@@ -123,3 +123,7 @@ app.*.symbols
 *.freezed.dart
 .idea/
 *.iml
+
+
+# tools - generated merge output
+_tools/project_standard.md
