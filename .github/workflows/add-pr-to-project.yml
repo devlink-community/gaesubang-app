@@ -2,7 +2,7 @@ name: PR을 프로젝트에 자동 할당합니다.
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: read
@@ -10,11 +10,20 @@ permissions:
   issues: write
 
 jobs:
-  add-to-project:
+  add-pr-to-project:
     runs-on: ubuntu-latest
     steps:
-      - name: Add PR to project
-        uses: actions/add-to-project@v1
-        with:
-          project-url: https://github.com/orgs/devlink-community/projects/4
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+          echo "${{ secrets.JIYOUNG_PAT }}" | gh auth login --with-token
+
+      - name: Add PR to Project
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -e
+          echo "Adding PR to Project..."
+          gh project item-add 4 --owner devlink-community --url "$PR_URL"
+          echo "Done"

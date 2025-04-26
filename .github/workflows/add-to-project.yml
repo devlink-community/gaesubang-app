@@ -4,13 +4,22 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   add-to-project:
     runs-on: ubuntu-latest
     steps:
-      - name: Add issue to project
-        uses: actions/add-to-project@v1
-        with:
-          project-url: https://github.com/orgs/devlink-community/projects/4
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
+      - name: Add Issue to Project
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh project item-add 4 --owner devlink-community --url https://github.com/devlink-community/devlink-mobile-app/issues/$ISSUE_NUMBER
