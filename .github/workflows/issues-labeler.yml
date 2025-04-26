@@ -1,8 +1,8 @@
-name: "PR: 제목 Prefix로 라벨 자동 부착"
+name: "issue: 제목 Prefix로 라벨 자동 부착"
 
 on:
-  pull_request:
-    types: [opened, edited, synchronize]
+  issues:
+    types: [opened, edited]
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ jobs:
   pr-title-labeler:
     runs-on: ubuntu-latest
     steps:
-      - name: PR 제목 Prefix로 라벨 자동 부착
+      - name: issue 제목 Prefix로 라벨 자동 부착
         uses: actions/github-script@v7
         with:
           script: |
