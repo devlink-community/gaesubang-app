@@ -25,9 +25,9 @@ void main() {
       await notifier.login('test@example.com', 'password123');
       final state = container.read(loginNotifierProvider);
 
-      expect(state.user, isA<AsyncData<User>>());
+      expect(state.loginUserResult, isA<AsyncData<User>>());
 
-      final user = (state.user as AsyncData<User>).value;
+      final user = (state.loginUserResult as AsyncData<User>).value;
 
       expect(user, isNotNull);
       expect(user.email, 'mock@example.com');

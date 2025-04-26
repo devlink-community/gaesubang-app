@@ -6,7 +6,7 @@ part 'login_state.freezed.dart';
 
 @freezed
 class LoginState with _$LoginState {
-  const LoginState({this.user = const AsyncLoading()});
+  const LoginState({this.loginUserResult = const AsyncLoading()});
 
-  final AsyncValue<User> user;
+  final AsyncValue<User> loginUserResult;
 }
