@@ -10,6 +10,6 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      - uses: marocchino/labeler@v4.11.0
+      - uses: actions/labeler@v5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
