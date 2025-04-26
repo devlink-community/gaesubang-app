@@ -121,9 +121,14 @@ app.*.symbols
 # ignore code-generated Dart files
 *.g.dart
 *.freezed.dart
+
+# IntelliJ IDEA project settings
 .idea/
 *.iml
 
+# Flutter local environment metadata
+.metadata
 
 # tools - generated merge output
-_tools/project_standard.md
+_tools/*.md
+!_tools/README.md
