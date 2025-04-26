@@ -21,6 +21,6 @@ jobs:
 
       - name: Add PR to Project
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          gh project item-add 4 --owner devlink-community --url https://github.com/devlink-community/devlink-mobile-app/pull/$PR_NUMBER
+          gh project item-add 4 --owner devlink-community --url "$PR_URL"
