@@ -19,8 +19,8 @@ jobs:
           sudo apt-get install -y gh
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-          - name: Add PR to Project
-          env:
-            PR_URL: ${{ github.event.pull_request.html_url }}
-          run: |
-            gh project item-add --project "https://github.com/orgs/devlink-community/projects/4" --url "$PR_URL"
+      - name: Add PR to Project
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh project item-add --project "https://github.com/orgs/devlink-community/projects/4" --url "$PR_URL"
