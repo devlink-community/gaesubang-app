@@ -1,0 +1,15 @@
+name: PR/Issue Prefix에 따라 라벨 자동 붙이기
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: marocchino/labeler@v4
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
