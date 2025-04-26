@@ -1,4 +1,4 @@
-name: PR: 제목 Prefix로 라벨 자동 부착
+name: "PR: 제목 Prefix로 라벨 자동 부착"
 
 on:
   pull_request:
@@ -28,8 +28,7 @@ jobs:
                 await github.rest.issues.addLabels({
                   ...context.repo,
                   issue_number: context.payload.pull_request.number,
-                  labels: [prefixMap[prefix]],
+                  labels: [prefixMap[prefix]]
                 });
               }
             }
-
