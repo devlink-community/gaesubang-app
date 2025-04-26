@@ -23,4 +23,7 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
+          set -e
+          echo "Adding PR to Project..."
           gh project item-add 4 --owner devlink-community --url "$PR_URL"
+          echo "Done"
