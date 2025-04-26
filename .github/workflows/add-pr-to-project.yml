@@ -13,8 +13,17 @@ jobs:
   add-to-project:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Check GitHub CLI login
+        run: gh auth status
+
       - name: Add PR to project
-        uses: ticket-actions/add-to-project@v2
-        with:
-          project-url: https://github.com/orgs/devlink-community/projects/4
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh project item-add 4 --owner devlink-community --url https://github.com/devlink-community/devlink-mobile-app/pull/$PR_NUMBER
