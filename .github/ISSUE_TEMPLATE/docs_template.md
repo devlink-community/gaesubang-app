@@ -1,13 +1,8 @@
----
-name: 📄 문서 작업
-about: 문서 생성, 수정, 리뷰 요청 시 사용
-title: "[docs] 문서 작업 제목"
-labels: documentation
-assignees: ''
----
+# [doce] 해당 문서에 대한 설명
 
 ## 📌 문서 정보
 - 경로: `docs/` 내 위치
+
 ## ✅ 체크리스트
 - [ ] 제목/목차 작성
 - [ ] 내용 정리
