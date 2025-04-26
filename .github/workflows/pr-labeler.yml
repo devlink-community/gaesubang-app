@@ -8,7 +8,6 @@ jobs:
   set-label:
     runs-on: ubuntu-latest
     steps:
-    
       - name: PR 제목에서 라벨 자동 매칭
         uses: actions/github-script@v7
         with:
@@ -24,7 +23,7 @@ jobs:
               '[utils]': '⚙️ utils'
             };
             const prTitle = context.payload.pull_request.title;
-            for (const prefix in prefixMap) {
+            for (const prefix in prefixMap
               if (prTitle.startsWith(prefix)) {
                 await github.rest.issues.addLabels({
                   ...context.repo,
