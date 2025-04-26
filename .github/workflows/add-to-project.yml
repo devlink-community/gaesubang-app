@@ -1,0 +1,15 @@
+name: 이슈를 프로젝트에 자동 할당합니다.
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue to project
+        uses: actions/add-to-project@v1
+        with:
+          project-url: https://github.com/orgs/devlink-community/projects/4
+          github-token: ${{ secrets.GITHUB_TOKEN }}

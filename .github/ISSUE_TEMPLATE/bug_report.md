@@ -4,7 +4,6 @@ about: 버그나 예외 상황을 보고합니다.
 title: '[bug] 구현기능 간략설명'
 labels: bug
 assignees: ''
-
 ---
 
 ## 🪄 어떤 부분을 수정하셨나요?

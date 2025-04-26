@@ -1,0 +1,14 @@
+🧹 chore:
+  - '^(\[chore\])'
+📚 docs:
+  - '^(\[docs\])'
+🚀 feat:
+  - '^(\[feat\])'
+🐞 fix:
+  - '^(\[fix\])'
+🔨 refactor:
+  - '^(\[refactor\])'
+🎨 style:
+  - '^(\[style\])'
+✅ test:
+  - '^(\[test\])'
