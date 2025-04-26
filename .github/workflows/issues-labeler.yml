@@ -1,0 +1,39 @@
+name: "issue: 제목 Prefix로 라벨 자동 부착"
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  pr-title-labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: issue 제목 Prefix로 라벨 자동 부착
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prefixMap = {
+              '[chore]': '🧹 chore',
+              '[docs]': '📚 docs',
+              '[feat]': '🚀 feat',
+              '[fix]': '🐞 fix',
+              '[refactor]': '🔨 refactor',
+              '[style]': '🎨 style',
+              '[test]': '✅ test',
+              '[utils]': '⚙️ utils'
+            };
+            const prTitle = context.payload.pull_request.title;
+            for (const prefix in prefixMap) {
+              if (prTitle.startsWith(prefix)) {
+                await github.rest.issues.addLabels({
+                  ...context.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: [prefixMap[prefix]]
+                });
+              }
+            }
