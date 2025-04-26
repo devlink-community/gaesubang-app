@@ -16,16 +16,18 @@ class LoginNotifier extends _$LoginNotifier {
   }
 
   Future<void> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(user: const AsyncLoading()); // 로딩 상태로 변경
 
     try {
       final user = await _loginUseCase.execute(
         email: email,
         password: password,
       );
-      state = state.copyWith(isLoading: false, user: user);
-    } catch (error) {
-      state = state.copyWith(isLoading: false, errorMessage: error.toString());
+      state = state.copyWith(user: AsyncData(user)); // 로그인 성공 시 user 설정
+    } catch (error, stackTrace) {
+      state = state.copyWith(
+        user: AsyncError(error, stackTrace),
+      ); // 로그인 실패 시 에러 설정
     }
   }
 

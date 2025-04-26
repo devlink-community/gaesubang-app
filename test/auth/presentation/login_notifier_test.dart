@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login_notifier.dart';
@@ -24,12 +25,14 @@ void main() {
       await notifier.login('test@example.com', 'password123');
       final state = container.read(loginNotifierProvider);
 
-      expect(state.isLoading, isFalse);
-      expect(state.user, isNotNull);
-      expect(state.user!.email, 'mock@example.com');
-      expect(state.user!.id, 'mock-id');
-      expect(state.user!.nickname, 'MockUser');
-      expect(state.errorMessage, isNull);
+      expect(state.user, isA<AsyncData<User>>());
+
+      final user = (state.user as AsyncData<User>).value;
+
+      expect(user, isNotNull);
+      expect(user.email, 'mock@example.com');
+      expect(user.id, 'mock-id');
+      expect(user.nickname, 'MockUser');
     });
   });
 }
