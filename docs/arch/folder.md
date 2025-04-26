@@ -58,23 +58,23 @@ lib/
 
 ## ✅ 폴더별 책임 요약
 
-| 폴더                  | 설명                                           |
-|-----------------------|------------------------------------------------|
-| `data_source/`        | 외부 API, Firebase, SharedPreferences 등 연결 |
-| `repository_impl/`    | 추상 repository의 실제 구현                   |
-| `mapper/`             | DTO ↔ Model 변환 확장                         |
-| `model/`              | 앱 내부에서 사용하는 도메인 모델 정의         |
-| `repository/`         | UseCase에서 참조하는 추상 repository interface |
-| `usecase/`            | 하나의 도메인 기능을 수행하는 유즈케이스      |
-| `presentation/`       | 상태, UI, 액션 처리 및 전달 담당               |
-| `module/`             | 기능 단위 DI 및 라우팅 구성                    |
+| 폴더                 | 설명                                       |
+|--------------------|------------------------------------------|
+| `data_source/`     | 외부 API, Firebase, SharedPreferences 등 연결 |
+| `repository_impl/` | 추상 repository의 실제 구현                     |
+| `mapper/`          | DTO ↔ Model 변환 확장                        |
+| `model/`           | 앱 내부에서 사용하는 도메인 모델 정의                    |
+| `repository/`      | UseCase에서 참조하는 추상 repository interface   |
+| `usecase/`         | 하나의 도메인 기능을 수행하는 유즈케이스                   |
+| `presentation/`    | 상태, UI, 액션 처리 및 전달 담당                    |
+| `module/`          | 기능 단위 DI 및 라우팅 구성                        |
 
 ---
 
 ## ✅ 기능 템플릿 확산 전략
 
 - 기능 추가 시 기존 기능 구조(auth 등)를 복제하여 시작합니다.
-- 구조만 복제하지 않고 클래스명, 경로, DI/Route 모두 해당 기능에 맞게 수정해야 합니다.
+- 구조만 복제하여 클래스명, 경로, DI/Route 모두 해당 기능에 맞게 수정해야 합니다.
 - shell 또는 Dart CLI 기반 템플릿 자동 생성 스크립트를 사용하면 빠르게 구조 확산이 가능합니다.
 
 ---
