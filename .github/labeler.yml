@@ -12,3 +12,5 @@
   - '^(\[style\])'
 ✅ test:
   - '^(\[test\])'
+⚙️ utils:
+  - '^(\[utils\])'
