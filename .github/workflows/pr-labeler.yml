@@ -11,6 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: marocchino/labeler@v4.11.0
-
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
