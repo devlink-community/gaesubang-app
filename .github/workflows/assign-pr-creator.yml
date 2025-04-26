@@ -2,11 +2,9 @@ name: PR 작성자를 담당자로 지정합니다.
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened,reopened]
 
 permissions:
-  contents: read
-  pull-requests: write
   issues: write
 
 
