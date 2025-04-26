@@ -17,6 +17,7 @@ ViewModel은 이 상태 객체를 생성하고 갱신하며, UI는 이를 구독
 
 - 상태는 화면에서 필요한 데이터만 포함한 **최소 단위 정보 객체**
 - `@freezed`로 선언하며, `copyWith`를 통해 안전하게 갱신 가능
+  ([freezed 공식문서](https://pub.dev/packages/freezed))
 - 뷰와 연결될 때는 항상 `AsyncValue<State>` 형태로 다룸
 - 상태 클래스는 비즈니스 로직을 포함하지 않으며, 단순 데이터 보관 역할만 수행
 
