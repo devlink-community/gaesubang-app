@@ -5,6 +5,7 @@ title: '[docs] 문서 제목 또는 위치'
 labels: documentation
 assignees: ''
 ---
+
 ## 📌 문서 정보
 - 경로: `docs/` 내 위치 (예: docs/guide/intro.md)
 - 변경 유형: (예: 신규/수정/삭제)
