@@ -22,4 +22,4 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           # <number>를 gh project list --owner devlink-community 로 조회
-          gh project item-add 6 --owner devlink-community --url https://github.com/devlink-community/devlink-mobile-app/issues/$ISSUE_NUMBER
+          gh project item-add 4 --owner devlink-community --url https://github.com/devlink-community/devlink-mobile-app/issues/$ISSUE_NUMBER
