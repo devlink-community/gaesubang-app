@@ -22,6 +22,7 @@ jobs:
               '[test]': '✅ test',
               '[utils]': '⚙️ utils'
             };
+            
             const prTitle = context.payload.pull_request.title;
             for (const prefix in prefixMap) {
               if (prTitle.startsWith(prefix)) {
