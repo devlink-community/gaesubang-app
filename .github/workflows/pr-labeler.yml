@@ -1,15 +1,34 @@
-name: PR/Issue Prefix에 따라 라벨 자동 붙이기
+name: PR: 제목 Prefix에 따라 라벨 자동 부착
 
 on:
   pull_request:
     types: [opened, edited, synchronize]
-  issues:
-    types: [opened, edited]
 
 jobs:
-  label:
+  pr-title-labeler:
     runs-on: ubuntu-latest
     steps:
-      - uses: marocchino/labeler@v4.11.0
+      - name: PR 제목 Prefix로 라벨 자동 부착
+        uses: actions/github-script@v7
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prefixMap = {
+              '[chore]': '🧹 chore',
+              '[docs]': '📚 docs',
+              '[feat]': '🚀 feat',
+              '[fix]': '🐞 fix',
+              '[refactor]': '🔨 refactor',
+              '[style]': '🎨 style',
+              '[test]': '✅ test',
+              '[utils]': '⚙️ utils'
+            };
+            const prTitle = context.payload.pull_request.title;
+            for (const prefix in prefixMap) {
+              if (prTitle.startsWith(prefix)) {
+                await github.rest.issues.addLabels({
+                  ...context.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: [prefixMap[prefix]]
+                });
+              }
+            }
