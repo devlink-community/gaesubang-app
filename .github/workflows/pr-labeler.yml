@@ -8,6 +8,7 @@ jobs:
   set-label:
     runs-on: ubuntu-latest
     steps:
+    
       - name: PR 제목에서 라벨 자동 매칭
         uses: actions/github-script@v7
         with:
