@@ -21,7 +21,7 @@ Screen은 사용자에게 보여지는 UI를 구성하는 **순수 뷰 컴포넌
 
 ## ✅ 파일 구조 및 위치
 
-```
+```text
 lib/
 └── profile/
     └── presentation/

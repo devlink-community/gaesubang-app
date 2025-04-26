@@ -25,7 +25,7 @@ ViewModel은 이 상태 객체를 생성하고 갱신하며, UI는 이를 구독
 
 ## ✅ 파일 구조 및 위치
 
-```
+```text
 lib/
 └── auth/
     └── presentation/

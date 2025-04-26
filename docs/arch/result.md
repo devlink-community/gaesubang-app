@@ -24,7 +24,7 @@ ViewModel은 흐름만 받아 상태를 구성한다. 테스트성과 추적성�
 
 ## ✅ 흐름 구조 요약
 
-```
+```text
 data_source      → throws Exception
 repository       → try-catch → Result<T> (Failure 포함)
 usecase          → Result<T> → AsyncValue<T>
@@ -130,8 +130,8 @@ ref.watch(loginProvider).when(
 | 단계       | 처리 방식                          |
 |------------|-----------------------------------|
 | DataSource | Exception throw                   |
-| Repository | try-catch → Result<T>             |
-| UseCase    | Result → AsyncValue 변환           |
+| Repository | try-catch → `Result<T>`             |
+| UseCase    | `Result` → `AsyncValue` 변환           |
 | ViewModel  | state = AsyncValue                |
 | UI         | AsyncValue.when(...) 분기 렌더링  |
 
