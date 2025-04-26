@@ -7,7 +7,6 @@ on:
 permissions:
   issues: write
 
-
 jobs:
   assign-pr-author:
     runs-on: ubuntu-latest
