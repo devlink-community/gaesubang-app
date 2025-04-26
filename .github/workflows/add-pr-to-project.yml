@@ -2,7 +2,7 @@ name: PR을 프로젝트에 자동 할당합니다.
 
 on:
   pull_request:
-    types: [opened,reopened]
+    types: [opened, reopened]
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Add PR to project
-        uses: github/add-to-project@v1
+        uses: ticket-actions/add-to-project@v2
         with:
           project-url: https://github.com/orgs/devlink-community/projects/4
           github-token: ${{ secrets.GITHUB_TOKEN }}
