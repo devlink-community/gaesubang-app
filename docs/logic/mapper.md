@@ -38,7 +38,11 @@ Mapper는 외부 DTO를 내부 Model로 변환하고,
 ```dart
 import '../../domain/model/user.dart';
 import '../dto/user_dto.dart';
+```
 
+### 📌 DTO → Model 변환
+
+```dart
 extension UserDtoMapper on UserDto {
   User toModel() {
     return User(
@@ -48,7 +52,13 @@ extension UserDtoMapper on UserDto {
     );
   }
 }
+```
 
+---
+
+### 📌 Model → DTO 변환
+
+```dart
 extension UserModelMapper on User {
   UserDto toDto() {
     return UserDto(
@@ -62,11 +72,31 @@ extension UserModelMapper on User {
 
 ---
 
-## ✅ 리스트 변환 예시
+### 📌 List<DTO> → List<Model> 변환
 
 ```dart
 extension UserDtoListMapper on List<UserDto>? {
   List<User> toModelList() => this?.map((e) => e.toModel()).toList() ?? [];
+}
+```
+
+---
+
+### 📌 Map → DTO 변환
+
+```dart
+extension MapToUserDto on Map<String, dynamic> {
+  UserDto toUserDto() => UserDto.fromJson(this);
+}
+```
+
+---
+
+### 📌 List<Map> → List<DTO> 변환
+
+```dart
+extension MapListToUserDtoList on List<Map<String, dynamic>>? {
+  List<UserDto> toUserDtoList() => this?.map((e) => UserDto.fromJson(e)).toList() ?? [];
 }
 ```
 

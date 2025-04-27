@@ -18,6 +18,8 @@ UI, UseCase, Repository 등에서 공통적으로 사용되며,
 - 불변성(Immutable) 유지
 - **필수값은 `required`**, 선택값은 `nullable` 처리
 - API 기반 DTO와는 분리하며, 필요 시 Mapper를 통해 변환
+- freezed 3.x 최신 방식으로 직접 constructor를 작성한다.  
+  (const User({required this.id}) 형태 사용, const factory = _User 형태 금지'
 
 ---
 
