@@ -23,7 +23,7 @@
   단, 공용화가 확정된 요소만 이동하며, 성급한 추출은 금지합니다.
 - Repository 구현체는 반드시 `data/repository_impl/` 폴더에 위치합니다.
 - `presentation/` 폴더 내 구성은 다음 항목을 원칙으로 합니다:
-    - `screen/`, `screen_root/`, `state/`, `action/`, `view_model/`
+    - `screen/`, `screen_root/`, `state/`, `action/`, `notifier/`
 - 레이어 간 의존성은 항상 하향식만 허용됩니다 (UI → UseCase → Repo Interface)
 
 ---

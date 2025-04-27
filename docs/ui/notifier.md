@@ -34,12 +34,31 @@ class LoginNotifier extends _$LoginNotifier {
     _loginUseCase = ref.watch(loginUseCaseProvider);
     return const LoginState();
   }
+
+  Future<void> onAction(LoginAction action) async {
+    switch (action) {
+      case SubmitLogin(:final email, :final password):
+        await _handleLogin(email, password);
+      case ResetLoginForm():
+        _handleReset();
+    }
+  }
+
+  Future<void> _handleLogin(String email, String password) async {
+    state = state.copyWith(loginUserResult: const AsyncLoading());
+    final asyncResult = await _loginUseCase.execute(email, password);
+    state = state.copyWith(loginUserResult: asyncResult);
+  }
+
+  void _handleReset() {
+    state = const LoginState();
+  }
 }
 ```
 
 ✅ `build()`에서는 의존성 주입과 초기 상태 설정까지만 수행합니다.  
-✅ **비즈니스 로직 실행은 절대 build()에서 직접 하지 않습니다.**  
-(API 요청 등은 별도 메서드를 통해 실행)
+✅ 비즈니스 로직 실행은 onAction을 통해 별도로 트리거합니다.  
+✅ 데이터 호출은 반드시 UseCase를 통해 수행합니다.
 
 ---
 
@@ -66,7 +85,7 @@ lib/
 ## ✅ 동기형 build()
 
 - 초기값만 설정할 경우 사용
-- 네트워크 요청은 별도로 메서드 분리
+- 네트워크 요청은 별도 메서드로 분리하여 처리한다
 
 ```dart
 @riverpod
@@ -82,19 +101,24 @@ class LoginNotifier extends _$LoginNotifier {
 
 ## ✅ 비동기형 Future build()
 
-- 페이지 진입 시 서버 데이터가 필수인 경우 사용
-- build() 자체를 비동기로 구성
+- 페이지 진입 시 서버 데이터가 필수로 필요한 경우 사용
+- build() 자체를 비동기로 구성하여 통신한다
 
 ```dart
 @riverpod
 class ProfileNotifier extends _$ProfileNotifier {
+  late final GetProfileUseCase _getProfileUseCase;
+
   @override
   Future<ProfileState> build() async {
-    final profile = await api.fetchProfile();
-    return ProfileState(profileResult: AsyncData(profile));
+    _getProfileUseCase = ref.watch(getProfileUseCaseProvider);
+    final profileAsyncValue = await _getProfileUseCase.execute();
+    return ProfileState(profileResult: profileAsyncValue);
   }
 }
 ```
+
+> ✅ AsyncNotifier를 사용하는 경우에만 build()에서 비동기 통신을 수행합니다.
 
 ---
 
@@ -102,40 +126,95 @@ class ProfileNotifier extends _$ProfileNotifier {
 
 | 상황 | 권장 방식 |
 |:---|:---|
-| 기본 상태만 세팅, API 호출 없음 | 동기 build() |
-| 서버 데이터가 필요 | 비동기 Future build() |
+| 기본 상태만 세팅, API 호출 없음 | 동기형 build() (Notifier) |
+| 진입 즉시 서버 데이터가 필요한 경우 | 비동기형 build() (AsyncNotifier) |
+
+> 상황에 따라 적절히 동기/비동기 구조를 선택합니다.
 
 ---
 
 # 👁️ 상태 구독 및 사용
 
-## ✅ 기본 구독 방법
+## ✅ Root 예시 (LoginScreenRoot)
 
 ```dart
-class LoginScreen extends ConsumerWidget {
+class LoginScreenRoot extends ConsumerWidget {
+  const LoginScreenRoot({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(loginNotifierProvider);
+    final notifier = ref.watch(loginNotifierProvider.notifier);
 
+    return LoginScreen(
+      state: state,
+      onAction: notifier.onAction,
+    );
+  }
+}
+```
+
+## ✅ Screen 예시 (LoginScreen)
+
+```dart
+class LoginScreen extends StatelessWidget {
+  final LoginState state;
+  final void Function(LoginAction action) onAction;
+
+  const LoginScreen({
+    super.key,
+    required this.state,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Text('이메일: ${state.loginUserResult.value?.email ?? ''}');
   }
 }
 ```
 
-✅ `ref.watch()`를 통해 Notifier의 상태를 구독하고,  
-✅ 상태가 변경될 때마다 UI가 자동으로 리렌더링됩니다.
+✅ Root가 상태 주입을 담당하고, Screen은 StatelessWidget으로 순수 UI만 담당합니다.
 
 ---
 
-## ✅ AsyncValue 처리
+# ✅ AsyncValue 패턴 매칭 처리 예시
+
+## ✅ Root 예시 (ProfileScreenRoot)
 
 ```dart
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreenRoot extends ConsumerWidget {
+  const ProfileScreenRoot({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileState = ref.watch(profileNotifierProvider);
+    final state = ref.watch(profileNotifierProvider);
+    final notifier = ref.watch(profileNotifierProvider.notifier);
 
-    switch (profileState.profileResult) {
+    return ProfileScreen(
+      state: state,
+      onAction: notifier.onAction,
+    );
+  }
+}
+```
+
+## ✅ Screen 예시 (ProfileScreen)
+
+```dart
+class ProfileScreen extends StatelessWidget {
+  final ProfileState state;
+  final void Function(ProfileAction action) onAction;
+
+  const ProfileScreen({
+    super.key,
+    required this.state,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (state.profileResult) {
       case AsyncData(:final value):
         return Text('Hello, ${value.name}');
       case AsyncLoading():
@@ -148,104 +227,25 @@ class ProfileScreen extends ConsumerWidget {
 }
 ```
 
+✅ AsyncValue는 switch-case로 분기하여 상태를 표현합니다.
+
 ---
 
 # 🛠️ 사용자 액션 처리 (onAction 패턴)
 
-## ✅ 액션 클래스 정의 (sealed class)
+- 모든 사용자 액션은 반드시 onAction() 메서드로 수집하여 관리합니다.
+- 복잡한 액션은 필요에 따라 별도 메서드로 분리할 수 있습니다.
 
-```dart
-sealed class LoginAction {}
-
-class SubmitLogin extends LoginAction {
-  final String email;
-  final String password;
-  const SubmitLogin(this.email, this.password);
-}
-
-class ResetLoginForm extends LoginAction {
-  const ResetLoginForm();
-}
-```
-
----
-
-## ✅ Notifier 액션 처리
-
-```dart
-@riverpod
-class LoginNotifier extends _$LoginNotifier {
-  @override
-  LoginState build() => const LoginState();
-
-  Future<void> onAction(LoginAction action) async {
-    switch (action) {
-      case SubmitLogin(:final email, :final password):
-        await _handleLogin(email, password);
-      case ResetLoginForm():
-        _handleReset();
-    }
-  }
-
-  Future<void> _handleLogin(String email, String password) async {
-    state = state.copyWith(loginUserResult: const AsyncLoading());
-    final asyncResult = await _loginUseCase.execute(email, password);
-    state = state.copyWith(loginUserResult: asyncResult);
-  }
-
-  void _handleReset() {
-    state = const LoginState();
-  }
-}
-```
-
-✅ 액션을 명시적으로 분기하여 관리합니다.
-
-✅ 비동기 액션은 async/await로 처리하고,  
-✅ 동기 액션은 간단히 메서드 호출로 처리합니다.
+✅ Screen은 액션 발생 시 onAction(LoginAction)을 호출합니다.  
+✅ Notifier는 onAction()에서 switch-case로 액션을 분기하여 처리합니다.
 
 ---
 
 # 🧪 테스트 전략
 
-## ✅ 초기 상태 테스트
-
-```dart
-test('초기 상태는 AsyncLoading이다', () {
-  final notifier = LoginNotifier();
-  expect(notifier.state.loginUserResult, isA<AsyncLoading>());
-});
-```
-
----
-
-## ✅ 액션 후 상태 변이 테스트
-
-```dart
-test('로그인 성공 후 상태는 AsyncData이다', () async {
-  when(mockLoginUseCase.execute(any, any))
-      .thenAnswer((_) async => AsyncData(mockUser));
-
-  await notifier.onAction(SubmitLogin('test@example.com', 'password'));
-
-  expect(notifier.state.loginUserResult, isA<AsyncData<User>>());
-});
-```
-
----
-
-## ✅ 에러 발생 시 상태 테스트
-
-```dart
-test('로그인 실패 시 상태는 AsyncError이다', () async {
-  when(mockLoginUseCase.execute(any, any))
-      .thenAnswer((_) async => AsyncError(mockFailure));
-
-  await notifier.onAction(SubmitLogin('wrong@example.com', 'wrongpass'));
-
-  expect(notifier.state.loginUserResult, isA<AsyncError<Failure>>());
-});
-```
+- Notifier 초기 상태 테스트
+- onAction 호출 후 상태 변이 테스트
+- AsyncValue 기반 상태 변화 검증
 
 ---
 
@@ -255,8 +255,9 @@ test('로그인 실패 시 상태는 AsyncError이다', () async {
 |:---|:---|
 | State | UI에 필요한 최소한의 데이터 구조 (immutable, freezed 사용) |
 | Notifier | 상태를 보관하고, 액션을 통해 상태를 변경 |
+| UseCase | 비즈니스 로직 실행 (Repository 접근 포함) |
 | Screen | Notifier의 상태를 구독하고 UI를 렌더링 |
-| Root | 상태를 주입하고, context(의존성 관리, Provider 연결)를 담당 |
+| Root | 상태를 주입하고, context 기반 처리를 담당 |
 
 ---
 
@@ -270,12 +271,9 @@ test('로그인 실패 시 상태는 AsyncError이다', () async {
 
 # ✅ 문서 요약
 
-- build()는 초기 상태 세팅 전용
-- 네트워크 요청은 onAction()을 통한 메서드 실행으로 분리
-- 상태 구독은 ref.watch로 수행
-- AsyncValue.when을 통한 상태 분기
-- Failure는 AsyncError로 감싸고, 사용자 메시지를 명확히 표시
-- 액션은 onAction 패턴으로 통일 관리
-- 테스트 전략과 책임 분리가 명확
-
----
+- build()는 초기 상태 세팅 전용이다.
+- 동기형/비동기형 Notifier를 상황에 맞게 선택한다.
+- 모든 사용자 액션은 onAction()으로 통일 관리한다.
+- 데이터 호출은 반드시 UseCase를 통해 진행한다.
+- 상태 분기는 switch-case 패턴을 사용한다.
+- 테스트는 상태 변화 중심으로 수행한다.

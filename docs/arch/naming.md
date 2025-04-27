@@ -151,7 +151,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
 # ✅ 5. 프로바이더 및 상태 객체 명명
 
-- ViewModel 기반 상태 프로바이더는 `{기능명}ViewModelProvider`
+- Notifier 기반 상태 프로바이더는 `{기능명}NotifierProvider`
 - 도출 상태값은 `{도출명}Provider`, 파생값 명시
 - 상태 클래스는 `{기능명}State`
 - 액션 클래스는 `{기능명}Action`
@@ -165,14 +165,14 @@ class AuthRepositoryImpl implements AuthRepository {
 | Repository     | `AuthRepository`             | interface / impl 동일                    |
 | DataSource     | `AuthDataSourceImpl`         | API 전용, Firebase는 별도                |
 | UseCase        | `LoginUseCase`               | 비즈니스 단위 로직                      |
-| ViewModel      | `ProfileViewModel`           | 상태 관리 + 액션 분기                   |
+| Notifier      | `ProfileNotifier`           | 상태 관리 + 액션 분기                   |
 | State          | `ProfileState`               | freezed 기반 상태 클래스                |
 | Action         | `ProfileAction`              | sealed class 기반 액션 정의             |
 | ScreenRoot     | `ProfileScreenRoot`          | 상태 주입 및 context 처리               |
 | Screen         | `ProfileScreen`              | 순수 UI                                 |
 | Component      | `profile_stat_card.dart`     | 기능 접두사 필수                         |
 | 공통 컴포넌트   | `profile_header_common.dart` | 공통화 이전 기능 내 위치                 |
-| Provider       | `loginViewModelProvider`     | ViewModel 기준 상태 주입                |
+| Provider       | `loginNotifierProvider`     | Notifier 기준 상태 주입                |
 | 생성자 필드    | `_repository`                | final + 프라이빗 + required 주입        |
 
 ---
@@ -182,6 +182,6 @@ class AuthRepositoryImpl implements AuthRepository {
 - [folder.md](folder.md)
 - [layer.md](layer.md)
 - [usecase.md](../logic/usecase.md)
-- [viewmodel.md](../logic/viewmodel.md)
+- [Notifier.md](../logic/notifier.md)
 - [repository.md](../logic/repository.md)
 - [screen.md](../ui/screen.md)
