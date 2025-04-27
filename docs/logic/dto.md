@@ -99,5 +99,4 @@ class ParentDto {
 
 - [mapper.md](mapper.md): DTO ↔ Model 변환 처리
 - [model.md](model.md): 내부 Entity 정의
-- [datasource.md](datasource.md): DTO를 사용하는 API 처리 로지구
-
+- [datasource.md](datasource.md): DTO를 사용하는 API 처리 로직
