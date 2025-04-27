@@ -11,7 +11,7 @@
 
 ---
 
-# 📚 전체 아키텍처 흐름 요약
+## 📚 전체 아키텍처 흐름 요약
 
 | 계층 | 역할 |
 |:---|:---|
@@ -25,7 +25,7 @@
 
 ---
 
-# 🧱 설계 원칙
+## 🧱 설계 원칙
 
 - GoRouter는 `@riverpod` 어노테이션을 사용해 Provider로 등록한다.
 - 기능별로 `module_di.dart`, `module_route.dart`를 분리하여 관리한다.
@@ -35,9 +35,12 @@
 
 ---
 
-# 📚 Provider 정의 예시
+## 📚 Provider 정의 예시
 
 ```dart
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+part 'di_route.g.dart';
+
 @riverpod
 AuthDataSource authDataSource(AuthDataSourceRef ref) => AuthDataSource();
 
@@ -65,7 +68,7 @@ class LoginNotifier extends _$LoginNotifier {
 
 ---
 
-# 📚 Route 정의 예시
+## 📚 Route 정의 예시
 
 ```dart
 final authRoutes = [
@@ -83,6 +86,9 @@ final authRoutes = [
 # 📚 routerProvider 예시 (di_route.dart)
 
 ```dart
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+part 'di_route.g.dart';
+
 @riverpod
 GoRouter router(RouterRef ref) {
   return GoRouter(
@@ -100,7 +106,7 @@ GoRouter router(RouterRef ref) {
 
 ---
 
-# 📚 Root 예시
+## 📚 Root 예시
 
 ```dart
 class LoginScreenRoot extends ConsumerWidget {

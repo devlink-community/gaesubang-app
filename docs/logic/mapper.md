@@ -86,13 +86,13 @@ extension UserDtoListMapper on List<UserDto>? {
 
 ```dart
 extension MapToUserDto on Map<String, dynamic> {
-  UserDto toUserDto() => UserDto.fromJson(this);
+  UserDto toDto() => UserDto.fromJson(this);
 }
 ```
 
 ---
 
-### 📌 List<Map> → List<DTO> 변환
+### 📌 List<Map<String, dynamic>> → List<DTO> 변환
 
 ```dart
 extension MapListToUserDtoList on List<Map<String, dynamic>>? {
