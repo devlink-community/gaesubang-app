@@ -1,13 +1,14 @@
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class LoginUseCase {
   final AuthRepository _repository;
 
   LoginUseCase({required AuthRepository repository}) : _repository = repository;
 
-  Future<User> execute({
+  Future<AsyncValue<User>> execute({
     required String email,
     required String password,
   }) async {
@@ -15,9 +16,9 @@ class LoginUseCase {
 
     switch (result) {
       case Success(data: final user):
-        return user;
+        return AsyncData(user);
       case Error(failure: final error):
-        throw error;
+        return AsyncError(error, error.stackTrace ?? StackTrace.current);
     }
   }
 }
