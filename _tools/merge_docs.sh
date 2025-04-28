@@ -10,6 +10,9 @@ OUTPUT_FILE="$OUTPUT_DIR/project_standard.md"
 mkdir -p "$OUTPUT_DIR"
 : > "$OUTPUT_FILE"
 
+echo "> 📅 생성일시: $(date '+%Y-%m-%d %H:%M:%S')" >> "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
+
 for FILE in $(find docs -type f -name "*.md" | sort); do
   echo "# 📄 $FILE" >> "$OUTPUT_FILE"
   echo "" >> "$OUTPUT_FILE"
