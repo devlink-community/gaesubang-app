@@ -2,17 +2,36 @@ import 'package:devlink_mobile_app/auth/presentation/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login_state.dart';
 import 'package:flutter/material.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   final LoginState state;
   final void Function(LoginAction action) onAction;
 
   const LoginScreen({super.key, required this.state, required this.onAction});
 
   @override
-  Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
+  State<LoginScreen> createState() => _LoginScreenState();
+}
 
+class _LoginScreenState extends State<LoginScreen> {
+  late final TextEditingController emailController;
+  late final TextEditingController passwordController;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController = TextEditingController();
+    passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
@@ -20,7 +39,7 @@ class LoginScreen extends StatelessWidget {
           TextField(controller: passwordController, obscureText: true),
           ElevatedButton(
             onPressed:
-                () => onAction(
+                () => widget.onAction(
                   LoginAction.loginPressed(
                     email: emailController.text,
                     password: passwordController.text,
@@ -30,11 +49,14 @@ class LoginScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed:
-                () => onAction(const LoginAction.navigateToForgetPassword()),
+                () => widget.onAction(
+                  const LoginAction.navigateToForgetPassword(),
+                ),
             child: const Text('비밀번호를 잊으셨나요?'),
           ),
           TextButton(
-            onPressed: () => onAction(const LoginAction.navigateToSignUp()),
+            onPressed:
+                () => widget.onAction(const LoginAction.navigateToSignUp()),
             child: const Text('회원가입'),
           ),
         ],

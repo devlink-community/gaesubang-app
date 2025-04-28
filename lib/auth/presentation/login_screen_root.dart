@@ -15,14 +15,14 @@ class LoginScreenRoot extends ConsumerWidget {
     final state = ref.watch(loginNotifierProvider);
     final notifier = ref.watch(loginNotifierProvider.notifier);
 
-    // 로그인 성공 시 홈으로 이동
-    final loginResult = state.loginUserResult;
-    if (loginResult?.hasValue == true) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 로그인 성공 감지 후 이동 (build() 분리)
+    ref.listen(loginNotifierProvider, (previous, next) {
+      final loginResult = next.loginUserResult;
+      if (loginResult?.hasValue == true) {
         context.go('/home');
-        notifier.logout();
-      });
-    }
+        ref.read(loginNotifierProvider.notifier).logout();
+      }
+    });
 
     // 로딩 처리
     if (state.loginUserResult?.isLoading == true) {
