@@ -23,8 +23,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = UserDto.fromJson(response).toModel();
       // response를 UserDto로 변환 후 Model로 변환
       return Result.success(user);
-    } catch (e) {
-      return Result.error(mapExceptionToFailure(e));
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
     }
   }
 
@@ -42,8 +42,8 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       final user = response.toUserDto().toModel();
       return Result.success(user);
-    } catch (e) {
-      return Result.error(mapExceptionToFailure(e));
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
     }
   }
 
@@ -56,8 +56,8 @@ class AuthRepositoryImpl implements AuthRepository {
       }
       final user = response.toUserDto().toModel();
       return Result.success(user);
-    } catch (e) {
-      return Result.error(mapExceptionToFailure(e));
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
     }
   }
 
@@ -66,8 +66,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _dataSource.signOut();
       return const Result.success(null);
-    } catch (e) {
-      return Result.error(mapExceptionToFailure(e));
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
     }
   }
 }
