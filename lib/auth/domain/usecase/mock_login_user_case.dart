@@ -12,7 +12,14 @@ class MockLoginUseCase implements LoginUseCase {
     await Future.delayed(const Duration(milliseconds: 300)); // 실제 로그인처럼 딜레이 추가
 
     return const AsyncData(
-      Member(id: 'mock-id', email: 'mock@example.com', nickname: 'MockUser'),
+      Member(
+        id: '0',
+        email: 'mock@example.com',
+        nickname: 'MockUser',
+        uid: 'whatsup',
+        onAir: false,
+        image: 'mock/image/path',
+      ),
     );
   }
 }

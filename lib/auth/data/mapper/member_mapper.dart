@@ -5,7 +5,14 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 // UserDto → Member 변환
 extension UserDtoToMemberMapper on UserDto {
   Member toModel() {
-    return Member(id: id ?? '', email: email ?? '', nickname: nickname ?? '');
+    return Member(
+      id: id ?? '',
+      email: email ?? '',
+      nickname: nickname ?? '',
+      onAir: false,
+      image: '',
+      uid: '',
+    );
   }
 }
 
@@ -28,7 +35,8 @@ extension UserDtoToMemberFromProfileMapper on UserDto {
       id: id ?? '',
       email: email ?? '',
       nickname: nickname ?? '',
-      imagePath: profileDto.imagePath ?? '', // 병합된 프로필 이미지
+      uid: uid ?? '',
+      image: profileDto.image ?? '', // 병합된 프로필 이미지
       onAir: profileDto.onAir ?? false, // 병합된 onAir 상태
     );
   }

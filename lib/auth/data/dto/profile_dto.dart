@@ -4,11 +4,11 @@ part 'profile_dto.g.dart';
 
 @JsonSerializable()
 class ProfileDto {
-  const ProfileDto({this.userId, this.imagePath, this.onAir});
+  const ProfileDto({this.userId, this.image, this.onAir});
 
   @JsonKey(name: 'id')
   final String? userId;
-  final String? imagePath;
+  final String? image;
   final bool? onAir;
 
   factory ProfileDto.fromJson(Map<String, dynamic> json) =>
