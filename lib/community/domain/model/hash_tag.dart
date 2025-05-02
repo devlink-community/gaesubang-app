@@ -3,7 +3,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'hash_tag.freezed.dart';
 
 @freezed
-abstract class HashTag with _$HashTag {
-  const factory HashTag({required String id, required String content}) =
-      _HashTag;
+class HashTag with _$HashTag {
+  const HashTag({required this.id, required this.content});
+
+  @override
+  final String id;
+  @override
+  final String content;
 }

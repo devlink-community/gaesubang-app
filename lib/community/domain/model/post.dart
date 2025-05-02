@@ -8,15 +8,32 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'post.freezed.dart';
 
 @freezed
-abstract class Post with _$Post {
-  const factory Post({
-    required String id,
-    required String title,
-    required String content,
-    required Member member,
-    required BoardType boardType,
-    required DateTime createdAt,
-    @Default(<HashTag>[]) List<HashTag> hashTag,
-    @Default(<Like>[]) List<Like> like,
-  }) = _Post;
+class Post with _$Post {
+  const Post({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.member,
+    required this.boardType,
+    required this.createdAt,
+    this.hashTag = const <HashTag>[],
+    this.like = const <Like>[],
+  });
+
+  @override
+  final String id;
+  @override
+  final String title;
+  @override
+  final String content;
+  @override
+  final Member member;
+  @override
+  final BoardType boardType;
+  @override
+  final DateTime createdAt;
+  @override
+  final List<HashTag> hashTag;
+  @override
+  final List<Like> like;
 }
