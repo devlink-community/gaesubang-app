@@ -2,7 +2,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 part 'comment_dto.freezed.dart';
 part 'comment_dto.g.dart';
-
 @freezed
 abstract class CommentDto with _$CommentDto {
   const factory CommentDto({
