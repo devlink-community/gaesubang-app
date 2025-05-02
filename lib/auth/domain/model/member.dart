@@ -8,13 +8,15 @@ class Member with _$Member {
     required this.id,
     required this.email,
     required this.nickname,
-    this.imagePath = "",
+    required this.uid,
+    this.image = "",
     this.onAir = false,
   });
 
   final String id;
   final String email;
   final String nickname;
-  final String imagePath;
+  final String uid;
+  final String image;
   final bool onAir;
 }
