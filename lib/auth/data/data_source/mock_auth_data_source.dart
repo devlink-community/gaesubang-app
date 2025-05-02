@@ -12,11 +12,7 @@ class MockAuthDataSource implements AuthDataSource {
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     if (email == 'test@example.com' && password == 'password123') {
-      _currentUser = {
-        'id': 'mock-user-id',
-        'email': email,
-        'nickname': 'MockUser',
-      };
+      _currentUser = {'id': '0', 'email': email, 'nickname': 'MockUser'};
       return _currentUser!;
     } else {
       throw Exception('Invalid credentials');
@@ -33,11 +29,7 @@ class MockAuthDataSource implements AuthDataSource {
     if (email == 'duplicate@example.com') {
       throw Exception('Email already exists');
     }
-    _currentUser = {
-      'id': 'mock-new-user-id',
-      'email': email,
-      'nickname': nickname,
-    };
+    _currentUser = {'id': '1', 'email': email, 'nickname': nickname};
     return _currentUser!;
   }
 
