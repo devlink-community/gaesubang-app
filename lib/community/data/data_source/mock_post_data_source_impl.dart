@@ -48,7 +48,7 @@ class PostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<List<CommentDto>> addComment({
+  Future<List<CommentDto>> createComment({
     required String postId,
     required String memberId,
     required String content,

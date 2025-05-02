@@ -15,7 +15,7 @@ abstract interface class PostDataSource {
 
   /* Comment */
   Future<List<CommentDto>> fetchComments(String postId);
-  Future<List<CommentDto>> addComment({
+  Future<List<CommentDto>> createComment({
     required String postId,
     required String memberId,
     required String content,
