@@ -87,13 +87,35 @@ Future<Result<User>> login(String email, String pw) async {
 ## ✅ Exception → Failure 매핑 유틸
 
 ```dart
-Failure mapExceptionToFailure(Object e) {
-  if (e is TimeoutException) {
-    return Failure(FailureType.timeout, "요청 시간이 초과됐습니다", cause: e);
-  } else if (e.toString().contains("SocketException")) {
-    return Failure(FailureType.network, "인터넷 연결을 확인해주세요", cause: e);
+Failure mapExceptionToFailure(Object error, StackTrace stackTrace) {
+  if (error is TimeoutException) {
+    return Failure(
+      FailureType.timeout,
+      '요청 시간이 초과되었습니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
+  } else if (error is FormatException) {
+    return Failure(
+      FailureType.parsing,
+      '데이터 형식 오류입니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
+  } else if (error.toString().contains('SocketException')) {
+    return Failure(
+      FailureType.network,
+      '인터넷 연결을 확인해주세요',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   } else {
-    return Failure(FailureType.unknown, "알 수 없는 오류", cause: e);
+    return Failure(
+      FailureType.unknown,
+      '알 수 없는 오류가 발생했습니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   }
 }
 ```
@@ -116,11 +138,16 @@ Future<void> login(String email, String pw) async {
 ## ✅ UI (리버팟 + AsyncValue)
 
 ```dart
-ref.watch(loginProvider).when(
-  loading: () => CircularProgressIndicator(),
-  data: (user) => Text('환영합니다 ${user.email}'),
-  error: (e, _) => Text('에러 발생: $e'),
-);
+final loginState = ref.watch(loginProvider);
+
+switch (loginState) {
+  case AsyncLoading():
+    return CircularProgressIndicator();
+  case AsyncData(:final user):
+    return Text('환영합니다 ${user.email}');
+  case AsyncError(:final error, :_):
+    return Text('에러 발생: $error');
+}
 ```
 
 ---
@@ -133,7 +160,7 @@ ref.watch(loginProvider).when(
 | Repository | try-catch → `Result<T>`             |
 | UseCase    | `Result` → `AsyncValue` 변환           |
 | ViewModel  | state = AsyncValue                |
-| UI         | AsyncValue.when(...) 분기 렌더링  |
+| UI         | switch 문을 이용해 AsyncValue 분기 렌더링 |
 
 ---
 
