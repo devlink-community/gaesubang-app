@@ -17,33 +17,39 @@ class CommunityListScreen extends StatelessWidget {
   final void Function(CommunityListAction action) onAction;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('커뮤니티'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () => onAction(const CommunityListAction.tapSearch()),
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('커뮤니티'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => onAction(const CommunityListAction.tapSearch()),
+            ),
+          ],
         ),
-      ],
-    ),
-    floatingActionButton: FloatingActionButton(
-      onPressed: () => onAction(const CommunityListAction.tapWrite()),
-      child: const Icon(Icons.edit),
-    ),
-    body: RefreshIndicator(
-      onRefresh: () async => onAction(const CommunityListAction.refresh()),
-      child: Column(
-        children: [
-          _buildTabBar(),
-          Expanded(
-            child:
-                _buildPostList() ?? const Center(child: Text('등록된 게시글이 없습니다')),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => onAction(const CommunityListAction.tapWrite()),
+          child: const Icon(Icons.edit),
+        ),
+        body: RefreshIndicator(
+          onRefresh: () async => onAction(const CommunityListAction.refresh()),
+          child: Column(
+            children: [
+              _buildTabBar(),
+              Expanded(
+                child:
+                    _buildPostList() ??
+                    const Center(child: Text('등록된 게시글이 없습니다')),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _buildTabBar() => TabBar(
     labelColor: Colors.blue,
