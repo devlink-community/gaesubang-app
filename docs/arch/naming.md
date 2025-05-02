@@ -97,10 +97,12 @@ class LoginUseCase {
 
   Future<AsyncValue<User>> execute(String email, String pw) async {
     final result = await _repository.login(email, pw);
-    return result.when(
-      success: (user) => AsyncData(user),
-      error: (e) => AsyncError(e.message),
-    );
+    switch (result) {
+      case Success(data: final user):
+        return AsyncData(user);
+      case Error(failure: final error):
+        return AsyncError(error, error.stackTrace ?? StackTrace.current);
+    }
   }
 }
 ```
