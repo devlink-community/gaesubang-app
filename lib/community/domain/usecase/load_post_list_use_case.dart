@@ -7,5 +7,5 @@ class LoadPostListUseCase {
   const LoadPostListUseCase({required PostRepository repo}) : _repo = repo;
   final PostRepository _repo;
 
-  Future<Result<List<Post>>> call() => _repo.loadPostList();
+  Future<Result<List<Post>>> execute() => _repo.loadPostList();
 }

@@ -16,18 +16,18 @@ part 'community_list_notifier.g.dart';
 class CommunityListNotifier extends _$CommunityListNotifier {
   @override
   CommunityListState build() {
-    _load = ref.watch(loadPostListUseCaseProvider);
+    _loadPostListUseCase = ref.watch(loadPostListUseCaseProvider);
     // 비동기 로딩 → 결과 반영
     Future.microtask(_fetch);
     return const CommunityListState(); // 초기값
   }
 
-  late final LoadPostListUseCase _load;
+  late final LoadPostListUseCase _loadPostListUseCase;
 
   /// 원격 새로고침
   Future<void> _fetch() async {
     state = state.copyWith(postList: const AsyncLoading());
-    final result = await _load();
+    final result = await _loadPostListUseCase.execute();
     switch (result) {
       case Success(data: final list):
         state = state.copyWith(postList: AsyncData(list));
