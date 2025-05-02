@@ -4,8 +4,6 @@ part 'like.freezed.dart';
 
 @freezed
 abstract class Like with _$Like {
-  const factory Like({
-    required String boardId,
-    required String memberId,
-  }) = _Like;
+  const factory Like({required String boardId, required String memberId}) =
+      _Like;
 }
