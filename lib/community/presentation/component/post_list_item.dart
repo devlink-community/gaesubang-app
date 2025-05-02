@@ -1,5 +1,6 @@
+import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:flutter/material.dart';
-import '../../domain/model/post.dart';
+
 
 class PostListItem extends StatelessWidget {
   const PostListItem({

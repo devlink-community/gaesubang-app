@@ -1,5 +1,6 @@
 // lib/community/data/mapper/post_mapper.dart
 // import 'package:auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/like_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
@@ -7,6 +8,7 @@ import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
+import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 
 extension PostDtoMapper on PostDto {
   Post toModel() => Post(
