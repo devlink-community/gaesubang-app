@@ -1,7 +1,23 @@
 // lib/community/data/data_source/post_data_source.dart
+import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 
 abstract interface class PostDataSource {
-  /// 모든 게시글을 한 번에 가져온다.
+  /* List */
   Future<List<PostDto>> fetchPostList();
+
+  /* Detail */
+  Future<PostDto> fetchPostDetail(String postId);
+
+  /* Toggle */
+  Future<PostDto> toggleLike(String postId);
+  Future<PostDto> toggleBookmark(String postId);
+
+  /* Comment */
+  Future<List<CommentDto>> fetchComments(String postId);
+  Future<List<CommentDto>> createComment({
+    required String postId,
+    required String memberId,
+    required String content,
+  });
 }

@@ -3,10 +3,7 @@ import 'package:devlink_mobile_app/community/module/util/%08community_tab_type_e
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-
 part 'community_list_state.freezed.dart';
-
-
 
 @freezed
 abstract class CommunityListState with _$CommunityListState {
