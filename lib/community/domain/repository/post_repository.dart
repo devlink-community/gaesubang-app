@@ -1,9 +1,25 @@
 // lib/community/domain/repository/post_repository.dart
+
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
+import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
-
-
 abstract interface class PostRepository {
+  /* List */
   Future<Result<List<Post>>> loadPostList();
+
+  /* Detail */
+  Future<Result<Post>> getPostDetail(String postId);
+
+  /* Toggle */
+  Future<Result<Post>> toggleLike(String postId);
+  Future<Result<Post>> toggleBookmark(String postId);
+
+  /* Comment */
+  Future<Result<List<Comment>>> getComments(String postId);
+  Future<Result<List<Comment>>> createComment({
+    required String postId,
+    required String memberId,
+    required String content,
+  });
 }
