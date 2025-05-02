@@ -34,29 +34,25 @@ UI                → AsyncValue.when() → 에러 메시지 표시
 ## ✅ Failure 클래스 정의
 
 ```dart
-enum FailureType {
-  network,
-  unauthorized,
-  timeout,
-  server,
-  parsing,
-  unknown,
-}
-
+/// 실패 정보 구조
 class Failure {
   final FailureType type;
   final String message;
   final Object? cause;
+  final StackTrace? stackTrace;
 
-  const Failure(this.type, this.message, {this.cause});
+  const Failure(this.type, this.message, {this.cause, this.stackTrace});
 
   bool get isNetwork => type == FailureType.network;
   bool get isTimeout => type == FailureType.timeout;
 
   @override
   String toString() =>
-      'Failure(type: $type, message: $message, cause: $cause)';
+      'Failure(type: $type, message: $message, cause: $cause, stackTrace: $stackTrace)';
 }
+
+/// 실패 유형 분류
+enum FailureType { network, unauthorized, timeout, server, parsing, unknown }
 ```
 
 ---
@@ -64,15 +60,36 @@ class Failure {
 ## ✅ 예외 매핑 유틸 (`mapExceptionToFailure()`)
 
 ```dart
-Failure mapExceptionToFailure(Object error) {
+/// Exception을 Failure로 매핑하는 유틸
+Failure mapExceptionToFailure(Object error, StackTrace stackTrace) {
   if (error is TimeoutException) {
-    return Failure(FailureType.timeout, '요청 시간이 초과되었습니다', cause: error);
+    return Failure(
+      FailureType.timeout,
+      '요청 시간이 초과되었습니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   } else if (error is FormatException) {
-    return Failure(FailureType.parsing, '데이터 형식 오류입니다', cause: error);
+    return Failure(
+      FailureType.parsing,
+      '데이터 형식 오류입니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   } else if (error.toString().contains('SocketException')) {
-    return Failure(FailureType.network, '인터넷 연결을 확인해주세요', cause: error);
+    return Failure(
+      FailureType.network,
+      '인터넷 연결을 확인해주세요',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   } else {
-    return Failure(FailureType.unknown, '알 수 없는 오류가 발생했습니다', cause: error);
+    return Failure(
+      FailureType.unknown,
+      '알 수 없는 오류가 발생했습니다',
+      cause: error,
+      stackTrace: stackTrace,
+    );
   }
 }
 ```
@@ -86,8 +103,8 @@ Future<Result<User>> login(String email, String pw) async {
   try {
     final dto = await remote.login(email, pw);
     return Result.success(dto.toModel());
-  } catch (e) {
-    final failure = mapExceptionToFailure(e);
+  } catch (e, st) {
+    final failure = mapExceptionToFailure(e, st);
     return Result.error(failure);
   }
 }
@@ -103,7 +120,7 @@ try {
 } catch (e, st) {
   debugPrintStack(label: 'Repository Error', stackTrace: st);
   assert(false, '처리되지 않은 예외: $e');
-  return Result.error(mapExceptionToFailure(e));
+  return Result.error(mapExceptionToFailure(e, st));
 }
 ```
 
@@ -114,11 +131,16 @@ try {
 ## ✅ UI 처리 예시 (AsyncValue 기반)
 
 ```dart
-ref.watch(loginProvider).when(
-  loading: () => const CircularProgressIndicator(),
-  data: (user) => Text('환영합니다 ${user.email}'),
-  error: (e, _) => Text('에러: ${(e as Failure).message}'),
-);
+final loginState = ref.watch(loginProvider);
+
+switch (loginState) {
+  case AsyncLoading():
+    return CircularProgressIndicator();
+  case AsyncData(:final user):
+    return Text('환영합니다 ${user.email}');
+  case AsyncError(:final error, :_):
+    return Text('에러 발생: $error');
+}
 ```
 
 ---
