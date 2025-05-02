@@ -4,8 +4,6 @@ part 'hash_tag.freezed.dart';
 
 @freezed
 abstract class HashTag with _$HashTag {
-  const factory HashTag({
-    required String id,
-    required String content,
-  }) = _HashTag;
+  const factory HashTag({required String id, required String content}) =
+      _HashTag;
 }
