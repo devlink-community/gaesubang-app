@@ -47,14 +47,14 @@ abstract interface class UserRepository {
 
 ```dart
 class UserRepositoryImpl implements UserRepository {
-  final AuthDataSource _remote;
+  final AuthDataSource _dataSouce;
 
-  UserRepositoryImpl(this._remote);
+  UserRepositoryImpl(this._dataSouce);
 
   @override
   Future<Result<User>> login(String email, String password) async {
     try {
-      final dto = await _remote.fetchLogin(email, password);
+      final dto = await _dataSouce.fetchLogin(email, password);
       return Result.success(dto.toModel());
     } catch (e) {
       return Result.error(mapExceptionToFailure(e));
