@@ -1,6 +1,6 @@
-import 'package:devlink_mobile_app/auth/domain/model/user.dart';
+import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_state.freezed.dart';
 
@@ -8,5 +8,5 @@ part 'login_state.freezed.dart';
 class LoginState with _$LoginState {
   const LoginState({this.loginUserResult});
 
-  final AsyncValue<User>? loginUserResult;
+  final AsyncValue<Member>? loginUserResult;
 }
