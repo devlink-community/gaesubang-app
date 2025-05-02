@@ -79,7 +79,7 @@ class CommunityListScreen extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           itemCount: list.length,
           itemBuilder:
-              (_, i) => PostListItem(
+              (context, i) => PostListItem(
                 post: list[i],
                 onTap: () => onAction(CommunityListAction.tapPost(list[i].id)),
               ),
