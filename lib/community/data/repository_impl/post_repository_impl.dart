@@ -1,5 +1,5 @@
 // lib/community/data/repository_impl/post_repository_impl.dart
-import 'package:devlink_mobile_app/community/data/mapper/commnet_mapper.dart';
+import 'package:devlink_mobile_app/community/data/mapper/comment_mapper.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_data_source.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
