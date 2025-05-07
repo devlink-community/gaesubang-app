@@ -1,13 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../domain/model/member_attendance.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'attendance_state.freezed.dart';
 
 @freezed
-sealed class AttendanceState with _$AttendanceState {
+class AttendanceState with _$AttendanceState {
   const factory AttendanceState({
-    @Default(AsyncLoading()) AsyncValue<List<MemberAttendance>> attendances,
-    String? selectedMemberId,
+    @Default({}) Map<String, Color> attendanceStatus,
+    @Default(AsyncLoading()) AsyncValue<void> loading,
+    required DateTime selectedDate,
+    required DateTime displayedMonth,
   }) = _AttendanceState;
 }

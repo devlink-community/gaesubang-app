@@ -1,43 +1,100 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-import '../calendar_grid.dart';
-import 'attendance_action.dart';
-import 'attendance_state.dart'; // ← 이거는 기존 캘린더 위젯 분리했을 경우
+import '../component/calendar_grid.dart';
+import '../component/weekday_label.dart';
 
 class AttendanceScreen extends StatelessWidget {
-  final AttendanceState state;
-  final void Function(AttendanceAction action) onAction;
+  final DateTime selectedDate;
+  final DateTime displayedMonth;
+  final Map<String, Color> attendanceStatus;
+  final void Function(DateTime) onDateSelected;
+  final VoidCallback onPreviousMonth;
+  final VoidCallback onNextMonth;
 
-  const AttendanceScreen({super.key, required this.state, required this.onAction});
+  const AttendanceScreen({
+    super.key,
+    required this.selectedDate,
+    required this.displayedMonth,
+    required this.attendanceStatus,
+    required this.onDateSelected,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final displayedMonth = DateTime.now(); // 필요한 경우 상태에 추가 가능
-    final attendanceStatus = <DateTime, Color>{};
-
-    state.attendances.whenOrNull(data: (list) {
-      for (final item in list) {
-        final color = switch (item.percentage) {
-          >= 80 => const Color(0xFF5D5FEF),
-          >= 50 => const Color(0xFF7879F1),
-          >= 20 => const Color(0xFFA5A6F6),
-          _ => Colors.transparent,
-        };
-        final fakeDate = DateTime(displayedMonth.year, displayedMonth.month, list.indexOf(item) + 1);
-        attendanceStatus[fakeDate] = color;
-      }
-    });
-
     return Scaffold(
-      appBar: AppBar(title: const Text('출석부')),
-      body: CalendarGrid(
-        year: displayedMonth.year,
-        month: displayedMonth.month,
-        selectedDate: DateTime.now(),
-        attendanceStatus: attendanceStatus,
-        onDateSelected: (date) => onAction(AttendanceAction.selectMember(date.toIso8601String())),
-        isSameDay: (a, b) => a.year == b.year && a.month == b.month && a.day == b.day,
+      appBar: AppBar(
+        title: const Text(
+          '출석부',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: BackButton(color: Colors.black),
+      ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 12),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  WeekdayLabel(label: 'SUN'),
+                  WeekdayLabel(label: 'MON'),
+                  WeekdayLabel(label: 'TUE'),
+                  WeekdayLabel(label: 'WED'),
+                  WeekdayLabel(label: 'THU'),
+                  WeekdayLabel(label: 'FRI'),
+                  WeekdayLabel(label: 'SAT'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            CalendarGrid(
+              year: displayedMonth.year,
+              month: displayedMonth.month,
+              selectedDate: selectedDate,
+              onDateSelected: onDateSelected,
+              attendanceStatus: attendanceStatus,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: onPreviousMonth,
+                icon: const Icon(Icons.chevron_left, color: Color(0xFFA5A6F6)),
+              ),
+              IconButton(
+                onPressed: onNextMonth,
+                icon: const Icon(Icons.chevron_right, color: Color(0xFFA5A6F6)),
+              ),
+            ],
+          ),
+          Text(
+            "${displayedMonth.year}.${displayedMonth.month.toString().padLeft(2, '0')}",
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF262424),
+            ),
+          ),
+        ],
       ),
     );
   }

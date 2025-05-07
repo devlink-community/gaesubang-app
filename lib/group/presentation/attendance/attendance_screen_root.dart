@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import 'attendance_notifier.dart';
 import 'attendance_screen.dart';
-import 'attendance_state.dart';
-import 'attendance_action.dart';
 
 class AttendanceScreenRoot extends ConsumerWidget {
   const AttendanceScreenRoot({super.key});
@@ -14,8 +13,12 @@ class AttendanceScreenRoot extends ConsumerWidget {
     final notifier = ref.watch(attendanceNotifierProvider.notifier);
 
     return AttendanceScreen(
-      state: state,
-      onAction: notifier.onAction,
+      selectedDate: state.selectedDate,
+      displayedMonth: state.displayedMonth,
+      attendanceStatus: state.attendanceStatus,
+      onDateSelected: notifier.onDateSelected,
+      onPreviousMonth: notifier.onPreviousMonth,
+      onNextMonth: notifier.onNextMonth,
     );
   }
 }

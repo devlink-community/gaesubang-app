@@ -1,30 +1,49 @@
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../domain/usecase/get_group_attendance_use_case.dart';
-import '../../module/attendance_di.dart';
+import 'package:flutter/material.dart';
+
 import 'attendance_state.dart';
-import 'attendance_action.dart';
 
 part 'attendance_notifier.g.dart';
 
 @riverpod
 class AttendanceNotifier extends _$AttendanceNotifier {
-  late final GetGroupAttendanceUseCase _getAttendance;
-
   @override
   AttendanceState build() {
-    _getAttendance = ref.watch(getGroupAttendanceUseCaseProvider);
-    return const AttendanceState();
+    final now = DateTime.now();
+    return AttendanceState(
+      selectedDate: now,
+      displayedMonth: DateTime(now.year, now.month, 1),
+    );
   }
 
-  Future<void> onAction(AttendanceAction action) async {
-    switch (action) {
-      case LoadAttendance(:final date):
-        state = state.copyWith(attendances: const AsyncLoading());
-        final result = await _getAttendance.execute('group123', date);
-        state = state.copyWith(attendances: result);
+  void onDateSelected(DateTime date) {
+    final dateKey = _format(date);
+    final updatedStatus = Map<String, Color>.from(state.attendanceStatus);
 
-      case SelectMember(:final memberId):
-        state = state.copyWith(selectedMemberId: memberId);
+    if (updatedStatus.containsKey(dateKey)) {
+      updatedStatus.remove(dateKey);
+    } else {
+      updatedStatus[dateKey] = const Color(0xFFA5A6F6); // 임시 색상
     }
+
+    state = state.copyWith(
+      selectedDate: date,
+      attendanceStatus: updatedStatus,
+    );
+  }
+
+  void onPreviousMonth() {
+    final prevMonth = DateTime(state.displayedMonth.year, state.displayedMonth.month - 1, 1);
+    state = state.copyWith(displayedMonth: prevMonth);
+  }
+
+  void onNextMonth() {
+    final nextMonth = DateTime(state.displayedMonth.year, state.displayedMonth.month + 1, 1);
+    state = state.copyWith(displayedMonth: nextMonth);
+  }
+
+  String _format(DateTime date) {
+    return "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 }
