@@ -8,6 +8,7 @@ class MockProfileDataSource implements ProfileDataSource {
       'id': '0', // 동일한 userId
       'imagePath': 'mock/image/path',
       'onAir': true,
+      'description': '미소천사 입니다.',
     };
   }
 }
