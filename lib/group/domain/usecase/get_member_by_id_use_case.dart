@@ -1,4 +1,5 @@
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+
+import '../model/member.dart';
 
 class GetMemberByIdUseCase {
   Future<Member> execute(String id) async {

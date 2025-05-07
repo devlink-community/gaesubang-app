@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'attendance_notifier.dart';
+import 'attendance_screen.dart';
 import 'attendance_state.dart';
 import 'attendance_action.dart';
-import 'attendance_screen.dart';
 
 class AttendanceScreenRoot extends ConsumerWidget {
   const AttendanceScreenRoot({super.key});

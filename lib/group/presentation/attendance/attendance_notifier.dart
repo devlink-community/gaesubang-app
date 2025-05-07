@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/usecase/get_group_attendance_use_case.dart';
-import '../../module/auth_di.dart';
+import '../../module/attendance_di.dart';
 import 'attendance_state.dart';
 import 'attendance_action.dart';
 
