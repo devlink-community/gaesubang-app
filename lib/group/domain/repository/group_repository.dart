@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/group/domin/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/model/group.dart';
 
 abstract interface class GroupRepository {
   Future<Result<List<Group>>> getGroupList();
