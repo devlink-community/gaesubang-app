@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/community/data/data_source/mock_post_data_source_impl.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_comment_use_case.dart';
+import 'package:devlink_mobile_app/community/domain/usecase/create_post_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_comments_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_post_detail_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_bookmark_use_case.dart';
@@ -50,3 +51,7 @@ CreateCommentUseCase createCommentUseCase(Ref ref) =>
 @riverpod
 FetchCommentsUseCase fetchCommentsUseCase(Ref ref) =>
     FetchCommentsUseCase(repo: ref.watch(postRepositoryProvider));
+
+@riverpod
+CreatePostUseCase createPostUseCase(Ref ref) =>
+    CreatePostUseCase(repo: ref.watch(postRepositoryProvider));
