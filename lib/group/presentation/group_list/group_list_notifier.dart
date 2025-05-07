@@ -26,7 +26,6 @@ class GroupListNotifier extends _$GroupListNotifier {
   }
 
   Future<void> _loadGroupList() async {
-    state = state.copyWith(groupList: const AsyncLoading());
     final asyncResult = await _getGroupListUseCase.execute();
     state = state.copyWith(groupList: asyncResult);
   }
@@ -48,6 +47,11 @@ class GroupListNotifier extends _$GroupListNotifier {
       case OnLoadGroupList():
         await _loadGroupList();
       case OnTapGroup(:final groupId):
+        if (state.selectedGroup is AsyncLoading ||
+            (state.selectedGroup is AsyncData &&
+                (state.selectedGroup as AsyncData).value?.id == groupId)) {
+          return;
+        }
         await _getGroupDetail(groupId);
       case OnJoinGroup(:final groupId):
         await _joinGroup(groupId);

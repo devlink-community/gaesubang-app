@@ -8,6 +8,8 @@ import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen_root.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -47,3 +49,17 @@ UpdateGroupUseCase updateGroupUseCase(Ref ref) =>
 @riverpod
 LeaveGroupUseCase leaveGroupUseCase(Ref ref) =>
     LeaveGroupUseCase(repository: ref.watch(groupRepositoryProvider));
+
+// ---
+
+final List<GoRoute> groupRoutes = [
+  GoRoute(
+    path: '/group',
+    builder: (context, state) => const GroupListScreenRoot(),
+  ),
+];
+
+@riverpod
+GoRouter groupRouter(Ref ref) {
+  return GoRouter(initialLocation: '/group', routes: [...groupRoutes]);
+}

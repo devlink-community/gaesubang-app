@@ -63,7 +63,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         hashTags: hashTags,
         limitMemberCount: limitMemberCount,
         owner: owner,
-        imageUrl: i % 5 == 0 ? 'assets/images/group_${i % 3 + 1}.png' : null,
+        imageUrl: 'assets/images/group_${i + 1}.png',
       );
     });
   }
