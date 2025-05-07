@@ -1,5 +1,5 @@
 // lib/community/data/repository_impl/post_repository_impl.dart
-import 'package:devlink_mobile_app/community/data/mapper/commnet_mapper.dart';
+import 'package:devlink_mobile_app/community/data/mapper/comment_mapper.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_data_source.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
@@ -9,7 +9,7 @@ import 'package:devlink_mobile_app/community/domain/repository/post_repository.d
 
 class PostRepositoryImpl implements PostRepository {
   const PostRepositoryImpl({required PostDataSource dataSource})
-      : _remote = dataSource;
+    : _remote = dataSource;
 
   final PostDataSource _remote;
 
@@ -20,7 +20,9 @@ class PostRepositoryImpl implements PostRepository {
       final dto = await _remote.fetchPostList();
       return Result.success(dto.toModelList());
     } catch (e) {
-      return Result.error(mapExceptionToFailure(e,StackTrace.fromString(e.toString())));
+      return Result.error(
+        mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
+      );
     }
   }
 
@@ -48,20 +50,37 @@ class PostRepositoryImpl implements PostRepository {
     required String postId,
     required String memberId,
     required String content,
-  }) async =>
-      _wrap(() async => (await _remote.createComment(
-            postId: postId,
-            memberId: memberId,
-            content: content,
-          ))
-              .toModelList());
+  }) async => _wrap(
+    () async =>
+        (await _remote.createComment(
+          postId: postId,
+          memberId: memberId,
+          content: content,
+        )).toModelList(),
+  );
+
+  /* ---------- NEW ---------- */
+  @override
+  Future<String> createPost({
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) => _remote.createPost(
+    title: title,
+    content: content,
+    hashTags: hashTags,
+    imageUris: imageUris,
+  );
 
   /* ---------- Helper ---------- */
   Future<Result<T>> _wrap<T>(Future<T> Function() fn) async {
     try {
       return Result.success(await fn());
     } catch (e) {
-      return Result.error(mapExceptionToFailure(e,StackTrace.fromString(e.toString())));
+      return Result.error(
+        mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
+      );
     }
   }
 }

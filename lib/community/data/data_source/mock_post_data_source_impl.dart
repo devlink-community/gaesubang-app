@@ -66,6 +66,20 @@ class PostDataSourceImpl implements PostDataSource {
     ];
   }
 
+  /* ---------- NEW ---------- */
+  @override
+  Future<String> createPost({
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    // 실제 API 호출 자리. 여기서는 새 random id 반환
+    final newId = 'post_${_rand.nextInt(100000)}';
+    return newId;
+  }
+
   /* ---------- Mock Helpers ---------- */
   PostDto _mock(int i) {
     final likeCnt = _rand.nextInt(200);
@@ -79,7 +93,8 @@ class PostDataSourceImpl implements PostDataSource {
         nickname: 'user$i',
         uid: 'uid_$i',
         onAir: i.isEven,
-        image: '',
+        image:
+            'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
       ),
       boardType: BoardType.free,
       createdAt: DateTime.now().subtract(Duration(minutes: i * 5)),
@@ -87,15 +102,20 @@ class PostDataSourceImpl implements PostDataSource {
         HashTagDto(id: 't1', content: '#태그${i % 3}'),
         if (i.isEven) HashTagDto(id: 't2', content: '#인기'),
       ],
-      like:
-          List.generate(likeCnt, (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx')),
+      like: List.generate(
+        likeCnt,
+        (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx'),
+      ),
+      comment: [_mockComment('post_$i', i)],
+      image:
+          "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
     );
   }
 
   CommentDto _mockComment(String postId, int i) => CommentDto(
-        boardId: postId,
-        memberId: 'u$i',
-        createdAt: DateTime(2025, 4, 28),
-        content: '저도 참여하고 싶습니다!',
-      );
+    boardId: postId,
+    memberId: 'u$i',
+    createdAt: DateTime(2025, 4, 28),
+    content: '저도 참여하고 싶습니다!',
+  );
 }

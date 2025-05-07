@@ -32,10 +32,10 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   /* ---------- build ---------- */
   @override
   CommunityDetailState build(String postId) {
-    _postId        = postId;
-    _fetchDetail   = ref.watch(fetchPostDetailUseCaseProvider);
-    _toggleLike    = ref.watch(toggleLikeUseCaseProvider);
-    _toggleBookmark= ref.watch(toggleBookmarkUseCaseProvider);
+    _postId = postId;
+    _fetchDetail = ref.watch(fetchPostDetailUseCaseProvider);
+    _toggleLike = ref.watch(toggleLikeUseCaseProvider);
+    _toggleBookmark = ref.watch(toggleBookmarkUseCaseProvider);
     _fetchComments = ref.watch(fetchCommentsUseCaseProvider);
     _createComment = ref.watch(createCommentUseCaseProvider);
 
@@ -58,7 +58,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
       case AddComment(:final content):
         final res = await _createComment.execute(
           postId: _postId,
-          memberId: 'me',            // TODO: 실제 로그인 유저 ID
+          memberId: 'me', // TODO: 실제 로그인 유저 ID
           content: content,
         );
         _applyCommentResult(res);
@@ -69,12 +69,12 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   Future<void> _loadAll() async {
     // 1) 로딩 표시
     state = const CommunityDetailState(
-      post:     AsyncLoading(),
+      post: AsyncLoading(),
       comments: AsyncLoading(),
     );
 
     // 2) 동시 요청
-    final postRes    = _fetchDetail.execute(_postId);
+    final postRes = _fetchDetail.execute(_postId);
     final commentRes = _fetchComments.execute(_postId);
 
     _applyPostResult(await postRes);
@@ -86,9 +86,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
       case Success<Post>(:final data):
         state = state.copyWith(post: AsyncData(data));
       case Error<Post>(:final failure):
-        state = state.copyWith(
-          post: AsyncError(failure, StackTrace.current),
-        );
+        state = state.copyWith(post: AsyncError(failure, StackTrace.current));
     }
   }
 

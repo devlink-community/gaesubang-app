@@ -7,9 +7,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 part 'community_detail_state.freezed.dart';
 
 @freezed
-abstract class CommunityDetailState with _$CommunityDetailState {
-  const factory CommunityDetailState({
-    @Default(AsyncLoading()) AsyncValue<Post> post,
-    @Default(AsyncLoading()) AsyncValue<List<Comment>> comments,
-  }) = _CommunityDetailState;
+class CommunityDetailState with _$CommunityDetailState {
+  const CommunityDetailState({
+    this.post = const AsyncLoading(),
+    this.comments = const AsyncLoading(),
+  });
+
+  @override
+  final AsyncValue<Post> post;
+  @override
+  final AsyncValue<List<Comment>> comments;
 }

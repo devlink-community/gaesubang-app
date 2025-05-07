@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/load_post_list_use_case.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
-import 'package:devlink_mobile_app/community/module/util/%08community_tab_type_enum.dart';
+import 'package:devlink_mobile_app/community/module/util/community_tab_type_enum.dart';
+
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
