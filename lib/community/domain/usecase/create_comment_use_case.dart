@@ -11,9 +11,5 @@ class CreateCommentUseCase {
     required String memberId,
     required String content,
   }) =>
-      _repo.createComment(
-        postId: postId,
-        memberId: memberId,
-        content: content,
-      );
+      _repo.createComment(postId: postId, memberId: memberId, content: content);
 }
