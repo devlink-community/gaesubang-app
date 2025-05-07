@@ -20,6 +20,7 @@ class Post with _$Post {
     this.hashTag = const <HashTag>[],
     this.like = const <Like>[],
     this.comment = const <Comment>[],
+    this.image = 'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
   });
 
   @override
@@ -40,4 +41,5 @@ class Post with _$Post {
   final List<Like> like;
   @override
   final List<Comment> comment;
+  final String image;
 }

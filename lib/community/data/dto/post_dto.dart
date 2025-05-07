@@ -23,6 +23,7 @@ abstract class PostDto with _$PostDto {
     List<HashTagDto>? hashTag,
     List<LikeDto>? like,
     List<CommentDto>? comment,
+    String? image,
   }) = _PostDto;
 
   factory PostDto.fromJson(Map<String, dynamic> json) =>
