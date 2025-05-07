@@ -31,13 +31,22 @@ class GroupListItem extends StatelessWidget {
                   ),
                   child:
                       group.imageUrl != null
-                          ? Image.network(
-                            group.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.image, size: 40);
-                            },
-                          )
+                          ? (group.imageUrl!.startsWith('assets/') ||
+                                  group.imageUrl!.startsWith('asset/'))
+                              ? Image.asset(
+                                group.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.image, size: 40);
+                                },
+                              )
+                              : Image.network(
+                                group.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.image, size: 40);
+                                },
+                              )
                           : const Icon(Icons.image, size: 40),
                 ),
               ),
