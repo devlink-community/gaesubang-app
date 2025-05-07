@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.da
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
+import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_timer_status.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -54,9 +55,10 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
         _handleResetTimer();
 
       case SetGroupId(:final groupId):
-        _handleSetGroupId(groupId);
-        await _loadGroupSessions(groupId);
-        await _checkActiveSession();
+        await _handleSetGroupId(groupId);
+
+      case SetGroupInfo(:final groupName, :final hashTags):
+        _handleSetGroupInfo(groupName, hashTags);
 
       case RefreshSessions():
         await _loadGroupSessions(state.groupId);
@@ -66,6 +68,19 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
       case ViewStatistics():
         // 화면 이동은 Root에서 처리
+        break;
+
+      case ToggleTimer():
+        if (state.timerStatus == TimerStatus.running) {
+          _handlePauseTimer();
+        } else if (state.timerStatus == TimerStatus.paused ||
+            state.timerStatus == TimerStatus.initial) {
+          if (state.timerStatus == TimerStatus.initial) {
+            await _handleStartTimer();
+          } else {
+            _handleResumeTimer();
+          }
+        }
         break;
     }
   }
@@ -90,6 +105,9 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
     // 타이머 시작
     _startTimerCountdown();
+
+    // 모의 데이터 업데이트 (실제 구현에서는 서버에서 가져와야 함)
+    _updateMockMemberTimers();
   }
 
   // 타이머 일시정지 처리
@@ -154,8 +172,27 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   }
 
   // 그룹 ID 설정
-  void _handleSetGroupId(String groupId) {
+  Future<void> _handleSetGroupId(String groupId) async {
     state = state.copyWith(groupId: groupId);
+
+    // 기본 그룹 정보 설정 (실제 구현에서는 API 호출로 대체)
+    state = state.copyWith(
+      groupName: "소금빵 먹는 사람들",
+      participantCount: 4,
+      totalMemberCount: 6,
+      hashTags: ["지각중", "소금빵", "플리터"],
+    );
+
+    await _loadGroupSessions(groupId);
+    await _checkActiveSession();
+
+    // 모의 데이터 업데이트
+    _updateMockMemberTimers();
+  }
+
+  // 그룹 정보 설정
+  void _handleSetGroupInfo(String groupName, List<String> hashTags) {
+    state = state.copyWith(groupName: groupName, hashTags: hashTags);
   }
 
   // 그룹 세션 목록 로드
@@ -205,5 +242,71 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
     if (state.timerStatus != TimerStatus.running) return;
 
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
+
+    // 5초마다 멤버 타이머 업데이트 (실제 구현에서는 서버에서 주기적으로 가져와야 함)
+    if (state.elapsedSeconds % 5 == 0) {
+      _updateMockMemberTimers();
+    }
+  }
+
+  // 모의 멤버 타이머 데이터 업데이트 (실제 구현에서는 API 호출로 대체)
+  void _updateMockMemberTimers() {
+    // 기존 이미지들
+    final imageUrls = [
+      "https://example.com/avatar1.jpg", // 여우 이미지
+      "https://example.com/avatar2.jpg", // 곰돌이 이미지
+      "https://example.com/avatar3.jpg", // 웨딩 이미지
+      "https://example.com/avatar4.jpg", // 고양이 이미지
+      "https://example.com/avatar5.jpg", // 안경 쓴 남자 이미지
+      "https://example.com/avatar6.jpg", // 모자 쓴 이미지
+    ];
+
+    // 모의 데이터
+    final mockMembers = [
+      MemberTimer(
+        memberId: "user1",
+        memberName: "이용자1",
+        imageUrl: imageUrls[0],
+        elapsedSeconds: 3 * 3600, // 3시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user2",
+        memberName: "이용자2",
+        imageUrl: imageUrls[1],
+        elapsedSeconds: 0,
+        status: MemberTimerStatus.sleeping,
+      ),
+      MemberTimer(
+        memberId: "user3",
+        memberName: "이용자3",
+        imageUrl: imageUrls[2],
+        elapsedSeconds: 3 * 3600, // 3시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user4",
+        memberName: "이용자4",
+        imageUrl: imageUrls[3],
+        elapsedSeconds: 13 * 3600, // 13시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user5",
+        memberName: "이용자5",
+        imageUrl: imageUrls[4],
+        elapsedSeconds: 32 * 3600, // 32시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user6",
+        memberName: "이용자6",
+        imageUrl: imageUrls[5],
+        elapsedSeconds: 0,
+        status: MemberTimerStatus.sleeping,
+      ),
+    ];
+
+    state = state.copyWith(memberTimers: mockMembers);
   }
 }
