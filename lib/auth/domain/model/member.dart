@@ -11,6 +11,7 @@ class Member with _$Member {
     required this.uid,
     this.image = "",
     this.onAir = false,
+    this.description = "",
   });
 
   final String id;
@@ -19,4 +20,5 @@ class Member with _$Member {
   final String uid;
   final String image;
   final bool onAir;
+  final String description;
 }

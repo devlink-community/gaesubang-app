@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../auth/domain/model/member.dart';
 import 'component/focus_stats_chart.dart';
+import 'component/user_intro.dart';
 import 'intro_action.dart';
 import 'intro_state.dart';
 
@@ -30,33 +31,37 @@ class IntroScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // 프로필 부분
           state.userProfile.when(
-            data: (member) => _buildProfile(member),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('프로필 정보를 불러올 수 없습니다')),
+            data: (Member member) => ProfileInfo(member: member),
+            loading:
+                () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            error:
+                (_, __) => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('프로필 정보를 불러올 수 없습니다')),
+                ),
           ),
 
-          const Divider(),
+          // 구분선
+          const Divider(height: 1),
 
-          // 통계 차트 부분 (남은 공간 채우기)
-          Expanded(
-            child: state.focusStats.when(
-              data: (stats) => FocusStatsChart(stats: stats),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Center(child: Text('통계 정보를 불러올 수 없습니다')),
+          // ② 통계 차트 영역
+          Padding(
+            padding: EdgeInsets.all(30),
+            child: Expanded(
+              child: state.focusStats.when(
+                data: (stats) => FocusStatsChart(stats: stats),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error:
+                    (_, __) => const Center(child: Text('통계 정보를 불러올 수 없습니다')),
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildProfile(Member member) {
-    return ListTile(
-      leading: CircleAvatar(backgroundImage: NetworkImage(member.image)),
-      title: Text(member.nickname),
-      subtitle: Text(member.email),
     );
   }
 }

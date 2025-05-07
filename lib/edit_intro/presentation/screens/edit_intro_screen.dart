@@ -42,7 +42,9 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(editIntroProvider.notifier).updateProfile(
+    final success = await ref
+        .read(editIntroProvider.notifier)
+        .updateProfile(
           nickname: _nicknameController.text,
           intro: _introController.text,
         );
@@ -57,28 +59,22 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
     final state = ref.watch(editIntroProvider);
 
     if (state.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (state.hasError) {
       return Scaffold(
-        body: Center(
-          child: Text(state.errorMessage ?? '오류가 발생했습니다'),
-        ),
+        body: Center(child: Text(state.errorMessage ?? '오류가 발생했습니다')),
       );
     }
 
     final member = state.member;
     if (member == null) {
-      return const Scaffold(
-        body: Center(child: Text('프로필 정보를 불러올 수 없습니다')),
-      );
+      return const Scaffold(body: Center(child: Text('프로필 정보를 불러올 수 없습니다')));
     }
 
     _nicknameController.text = member.nickname;
-    _introController.text = member.image;
+    _introController.text = member.description;
 
     return Scaffold(
       appBar: AppBar(
@@ -100,12 +96,14 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: member.image.isNotEmpty
-                          ? NetworkImage(member.image)
-                          : null,
-                      child: member.image.isEmpty
-                          ? const Icon(Icons.person, size: 50)
-                          : null,
+                      backgroundImage:
+                          member.image.isNotEmpty
+                              ? NetworkImage(member.image)
+                              : null,
+                      child:
+                          member.image.isEmpty
+                              ? const Icon(Icons.person, size: 50)
+                              : null,
                     ),
                     Positioned(
                       bottom: 0,
@@ -116,7 +114,10 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.camera_alt, color: Colors.white),
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                          ),
                           onPressed: _pickImage,
                         ),
                       ),
@@ -158,4 +159,4 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
       ),
     );
   }
-} 
+}
