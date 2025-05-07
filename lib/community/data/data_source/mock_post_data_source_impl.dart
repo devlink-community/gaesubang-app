@@ -79,7 +79,8 @@ class PostDataSourceImpl implements PostDataSource {
         nickname: 'user$i',
         uid: 'uid_$i',
         onAir: i.isEven,
-        image: '',
+        image:
+            'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
       ),
       boardType: BoardType.free,
       createdAt: DateTime.now().subtract(Duration(minutes: i * 5)),
@@ -87,15 +88,18 @@ class PostDataSourceImpl implements PostDataSource {
         HashTagDto(id: 't1', content: '#태그${i % 3}'),
         if (i.isEven) HashTagDto(id: 't2', content: '#인기'),
       ],
-      like:
-          List.generate(likeCnt, (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx')),
+      like: List.generate(
+        likeCnt,
+        (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx'),
+      ),
+      comment: [_mockComment('post_$i', i)],
     );
   }
 
   CommentDto _mockComment(String postId, int i) => CommentDto(
-        boardId: postId,
-        memberId: 'u$i',
-        createdAt: DateTime(2025, 4, 28),
-        content: '저도 참여하고 싶습니다!',
-      );
+    boardId: postId,
+    memberId: 'u$i',
+    createdAt: DateTime(2025, 4, 28),
+    content: '저도 참여하고 싶습니다!',
+  );
 }
