@@ -1,3 +1,5 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list_item.dart';
@@ -19,20 +21,27 @@ class GroupListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Group'),
+        title: const Text('Group', style: AppTextStyles.heading6Bold),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(
+              Icons.search,
+              color: AppColorStyles.black,
+              size: 24,
+            ),
             onPressed: () => onAction(const GroupListAction.onTapSearch()),
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+        child: _buildBody(),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => onAction(const GroupListAction.onTapCreateGroup()),
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColorStyles.primary100,
+        child: const Icon(Icons.add, color: AppColorStyles.white),
       ),
     );
   }
@@ -54,11 +63,12 @@ class GroupListScreen extends StatelessWidget {
 
   Widget _buildGroupList(List<Group> groups) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
       itemCount: groups.length,
+      physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
         final group = groups[index];
         return GroupListItem(
+          key: ValueKey('group_${group.id}'),
           group: group,
           onTap: () => onAction(GroupListAction.onTapGroup(group.id)),
         );

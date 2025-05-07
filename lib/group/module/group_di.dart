@@ -17,6 +17,10 @@ import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.da
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+
+import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen_root.dart';
+import 'package:go_router/go_router.dart';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -83,3 +87,15 @@ ResumeTimerUseCase resumeTimerUseCase(Ref ref) =>
 @riverpod
 GetTimerSessionsUseCase getTimerSessionsUseCase(Ref ref) =>
     GetTimerSessionsUseCase(repository: ref.watch(timerRepositoryProvider));
+
+final List<GoRoute> groupRoutes = [
+  GoRoute(
+    path: '/group',
+    builder: (context, state) => const GroupListScreenRoot(),
+  ),
+];
+
+@riverpod
+GoRouter groupRouter(Ref ref) {
+  return GoRouter(initialLocation: '/group', routes: [...groupRoutes]);
+}
