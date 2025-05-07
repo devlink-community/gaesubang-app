@@ -1,4 +1,3 @@
-// lib/group/presentation/group_timer/group_timer_screen_root.dart
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_screen.dart';
@@ -38,9 +37,17 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot> {
       state: state,
       onAction: (action) async {
         switch (action) {
-          case ViewStatistics():
-            // 통계 화면으로 이동
-            context.push('/group/${widget.groupId}/statistics');
+          case NavigateToAttendance():
+            // 출석부(캘린더) 화면으로 이동
+            context.push('/group/${widget.groupId}/attendance');
+
+          case NavigateToSettings():
+            // 그룹 설정 화면으로 이동
+            context.push('/group/${widget.groupId}/settings');
+
+          case NavigateToUserProfile(:final userId):
+            // 사용자 프로필 화면으로 이동
+            context.push('/user/$userId/profile');
 
           default:
             // 기타 액션은 Notifier에 위임

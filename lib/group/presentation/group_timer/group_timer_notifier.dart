@@ -66,10 +66,6 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
       case TimerTick():
         _handleTimerTick();
 
-      case ViewStatistics():
-        // 화면 이동은 Root에서 처리
-        break;
-
       case ToggleTimer():
         if (state.timerStatus == TimerStatus.running) {
           _handlePauseTimer();
@@ -81,6 +77,13 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
             _handleResumeTimer();
           }
         }
+        break;
+
+      // 네비게이션 액션들 - 이 파일에서는 처리하지 않음(Root에서 처리)
+      case NavigateToAttendance():
+      case NavigateToSettings():
+      case NavigateToUserProfile():
+        // 이러한 네비게이션 액션들은 Root에서 처리하므로 여기서는 아무 것도 하지 않음
         break;
     }
   }
@@ -177,10 +180,10 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
     // 기본 그룹 정보 설정 (실제 구현에서는 API 호출로 대체)
     state = state.copyWith(
-      groupName: "소금빵 먹는 사람들",
+      groupName: "문성용 왕팬맨",
       participantCount: 4,
       totalMemberCount: 6,
-      hashTags: ["지각중", "소금빵", "플리터"],
+      hashTags: ["왕팬맨", "#코더", "#코코아"],
     );
 
     await _loadGroupSessions(groupId);
