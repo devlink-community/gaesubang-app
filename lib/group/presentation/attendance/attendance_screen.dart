@@ -1,100 +1,58 @@
 import 'package:flutter/material.dart';
 import '../component/calendar_grid.dart';
-import '../component/weekday_label.dart';
+import 'attendance_action.dart';
+import 'attendance_state.dart';
 
 class AttendanceScreen extends StatelessWidget {
-  final DateTime selectedDate;
-  final DateTime displayedMonth;
-  final Map<String, Color> attendanceStatus;
-  final void Function(DateTime) onDateSelected;
-  final VoidCallback onPreviousMonth;
-  final VoidCallback onNextMonth;
+  final AttendanceState state;
+  final void Function(AttendanceAction) onAction;
 
   const AttendanceScreen({
     super.key,
-    required this.selectedDate,
-    required this.displayedMonth,
-    required this.attendanceStatus,
-    required this.onDateSelected,
-    required this.onPreviousMonth,
-    required this.onNextMonth,
+    required this.state,
+    required this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '출석부',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: BackButton(color: Colors.black),
-      ),
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('출석부'),
+        centerTitle: true,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            const SizedBox(height: 12),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  WeekdayLabel(label: 'SUN'),
-                  WeekdayLabel(label: 'MON'),
-                  WeekdayLabel(label: 'TUE'),
-                  WeekdayLabel(label: 'WED'),
-                  WeekdayLabel(label: 'THU'),
-                  WeekdayLabel(label: 'FRI'),
-                  WeekdayLabel(label: 'SAT'),
-                ],
-              ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () => onAction(const AttendanceAction.previousMonth()),
+                ),
+                Text(
+                  '${state.displayedMonth.year}년 ${state.displayedMonth.month}월',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () => onAction(const AttendanceAction.nextMonth()),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             CalendarGrid(
-              year: displayedMonth.year,
-              month: displayedMonth.month,
-              selectedDate: selectedDate,
-              onDateSelected: onDateSelected,
-              attendanceStatus: attendanceStatus,
+              year: state.displayedMonth.year,
+              month: state.displayedMonth.month,
+              selectedDate: state.selectedDate,
+              onDateSelected: (date) => onAction(AttendanceAction.selectDate(date)),
+              attendanceStatus: state.attendanceStatus,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: onPreviousMonth,
-                icon: const Icon(Icons.chevron_left, color: Color(0xFFA5A6F6)),
-              ),
-              IconButton(
-                onPressed: onNextMonth,
-                icon: const Icon(Icons.chevron_right, color: Color(0xFFA5A6F6)),
-              ),
-            ],
-          ),
-          Text(
-            "${displayedMonth.year}.${displayedMonth.month.toString().padLeft(2, '0')}",
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF262424),
-            ),
-          ),
-        ],
       ),
     );
   }

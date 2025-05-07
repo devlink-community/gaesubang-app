@@ -10,15 +10,11 @@ class AttendanceScreenRoot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(attendanceNotifierProvider);
-    final notifier = ref.watch(attendanceNotifierProvider.notifier);
+    final notifier = ref.read(attendanceNotifierProvider.notifier);
 
     return AttendanceScreen(
-      selectedDate: state.selectedDate,
-      displayedMonth: state.displayedMonth,
-      attendanceStatus: state.attendanceStatus,
-      onDateSelected: notifier.onDateSelected,
-      onPreviousMonth: notifier.onPreviousMonth,
-      onNextMonth: notifier.onNextMonth,
+      state: state,
+      onAction: notifier.onAction,
     );
   }
 }
