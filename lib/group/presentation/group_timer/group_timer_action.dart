@@ -34,9 +34,16 @@ sealed class GroupTimerAction with _$GroupTimerAction {
   // 타이머 틱 업데이트 액션 (1초마다 호출)
   const factory GroupTimerAction.timerTick() = TimerTick;
 
-  // 타이머 통계 보기 클릭 (화면 이동용)
-  const factory GroupTimerAction.viewStatistics() = ViewStatistics;
-
   // 타이머 토글 액션 (시작/일시정지)
   const factory GroupTimerAction.toggleTimer() = ToggleTimer;
+
+  // 출석부(캘린더) 화면으로 이동
+  const factory GroupTimerAction.navigateToAttendance() = NavigateToAttendance;
+
+  // 그룹 설정 화면으로 이동
+  const factory GroupTimerAction.navigateToSettings() = NavigateToSettings;
+
+  // 사용자 프로필 화면으로 이동
+  const factory GroupTimerAction.navigateToUserProfile(String userId) =
+      NavigateToUserProfile;
 }
