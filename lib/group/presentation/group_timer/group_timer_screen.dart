@@ -1,9 +1,8 @@
-import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
+import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_timer_item.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/timer_circle_progress.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class GroupTimerScreen extends StatelessWidget {
   const GroupTimerScreen({
@@ -19,245 +18,118 @@ class GroupTimerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('집중 타이머'),
+        title: Text(state.groupName),
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => onAction(const GroupTimerAction.viewStatistics()),
-            tooltip: '통계 보기',
+            icon: const Icon(Icons.settings),
+            onPressed: () {}, // 설정 화면으로 이동
           ),
         ],
       ),
-      body: Column(children: [_buildTimerSection(), _buildSessionList()]),
-    );
-  }
-
-  // 타이머 섹션
-  Widget _buildTimerSection() {
-    return Expanded(
-      flex: 3,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 그룹명 표시
-            Text(
-              '${state.groupId} 그룹',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-
-            // 타이머 원형 프로그레스
-            TimerCircleProgress(
-              elapsedSeconds: state.elapsedSeconds,
-              totalSeconds: 60 * 25, // 25분 (포모도로 기본)
-              radius: 120,
-              strokeWidth: 15,
-            ),
-            const SizedBox(height: 30),
-
-            // 타이머 컨트롤 버튼들
-            _buildTimerControls(),
-
-            // 에러 메시지 (있는 경우)
-            if (state.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  state.errorMessage!,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 타이머 컨트롤 버튼들
-  Widget _buildTimerControls() {
-    // 타이머 상태에 따라 다른 버튼 표시
-    switch (state.timerStatus) {
-      case TimerStatus.initial:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildControlButton(
-              label: '시작',
-              icon: Icons.play_arrow,
-              color: Colors.green,
-              onPressed: () => onAction(const GroupTimerAction.startTimer()),
-            ),
-          ],
-        );
-
-      case TimerStatus.running:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildControlButton(
-              label: '일시정지',
-              icon: Icons.pause,
-              color: Colors.orange,
-              onPressed: () => onAction(const GroupTimerAction.pauseTimer()),
-            ),
-            const SizedBox(width: 20),
-            _buildControlButton(
-              label: '종료',
-              icon: Icons.stop,
-              color: Colors.red,
-              onPressed: () => onAction(const GroupTimerAction.stopTimer()),
-            ),
-          ],
-        );
-
-      case TimerStatus.paused:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildControlButton(
-              label: '재개',
-              icon: Icons.play_arrow,
-              color: Colors.green,
-              onPressed: () => onAction(const GroupTimerAction.resumeTimer()),
-            ),
-            const SizedBox(width: 20),
-            _buildControlButton(
-              label: '종료',
-              icon: Icons.stop,
-              color: Colors.red,
-              onPressed: () => onAction(const GroupTimerAction.stopTimer()),
-            ),
-          ],
-        );
-
-      case TimerStatus.completed:
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildControlButton(
-              label: '새로 시작',
-              icon: Icons.refresh,
-              color: Colors.blue,
-              onPressed: () {
-                onAction(const GroupTimerAction.resetTimer());
-                onAction(const GroupTimerAction.startTimer());
-              },
-            ),
-          ],
-        );
-    }
-  }
-
-  // 컨트롤 버튼 위젯
-  Widget _buildControlButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white),
-      label: Text(label, style: const TextStyle(color: Colors.white)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      ),
-    );
-  }
-
-  // 세션 목록 섹션
-  Widget _buildSessionList() {
-    return Expanded(
-      flex: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '최근 집중 기록',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed:
-                      () => onAction(const GroupTimerAction.refreshSessions()),
-                  tooltip: '새로고침',
-                ),
-              ],
-            ),
-          ),
-          Expanded(child: _buildSessionListContent()),
+          _buildHeader(), // 상단 정보 영역
+          _buildTimerSection(), // 타이머 영역
+          _buildMessage(), // 메시지 영역
+          _buildHashTags(), // 해시태그 영역
+          _buildMemberTimers(), // 멤버 타이머 영역
         ],
       ),
     );
   }
 
-  // 세션 목록 내용
-  Widget _buildSessionListContent() {
-    switch (state.sessions) {
-      case AsyncLoading():
-        return const Center(child: CircularProgressIndicator());
+  // 상단 정보 영역 (참여자 수, 날짜)
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 참여자 수
+          Row(
+            children: [
+              const Icon(Icons.person, size: 20),
+              const SizedBox(width: 4),
+              Text('${state.participantCount} / ${state.totalMemberCount}'),
+            ],
+          ),
 
-      case AsyncError(:final error):
-        return Center(child: Text('세션 목록을 불러올 수 없습니다: $error'));
-
-      case AsyncData(:final value):
-        if (value.isEmpty) {
-          return const Center(child: Text('아직 집중 기록이 없습니다'));
-        }
-
-        return ListView.builder(
-          itemCount: value.length,
-          itemBuilder: (context, index) {
-            final session = value[index];
-            return _buildSessionItem(session);
-          },
-        );
-    }
-
-    // 기본 반환값 추가
-    return const SizedBox.shrink();
-  }
-
-  // 개별 세션 아이템
-  Widget _buildSessionItem(TimerSession session) {
-    final duration = Duration(seconds: session.duration);
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-
-    final formattedDate = _formatDate(session.startTime);
-    final formattedDuration = '$minutes분 ${seconds}초';
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.timer)),
-        title: Text(formattedDuration),
-        subtitle: Text(formattedDate),
-        trailing:
-            session.isCompleted
-                ? const Icon(Icons.check_circle, color: Colors.green)
-                : const Icon(Icons.pending, color: Colors.orange),
+          // 달력 아이콘
+          IconButton(
+            icon: const Icon(Icons.calendar_today, size: 20),
+            onPressed: () => onAction(const GroupTimerAction.viewStatistics()),
+          ),
+        ],
       ),
     );
   }
 
-  // 날짜 포맷팅 헬퍼
-  String _formatDate(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+  // 타이머 영역
+  Widget _buildTimerSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TimerCircleProgress(
+        elapsedSeconds: state.elapsedSeconds,
+        isRunning: state.timerStatus == TimerStatus.running,
+        onTap: () => onAction(const GroupTimerAction.toggleTimer()),
+      ),
+    );
+  }
 
-    if (date == today) {
-      return '오늘 ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-    }
+  // 메시지 영역
+  Widget _buildMessage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Text(
+        '안녕하세요. 저희는 소금빵을 먹으며 공부하는 소막입니다.\n'
+        '다들 소금빵 좋아하시나요?\n'
+        '한 줄이라도 코드를 나가주세요.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 14, color: Colors.black87),
+      ),
+    );
+  }
 
-    return '${dateTime.month}/${dateTime.day} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  // 해시태그 영역
+  Widget _buildHashTags() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        children:
+            state.hashTags.map((tag) {
+              return Text(
+                '#$tag',
+                style: const TextStyle(color: Colors.blue, fontSize: 14),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  // 멤버 타이머 영역
+  Widget _buildMemberTimers() {
+    // 그리드 레이아웃으로 표시 (3열)
+    return Expanded(
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, // 3열 그리드
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.8, // 자식 위젯의 가로/세로 비율
+        ),
+        itemCount: state.memberTimers.length,
+        itemBuilder: (context, index) {
+          final member = state.memberTimers[index];
+          return MemberTimerItem(
+            imageUrl: member.imageUrl,
+            status: member.status,
+            timeDisplay: member.timeDisplay,
+          );
+        },
+      ),
+    );
   }
 }
