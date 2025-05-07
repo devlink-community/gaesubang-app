@@ -10,7 +10,7 @@ class PostListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     leading: Image.network(
-      "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
+      post.image,
       width: 70,
       height: 70,
       fit: BoxFit.cover,
