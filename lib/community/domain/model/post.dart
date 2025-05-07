@@ -1,5 +1,6 @@
 // lib/community/domain/model/post.dart
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
@@ -18,6 +19,7 @@ class Post with _$Post {
     required this.createdAt,
     this.hashTag = const <HashTag>[],
     this.like = const <Like>[],
+    this.comment = const <Comment>[],
   });
 
   @override
@@ -36,4 +38,6 @@ class Post with _$Post {
   final List<HashTag> hashTag;
   @override
   final List<Like> like;
+  @override
+  final List<Comment> comment;
 }
