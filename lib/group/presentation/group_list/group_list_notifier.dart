@@ -26,7 +26,6 @@ class GroupListNotifier extends _$GroupListNotifier {
   }
 
   Future<void> _loadGroupList() async {
-    state = state.copyWith(groupList: const AsyncLoading());
     final asyncResult = await _getGroupListUseCase.execute();
     state = state.copyWith(groupList: asyncResult);
   }
