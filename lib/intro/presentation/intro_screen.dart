@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../auth/domain/model/member.dart';
-import '../domain/model/focus_time_stats.dart';
 import 'component/focus_stats_chart.dart';
 import 'intro_action.dart';
 import 'intro_state.dart';
