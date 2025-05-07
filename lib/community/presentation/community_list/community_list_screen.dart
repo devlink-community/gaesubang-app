@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'community_list_state.dart';
 import 'community_list_action.dart';
-import '../component/post_list_item.dart';
+import '../components/post_list_item.dart';
 
 class CommunityListScreen extends StatelessWidget {
   const CommunityListScreen({
@@ -109,19 +109,6 @@ class CommunityListScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildTabBar() => TabBar(
-    labelColor: Colors.blue,
-    indicatorColor: Colors.blue,
-    unselectedLabelColor: Colors.grey,
-    onTap:
-        (i) => onAction(
-          CommunityListAction.changeTab(
-            i == 0 ? CommunityTabType.popular : CommunityTabType.newest,
-          ),
-        ),
-    tabs: const [Tab(text: '인기순'), Tab(text: '최신순')],
-  );
 
   Widget? _buildPostList() {
     switch (state.postList) {
