@@ -47,6 +47,11 @@ class GroupListNotifier extends _$GroupListNotifier {
       case OnLoadGroupList():
         await _loadGroupList();
       case OnTapGroup(:final groupId):
+        if (state.selectedGroup is AsyncLoading ||
+            (state.selectedGroup is AsyncData &&
+                (state.selectedGroup as AsyncData).value?.id == groupId)) {
+          return;
+        }
         await _getGroupDetail(groupId);
       case OnJoinGroup(:final groupId):
         await _joinGroup(groupId);

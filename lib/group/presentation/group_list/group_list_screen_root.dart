@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/group/presentation/group_join_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen.dart';
@@ -68,74 +69,9 @@ class GroupListScreenRoot extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '안녕하세요. 저희는 소그룹을 만들어...',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '"${group.name}" 스터디에 참여하시겠습니까?',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const Text(
-                '멤버 추가 인증이 필요할 수 있습니다.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 8,
-          ),
-          actions: [
-            SizedBox(
-              width: 140,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed:
-                    () => notifier.onAction(
-                      const GroupListAction.onCloseDialog(),
-                    ),
-                child: const Text('취소'),
-              ),
-            ),
-            SizedBox(
-              width: 140,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed:
-                    () => notifier.onAction(
-                      GroupListAction.onJoinGroup(group.id),
-                    ),
-                child: const Text('참여하기'),
-              ),
-            ),
-          ],
+        return GroupJoinDialog(
+          group: group,
+          onAction: (action) => notifier.onAction(action),
         );
       },
     );
