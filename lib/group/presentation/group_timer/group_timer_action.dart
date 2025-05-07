@@ -22,6 +22,12 @@ sealed class GroupTimerAction with _$GroupTimerAction {
   // 그룹 ID 설정 액션
   const factory GroupTimerAction.setGroupId(String groupId) = SetGroupId;
 
+  // 그룹 정보 설정 액션
+  const factory GroupTimerAction.setGroupInfo(
+    String groupName,
+    List<String> hashTags,
+  ) = SetGroupInfo;
+
   // 세션 목록 새로고침 액션
   const factory GroupTimerAction.refreshSessions() = RefreshSessions;
 
@@ -30,4 +36,7 @@ sealed class GroupTimerAction with _$GroupTimerAction {
 
   // 타이머 통계 보기 클릭 (화면 이동용)
   const factory GroupTimerAction.viewStatistics() = ViewStatistics;
+
+  // 타이머 토글 액션 (시작/일시정지)
+  const factory GroupTimerAction.toggleTimer() = ToggleTimer;
 }
