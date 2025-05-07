@@ -1,13 +1,23 @@
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source_impl.dart';
+import 'package:devlink_mobile_app/group/data/data_source/mock_timer_data_source_impl.dart';
+// 타이머 관련 import 추가
+import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
+import 'package:devlink_mobile_app/group/data/repository_impl/timer_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen_root.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,7 +60,33 @@ UpdateGroupUseCase updateGroupUseCase(Ref ref) =>
 LeaveGroupUseCase leaveGroupUseCase(Ref ref) =>
     LeaveGroupUseCase(repository: ref.watch(groupRepositoryProvider));
 
-// ---
+// ==================== 그룹 타이머 관련 DI ====================
+
+// TimerDataSource 프로바이더
+@riverpod
+TimerDataSource timerDataSource(Ref ref) => MockTimerDataSourceImpl();
+
+// TimerRepository 프로바이더
+@riverpod
+TimerRepository timerRepository(Ref ref) =>
+    TimerRepositoryImpl(dataSource: ref.watch(timerDataSourceProvider));
+
+// Timer UseCase 프로바이더들
+@riverpod
+StartTimerUseCase startTimerUseCase(Ref ref) =>
+    StartTimerUseCase(repository: ref.watch(timerRepositoryProvider));
+
+@riverpod
+StopTimerUseCase stopTimerUseCase(Ref ref) =>
+    StopTimerUseCase(repository: ref.watch(timerRepositoryProvider));
+
+@riverpod
+ResumeTimerUseCase resumeTimerUseCase(Ref ref) =>
+    ResumeTimerUseCase(repository: ref.watch(timerRepositoryProvider));
+
+@riverpod
+GetTimerSessionsUseCase getTimerSessionsUseCase(Ref ref) =>
+    GetTimerSessionsUseCase(repository: ref.watch(timerRepositoryProvider));
 
 final List<GoRoute> groupRoutes = [
   GoRoute(

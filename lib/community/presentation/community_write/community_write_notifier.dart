@@ -1,9 +1,8 @@
 // lib/community/presentation/community_write/community_write_notifier.dart
-import 'dart:typed_data';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
-import 'package:devlink_mobile_app/community/presentation/community_write/community_write_state.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_action.dart';
+import 'package:devlink_mobile_app/community/presentation/community_write/community_write_state.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_write_notifier.g.dart';
 
@@ -59,15 +58,9 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
         hashTags: state.hashTags,
         imageUris: [], // 파일 업로드 후 URL 로 교체하는 로직이 있으면 전달
       );
-      state = state.copyWith(
-        submitting: false,
-        createdPostId: postId,
-      );
+      state = state.copyWith(submitting: false, createdPostId: postId);
     } catch (e) {
-      state = state.copyWith(
-        submitting: false,
-        errorMessage: '게시글 작성에 실패했습니다',
-      );
+      state = state.copyWith(submitting: false, errorMessage: '게시글 작성에 실패했습니다');
     }
   }
 }
