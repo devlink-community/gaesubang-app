@@ -66,6 +66,20 @@ class PostDataSourceImpl implements PostDataSource {
     ];
   }
 
+  /* ---------- NEW ---------- */
+  @override
+  Future<String> createPost({
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    // 실제 API 호출 자리. 여기서는 새 random id 반환
+    final newId = 'post_${_rand.nextInt(100000)}';
+    return newId;
+  }
+
   /* ---------- Mock Helpers ---------- */
   PostDto _mock(int i) {
     final likeCnt = _rand.nextInt(200);
@@ -93,6 +107,8 @@ class PostDataSourceImpl implements PostDataSource {
         (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx'),
       ),
       comment: [_mockComment('post_$i', i)],
+      image:
+          "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
     );
   }
 
