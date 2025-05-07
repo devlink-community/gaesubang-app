@@ -1,4 +1,5 @@
 // lib/community/data/dto/post_dto.dart
+import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/like_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
@@ -21,6 +22,8 @@ abstract class PostDto with _$PostDto {
     DateTime? createdAt,
     List<HashTagDto>? hashTag,
     List<LikeDto>? like,
+    List<CommentDto>? comment,
+    String? image,
   }) = _PostDto;
 
   factory PostDto.fromJson(Map<String, dynamic> json) =>

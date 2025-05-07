@@ -3,11 +3,20 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'comment.freezed.dart';
 
 @freezed
-abstract class Comment with _$Comment {
-  const factory Comment({
-    required String boardId,
-    required String memberId,
-    required DateTime createdAt,
-    required String content,
-  }) = _Comment;
+class Comment with _$Comment {
+  const Comment({
+    required this.boardId,
+    required this.memberId,
+    required this.createdAt,
+    required this.content,
+  });
+
+  @override
+  final String boardId;
+  @override
+  final String memberId;
+  @override
+  final DateTime createdAt;
+  @override
+  final String content;
 }
