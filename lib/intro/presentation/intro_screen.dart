@@ -1,8 +1,10 @@
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../auth/domain/model/member.dart';
+// ← 임포트 추가
 import 'component/focus_stats_chart.dart';
+import 'component/total_focus.dart';
 import 'component/user_intro.dart';
 import 'intro_action.dart';
 import 'intro_state.dart';
@@ -17,50 +19,64 @@ class IntroScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Intro'),
+        centerTitle: true,
+        title: Text('프로필', style: AppTextStyles.heading3Bold),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => onAction(const RefreshIntro()),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
+            iconSize: 30,
             onPressed: () => onAction(const OpenSettings()),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          state.userProfile.when(
-            data: (Member member) => ProfileInfo(member: member),
-            loading:
-                () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-            error:
-                (_, __) => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('프로필 정보를 불러올 수 없습니다')),
-                ),
-          ),
+      body: Padding(
+        padding: EdgeInsets.all(30),
+        child: Column(
+          children: [
+            // 프로필 영역
+            state.userProfile.when(
+              data: (member) => ProfileInfo(member: member),
+              loading:
+                  () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              error:
+                  (_, __) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: Text('프로필 정보를 불러올 수 없습니다')),
+                  ),
+            ),
 
-          // 구분선
-          const Divider(height: 1),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
 
-          // ② 통계 차트 영역
-          Padding(
-            padding: EdgeInsets.all(30),
-            child: Expanded(
+            // 통계 + 차트 영역
+            Expanded(
               child: state.focusStats.when(
-                data: (stats) => FocusStatsChart(stats: stats),
+                data: (stats) {
+                  // ⚙️ 여기를 Column으로 감싸서 두 개의 위젯을 배치
+                  return Column(
+                    children: [
+                      // ① 총시간 정보
+                      Center(
+                        child: TotalTimeInfo(totalMinutes: stats.totalMinutes),
+                      ),
+                      // ② 차트
+                      Padding(
+                        padding: EdgeInsets.only(top: 30, bottom: 30),
+                        child: Expanded(child: FocusStatsChart(stats: stats)),
+                      ),
+                    ],
+                  );
+                },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error:
                     (_, __) => const Center(child: Text('통계 정보를 불러올 수 없습니다')),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
