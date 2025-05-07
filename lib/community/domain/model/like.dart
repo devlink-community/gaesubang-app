@@ -3,9 +3,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'like.freezed.dart';
 
 @freezed
-abstract class Like with _$Like {
-  const factory Like({
-    required String boardId,
-    required String memberId,
-  }) = _Like;
+class Like with _$Like {
+  const Like({required this.boardId, required this.memberId});
+
+  @override
+  final String boardId;
+  @override
+  final String memberId;
 }
