@@ -23,8 +23,8 @@ AttendanceRepository attendanceRepository(Ref ref) =>
     AttendanceRepositoryImpl(ref.watch(attendanceDataSourceProvider));
 
 @riverpod
-GetAttendanceByGroupUseCase getAttendanceByDateUseCase(Ref ref) =>
-    GetAttendanceByGroupUseCase(ref.watch(attendanceRepositoryProvider));
+GetAttendanceByDateUseCase getAttendanceByDateUseCase(Ref ref) =>
+    GetAttendanceByDateUseCase(ref.watch(attendanceRepositoryProvider));
 
 // ------------------- Route -------------------
 

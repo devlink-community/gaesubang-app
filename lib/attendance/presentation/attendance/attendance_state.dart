@@ -7,14 +7,14 @@ class AttendanceState {
   final AsyncValue<void> loading;
   final DateTime selectedDate;
   final DateTime displayedMonth;
-  final String groupId;
+  final List<Member> group;
 
   const AttendanceState({
     this.attendanceStatus = const {},
     this.loading = const AsyncLoading(),
     required this.selectedDate,
     required this.displayedMonth,
-    required this.groupId,
+    required this.group,
   });
 
   AttendanceState copyWith({

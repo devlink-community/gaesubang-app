@@ -9,10 +9,10 @@ class GetAttendanceByDateUseCase {
 
   Future<Result<List<Attendance>>> execute({
     required List<String> memberIds,
-    // required DateTime date,
+    required DateTime date,
   }) {
-    return repository.fetchAttendancesByGroup(groupId: groupId,
-        // date: date
+    return repository.fetchAttendancesByDate(memberIds: memberIds,
+        date: date
     );
   }
 }

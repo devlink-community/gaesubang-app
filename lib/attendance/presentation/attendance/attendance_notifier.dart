@@ -12,7 +12,7 @@ part 'attendance_notifier.g.dart';
 
 @riverpod
 class AttendanceNotifier extends _$AttendanceNotifier {
-  late final GetAttendanceByGroupUseCase _useCase;
+  late final GetAttendanceByDateUseCase _useCase;
 
   @override
   AttendanceState build() {
