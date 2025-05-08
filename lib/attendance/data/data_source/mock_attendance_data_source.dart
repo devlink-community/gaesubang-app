@@ -2,9 +2,40 @@ import 'dart:async';
 
 import 'package:intl/intl.dart';
 
+import '../../domain/model/member.dart';
 import 'attendance_data_source.dart';
 
 class MockAttendanceDataSource implements AttendanceDataSource {
+  final _mockMembers = [
+    Member(
+      id: 'user1',
+      email: 'user1@example.com',
+      nickname: '사용자1',
+      uid: 'uid1',
+      onAir: true,
+    ),
+    Member(
+      id: 'user2',
+      email: 'user2@example.com',
+      nickname: '사용자2',
+      uid: 'uid2',
+    ),
+    Member(
+      id: 'user3',
+      email: 'user3@example.com',
+      nickname: '사용자3',
+      uid: 'uid3',
+    ),
+    Member(
+      id: 'user4',
+      email: 'user4@example.com',
+      nickname: '사용자4',
+      uid: 'uid4',
+      onAir: true,
+    ),
+  ];
+
+  // 출석 데이터
   final _mockData = [
     {
       'memberId': 'user1',
@@ -27,6 +58,11 @@ class MockAttendanceDataSource implements AttendanceDataSource {
       'time': 250, // 80%
     },
   ];
+
+  // 멤버 ID로 멤버 데이터 조회
+  List<Member> getMembersByIds(List<String> memberIds) {
+    return _mockMembers.where((member) => memberIds.contains(member.id)).toList();
+  }
 
   @override
   Future<List<Map<String, dynamic>>> fetchAttendancesByDate({
