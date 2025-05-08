@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'group/module/attendance_di.dart';
+import 'attendance/module/attendance_di.dart';
+
 
 
 void main() {
