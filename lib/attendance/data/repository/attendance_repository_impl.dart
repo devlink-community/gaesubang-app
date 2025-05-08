@@ -6,19 +6,19 @@ import '../dto/attendance_dto.dart';
 import '../mapper/attendance_mapper.dart';
 
 class AttendanceRepositoryImpl implements AttendanceRepository {
-  final AttendanceDataSource dataSource;
+  final AttendanceDataSource _dataSource;
 
-  AttendanceRepositoryImpl(this.dataSource);
+  AttendanceRepositoryImpl(this._dataSource);
 
   @override
-  Future<Result<List<Attendance>>> fetchAttendancesByGroup({
-    required String groupId,
-    // required DateTime date,
+  Future<Result<List<Attendance>>> fetchAttendancesByDate({
+    required  List<String> memberIds,
+    required DateTime date,
   }) async {
     try {
-      final rawList = await dataSource.fetchAttendancesByGroup(
-        groupId: groupId,
-        // date: date,
+      final rawList = await _dataSource.fetchAttendancesByDate(
+        memberIds: memberIds,
+        date: date,
       );
       final dtoList = rawList.map((e) => AttendanceDto.fromJson(e)).toList();
       final modelList = dtoList.toModelList();
