@@ -1,5 +1,3 @@
-import '../../auth/domain/model/member.dart';
-import '../domain/model/focus_time_stats.dart';
 import '../domain/use_case/fetch_intro_data_use_case.dart';
 import '../domain/use_case/fetch_intro_stats_use_case.dart';
 import '../module/intro_di.dart';
