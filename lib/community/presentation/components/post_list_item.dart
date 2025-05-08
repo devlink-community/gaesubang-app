@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:flutter/material.dart';
 
 class PostListItem extends StatelessWidget {
@@ -9,15 +10,29 @@ class PostListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Image.network(
-      post.image,
-      width: 70,
-      height: 70,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return const Center(child: CircularProgressIndicator());
-      },
+    leading: Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: AppColorStyles.gray60,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(
+        post.image,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(
+            Icons.image,
+            size: 30,
+            color: AppColorStyles.gray60,
+          );
+        },
+      ),
     ),
     // title: Text(post.title),
     title: Column(
