@@ -7,7 +7,7 @@ import '../data/data_source/attendance_data_source.dart';
 import '../data/data_source/mock_attendance_data_source.dart';
 import '../data/repository/attendance_repository_impl.dart';
 import '../domain/repository/attendance_repository.dart';
-import '../domain/usecase/get_attendance_by_member_use_case.dart';
+import '../domain/usecase/get_attendance_by_group_use_case.dart';
 import '../presentation/attendance/attendance_screen_root.dart';
 
 part 'attendance_di.g.dart';
@@ -23,8 +23,8 @@ AttendanceRepository attendanceRepository(Ref ref) =>
     AttendanceRepositoryImpl(ref.watch(attendanceDataSourceProvider));
 
 @riverpod
-GetAttendanceByMemberUseCase getAttendanceByMemberUseCase(Ref ref) =>
-    GetAttendanceByMemberUseCase(ref.watch(attendanceRepositoryProvider));
+GetAttendanceByGroupUseCase getAttendanceByDateUseCase(Ref ref) =>
+    GetAttendanceByGroupUseCase(ref.watch(attendanceRepositoryProvider));
 
 // ------------------- Route -------------------
 

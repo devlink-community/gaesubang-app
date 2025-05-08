@@ -1,22 +1,25 @@
-import 'package:devlink_mobile_app/group/data/mapper/attendance_mapper.dart';
-
 import '../../../core/result/result.dart';
-import '../../domain/model/attendance.dart';
 import '../../domain/repository/attendance_repository.dart';
+import '../../domain/model/attendance.dart';
 import '../data_source/attendance_data_source.dart';
 import '../dto/attendance_dto.dart';
+import '../mapper/attendance_mapper.dart';
 
 class AttendanceRepositoryImpl implements AttendanceRepository {
-  final AttendanceDataSource _dataSource;
+  final AttendanceDataSource dataSource;
 
-  AttendanceRepositoryImpl(this._dataSource);
+  AttendanceRepositoryImpl(this.dataSource);
 
   @override
-  Future<Result<List<Attendance>>> getAttendancesByMember(
-    String memberId,
-  ) async {
+  Future<Result<List<Attendance>>> fetchAttendancesByGroup({
+    required String groupId,
+    // required DateTime date,
+  }) async {
     try {
-      final rawList = await _dataSource.fetchAttendancesByMember(memberId);
+      final rawList = await dataSource.fetchAttendancesByGroup(
+        groupId: groupId,
+        // date: date,
+      );
       final dtoList = rawList.map((e) => AttendanceDto.fromJson(e)).toList();
       final modelList = dtoList.toModelList();
       return Result.success(modelList);

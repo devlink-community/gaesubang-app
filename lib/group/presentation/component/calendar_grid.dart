@@ -39,6 +39,8 @@ class CalendarGrid extends StatelessWidget {
                 final dateKey = DateFormat('yyyy-MM-dd').format(date);
                 final isSelected = dateKey == DateFormat('yyyy-MM-dd').format(selectedDate);
                 final color = attendanceStatus[dateKey];
+                print('날짜: $dateKey, 색상: ${attendanceStatus[dateKey]}');
+
                 return DateCell(
                   date: date,
                   isSelected: isSelected,

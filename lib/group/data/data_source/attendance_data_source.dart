@@ -1,5 +1,5 @@
 abstract interface class AttendanceDataSource {
-  Future<List<Map<String,dynamic>>> fetchAttendancesByMember(
-    String groupId,
-  );
+  Future<List<Map<String, dynamic>>> fetchAttendancesByGroup({
+    required String groupId,
+  });
 }
