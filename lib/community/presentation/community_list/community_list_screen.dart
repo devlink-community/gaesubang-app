@@ -1,5 +1,4 @@
 import 'package:devlink_mobile_app/community/module/util/community_tab_type_enum.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'community_list_state.dart';
@@ -114,8 +113,8 @@ class CommunityListScreen extends StatelessWidget {
     switch (state.postList) {
       case AsyncLoading():
         return const Center(child: CircularProgressIndicator());
-      case AsyncError(:final error):
-        return Center(child: Text((error as Failure).message));
+      case AsyncError(:final error, :final stackTrace):
+        return Center(child: Text('에러가 발생했습니다: $error'));
       case AsyncData(:final value):
         final list = value.isNotEmpty ? value : [];
         if (list.isEmpty) {
