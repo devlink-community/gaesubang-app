@@ -42,4 +42,13 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+
+    <!-- Android 13 이상 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- Android 12 이하를 위한 설정 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <!-- 카메라 사용 시 -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>
