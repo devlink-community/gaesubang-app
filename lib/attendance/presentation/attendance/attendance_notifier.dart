@@ -1,5 +1,5 @@
+// lib/attendance/presentation/attendance/attendance_notifier.dart
 import 'package:flutter/material.dart';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/result/result.dart';
@@ -18,14 +18,13 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   AttendanceState build() {
     final today = DateTime.now();
     final initialState = AttendanceState(
-      groupId: 'group1',
       selectedDate: today,
       displayedMonth: DateTime(today.year, today.month, 1),
     );
 
     Future.microtask(() {
       _useCase = ref.watch(getAttendanceByDateUseCaseProvider);
-      loadAttendance(initialState.groupId);
+      loadAttendance();
     });
 
     return initialState;
@@ -33,10 +32,11 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   void onAction(AttendanceAction action) {
     action.process(
-      load: (action) => loadAttendance(state.groupId),
+      load: (action) => loadAttendance(),
       selectGroupId: (action) {
-        state = state.copyWith(groupId: action.groupId);
-        loadAttendance(action.groupId);
+        // 이 부분은 members 기반으로 수정 필요
+        // 현재는 그룹 ID를 직접적으로 처리하지 않음
+        loadAttendance();
       },
       selectDate: (action) => onDateSelected(action.date),
       previousMonth: (_) => onPreviousMonth(),
@@ -70,10 +70,21 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   }
 
   // 출석 데이터 불러오기
-  Future<void> loadAttendance(String groupId) async {
+  Future<void> loadAttendance() async {
     state = state.copyWith(loading: const AsyncLoading());
 
-    final result = await _useCase.execute(groupId: groupId);
+    // state.members에서 ID 목록 가져오기
+    final memberIds = state.members.map((m) => m.id).toList();
+
+    // memberIds가 비어있으면 기본 ID 목록 사용
+    final idsToUse = memberIds.isEmpty
+        ? ['user1', 'user2', 'user3', 'user4']
+        : memberIds;
+
+    final result = await _useCase.execute(
+      memberIds: idsToUse,
+      date: state.selectedDate,
+    );
 
     if (result is Success) {
       final attendances = (result as Success).data;
