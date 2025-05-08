@@ -24,7 +24,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     );
 
     Future.microtask(() {
-      _useCase = ref.watch(getAttendancesByGroupUseCaseProvider);
+      _useCase = ref.watch(getAttendanceByDateUseCaseProvider);
       loadAttendance(initialState.groupId);
     });
 
