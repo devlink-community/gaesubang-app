@@ -1,12 +1,12 @@
 // lib/map/presentation/map_notifier.dart
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/domain/model/map_marker.dart';
-import 'package:devlink_mobile_app/map/domain/module/filter_type.dart';
-import 'package:devlink_mobile_app/map/domain/module/map_di.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/check_location_permission_use_case.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/get_current_location_use_case.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/get_near_by_items_use_case.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/save_location_data_use_case.dart';
+import 'package:devlink_mobile_app/map/module/filter_type.dart';
+import 'package:devlink_mobile_app/map/module/map_di.dart';
 import 'package:devlink_mobile_app/map/presentation/map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/map_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';

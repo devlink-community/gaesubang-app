@@ -3,7 +3,7 @@ import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/map/domain/model/map_marker.dart';
 import 'package:devlink_mobile_app/map/domain/model/near_by_items.dart';
-import 'package:devlink_mobile_app/map/domain/module/filter_type.dart';
+import 'package:devlink_mobile_app/map/module/filter_type.dart';
 import 'package:devlink_mobile_app/map/presentation/map_state.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';

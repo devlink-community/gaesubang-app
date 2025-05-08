@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/map/domain/module/filter_type.dart';
+import 'package:devlink_mobile_app/map/module/filter_type.dart';
 import 'package:flutter/material.dart';
 
 class FilterTabs extends StatelessWidget {
