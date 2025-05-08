@@ -17,9 +17,11 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   @override
   AttendanceState build() {
     final today = DateTime.now();
+    final members = ref.watch(mockMembersProvider);
     final initialState = AttendanceState(
       selectedDate: today,
       displayedMonth: DateTime(today.year, today.month, 1),
+      members: members,
     );
 
     Future.microtask(() {
@@ -84,6 +86,9 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       memberIds: idsToUse,
       date: state.selectedDate,
     );
+
+    print('✅ memberIds: $idsToUse');
+    print('✅ selectedDate: ${DateFormat('yyyy-MM-dd').format(state.selectedDate)}');
 
     if (result is Success) {
       final attendances = (result as Success).data;

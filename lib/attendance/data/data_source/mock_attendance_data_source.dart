@@ -6,85 +6,33 @@ import '../../domain/model/member.dart';
 import 'attendance_data_source.dart';
 
 class MockAttendanceDataSource implements AttendanceDataSource {
-  final _mockMembers = [
-    Member(
-      id: 'user1',
-      email: 'user1@example.com',
-      nickname: '사용자1',
-      uid: 'uid1',
-      onAir: true,
-    ),
-    Member(
-      id: 'user2',
-      email: 'user2@example.com',
-      nickname: '사용자2',
-      uid: 'uid2',
-    ),
-    Member(
-      id: 'user3',
-      email: 'user3@example.com',
-      nickname: '사용자3',
-      uid: 'uid3',
-    ),
-    Member(
-      id: 'user4',
-      email: 'user4@example.com',
-      nickname: '사용자4',
-      uid: 'uid4',
-      onAir: true,
-    ),
-  ];
-
-  // 출석 데이터
   final _mockData = [
     {
       'memberId': 'user1',
-      'date': DateFormat('yyyy-MM-dd').format(DateTime.now()), // 오늘 날짜
-      'time': 45, // 0%
+      'groupId': 'group1',
+      'date': '2025-05-08',
+      'time': 250,
     },
     {
       'memberId': 'user2',
-      'date': '2025-06-02',
-      'time': 75, // 20%
+      'groupId': 'group1',
+      'date': '2025-05-09',
+      'time': 130,
     },
     {
       'memberId': 'user3',
-      'date': '2025-06-03',
-      'time': 130, // 50%
+      'groupId': 'group1',
+      'date': '2025-05-09',
+      'time': 70,
     },
-    {
-      'memberId': 'user4',
-      'date': '2025-06-04',
-      'time': 250, // 80%
-    },
+    // 다른 월 데이터도 넣어줘도 됨
   ];
 
-  // 멤버 ID로 멤버 데이터 조회
-  List<Member> getMembersByIds(List<String> memberIds) {
-    return _mockMembers.where((member) => memberIds.contains(member.id)).toList();
-  }
-
   @override
-  Future<List<Map<String, dynamic>>> fetchAttendancesByDate({
-    required List<String> memberIds,
-    required DateTime date,
+  Future<List<Map<String, dynamic>>> fetchAttendancesByGroup({
+    required String groupId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
-
-    // '20xx-xx-xx'
-    // final dateKey =
-    //     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-
-    // print('dateKey: $dateKey');
-    // print('필터 대상 groupId: $groupId');
-    // print('전체 mockData:');
-    // for (final e in mockData) {
-    //   print('groupId: ${e['groupId']}, date: ${e['date']}');
-    // }
-    final dateKey = DateFormat('yyyy-MM-dd').format(date);
-
-    return _mockData
-        .where((e) => memberIds.contains(e['memberId']) && e['date'] == dateKey)
-        .toList();
+    return _mockData.where((e) => e['groupId'] == groupId).toList();
   }
 }
