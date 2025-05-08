@@ -16,15 +16,19 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   @override
   AttendanceState build() {
-    _useCase = ref.watch(getAttendanceByDateUseCaseProvider);
-
     final today = DateTime.now();
-
-    return AttendanceState(
-      groupId: state.groupId,
+    final initialState = AttendanceState(
+      groupId: 'group1',
       selectedDate: today,
       displayedMonth: DateTime(today.year, today.month, 1),
     );
+
+    Future.microtask(() {
+      _useCase = ref.watch(getAttendancesByGroupUseCaseProvider);
+      loadAttendance(initialState.groupId);
+    });
+
+    return initialState;
   }
 
   void onAction(AttendanceAction action) {
