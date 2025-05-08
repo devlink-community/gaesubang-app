@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/model/member.dart';
 
-class AttendanceState {
-  final Map<String, Color> attendanceStatus;
-  final AsyncValue<void> loading;
-  final DateTime selectedDate;
-  final DateTime displayedMonth;
-  final List<Member> members;
+part 'attendance_state.freezed.dart';
 
+@freezed
+class AttendanceState with _$AttendanceState {
   const AttendanceState({
     this.attendanceStatus = const {},
     this.loading = const AsyncLoading(),
@@ -18,19 +16,9 @@ class AttendanceState {
     this.members = const [],
   });
 
-  AttendanceState copyWith({
-    Map<String, Color>? attendanceStatus,
-    AsyncValue<void>? loading,
-    DateTime? selectedDate,
-    DateTime? displayedMonth,
-    List<Member>? members,
-  }) {
-    return AttendanceState(
-      attendanceStatus: attendanceStatus ?? this.attendanceStatus,
-      loading: loading ?? this.loading,
-      selectedDate: selectedDate ?? this.selectedDate,
-      displayedMonth: displayedMonth ?? this.displayedMonth,
-      members: members ?? this.members,
-    );
-  }
+  final Map<String, Color> attendanceStatus;
+  final AsyncValue<void> loading;
+  final DateTime selectedDate;
+  final DateTime displayedMonth;
+  final List<Member> members;
 }

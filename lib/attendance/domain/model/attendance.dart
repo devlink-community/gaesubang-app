@@ -13,6 +13,4 @@ class Attendance with _$Attendance {
     required this.date,
     required this.time,
   });
-
-
 }

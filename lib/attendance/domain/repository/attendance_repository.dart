@@ -2,8 +2,9 @@ import '../../../core/result/result.dart';
 import '../model/attendance.dart';
 
 abstract interface class AttendanceRepository {
-  Future<Result<List<Attendance>>> fetchAttendancesByDate({
+  Future<Result<List<Attendance>>> fetchAttendancesByMemberIds({
     required List<String> memberIds,
-    required DateTime date,
+    required DateTime startDate,
+    required DateTime endDate,
   });
 }

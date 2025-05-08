@@ -1,51 +1,46 @@
-
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/data_source/attendance_data_source.dart';
 import '../data/data_source/mock_attendance_data_source.dart';
 import '../data/repository/attendance_repository_impl.dart';
-import '../domain/model/member.dart';
 import '../domain/repository/attendance_repository.dart';
-import '../domain/usecase/get_attendance_by_group_use_case.dart';
+import '../domain/usecase/get_attendance_by_month_use_case.dart';
 import '../presentation/attendance/attendance_screen_root.dart';
+import '../domain/model/group.dart';
 
-part 'attendance_di.g.dart';
+/// ------------------- Provider 정의 -------------------
 
-// ------------------- DI -------------------
+final attendanceDataSourceProvider = Provider<AttendanceDataSource>((ref) {
+  return MockAttendanceDataSource();
+});
 
-@riverpod
-AttendanceDataSource attendanceDataSource(Ref ref) =>
-    MockAttendanceDataSource();
+final attendanceRepositoryProvider = Provider<AttendanceRepository>((ref) {
+  final dataSource = ref.watch(attendanceDataSourceProvider);
+  return AttendanceRepositoryImpl(dataSource);
+});
 
-@riverpod
-AttendanceRepository attendanceRepository(Ref ref) =>
-    AttendanceRepositoryImpl(ref.watch(attendanceDataSourceProvider));
+final getAttendancesByMonthUseCaseProvider =
+Provider<GetAttendancesByMonthUseCase>((ref) {
+  final repository = ref.watch(attendanceRepositoryProvider);
+  return GetAttendancesByMonthUseCase(repository);
+});
 
-@riverpod
-GetAttendanceByDateUseCase getAttendanceByDateUseCase(Ref ref) =>
-    GetAttendanceByDateUseCase(ref.watch(attendanceRepositoryProvider));
-
-@riverpod
-List<Member> mockMembers(Ref ref) {
-  final dataSource = ref.watch(attendanceDataSourceProvider) as MockAttendanceDataSource;
-  return dataSource.getMembersByIds(['user1', 'user2', 'user3', 'user4']);
-}
-
-// ------------------- Route -------------------
+/// ------------------- Route 정의 -------------------
 
 final List<GoRoute> attendanceRoutes = [
   GoRoute(
     path: '/attendance',
-    builder: (context, state) => const AttendanceScreenRoot(),
+    builder: (context, state) {
+      final group = state.extra as Group;
+      return AttendanceScreenRoot(group: group);
+    },
   ),
 ];
 
-@riverpod
-GoRouter router(Ref ref) {
+final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/attendance',
-    routes: [...attendanceRoutes],
+    routes: attendanceRoutes,
   );
-}
+});

@@ -2,37 +2,47 @@ import 'dart:async';
 
 import 'package:intl/intl.dart';
 
-import '../../domain/model/member.dart';
 import 'attendance_data_source.dart';
 
 class MockAttendanceDataSource implements AttendanceDataSource {
-  final _mockData = [
+  final List<Map<String, dynamic>> _mockData = [
     {
       'memberId': 'user1',
-      'groupId': 'group1',
+      'date': '2025-05-01',
+      'time': 30,
+    },
+    {
+      'memberId': 'user1',
       'date': '2025-05-08',
       'time': 250,
     },
     {
       'memberId': 'user2',
-      'groupId': 'group1',
-      'date': '2025-05-09',
+      'date': '2025-05-08',
       'time': 130,
     },
     {
       'memberId': 'user3',
-      'groupId': 'group1',
       'date': '2025-05-09',
-      'time': 70,
+      'time': 60,
     },
-    // 다른 월 데이터도 넣어줘도 됨
   ];
 
   @override
-  Future<List<Map<String, dynamic>>> fetchAttendancesByGroup({
-    required String groupId,
+  Future<List<Map<String, dynamic>>> fetchAttendancesByMemberIds({
+    required List<String> memberIds,
+    required DateTime startDate,
+    required DateTime endDate,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return _mockData.where((e) => e['groupId'] == groupId).toList();
+
+    final startKey = DateFormat('yyyy-MM-dd').format(startDate);
+    final endKey = DateFormat('yyyy-MM-dd').format(endDate);
+
+    return _mockData.where((e) {
+      final memberOk = memberIds.contains(e['memberId']);
+      final date = e['date'] as String;
+      return memberOk && date.compareTo(startKey) >= 0 && date.compareTo(endKey) <= 0;
+    }).toList();
   }
 }
