@@ -87,4 +87,45 @@ class GroupRepositoryImpl implements GroupRepository {
       );
     }
   }
+
+  @override
+  Future<Result<List<Group>>> searchGroups(String query) async {
+    try {
+      // 먼저 모든 그룹 데이터를 가져옵니다
+      final groupDtoList = await _dataSource.fetchGroupList();
+      final allGroups = groupDtoList.toModelList();
+
+      // 검색어를 소문자로 변환하여 대소문자 구분 없이 검색
+      final queryLower = query.toLowerCase();
+
+      // 이름, 설명, 해시태그에서 검색어 포함 여부 확인
+      final filteredGroups =
+          allGroups.where((group) {
+            // 그룹 이름에서 검색
+            if (group.name.toLowerCase().contains(queryLower)) {
+              return true;
+            }
+
+            // 그룹 설명에서 검색 (description이 null이 아닌 경우에만)
+            if (group.description.toLowerCase().contains(queryLower)) {
+              return true;
+            }
+
+            // 해시태그에서 검색
+            if (group.hashTags.any(
+              (tag) => tag.content.toLowerCase().contains(queryLower),
+            )) {
+              return true;
+            }
+
+            return false;
+          }).toList();
+
+      return Result.success(filteredGroups);
+    } catch (e) {
+      return Result.error(
+        Failure(FailureType.unknown, '그룹 검색 중 오류가 발생했습니다', cause: e),
+      );
+    }
+  }
 }

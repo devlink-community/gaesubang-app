@@ -8,4 +8,6 @@ abstract interface class GroupRepository {
   Future<Result<Group>> createGroup(Group group);
   Future<Result<void>> updateGroup(Group group);
   Future<Result<void>> leaveGroup(String groupId);
+
+  Future<Result<List<Group>>> searchGroups(String query);
 }
