@@ -39,7 +39,7 @@ class MockAttendanceDataSource implements AttendanceDataSource {
   final _mockData = [
     {
       'memberId': 'user1',
-      'date': '2025-06-01',
+      'date': DateFormat('yyyy-MM-dd').format(DateTime.now()), // 오늘 날짜
       'time': 45, // 0%
     },
     {

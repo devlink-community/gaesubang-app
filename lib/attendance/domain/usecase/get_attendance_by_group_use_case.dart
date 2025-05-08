@@ -11,8 +11,6 @@ class GetAttendanceByDateUseCase {
     required List<String> memberIds,
     required DateTime date,
   }) {
-    return repository.fetchAttendancesByDate(memberIds: memberIds,
-        date: date
-    );
+    return repository.fetchAttendancesByDate(memberIds: memberIds, date: date);
   }
 }

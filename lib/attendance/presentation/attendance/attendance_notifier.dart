@@ -1,5 +1,5 @@
-// lib/attendance/presentation/attendance/attendance_notifier.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/result/result.dart';
@@ -34,8 +34,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     action.process(
       load: (action) => loadAttendance(),
       selectGroupId: (action) {
-        // 이 부분은 members 기반으로 수정 필요
-        // 현재는 그룹 ID를 직접적으로 처리하지 않음
+
         loadAttendance();
       },
       selectDate: (action) => onDateSelected(action.date),
@@ -92,8 +91,9 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       final newStatus = <String, Color>{};
 
       for (final a in attendances) {
-        final key =
-            '${a.date.year}-${a.date.month.toString().padLeft(2, '0')}-${a.date.day.toString().padLeft(2, '0')}';
+        // DateFormat을 사용하여 날짜 키 생성 - 일관성을 위해
+        final key = DateFormat('yyyy-MM-dd').format(a.date);
+
         final color = switch (a.time) {
           >= 240 => const Color(0xFF5D5FEF), // 80%
           >= 120 => const Color(0xFF7879F1), // 50%
@@ -101,8 +101,9 @@ class AttendanceNotifier extends _$AttendanceNotifier {
           _ => Colors.transparent, // 0%
         };
         newStatus[key] = color;
+        print('생성된 키: $key, 색상: $color'); // 디버깅용 로그 추가
       }
-      print('Converted status map: $newStatus');
+      print('전체 상태 맵: $newStatus');
 
       state = state.copyWith(
         attendanceStatus: newStatus,
@@ -114,4 +115,5 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       state = state.copyWith(loading: AsyncError(failure, stackTrace));
     }
   }
+
 }
