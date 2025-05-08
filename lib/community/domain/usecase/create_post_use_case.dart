@@ -1,5 +1,3 @@
-// lib/community/domain/usecase/create_post_use_case.dart
-import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/domain/repository/post_repository.dart';
 
 /// 게시글 작성 요청

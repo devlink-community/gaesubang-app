@@ -5,13 +5,14 @@ import 'package:devlink_mobile_app/edit_intro/domain/usecase/update_profile_usec
 import 'package:devlink_mobile_app/edit_intro/domain/usecase/update_profile_image_usecase.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
 
-final editIntroProvider = StateNotifierProvider<EditIntroNotifier, EditIntroState>((ref) {
-  return EditIntroNotifier(
-    ref.watch(getCurrentProfileUseCaseProvider),
-    ref.watch(updateProfileUseCaseProvider),
-    ref.watch(updateProfileImageUseCaseProvider),
-  );
-});
+final editIntroProvider =
+    StateNotifierProvider<EditIntroNotifier, EditIntroState>((ref) {
+      return EditIntroNotifier(
+        ref.watch(getCurrentProfileUseCaseProvider),
+        ref.watch(updateProfileUseCaseProvider),
+        ref.watch(updateProfileImageUseCaseProvider),
+      );
+    });
 
 class EditIntroNotifier extends StateNotifier<EditIntroState> {
   final GetCurrentProfileUseCase _getCurrentProfileUseCase;
@@ -25,19 +26,11 @@ class EditIntroNotifier extends StateNotifier<EditIntroState> {
   ) : super(const EditIntroState());
 
   Future<void> loadProfile() async {
-    state = state.copyWith(
-      isLoading: true,
-      isError: false,
-      errorMessage: null,
-    );
+    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
     try {
       final member = await _getCurrentProfileUseCase();
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        member: member,
-      );
+      state = state.copyWith(isLoading: false, isSuccess: true, member: member);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -71,11 +64,7 @@ class EditIntroNotifier extends StateNotifier<EditIntroState> {
   }
 
   Future<bool> updateProfile({required String nickname, String? intro}) async {
-    state = state.copyWith(
-      isLoading: true,
-      isError: false,
-      errorMessage: null,
-    );
+    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
     try {
       final updatedMember = await _updateProfileUseCase(
