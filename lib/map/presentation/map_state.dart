@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/domain/model/map_marker.dart';
+import 'package:devlink_mobile_app/map/domain/model/near_by_items.dart';
 import 'package:devlink_mobile_app/map/domain/module/filter_type.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
