@@ -1,7 +1,6 @@
 // lib/map/presentation/map_notifier.dart
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/domain/model/map_marker.dart';
-import 'package:devlink_mobile_app/map/domain/model/near_by_items.dart';
 import 'package:devlink_mobile_app/map/domain/module/filter_type.dart';
 import 'package:devlink_mobile_app/map/domain/module/map_di.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/check_location_permission_use_case.dart';
@@ -149,7 +148,7 @@ class MapNotifier extends _$MapNotifier {
     state = state.copyWith(currentLocation: locationResult);
 
     // 위치를 성공적으로 가져왔으면 주변 항목 가져오기
-    if (locationResult is AsyncData) {
+    if (locationResult is AsyncData<Location>) {
       await _fetchNearByItems(locationResult.value);
     }
   }

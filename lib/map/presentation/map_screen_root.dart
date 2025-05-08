@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/map/presentation/map_action.dart';
+import 'package:devlink_mobile_app/map/presentation/map_notifier.dart';
 import 'package:devlink_mobile_app/map/presentation/map_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

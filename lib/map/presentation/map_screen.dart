@@ -1,5 +1,8 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
+import 'package:devlink_mobile_app/map/presentation/components/filter_tabs.dart';
+import 'package:devlink_mobile_app/map/presentation/components/nearby_card_view.dart';
+import 'package:devlink_mobile_app/map/presentation/components/radius_slider.dart';
 import 'package:devlink_mobile_app/map/presentation/map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/map_state.dart';
 import 'package:flutter/material.dart';
@@ -107,6 +110,8 @@ class MapScreen extends StatelessWidget {
                 ),
                 AsyncError(:final error) => Text('위치 오류: $error'),
                 AsyncLoading() => const CircularProgressIndicator(),
+                // 모든 케이스를 처리하기 위한 기본 케이스 추가
+                _ => const Text('위치 정보가 없습니다.'),
               },
             ),
           ),

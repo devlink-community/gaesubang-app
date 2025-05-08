@@ -84,6 +84,9 @@ class NearbyCardView extends StatelessWidget {
         );
       case AsyncLoading():
         return const Center(child: CircularProgressIndicator());
+      // 모든 케이스를 처리하기 위한 기본 케이스 추가
+      default:
+        return const Center(child: Text('오류', textAlign: TextAlign.center));
     }
   }
 
