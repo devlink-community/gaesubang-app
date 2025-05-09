@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/material.dart';
 
 import '../data/data_source/attendance_data_source.dart';
 import '../data/data_source/mock_attendance_data_source.dart';
@@ -39,8 +40,51 @@ GoRouter router(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
+      // 루트 경로 추가 - 홈 화면 또는 리다이렉트
+      GoRoute(
+        path: '/',
+        // 루트 경로에서 바로 출석부 화면으로 리다이렉트
+        redirect: (_, __) => '/attendance/group1',
+      ),
       ...attendanceRoutes,
     ],
+  );
+}
+
+// 모의 그룹 생성 함수
+Group _createMockGroup(String groupId) {
+  return Group(
+    id: groupId,
+    name: 'Mock Group',
+    description: 'Mock Group Description',
+    members: [
+      Member(
+        id: 'user1',
+        email: 'user1@example.com',
+        nickname: 'User One',
+        uid: 'uid1',
+      ),
+      Member(
+        id: 'user2',
+        email: 'user2@example.com',
+        nickname: 'User Two',
+        uid: 'uid2',
+      ),
+      Member(
+        id: 'user3',
+        email: 'user3@example.com',
+        nickname: 'User Three',
+        uid: 'uid3',
+      ),
+    ],
+    hashTags: ['study', 'programming'],
+    limitMemberCount: 10,
+    owner: Member(
+      id: 'owner1',
+      email: 'owner@example.com',
+      nickname: 'Owner',
+      uid: 'owner-uid',
+    ),
   );
 }
 
@@ -49,25 +93,9 @@ final attendanceRoutes = [
   GoRoute(
     path: '/attendance/:groupId',
     builder: (context, state) {
-      final groupId = state.pathParameters['groupId'] ?? '';
-
-      // 참고: 실제 앱에서는 여기서 그룹 정보를 불러오는 로직이 필요할 수 있습니다.
-      // 간단한 예제를 위해 빈 그룹 객체를 생성합니다.
-      final mockGroup = Group(
-        id: groupId,
-        name: 'Mock Group',
-        description: 'Mock Group Description',
-        members: [],
-        hashTags: [],
-        limitMemberCount: 10,
-        owner: Member(
-          id: 'owner1',
-          email: 'owner@example.com',
-          nickname: 'Owner',
-          uid: 'owner-uid',
-        ),
-      );
-
+      final groupId = state.pathParameters['groupId'] ?? 'group1';
+      // 모의 그룹 객체 생성 (실제 앱에서는 데이터베이스에서 가져와야 함)
+      final mockGroup = _createMockGroup(groupId);
       return AttendanceScreenRoot(group: mockGroup);
     },
   ),
