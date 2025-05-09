@@ -10,27 +10,32 @@ class MockAttendanceDataSource implements AttendanceDataSource {
       'memberId': 'user1',
       'date': '2025-05-01',
       'time': 30,
+      'groupId': 'group1',
     },
     {
       'memberId': 'user1',
       'date': '2025-05-08',
       'time': 250,
+      'groupId': 'group1',
     },
     {
       'memberId': 'user2',
       'date': '2025-05-08',
       'time': 130,
+      'groupId': 'group1',
     },
     {
       'memberId': 'user3',
       'date': '2025-05-09',
       'time': 60,
+      'groupId': 'group1',
     },
   ];
 
   @override
   Future<List<Map<String, dynamic>>> fetchAttendancesByMemberIds({
     required List<String> memberIds,
+    required String groupId,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
@@ -41,8 +46,9 @@ class MockAttendanceDataSource implements AttendanceDataSource {
 
     return _mockData.where((e) {
       final memberOk = memberIds.contains(e['memberId']);
+      final groupOk = e['groupId'] == groupId;
       final date = e['date'] as String;
-      return memberOk && date.compareTo(startKey) >= 0 && date.compareTo(endKey) <= 0;
+      return memberOk && groupOk && date.compareTo(startKey) >= 0 && date.compareTo(endKey) <= 0;
     }).toList();
   }
 }

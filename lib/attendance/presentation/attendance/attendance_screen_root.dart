@@ -14,11 +14,14 @@ class AttendanceScreenRoot extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(attendanceNotifierProvider);
-    final notifier = ref.read(attendanceNotifierProvider.notifier);
+    final notifier = ref.watch(attendanceNotifierProvider.notifier);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifier.onAction(AttendanceAction.selectGroup(group));
-    });
+
+    ref.listenManual(attendanceNotifierProvider, (_, __) {
+      Future.microtask(() {
+        notifier.onAction(AttendanceAction.selectGroup(group));
+      });
+    }, fireImmediately: true);
 
     return AttendanceScreen(
       state: state,

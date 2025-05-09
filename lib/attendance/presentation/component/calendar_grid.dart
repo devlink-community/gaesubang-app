@@ -36,12 +36,9 @@ class CalendarGrid extends StatelessWidget {
               final day = weekIndex * 7 + dayIndex + 1 - firstWeekday;
               if (day > 0 && day <= daysInMonth) {
                 final date = DateTime(year, month, day);
-                // DateFormat을 사용하여 날짜 키 생성 - 일관성을 위해
                 final dateKey = DateFormat('yyyy-MM-dd').format(date);
-                final isSelected = dateKey ==
-                    DateFormat('yyyy-MM-dd').format(selectedDate);
+                final isSelected = dateKey == DateFormat('yyyy-MM-dd').format(selectedDate);
                 final color = attendanceStatus[dateKey];
-                print('날짜: $dateKey, 색상: $color'); // 로그 유지
 
                 return DateCell(
                   date: date,

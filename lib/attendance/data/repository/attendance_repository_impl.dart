@@ -1,10 +1,9 @@
-import 'package:devlink_mobile_app/attendance/data/mapper/attendance_mapper.dart';
-
 import '../../../core/result/result.dart';
 import '../../domain/model/attendance.dart';
 import '../../domain/repository/attendance_repository.dart';
 import '../data_source/attendance_data_source.dart';
 import '../dto/attendance_dto.dart';
+import '../mapper/attendance_mapper.dart';
 
 class AttendanceRepositoryImpl implements AttendanceRepository {
   final AttendanceDataSource _dataSource;
@@ -14,12 +13,14 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   @override
   Future<Result<List<Attendance>>> fetchAttendancesByMemberIds({
     required List<String> memberIds,
+    required String groupId,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
     try {
       final rawList = await _dataSource.fetchAttendancesByMemberIds(
         memberIds: memberIds,
+        groupId: groupId,
         startDate: startDate,
         endDate: endDate,
       );
