@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
-import 'package:devlink_mobile_app/group/data/mepper/timer_mapper.dart';
+import 'package:devlink_mobile_app/group/data/mapper/timer_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
 import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
 
