@@ -401,7 +401,7 @@ class _GroupSearchScreenState extends State<GroupSearchScreen> {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 16),
           itemCount: value.length,
-          separatorBuilder: (context, index) => const Divider(height: 1),
+          separatorBuilder: (context, index) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final group = value[index];
             return GroupListItem(
