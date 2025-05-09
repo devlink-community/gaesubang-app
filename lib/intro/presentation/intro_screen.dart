@@ -65,7 +65,7 @@ class IntroScreen extends StatelessWidget {
                       // ② 차트
                       Padding(
                         padding: EdgeInsets.only(top: 30, bottom: 30),
-                        child: Expanded(child: FocusStatsChart(stats: stats)),
+                        child: FocusStatsChart(stats: stats),
                       ),
                     ],
                   );

@@ -6,16 +6,10 @@ part 'intro_route.g.dart';
 
 /// Intro 모듈의 라우트 정의
 final introRoutes = [
-  GoRoute(
-    path: '/intro',
-    builder: (context, state) => const IntroScreenRoot(),
-  ),
+  GoRoute(path: '/intro', builder: (context, state) => const IntroScreenRoot()),
 ];
 
 @riverpod
 GoRouter introRouter(IntroRouterRef ref) {
-  return GoRouter(
-    initialLocation: '/intro',
-    routes: introRoutes,
-  );
-} 
+  return GoRouter(initialLocation: '/intro', routes: introRoutes);
+}
