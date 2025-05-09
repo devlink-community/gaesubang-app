@@ -14,28 +14,27 @@ part 'attendance_di.g.dart';
 
 // Repository
 @riverpod
-AttendanceRepository attendanceRepository(AttendanceRepositoryRef ref) {
+AttendanceRepository attendanceRepository(Ref ref) {
   final dataSource = ref.watch(attendanceDataSourceProvider);
   return AttendanceRepositoryImpl(dataSource);
 }
 
 // DataSource
 @riverpod
-AttendanceDataSource attendanceDataSource(AttendanceDataSourceRef ref) {
+AttendanceDataSource attendanceDataSource(Ref ref) {
   return MockAttendanceDataSource();
 }
 
 // UseCase
 @riverpod
-GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(
-    GetAttendancesByMonthUseCaseRef ref) {
+GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) {
   final repository = ref.watch(attendanceRepositoryProvider);
   return GetAttendancesByMonthUseCase(repository);
 }
 
 // Router
 @riverpod
-GoRouter router(RouterRef ref) {
+GoRouter router(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
