@@ -22,23 +22,22 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
 
   Future<void> onAction(ForgotPasswordAction action) async {
     switch (action) {
-      case EmailChanged(:final email):
+      case EmailChangedAction(:final email):
         state = state.copyWith(
           email: email,
-          emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
+          emailError: null,
         );
 
-      case EmailFocusChanged(:final hasFocus):
+      case EmailFocusChangedAction(:final hasFocus):
         if (!hasFocus && state.email.isNotEmpty) {
-          // 포커스를 잃을 때만 이메일 유효성 검증
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(emailError: error);
         }
 
-      case SendResetEmail():
+      case SendResetEmailAction():
         await _performResetPassword();
 
-      case NavigateToLogin():
+      case NavigateToLoginAction():
       // Root에서 처리됨
         break;
     }
@@ -55,10 +54,22 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
     }
 
     // 비밀번호 재설정 이메일 전송
-    state = state.copyWith(resetPasswordResult: const AsyncLoading());
+    state = state.copyWith(
+      resetPasswordResult: const AsyncLoading(),
+      successMessage: null, // 전송 시작할 때 성공 메시지 초기화
+    );
 
     final result = await _resetPasswordUseCase.execute(state.email);
-    state = state.copyWith(resetPasswordResult: result);
+
+    // 성공 시 메시지 설정
+    if (result is AsyncData) {
+      state = state.copyWith(
+        resetPasswordResult: result,
+        successMessage: '비밀번호 재설정 이메일이 발송되었습니다. 이메일을 확인해주세요.',
+      );
+    } else {
+      state = state.copyWith(resetPasswordResult: result);
+    }
   }
 
   void resetForm() {

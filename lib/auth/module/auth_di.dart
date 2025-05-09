@@ -23,7 +23,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../domain/usecase/reset_password_use_case.dart';
-import '../presentation/forget_password/forget_password_screen_root.dart';
+import '../presentation/forgot_password/forgot_password_screen_root.dart';
 
 part 'auth_di.g.dart';
 
@@ -87,14 +87,13 @@ ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
 ResetPasswordUseCase resetPasswordUseCase(Ref ref) =>
     ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
 
-
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [
   GoRoute(path: '/', builder: (context, state) => const LoginScreenRoot()),
 
   GoRoute(
     path: '/forget-password',
-    builder: (context, state) => const ForgetPasswordScreenRoot(),
+    builder: (context, state) => const ForgotPasswordScreenRoot(),
   ),
   GoRoute(
     path: '/sign-up',

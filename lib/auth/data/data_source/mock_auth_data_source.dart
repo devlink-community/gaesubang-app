@@ -63,17 +63,13 @@ class MockAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<void> resetPassword(String email) async {
+  Future<void> sendPasswordResetEmail(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
-
-    // 이메일 존재 확인 (테스트용)
-    final takenEmails = ['test@example.com', 'admin@example.com', 'user@example.com'];
-    if (!takenEmails.contains(email.toLowerCase())) {
-      throw Exception('해당 이메일로 등록된 계정이 없습니다');
+    // 실제 구현에서는 Firebase Auth 등을 통해 재설정 이메일 발송
+    if (!email.contains('@')) {
+      throw Exception('유효하지 않은 이메일 형식입니다');
     }
-
-    // 성공 시 아무 값도 반환하지 않음
-    return;
+    // 성공 시 void 반환
   }
 
 }
