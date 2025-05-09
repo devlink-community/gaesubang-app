@@ -1,7 +1,7 @@
 // lib/auth/presentation/login_screen.dart
 import 'package:flutter/material.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_action.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_state.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
 import 'package:devlink_mobile_app/auth/presentation/component/custom_text_field.dart';
 import 'package:devlink_mobile_app/auth/presentation/component/custom_button.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';

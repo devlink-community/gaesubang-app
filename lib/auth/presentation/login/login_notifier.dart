@@ -1,7 +1,7 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_action.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_state.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_notifier.g.dart';
