@@ -1,5 +1,5 @@
-import 'package:devlink_mobile_app/auth/presentation/login_action.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_screen.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_screen.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

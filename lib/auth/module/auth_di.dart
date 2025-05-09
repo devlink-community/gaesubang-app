@@ -6,7 +6,7 @@ import 'package:devlink_mobile_app/auth/data/repository_impl/auth_repository_imp
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
-import 'package:devlink_mobile_app/auth/presentation/login_screen_root.dart';
+import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
