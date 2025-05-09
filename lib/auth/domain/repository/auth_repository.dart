@@ -1,3 +1,4 @@
+// lib/auth/domain/repository/auth_repository.dart
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
@@ -20,4 +21,10 @@ abstract interface class AuthRepository {
 
   /// 로그아웃
   Future<Result<void>> signOut();
+
+  /// 닉네임 중복 확인 (true: 사용 가능, false: 중복)
+  Future<Result<bool>> checkNicknameAvailability(String nickname);
+
+  /// 이메일 중복 확인 (true: 사용 가능, false: 중복)
+  Future<Result<bool>> checkEmailAvailability(String email);
 }
