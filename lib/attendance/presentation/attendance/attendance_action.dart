@@ -17,4 +17,4 @@ sealed class AttendanceAction with _$AttendanceAction {
 
   // 출석 데이터 로드 요청
   const factory AttendanceAction.loadAttendanceData() = LoadAttendanceData;
-}ㅎ
+}
