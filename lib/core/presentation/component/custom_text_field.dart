@@ -52,20 +52,20 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   Widget build(BuildContext context) {
     // 텍스트 필드 상태에 따른 테두리 색상 결정
-    Color borderColor = AppColors.grey200; // 기본 상태
+    Color borderColor = AppColorStyles.gray40; // 기본 상태
 
     // 에러 상태
     if (widget.errorText != null) {
-      borderColor = AppColors.red;
+      borderColor = AppColorStyles.error;
     }
     // 포커스 상태
     else if (_hasFocus) {
-      borderColor = AppColors.primary; // 보라색 (포커스)
+      borderColor = AppColorStyles.primary100; // 보라색 (포커스)
     }
     // 입력 상태 (텍스트가 있고 포커스가 없는 경우)
     else if (widget.controller != null &&
         widget.controller!.text.isNotEmpty) {
-      borderColor = AppColors.grey300;
+      borderColor = AppColorStyles.gray80;
     }
 
     return Column(
@@ -77,7 +77,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               widget.label,
-              style: AppTextStyles.bodyMedium,
+              style: AppTextStyles.body1Regular,
             ),
           ),
 
@@ -93,15 +93,15 @@ class _CustomTextFieldState extends State<CustomTextField> {
             obscureText: widget.obscureText,
             keyboardType: widget.keyboardType,
             onChanged: widget.onChanged,
-            style: AppTextStyles.bodyRegular,
+            style: AppTextStyles.body1Regular,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
               ),
               hintText: widget.hintText,
-              hintStyle: AppTextStyles.bodyRegular.copyWith(
-                color: AppColors.grey400,
+              hintStyle: AppTextStyles.body1Regular.copyWith(
+                color: AppColorStyles.gray60,
               ),
               border: InputBorder.none,
               isDense: true,
@@ -116,7 +116,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             child: Text(
               widget.errorText!,
               style: AppTextStyles.captionRegular.copyWith(
-                color: AppColors.red,
+                color: AppColorStyles.error,
               ),
             ),
           ),
