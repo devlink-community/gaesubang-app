@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:devlink_mobile_app/edit_intro/presentation/providers/edit_intro_provider.dart';
+
+import '../../module/edit_intro_di.dart';
 
 class EditIntroScreen extends ConsumerStatefulWidget {
   const EditIntroScreen({super.key});
