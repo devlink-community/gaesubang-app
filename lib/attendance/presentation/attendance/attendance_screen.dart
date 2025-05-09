@@ -96,48 +96,51 @@ class AttendanceScreen extends StatelessWidget {
 
   // 캘린더 본문 (날짜 그리드)
   Widget _buildCalendarBody() {
-    switch (state.attendanceList) {
-      case AsyncLoading():
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      case AsyncError(:final error):
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                '데이터를 불러올 수 없습니다: ${(error as dynamic).message ?? error}',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => onAction(const AttendanceAction.loadAttendanceData()),
-                child: const Text('다시 시도'),
-              ),
-            ],
-          ),
-        );
-      case AsyncData():
-      // Notifier에서 색상 맵을 생성하는 메서드 사용
-      // 실제로는 도메인 로직이 ViewModel에 있어야 하지만, 간단한 표시를 위해 이렇게 구현
-        final colorMap = (state.selectedGroup != null)
-            ? _getAttendanceColorMap()
-            : <String, Color>{};
+    return state.attendanceList.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              '데이터를 불러올 수 없습니다: ${error.toString()}',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => onAction(const AttendanceAction.loadAttendanceData()),
+              child: const Text('다시 시도'),
+            ),
+          ],
+        ),
+      ),
+      data: (data) => _buildCalendarGrid(),
+    );
+  }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: CalendarGrid(
-            year: state.displayedMonth.year,
-            month: state.displayedMonth.month,
-            selectedDate: state.selectedDate,
-            attendanceStatus: colorMap,
-            onDateSelected: (date) => onAction(AttendanceAction.selectDate(date)),
-          ),
-        );
-    }
+
+  // Calendar Grid 위젯 생성
+  Widget _buildCalendarGrid() {
+    // Notifier에서 색상 맵을 생성하는 메서드 사용
+    // 실제로는 도메인 로직이 Notifier에 있어야 하지만, 간단한 표시를 위해 이렇게 구현
+    final colorMap = (state.selectedGroup != null)
+        ? _getAttendanceColorMap()
+        : <String, Color>{};
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: CalendarGrid(
+        year: state.displayedMonth.year,
+        month: state.displayedMonth.month,
+        selectedDate: state.selectedDate,
+        attendanceStatus: colorMap,
+        onDateSelected: (date) => onAction(AttendanceAction.selectDate(date)),
+      ),
+    );
   }
 
   // 선택된 날짜에 대한 정보 표시
@@ -175,36 +178,38 @@ class AttendanceScreen extends StatelessWidget {
     // 선택된 날짜의 출석 정보 필터링
     final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
 
-    switch (state.attendanceList) {
-      case AsyncLoading():
-        return const SizedBox(
-          height: 50,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        );
-      case AsyncError():
-        return const Text('데이터를 불러올 수 없습니다');
-      case AsyncData(:final value):
-        final attendancesForDate = value.where(
-                (a) => DateFormat('yyyy-MM-dd').format(a.date) == selectedDateStr
-        ).toList();
+    return state.attendanceList.when(
+      loading: () => const SizedBox(
+        height: 50,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (error, stackTrace) => const Text('데이터를 불러올 수 없습니다'),
+      data: (attendances) => _buildAttendanceListForDate(attendances, selectedDateStr),
+    );
+  }
 
-        if (attendancesForDate.isEmpty) {
-          return const Text('이 날짜에 출석 정보가 없습니다');
-        }
+  // 특정 날짜의 출석 목록 표시
+  Widget _buildAttendanceListForDate(List<dynamic> attendances, String selectedDateStr) {
+    final attendancesForDate = attendances.where(
+            (a) => DateFormat('yyyy-MM-dd').format(a.date) == selectedDateStr
+    ).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: attendancesForDate.map((attendance) {
-            // 출석 회원을 찾아서 표시 (이름 등)
-            // 간단히 memberId를 표시
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('멤버 ID: ${attendance.memberId}'),
-              subtitle: Text('출석 시간: ${_formatMinutes(attendance.time)}'),
-            );
-          }).toList(),
-        );
+    if (attendancesForDate.isEmpty) {
+      return const Text('이 날짜에 출석 정보가 없습니다');
     }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: attendancesForDate.map((attendance) {
+        // 출석 회원을 찾아서 표시 (이름 등)
+        // 간단히 memberId를 표시
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('멤버 ID: ${attendance.memberId}'),
+          subtitle: Text('출석 시간: ${_formatMinutes(attendance.time)}'),
+        );
+      }).toList(),
+    );
   }
 
   // 분 단위 시간을 시간:분 형식으로 변환
