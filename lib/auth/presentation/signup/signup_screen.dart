@@ -82,19 +82,29 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // 포커스 변경 리스너
   void _onNicknameFocusChanged() {
-    widget.onAction(SignupAction.nicknameFocusChanged(_nicknameFocusNode.hasFocus));
+    // 포커스를 잃을 때만 유효성 검사 (중복 확인은 제외)
+    if (!_nicknameFocusNode.hasFocus) {
+      widget.onAction(SignupAction.nicknameFocusChanged(false));
+    }
   }
 
   void _onEmailFocusChanged() {
-    widget.onAction(SignupAction.emailFocusChanged(_emailFocusNode.hasFocus));
+    // 포커스를 잃을 때만 유효성 검사 (중복 확인은 제외)
+    if (!_emailFocusNode.hasFocus) {
+      widget.onAction(SignupAction.emailFocusChanged(false));
+    }
   }
 
   void _onPasswordFocusChanged() {
-    widget.onAction(SignupAction.passwordFocusChanged(_passwordFocusNode.hasFocus));
+    if (!_passwordFocusNode.hasFocus) {
+      widget.onAction(SignupAction.passwordFocusChanged(false));
+    }
   }
 
   void _onPasswordConfirmFocusChanged() {
-    widget.onAction(SignupAction.passwordConfirmFocusChanged(_passwordConfirmFocusNode.hasFocus));
+    if (!_passwordConfirmFocusNode.hasFocus) {
+      widget.onAction(SignupAction.passwordConfirmFocusChanged(false));
+    }
   }
 
   @override
@@ -110,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 40),
 
@@ -143,42 +153,35 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   // 닉네임 입력
                   CustomTextField(
-                    label: '닉네임',
-                    hintText: '닉네임을 입력하세요',
+                    label: '',
+                    hintText: 'nick name',
                     controller: _nicknameController,
+                    focusNode: _nicknameFocusNode,
                     errorText: widget.state.nicknameError,
                     onChanged: (value) => widget.onAction(SignupAction.nicknameChanged(value)),
-                  ),
-
-                  _buildAvailabilityIndicator(
-                    widget.state.nicknameAvailability,
-                    '사용 가능한 닉네임입니다.',
                   ),
 
                   const SizedBox(height: 16),
 
                   // 이메일 입력
                   CustomTextField(
-                    label: '이메일',
-                    hintText: '이메일을 입력하세요',
+                    label: '',
+                    hintText: 'Email address',
                     controller: _emailController,
+                    focusNode: _emailFocusNode,
                     keyboardType: TextInputType.emailAddress,
                     errorText: widget.state.emailError,
                     onChanged: (value) => widget.onAction(SignupAction.emailChanged(value)),
-                  ),
-
-                  _buildAvailabilityIndicator(
-                    widget.state.emailAvailability,
-                    '사용 가능한 이메일입니다.',
                   ),
 
                   const SizedBox(height: 16),
 
                   // 비밀번호 입력
                   CustomTextField(
-                    label: '비밀번호',
-                    hintText: '비밀번호를 입력하세요',
+                    label: '',
+                    hintText: 'Password',
                     controller: _passwordController,
+                    focusNode: _passwordFocusNode,
                     obscureText: true,
                     errorText: widget.state.passwordError,
                     onChanged: (value) => widget.onAction(SignupAction.passwordChanged(value)),
@@ -188,9 +191,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   // 비밀번호 확인 입력
                   CustomTextField(
-                    label: '비밀번호 확인',
-                    hintText: '비밀번호를 다시 입력하세요',
+                    label: '',
+                    hintText: 'Password confirm',
                     controller: _passwordConfirmController,
+                    focusNode: _passwordConfirmFocusNode,
                     obscureText: true,
                     errorText: widget.state.passwordConfirmError,
                     onChanged: (value) => widget.onAction(SignupAction.passwordConfirmChanged(value)),
@@ -198,8 +202,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   const SizedBox(height: 24),
 
-                  // 이용약관 동의
+                  // 이용약관 동의 (우측 정렬)
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬
                     children: [
                       Checkbox(
                         value: widget.state.agreeToTerms,
@@ -207,28 +212,13 @@ class _SignupScreenState extends State<SignupScreen> {
                             SignupAction.agreeToTermsChanged(value ?? false)),
                         activeColor: AppColorStyles.primary100,
                       ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => widget.onAction(
-                              SignupAction.agreeToTermsChanged(!widget.state.agreeToTerms)),
-                          child: Row(
-                            children: [
-                              Text(
-                                '이용약관 동의',
-                                style: AppTextStyles.body2Regular,
-                              ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () => widget.onAction(
-                                    const SignupAction.navigateToTerms()),
-                                child: Text(
-                                  '약관 보기',
-                                  style: AppTextStyles.body2Regular.copyWith(
-                                    color: AppColorStyles.primary100,
-                                  ),
-                                ),
-                              ),
-                            ],
+                      GestureDetector(
+                        onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
+                        child: Text(
+                          '회원가입 약관 보기',
+                          style: AppTextStyles.body2Regular.copyWith(
+                            color: AppColorStyles.primary100,
+                            //decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
@@ -238,11 +228,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   // 약관 동의 에러 메시지
                   if (widget.state.termsError != null)
                     Padding(
-                      padding: const EdgeInsets.only(left: 16.0, top: 4.0),
-                      child: Text(
-                        widget.state.termsError!,
-                        style: AppTextStyles.captionRegular.copyWith(
-                          color: AppColorStyles.error,
+                      padding: const EdgeInsets.only(right: 16.0, top: 4.0),
+                      child: Align(
+                        alignment: Alignment.centerRight, // 에러 메시지도 우측 정렬
+                        child: Text(
+                          widget.state.termsError!,
+                          style: AppTextStyles.captionRegular.copyWith(
+                            color: AppColorStyles.error,
+                          ),
                         ),
                       ),
                     ),
@@ -262,33 +255,6 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // 중복 확인 결과 표시 위젯
-  Widget _buildAvailabilityIndicator(AsyncValue<bool>? availability, String successMessage) {
-    if (availability == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, top: 4.0),
-      child: availability.when(
-        data: (isAvailable) => isAvailable
-            ? Text(
-          successMessage,
-          style: AppTextStyles.captionRegular.copyWith(
-            color: AppColorStyles.success,
-          ),
-        )
-            : const SizedBox.shrink(), // 사용 불가능한 경우 에러 메시지는 필드 에러로 표시됨
-        loading: () => const SizedBox(
-          height: 15,
-          width: 15,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-          ),
-        ),
-        error: (_, __) => const SizedBox.shrink(), // 에러는 필드 에러로 표시됨
       ),
     );
   }
