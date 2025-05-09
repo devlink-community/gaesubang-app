@@ -29,17 +29,20 @@ class ForgetPasswordNotifier extends _$ForgetPasswordNotifier {
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
         );
 
-    // 이메일 포커스 변경 처리 (유효성 검증 트리거)
-      case EmailFocusChanged(:final hasFocus):
-        if (!hasFocus && state.email.isNotEmpty) {
-          // 포커스를 잃을 때만 유효성 검증
-          final error = await _validateEmailUseCase.execute(state.email);
+        // 이메일이 유효한 형식인지 기본 검증
+        if (email.contains('@') && email.contains('.')) {
+          final error = await _validateEmailUseCase.execute(email);
           state = state.copyWith(emailError: error);
         }
 
     // 폼 제출 처리
       case Submit():
         await _performResetPassword();
+
+    // 이메일 포커스 변경 처리 - 이제 사용하지 않음
+      case EmailFocusChanged():
+      // 제거: 대신 이메일 입력 변경 시 직접 유효성 검증
+        break;
 
     // 로그인 화면으로 이동(Root에서 처리)
       case NavigateToLogin():

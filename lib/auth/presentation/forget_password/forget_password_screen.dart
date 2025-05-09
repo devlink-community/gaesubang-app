@@ -1,4 +1,6 @@
 // lib/auth/presentation/forget_password/forget_password_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/auth/presentation/forget_password/forget_password_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/forget_password/forget_password_state.dart';
@@ -23,16 +25,11 @@ class ForgetPasswordScreen extends StatefulWidget {
 
 class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   late final TextEditingController emailController;
-  late final FocusNode emailFocusNode;
 
   @override
   void initState() {
     super.initState();
     emailController = TextEditingController(text: widget.state.email);
-    emailFocusNode = FocusNode();
-
-    // 포커스 리스너 설정
-    emailFocusNode.addListener(_onEmailFocusChanged);
   }
 
   @override
@@ -48,14 +45,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   @override
   void dispose() {
     emailController.dispose();
-    emailFocusNode.removeListener(_onEmailFocusChanged);
-    emailFocusNode.dispose();
     super.dispose();
-  }
-
-  // 포커스 변경 리스너
-  void _onEmailFocusChanged() {
-    widget.onAction(ForgetPasswordAction.emailFocusChanged(emailFocusNode.hasFocus));
   }
 
   @override
@@ -96,7 +86,6 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                 label: '이메일',
                 hintText: '이메일 주소를 입력하세요',
                 controller: emailController,
-                focusNode: emailFocusNode,
                 keyboardType: TextInputType.emailAddress,
                 errorText: widget.state.emailError,
                 onChanged: (value) => widget.onAction(ForgetPasswordAction.emailChanged(value)),
@@ -120,8 +109,8 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                   ),
                 ),
 
-              // 에러 메시지 표시
-              if (widget.state.resetPasswordResult?.hasError ?? false)
+              // 에러 메시지 표시 부분
+              if (widget.state.resetPasswordResult case AsyncError(:final error))
                 Container(
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(top: 12),
@@ -130,7 +119,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '이메일 발송 실패: ${widget.state.resetPasswordResult!.error}',
+                    '이메일 발송 실패: $error',
                     style: AppTextStyles.body2Regular.copyWith(
                       color: AppColorStyles.error,
                     ),
