@@ -34,6 +34,18 @@ class _TagInputFieldState extends State<TagInputField> {
   void _addTag() {
     final value = _tagController.text.trim();
     if (value.isNotEmpty) {
+      // 중복 태그 확인
+      bool isDuplicate = widget.tags.any(
+        (tag) => tag.content.toLowerCase() == value.toLowerCase(),
+      );
+      if (isDuplicate) {
+        // 중복 태그가 있으면 사용자에게 알림 (옵션)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미 추가된 태그입니다.')));
+        _tagController.clear();
+        return;
+      }
       widget.onAddTag(value);
       _tagController.clear();
     }
@@ -61,10 +73,7 @@ class _TagInputFieldState extends State<TagInputField> {
                   ),
                 ),
                 onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    widget.onAddTag(value);
-                    _tagController.clear();
-                  }
+                  _addTag();
                 },
               ),
             ),
