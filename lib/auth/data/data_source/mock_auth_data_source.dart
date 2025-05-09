@@ -1,3 +1,4 @@
+// lib/auth/data/data_source/mock_auth_data_source.dart
 import 'dart:async';
 
 import 'auth_data_source.dart';
@@ -43,5 +44,21 @@ class MockAuthDataSource implements AuthDataSource {
   Future<void> signOut() async {
     await Future.delayed(const Duration(milliseconds: 300));
     _currentUser = null;
+  }
+
+  @override
+  Future<bool> checkNicknameAvailability(String nickname) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    // 사용 중인 닉네임 목록 (테스트용)
+    final takenNicknames = ['test', 'admin', 'user', 'devlink', 'MockUser'];
+    return !takenNicknames.contains(nickname.toLowerCase());
+  }
+
+  @override
+  Future<bool> checkEmailAvailability(String email) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    // 사용 중인 이메일 목록 (테스트용)
+    final takenEmails = ['test@example.com', 'admin@example.com', 'user@example.com', 'duplicate@example.com'];
+    return !takenEmails.contains(email.toLowerCase());
   }
 }
