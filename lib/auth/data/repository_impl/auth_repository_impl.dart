@@ -15,7 +15,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required AuthDataSource authDataSource,
     required profileDataSource,
   }) : _authDataSource = authDataSource,
-       _profileDataSource = profileDataSource;
+        _profileDataSource = profileDataSource;
 
   @override
   Future<Result<Member>> login({
@@ -81,6 +81,26 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _authDataSource.signOut();
       return const Result.success(null);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
+
+  @override
+  Future<Result<bool>> checkNicknameAvailability(String nickname) async {
+    try {
+      final isAvailable = await _authDataSource.checkNicknameAvailability(nickname);
+      return Result.success(isAvailable);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
+
+  @override
+  Future<Result<bool>> checkEmailAvailability(String email) async {
+    try {
+      final isAvailable = await _authDataSource.checkEmailAvailability(email);
+      return Result.success(isAvailable);
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
