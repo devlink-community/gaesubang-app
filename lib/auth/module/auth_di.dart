@@ -4,9 +4,18 @@ import 'package:devlink_mobile_app/auth/data/data_source/mock_profile_data_sourc
 import 'package:devlink_mobile_app/auth/data/data_source/profile_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/repository_impl/auth_repository_impl.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_confirm_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
+import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -30,6 +39,7 @@ AuthRepository authRepository(Ref ref) => AuthRepositoryImpl(
   profileDataSource: ref.watch(profileDataSourceProvider),
 );
 
+// 로그인 관련 UseCase
 @riverpod
 LoginUseCase loginUseCase(Ref ref) =>
     LoginUseCase(repository: ref.watch(authRepositoryProvider));
@@ -38,6 +48,36 @@ LoginUseCase loginUseCase(Ref ref) =>
 LoginUseCase mockLoginUseCase(Ref ref) {
   return MockLoginUseCase();
 }
+
+// 회원가입 관련 UseCase
+@riverpod
+SignupUseCase signupUseCase(Ref ref) =>
+    SignupUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+CheckNicknameAvailabilityUseCase checkNicknameAvailabilityUseCase(Ref ref) =>
+    CheckNicknameAvailabilityUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+CheckEmailAvailabilityUseCase checkEmailAvailabilityUseCase(Ref ref) =>
+    CheckEmailAvailabilityUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+ValidateNicknameUseCase validateNicknameUseCase(Ref ref) => ValidateNicknameUseCase();
+
+@riverpod
+ValidateEmailUseCase validateEmailUseCase(Ref ref) => ValidateEmailUseCase();
+
+@riverpod
+ValidatePasswordUseCase validatePasswordUseCase(Ref ref) => ValidatePasswordUseCase();
+
+@riverpod
+ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) =>
+    ValidatePasswordConfirmUseCase();
+
+@riverpod
+ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
+    ValidateTermsAgreementUseCase();
 
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [
@@ -49,7 +89,7 @@ final List<GoRoute> authRoutes = [
   ),
   GoRoute(
     path: '/sign-up',
-    builder: (context, state) => const _SignUpMockScreen(),
+    builder: (context, state) => const SignupScreenRoot(),
   ),
 
   GoRoute(path: '/home', builder: (context, state) => const _HomeMockScreen()),
@@ -70,17 +110,6 @@ class _ForgetPasswordMockScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(child: Text('🔒 Forget Password Screen (Mock)')),
-    );
-  }
-}
-
-class _SignUpMockScreen extends StatelessWidget {
-  const _SignUpMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('📝 Sign Up Screen (Mock)')),
     );
   }
 }
