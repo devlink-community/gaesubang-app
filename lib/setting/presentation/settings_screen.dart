@@ -1,7 +1,8 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/setting/presentation/settings_action.dart';
+import 'package:devlink_mobile_app/setting/presentation/settings_state.dart';
 import 'package:flutter/material.dart';
-
-import 'settings_action.dart';
-import 'settings_state.dart';
 
 class SettingsScreen extends StatelessWidget {
   final SettingsState state;
@@ -16,132 +17,124 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('설정'), automaticallyImplyLeading: true),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    return ListView(
-      children: [
-        _buildProfileSection(),
-        const Divider(),
-        _buildSecuritySection(),
-        const Divider(),
-        _buildInfoSection(),
-        const Divider(),
-        _buildAccountSection(),
-      ],
-    );
-  }
-
-  Widget _buildProfileSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
-          child: Text(
-            '프로필',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text('환경설정', style: AppTextStyles.heading3Bold),
+        automaticallyImplyLeading: true,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(left: 30, right: 30),
+              child: ListView(
+                children: [
+                  _buildSettingItem(
+                    title: '프로필 수정',
+                    onTap:
+                        () => onAction(const SettingsAction.onTapEditProfile()),
+                  ),
+                  _buildSettingItem(
+                    title: '비밀번호 수정',
+                    onTap:
+                        () => onAction(
+                          const SettingsAction.onTapChangePassword(),
+                        ),
+                  ),
+                  _buildSettingItem(
+                    title: '개인정보 수정',
+                    onTap:
+                        () => onAction(const SettingsAction.onTapEditProfile()),
+                  ),
+                  _buildSettingItem(
+                    title: '개인정보 처리방침',
+                    onTap:
+                        () =>
+                            onAction(const SettingsAction.onTapPrivacyPolicy()),
+                  ),
+                  _buildSettingItem(
+                    title: '앱 사용 오픈 소스',
+                    onTap: () => onAction(const SettingsAction.onTapAppInfo()),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.person),
-          title: const Text('프로필 수정'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => onAction(const SettingsAction.onTapEditProfile()),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColorStyles.primary100,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed:
+                        () => onAction(const SettingsAction.onTapLogout()),
+                    child: Text(
+                      '로그아웃',
+                      style: AppTextStyles.button1Medium.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey,
+                      side: const BorderSide(color: Colors.grey),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed:
+                        () =>
+                            onAction(const SettingsAction.onTapDeleteAccount()),
+                    child: Text(
+                      '회원탈퇴',
+                      style: AppTextStyles.button1Medium.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Text(
+                //   '버전 ${state.appVersion}',
+                //   style: AppTextStyles.captionRegular.copyWith(color: Colors.grey),
+                // )
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSecuritySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
-          child: Text(
-            '보안',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.lock),
-          title: const Text('비밀번호 변경'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => onAction(const SettingsAction.onTapChangePassword()),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
-          child: Text(
-            '정보',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.privacy_tip),
-          title: const Text('개인정보 처리방침'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => onAction(const SettingsAction.onTapPrivacyPolicy()),
-        ),
-        ListTile(
-          leading: const Icon(Icons.info),
-          title: const Text('앱 정보'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => onAction(const SettingsAction.onTapAppInfo()),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAccountSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
-          child: Text(
-            '계정',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.logout, color: Colors.orange),
-          title: const Text('로그아웃', style: TextStyle(color: Colors.orange)),
-          onTap: () => onAction(const SettingsAction.onTapLogout()),
-        ),
-        ListTile(
-          leading: const Icon(Icons.delete_forever, color: Colors.red),
-          title: const Text('회원 탈퇴', style: TextStyle(color: Colors.red)),
-          onTap: () => onAction(const SettingsAction.onTapDeleteAccount()),
-        ),
-      ],
+  Widget _buildSettingItem({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      title: Text(title, style: AppTextStyles.subtitle1Medium),
+      trailing: const Icon(Icons.chevron_right),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 8.0,
+      ),
+      onTap: onTap,
     );
   }
 }

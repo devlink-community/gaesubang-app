@@ -1,7 +1,9 @@
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../edit_intro/presentation/screens/edit_intro_root.dart';
 import '../presentation/intro_screen_root.dart';
 
@@ -39,6 +41,6 @@ final introRoutes = [
 ];
 
 @riverpod
-GoRouter introRouter(IntroRouterRef ref) {
+GoRouter introRouter(Ref ref) {
   return GoRouter(initialLocation: '/intro', routes: introRoutes);
 }
