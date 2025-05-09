@@ -1,3 +1,4 @@
+// lib/auth/presentation/component/custom_text_field.dart
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -15,6 +16,7 @@ class CustomTextField extends StatefulWidget {
     this.errorText,
     this.controller,
     this.onChanged,
+    this.focusNode, // 여기에 focusNode 매개변수 추가
   });
 
   final String label;
@@ -24,18 +26,21 @@ class CustomTextField extends StatefulWidget {
   final String? errorText;
   final TextEditingController? controller;
   final Function(String)? onChanged;
+  final FocusNode? focusNode; // 여기에 focusNode 필드 추가
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
 }
 
 class _CustomTextFieldState extends State<CustomTextField> {
-  final FocusNode _focusNode = FocusNode();
+  late final FocusNode _focusNode;
   bool _hasFocus = false;
 
   @override
   void initState() {
     super.initState();
+    // 상위 위젯에서 제공한 focusNode가 있으면 사용하고, 없으면 새로 생성
+    _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(() {
       setState(() {
         _hasFocus = _focusNode.hasFocus;
@@ -45,7 +50,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    // 내부에서 생성한 focusNode만 dispose
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
     super.dispose();
   }
 
