@@ -1,4 +1,6 @@
+import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // GoRouter 패키지 추가
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'auth/domain/model/member.dart';
@@ -36,18 +38,43 @@ void main() {
   // 3) IntroState에 목 데이터 모두 채우기
   final mockState = IntroState(
     userProfile: AsyncData(mockMember),
-    focusStats: AsyncData(mockStats), // ← 여기를 AsyncData로 바꿔주세요
+    focusStats: AsyncData(mockStats),
+  );
+
+  // 네비게이터 키 정의 (context 접근용) - router 정의 전에 선언
+  final navigatorKey = GlobalKey<NavigatorState>();
+
+  // GoRouter 설정
+  final router = GoRouter(
+    navigatorKey: navigatorKey, // 네비게이터 키 설정
+    initialLocation: '/intro',
+    routes: [
+      GoRoute(
+        path: '/intro',
+        builder:
+            (context, state) => IntroScreen(
+              state: mockState,
+              onAction: (action) async {
+                // 액션 처리 - GoRouter 사용 예시
+                final context = navigatorKey.currentContext;
+                if (context != null) {
+                  await context.push('/settings');
+                }
+              },
+            ),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreenRoot(),
+      ),
+    ],
   );
 
   runApp(
     ProviderScope(
-      child: MaterialApp(
-        home: IntroScreen(
-          state: mockState,
-          onAction: (action) async {
-            // 새로고침 등 액션도 목으로 처리
-          },
-        ),
+      child: MaterialApp.router(
+        routerConfig: router,
+        title: 'IntroScreen Demo',
       ),
     ),
   );
