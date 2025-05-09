@@ -61,4 +61,19 @@ class MockAuthDataSource implements AuthDataSource {
     final takenEmails = ['test@example.com', 'admin@example.com', 'user@example.com', 'duplicate@example.com'];
     return !takenEmails.contains(email.toLowerCase());
   }
+
+  @override
+  Future<void> resetPassword(String email) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 이메일 존재 확인 (테스트용)
+    final takenEmails = ['test@example.com', 'admin@example.com', 'user@example.com'];
+    if (!takenEmails.contains(email.toLowerCase())) {
+      throw Exception('해당 이메일로 등록된 계정이 없습니다');
+    }
+
+    // 성공 시 아무 값도 반환하지 않음
+    return;
+  }
+
 }
