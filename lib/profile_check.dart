@@ -55,7 +55,6 @@ void main() {
             (context, state) => IntroScreen(
               state: mockState,
               onAction: (action) async {
-                // 액션 처리 - GoRouter 사용 예시
                 final context = navigatorKey.currentContext;
                 if (context != null) {
                   await context.push('/settings');
