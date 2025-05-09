@@ -1,9 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../auth/domain/model/member.dart';
+import '../domain/model/focus_time_stats.dart';
 import '../domain/use_case/fetch_intro_data_use_case.dart';
 import '../domain/use_case/fetch_intro_stats_use_case.dart';
 import '../module/intro_di.dart';
 import 'intro_action.dart';
 import 'intro_state.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Assume Member, FocusTimeStats, use case providers are defined elsewhere.
 /// 1) AsyncNotifierProvider 정의
