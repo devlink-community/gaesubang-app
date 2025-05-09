@@ -109,12 +109,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Result<void>> resetPassword(String email) async {
     try {
-      await _authDataSource.resetPassword(email);
+      await _authDataSource.sendPasswordResetEmail(email);
       return const Result.success(null);
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
   }
-
 
 }
