@@ -16,10 +16,14 @@ import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_use_cas
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/reset_password_use_case.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../domain/usecase/reset_password_use_case.dart';
+import '../presentation/forget_password/forget_password_screen_root.dart';
 
 part 'auth_di.g.dart';
 
@@ -79,13 +83,18 @@ ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) =>
 ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
     ValidateTermsAgreementUseCase();
 
+@riverpod
+ResetPasswordUseCase resetPasswordUseCase(Ref ref) =>
+    ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
+
+
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [
   GoRoute(path: '/', builder: (context, state) => const LoginScreenRoot()),
 
   GoRoute(
     path: '/forget-password',
-    builder: (context, state) => const _ForgetPasswordMockScreen(),
+    builder: (context, state) => const ForgetPasswordScreenRoot(),
   ),
   GoRoute(
     path: '/sign-up',
@@ -102,17 +111,6 @@ GoRouter router(Ref ref) {
   return GoRouter(initialLocation: '/', routes: [...authRoutes]);
 }
 
-// ---------- 목업용 임시 스크린들 ----------
-class _ForgetPasswordMockScreen extends StatelessWidget {
-  const _ForgetPasswordMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('🔒 Forget Password Screen (Mock)')),
-    );
-  }
-}
 
 // ---------- 홈 목업용 임시 스크린 ----------
 
