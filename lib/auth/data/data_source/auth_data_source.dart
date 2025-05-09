@@ -24,4 +24,7 @@ abstract interface class AuthDataSource {
 
   /// 이메일 중복 확인 (true: 사용 가능, false: 중복)
   Future<bool> checkEmailAvailability(String email);
+
+  /// 비밀번호 재설정 이메일 발송
+  Future<void> resetPassword(String email);
 }
