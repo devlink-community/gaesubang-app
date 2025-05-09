@@ -20,4 +20,7 @@ abstract interface class AuthRepository {
 
   /// 로그아웃
   Future<Result<void>> signOut();
+
+  /// 회원탈퇴
+  Future<Result<void>> deleteAccount();
 }

@@ -85,4 +85,16 @@ class AuthRepositoryImpl implements AuthRepository {
       return Result.error(mapExceptionToFailure(e, st));
     }
   }
+
+  @override
+  Future<Result<void>> deleteAccount() async {
+    try {
+      // 여기서는 간단히 로그아웃만 수행합니다.
+      // 실제 구현에서는 서버 API를 통해 계정을 삭제해야 합니다.
+      await _authDataSource.signOut();
+      return const Result.success(null);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
 }
