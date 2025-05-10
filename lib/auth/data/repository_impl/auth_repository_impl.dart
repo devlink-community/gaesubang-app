@@ -30,13 +30,12 @@ class AuthRepositoryImpl implements AuthRepository {
       final userDto = UserDto.fromJson(response);
 
       // 두 번째 데이터 소스에서 ProfileDto 받아오기 (사용자 프로필 정보)
-      final profileResponse = await _profileDataSource.fetchUserProfile(email);
+      final profileResponse = await _profileDataSource.fetchUserProfile(userDto.id!);
       final profileDto = ProfileDto.fromJson(profileResponse);
 
       // DTO 병합 후 Member 모델로 변환
       final member = userDto.toModelFromProfile(profileDto);
 
-      // response를 UserDto로 변환 후 Model로 변환
       return Result.success(member);
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
@@ -116,4 +115,13 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Result<void>> deleteAccount(String email) async {
+    try {
+      await _authDataSource.deleteAccount(email);
+      return const Result.success(null);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
 }
