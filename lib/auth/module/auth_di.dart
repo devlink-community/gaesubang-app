@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/auth/data/repository_impl/auth_repository_imp
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/delete_account_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
@@ -86,6 +87,11 @@ ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
 @riverpod
 ResetPasswordUseCase resetPasswordUseCase(Ref ref) =>
     ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
+
+// 계정삭제 관련 UseCase (새로 추가)
+@riverpod
+DeleteAccountUseCase deleteAccountUseCase(Ref ref) =>
+    DeleteAccountUseCase(repository: ref.watch(authRepositoryProvider));
 
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [
