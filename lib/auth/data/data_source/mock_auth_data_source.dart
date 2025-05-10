@@ -128,18 +128,7 @@ class MockAuthDataSource implements AuthDataSource {
 
   // 비밀번호 검증 메서드
   bool _validatePassword(String email, String password) {
-    // 실제로는 암호화된 비밀번호와 비교해야 함
-    // 여기서는 테스트를 위해 기본 비밀번호 설정
-    final testPasswords = {
-      'test1@example.com': 'password123',
-      'test2@example.com': 'password123',
-      'test3@example.com': 'password123',
-      'test4@example.com': 'password123',
-      'test5@example.com': 'password123',
-      'admin@example.com': 'admin123',
-      'developer@example.com': 'dev123',
-    };
-
-    return testPasswords[email] == password;
+    // UserStorage에서 실제 비밀번호 검증
+    return _storage.validatePassword(email, password);
   }
 }
