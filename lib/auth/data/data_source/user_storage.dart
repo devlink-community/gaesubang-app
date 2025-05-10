@@ -1,3 +1,4 @@
+// lib/auth/data/data_source/user_storage.dart
 import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
 import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
 
@@ -10,6 +11,7 @@ class UserStorage {
   // 전체 사용자 데이터
   final Map<String, UserDto> _users = {};
   final Map<String, ProfileDto> _profiles = {};
+  final Map<String, String> _passwords = {}; // 비밀번호 저장 (실제로는 암호화해야 함)
 
   // 현재 로그인된 사용자
   String? _currentUserId;
@@ -21,38 +23,48 @@ class UserStorage {
         {
           'user': UserDto(id: 'user1', email: 'test1@example.com', nickname: '사용자1', uid: 'uid1'),
           'profile': ProfileDto(userId: 'user1', image: '', onAir: false),
+          'password': 'password123',
         },
         {
           'user': UserDto(id: 'user2', email: 'test2@example.com', nickname: '사용자2', uid: 'uid2'),
           'profile': ProfileDto(userId: 'user2', image: '', onAir: true),
+          'password': 'password123',
         },
         {
           'user': UserDto(id: 'user3', email: 'test3@example.com', nickname: '사용자3', uid: 'uid3'),
           'profile': ProfileDto(userId: 'user3', image: '', onAir: false),
+          'password': 'password123',
         },
         {
           'user': UserDto(id: 'user4', email: 'test4@example.com', nickname: '사용자4', uid: 'uid4'),
           'profile': ProfileDto(userId: 'user4', image: '', onAir: true),
+          'password': 'password123',
         },
         {
           'user': UserDto(id: 'user5', email: 'test5@example.com', nickname: '사용자5', uid: 'uid5'),
           'profile': ProfileDto(userId: 'user5', image: '', onAir: false),
+          'password': 'password123',
         },
         {
           'user': UserDto(id: 'user6', email: 'admin@example.com', nickname: '관리자', uid: 'uid6'),
           'profile': ProfileDto(userId: 'user6', image: '', onAir: true),
+          'password': 'admin123',
         },
         {
           'user': UserDto(id: 'user7', email: 'developer@example.com', nickname: '개발자', uid: 'uid7'),
           'profile': ProfileDto(userId: 'user7', image: '', onAir: true),
+          'password': 'dev123',
         },
       ];
 
       for (final userData in defaultUsers) {
         final user = userData['user'] as UserDto;
         final profile = userData['profile'] as ProfileDto;
+        final password = userData['password'] as String;
+
         _users[user.email!] = user;
         _profiles[user.id!] = profile;
+        _passwords[user.email!] = password;
       }
     }
   }
@@ -74,11 +86,18 @@ class UserStorage {
     return _profiles[userId];
   }
 
+  /// 비밀번호 확인
+  bool validatePassword(String email, String password) {
+    initialize();
+    return _passwords[email] == password;
+  }
+
   /// 사용자 추가 (회원가입)
-  void addUser(UserDto user, ProfileDto profile) {
+  void addUser(UserDto user, ProfileDto profile, String password) {
     initialize();
     _users[user.email!] = user;
     _profiles[user.id!] = profile;
+    _passwords[user.email!] = password;
   }
 
   /// 사용자 삭제 (계정삭제)
@@ -88,6 +107,7 @@ class UserStorage {
     if (user != null) {
       _profiles.remove(user.id);
       _users.remove(email);
+      _passwords.remove(email);
       // 현재 로그인된 사용자가 삭제되면 로그아웃
       if (_currentUserId == user.id) {
         _currentUserId = null;
@@ -113,7 +133,7 @@ class UserStorage {
     if (_currentUserId == null) return null;
     return _users.values.firstWhere(
           (user) => user.id == _currentUserId,
-      orElse: () => throw Exception('Current user not found'),
+      orElse: () => throw Exception('현재 사용자를 찾을 수 없습니다'),
     );
   }
 
