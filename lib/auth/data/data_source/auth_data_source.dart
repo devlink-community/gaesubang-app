@@ -28,6 +28,6 @@ abstract interface class AuthDataSource {
   /// 비밀번호 재설정 이메일 전송
   Future<void> sendPasswordResetEmail(String email);
 
-  /// 계정삭제 (새로 추가)
+  /// 계정삭제
   Future<void> deleteAccount(String email);
 }

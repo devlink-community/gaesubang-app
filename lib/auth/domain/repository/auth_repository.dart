@@ -30,4 +30,7 @@ abstract interface class AuthRepository {
 
   /// 비밀번호 재설정 이메일 발송
   Future<Result<void>> resetPassword(String email);
+
+  /// 계정삭제
+  Future<Result<void>> deleteAccount(String email);
 }
