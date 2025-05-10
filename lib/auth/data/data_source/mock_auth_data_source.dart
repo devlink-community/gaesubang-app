@@ -18,12 +18,12 @@ class MockAuthDataSource implements AuthDataSource {
 
     final user = _storage.getUserByEmail(email);
 
-    if (user != null && email.endsWith('@example.com')) {
-      // 간단한 비밀번호 검증 (실제로는 암호화된 비밀번호 비교)
+    // 사용자 존재 확인 및 비밀번호 검증
+    if (user != null && _validatePassword(email, password)) {
       _storage.login(user.id!);
       return user.toJson();
     } else {
-      throw Exception('Invalid credentials');
+      throw Exception('이메일 또는 비밀번호가 일치하지 않습니다');
     }
   }
 
@@ -37,11 +37,11 @@ class MockAuthDataSource implements AuthDataSource {
 
     // 중복 체크
     if (!_storage.isEmailAvailable(email)) {
-      throw Exception('Email already exists');
+      throw Exception('이미 사용 중인 이메일입니다');
     }
 
     if (!_storage.isNicknameAvailable(nickname)) {
-      throw Exception('Nickname already exists');
+      throw Exception('이미 사용 중인 닉네임입니다');
     }
 
     // 새 사용자 생성
@@ -59,8 +59,8 @@ class MockAuthDataSource implements AuthDataSource {
       onAir: false,
     );
 
-    // 저장소에 추가
-    _storage.addUser(userDto, profileDto);
+    // 비밀번호는 별도 저장 (여기서는 간단히 구현)
+    _storage.addUser(userDto, profileDto, password);
 
     return userDto.toJson();
   }
@@ -94,7 +94,8 @@ class MockAuthDataSource implements AuthDataSource {
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    // 실제 구현에서는 Firebase Auth 등을 통해 재설정 이메일 발송
+
+    // 이메일 형식 확인
     if (!email.contains('@')) {
       throw Exception('유효하지 않은 이메일 형식입니다');
     }
@@ -105,10 +106,10 @@ class MockAuthDataSource implements AuthDataSource {
       throw Exception('가입되지 않은 이메일입니다');
     }
 
-    // 성공 시 void 반환
+    // 성공 시 void 반환 (실제로는 이메일 전송)
   }
 
-  /// 계정삭제 (새로 추가)
+  @override
   Future<void> deleteAccount(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -123,5 +124,22 @@ class MockAuthDataSource implements AuthDataSource {
     }
 
     _storage.deleteUser(email);
+  }
+
+  // 비밀번호 검증 메서드
+  bool _validatePassword(String email, String password) {
+    // 실제로는 암호화된 비밀번호와 비교해야 함
+    // 여기서는 테스트를 위해 기본 비밀번호 설정
+    final testPasswords = {
+      'test1@example.com': 'password123',
+      'test2@example.com': 'password123',
+      'test3@example.com': 'password123',
+      'test4@example.com': 'password123',
+      'test5@example.com': 'password123',
+      'admin@example.com': 'admin123',
+      'developer@example.com': 'dev123',
+    };
+
+    return testPasswords[email] == password;
   }
 }
