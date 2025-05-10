@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/auth/data/mapper/member_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:flutter/foundation.dart'; // debugPrint 사용을 위함
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource _authDataSource;
@@ -29,7 +30,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       final userDto = UserDto.fromJson(response);
 
-      // 두 번째 데이터 소스에서 ProfileDto 받아오기 (사용자 프로필 정보)
+      // 프로필 정보 가져오기
       final profileResponse = await _profileDataSource.fetchUserProfile(userDto.id!);
       final profileDto = ProfileDto.fromJson(profileResponse);
 
@@ -38,6 +39,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Result.success(member);
     } catch (e, st) {
+      // 디버깅용 로그
+      debugPrint('Login error: $e');
+      debugPrint('StackTrace: $st');
+
       return Result.error(mapExceptionToFailure(e, st));
     }
   }
