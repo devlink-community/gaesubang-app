@@ -6,8 +6,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 void main() {
 
-  UserStorage.instance.initialize();
-
   runApp(
     ProviderScope(
       // overrides: [
