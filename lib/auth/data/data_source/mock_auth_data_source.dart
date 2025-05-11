@@ -103,7 +103,7 @@ class MockAuthDataSource implements AuthDataSource {
     // 가입된 이메일인지 확인
     final user = _storage.getUserByEmail(email);
     if (user == null) {
-      throw Exception('가입되지 않은 이메일입니다');
+      throw Exception('등록되지 않은 이메일입니다');
     }
 
     // 성공 시 void 반환 (실제로는 이메일 전송)
