@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/timer_session_dto.dart';
+import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_timer_status.dart';
+import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
 
 class MockTimerDataSourceImpl implements TimerDataSource {
   // 메모리 내 스토리지 (이전 더미 세션 저장)
@@ -113,5 +115,69 @@ class MockTimerDataSourceImpl implements TimerDataSource {
 
     // 유저 ID에 해당하는 활성 세션 반환
     return _activeSessionsByUser[userId];
+  }
+
+  @override
+  Future<List<MemberTimer>> fetchMemberTimers(String groupId) async {
+    // 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // 기존 이미지들 - 실제 환경에서는 서버에서 URL을 가져와야 함
+    final imageUrls = [
+      "https://example.com/avatar1.jpg", // 여우 이미지
+      "https://example.com/avatar2.jpg", // 곰돌이 이미지
+      "https://example.com/avatar3.jpg", // 웨딩 이미지
+      "https://example.com/avatar4.jpg", // 고양이 이미지
+      "https://example.com/avatar5.jpg", // 안경 쓴 남자 이미지
+      "https://example.com/avatar6.jpg", // 모자 쓴 이미지
+    ];
+
+    // 모의 데이터
+    final mockMembers = [
+      MemberTimer(
+        memberId: "user1",
+        memberName: "이용자1",
+        imageUrl: imageUrls[0],
+        elapsedSeconds: 3 * 3600, // 3시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user2",
+        memberName: "이용자2",
+        imageUrl: imageUrls[1],
+        elapsedSeconds: 0,
+        status: MemberTimerStatus.sleeping,
+      ),
+      MemberTimer(
+        memberId: "user3",
+        memberName: "이용자3",
+        imageUrl: imageUrls[2],
+        elapsedSeconds: 3 * 3600, // 3시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user4",
+        memberName: "이용자4",
+        imageUrl: imageUrls[3],
+        elapsedSeconds: 13 * 3600, // 13시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user5",
+        memberName: "이용자5",
+        imageUrl: imageUrls[4],
+        elapsedSeconds: 32 * 3600, // 32시간
+        status: MemberTimerStatus.active,
+      ),
+      MemberTimer(
+        memberId: "user6",
+        memberName: "이용자6",
+        imageUrl: imageUrls[5],
+        elapsedSeconds: 0,
+        status: MemberTimerStatus.sleeping,
+      ),
+    ];
+
+    return mockMembers;
   }
 }
