@@ -215,7 +215,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       GestureDetector(
                         onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
                         child: Text(
-                          '회원가입 약관 보기',
+                          '회원가입 약관 보실께요.',
                           style: AppTextStyles.body2Regular.copyWith(
                             color: AppColorStyles.primary100,
                             //decoration: TextDecoration.underline,
