@@ -1,5 +1,4 @@
 // lib/group/presentation/group_create/group_create_screen_root.dart
-import 'dart:io';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen.dart';
@@ -27,7 +26,7 @@ class GroupCreateScreenRoot extends ConsumerWidget {
             context,
           ).showSnackBar(const SnackBar(content: Text('그룹이 성공적으로 생성되었습니다')));
           // 그룹 상세 페이지로 이동
-          context.go('/group/$next');
+          context.push('/group/$next');
         }
       },
     );
