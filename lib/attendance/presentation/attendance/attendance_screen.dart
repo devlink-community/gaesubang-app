@@ -1,3 +1,5 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,10 +23,12 @@ class AttendanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.selectedGroup?.name ?? '출석부'),
+        title: Text('출석부',
+        style: AppTextStyles.heading3Bold,),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           _buildCalendarHeader(),
@@ -61,10 +65,7 @@ class AttendanceScreen extends StatelessWidget {
           ),
           Text(
             monthFormat.format(displayedMonth),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward_ios),
@@ -81,6 +82,7 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
+  // 18 semiboard //E3E3E3
   // 요일 라벨 (일~토)
   Widget _buildWeekdayLabels() {
     final weekdays = ['SUN', 'MON', 'TUE', 'WEN', 'THU', 'FRI', 'SAT'];
@@ -97,39 +99,40 @@ class AttendanceScreen extends StatelessWidget {
   // 캘린더 본문 (날짜 그리드)
   Widget _buildCalendarBody() {
     return state.attendanceList.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
-      error: (error, stackTrace) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              '데이터를 불러올 수 없습니다: ${error.toString()}',
-              textAlign: TextAlign.center,
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error:
+          (error, stackTrace) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  '데이터를 불러올 수 없습니다: ${error.toString()}',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed:
+                      () =>
+                          onAction(const AttendanceAction.loadAttendanceData()),
+                  child: const Text('다시 시도'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => onAction(const AttendanceAction.loadAttendanceData()),
-              child: const Text('다시 시도'),
-            ),
-          ],
-        ),
-      ),
+          ),
       data: (data) => _buildCalendarGrid(),
     );
   }
-
 
   // Calendar Grid 위젯 생성
   Widget _buildCalendarGrid() {
     // Notifier에서 색상 맵을 생성하는 메서드 사용
     // 실제로는 도메인 로직이 Notifier에 있어야 하지만, 간단한 표시를 위해 이렇게 구현
-    final colorMap = (state.selectedGroup != null)
-        ? _getAttendanceColorMap()
-        : <String, Color>{};
+    final colorMap =
+        (state.selectedGroup != null)
+            ? _getAttendanceColorMap()
+            : <String, Color>{};
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -151,6 +154,7 @@ class AttendanceScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Card(
+        color: Colors.white,
         elevation: 2,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -179,20 +183,29 @@ class AttendanceScreen extends StatelessWidget {
     final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
 
     return state.attendanceList.when(
-      loading: () => const SizedBox(
-        height: 50,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
+      loading:
+          () => const SizedBox(
+            height: 50,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
       error: (error, stackTrace) => const Text('데이터를 불러올 수 없습니다'),
-      data: (attendances) => _buildAttendanceListForDate(attendances, selectedDateStr),
+      data:
+          (attendances) =>
+              _buildAttendanceListForDate(attendances, selectedDateStr),
     );
   }
 
   // 특정 날짜의 출석 목록 표시
-  Widget _buildAttendanceListForDate(List<dynamic> attendances, String selectedDateStr) {
-    final attendancesForDate = attendances.where(
-            (a) => DateFormat('yyyy-MM-dd').format(a.date) == selectedDateStr
-    ).toList();
+  Widget _buildAttendanceListForDate(
+    List<dynamic> attendances,
+    String selectedDateStr,
+  ) {
+    final attendancesForDate =
+        attendances
+            .where(
+              (a) => DateFormat('yyyy-MM-dd').format(a.date) == selectedDateStr,
+            )
+            .toList();
 
     if (attendancesForDate.isEmpty) {
       return const Text('이 날짜에 출석 정보가 없습니다');
@@ -200,15 +213,16 @@ class AttendanceScreen extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: attendancesForDate.map((attendance) {
-        // 출석 회원을 찾아서 표시 (이름 등)
-        // 간단히 memberId를 표시
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text('멤버 ID: ${attendance.memberId}'),
-          subtitle: Text('출석 시간: ${_formatMinutes(attendance.time)}'),
-        );
-      }).toList(),
+      children:
+          attendancesForDate.map((attendance) {
+            // 출석 회원을 찾아서 표시 (이름 등)
+            // 간단히 memberId를 표시
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('멤버 ID: ${attendance.memberId}'),
+              subtitle: Text('출석 시간: ${_formatMinutes(attendance.time)}'),
+            );
+          }).toList(),
     );
   }
 
@@ -234,12 +248,21 @@ class AttendanceScreen extends StatelessWidget {
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
 
-      if (attendance.time >= 240) { // 4시간 이상
-        colorMap[dateKey] = Colors.green;
-      } else if (attendance.time >= 120) { // 2시간 이상
-        colorMap[dateKey] = Colors.lightGreen;
-      } else if (attendance.time >= 30) { // 30분 이상
-        colorMap[dateKey] = Colors.lightGreen.withOpacity(0.5);
+      if (attendance.time >= 240) {
+        // 4시간 이상
+        colorMap[dateKey] = const Color(
+          0xFF5D5FEF,
+        ); // #5D5FEF - AppColorStyles.primary100
+      } else if (attendance.time >= 120) {
+        // 2시간 이상
+        colorMap[dateKey] = const Color(
+          0xFF7879F1,
+        ); // #7879F1 - AppColorStyles.primary80
+      } else if (attendance.time >= 30) {
+        // 30분 이상
+        colorMap[dateKey] = const Color(
+          0xFFA5A6F6,
+        ); // #A5A6F6 - AppColorStyles.primary60
       } else {
         colorMap[dateKey] = Colors.grey.withOpacity(0.3);
       }
