@@ -1,10 +1,9 @@
 import 'dart:io';
-
 import 'package:devlink_mobile_app/edit_intro/presentation/edit_intro_action.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
+import '../../core/result/result.dart';
 import '../domain/usecase/get_current_profile_usecase.dart';
 import '../domain/usecase/update_profile_image_usecase.dart';
 import '../domain/usecase/update_profile_usecase.dart';
@@ -31,30 +30,17 @@ class EditIntroNotifier extends _$EditIntroNotifier {
   // 프로필 로드를 public 메서드로 변경하여 외부에서 호출 가능하게 함
   Future<void> loadProfile() async {
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
+    final result = await _getCurrentProfileUseCase.execute();
 
-    try {
-      final result = await _getCurrentProfileUseCase.execute();
-
-      if (result is AsyncData) {
-        state = state.copyWith(
-          isLoading: false,
-          isSuccess: true,
-          member: result.value,
-        );
-      } else if (result is AsyncError) {
-        final error = result.error;
+    switch (result) {
+      case Success(:final data):
+        state = state.copyWith(isLoading: false, isSuccess: true, member: data);
+      case Error(:final failure):
         state = state.copyWith(
           isLoading: false,
           isError: true,
-          errorMessage: error.toString(),
+          errorMessage: failure.message,
         );
-      }
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필 정보를 불러올 수 없습니다: ${e.toString()}',
-      );
     }
   }
 
@@ -123,6 +109,15 @@ class EditIntroNotifier extends _$EditIntroNotifier {
   }
 
   Future<bool> updateProfile({required String nickname, String? intro}) async {
+    final updated = state.member?.copyWith(
+      nickname: nickname,
+      description: intro ?? state.member?.description ?? '',
+    );
+
+    if (updated != null) {
+      state = state.copyWith(member: updated);
+    }
+
     return await _saveProfile();
   }
 

@@ -13,7 +13,6 @@ class SettingsScreenRoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // WidgetRef 파라미터 추가
     final state = ref.watch(settingsNotifierProvider);
     final notifier = ref.watch(settingsNotifierProvider.notifier);
 
@@ -48,7 +47,8 @@ class SettingsScreenRoot extends ConsumerWidget {
           case OnTapEditProfile():
             context.push('/edit-profile');
           case OnTapChangePassword():
-            context.push('/change-password');
+            // 비밀번호 변경을 위해 비밀번호 찾기 화면으로 이동
+            context.push('/forget-password');
           case OnTapPrivacyPolicy():
             // 웹 URL 열기
             await _launchUrl('https://www.privacypolicygenerator.info/');
@@ -122,7 +122,7 @@ class SettingsScreenRoot extends ConsumerWidget {
           title: "Are you sure ?",
           message: "정말 회원탈퇴 하시겠습니까?\n 모든 데이터가 삭제됩니다.",
           cancelText: "Cancel",
-          confirmText: "Confrim",
+          confirmText: "Confirm",
           onConfirm: () {
             Navigator.pop(dialogContext);
             notifier.onAction(action);
