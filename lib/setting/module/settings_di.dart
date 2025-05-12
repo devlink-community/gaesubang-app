@@ -13,8 +13,5 @@ LogoutUseCase logoutUseCase(LogoutUseCaseRef ref) {
 
 @riverpod
 DeleteAccountUseCase deleteAccountUseCase(DeleteAccountUseCaseRef ref) {
-  return DeleteAccountUseCase(
-    ref.watch(authRepositoryProvider),
-    repository: null,
-  );
+  return DeleteAccountUseCase(repository: ref.watch(authRepositoryProvider));
 }
