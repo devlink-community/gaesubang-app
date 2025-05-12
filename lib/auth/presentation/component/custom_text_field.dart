@@ -5,7 +5,7 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 
 /// 커스텀 텍스트 필드 컴포넌트
 ///
-/// 기본, 포커스, 입력, 에러 상태를 지원합니다.
+/// 기본, 포커스, 입력, 에러, 성공 상태를 지원합니다.
 class CustomTextField extends StatefulWidget {
   const CustomTextField({
     super.key,
@@ -14,6 +14,7 @@ class CustomTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.errorText,
+    this.successText, // 성공 메시지 추가
     this.controller,
     this.onChanged,
     this.focusNode,
@@ -24,6 +25,7 @@ class CustomTextField extends StatefulWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final String? errorText;
+  final String? successText; // 성공 메시지 필드 추가
   final TextEditingController? controller;
   final Function(String)? onChanged;
   final FocusNode? focusNode;
@@ -65,6 +67,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
     // 에러 상태
     if (widget.errorText != null) {
       borderColor = AppColorStyles.error;
+    }
+    // 성공 상태 (성공 메시지가 있는 경우)
+    else if (widget.successText != null) {
+      borderColor = AppColorStyles.success;
     }
     // 포커스 상태
     else if (_hasFocus) {
@@ -117,21 +123,38 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
         ),
 
-        // 에러 메시지 영역 - 고정 높이로 유지
+        // 메시지 영역 - 고정 높이로 유지
         Container(
-          height: 24, // 에러 메시지 영역의 고정 높이
+          height: 24, // 메시지 영역의 고정 높이
           padding: const EdgeInsets.only(top: 4.0, left: 4.0),
           alignment: Alignment.centerLeft,
-          child: widget.errorText != null
-              ? Text(
-            widget.errorText!,
-            style: AppTextStyles.captionRegular.copyWith(
-              color: AppColorStyles.error,
-            ),
-          )
-              : null, // 에러가 없을 때는 빈 공간으로 유지
+          child: _buildMessageText(),
         ),
       ],
     );
+  }
+
+  // 에러 또는 성공 메시지 표시 위젯 빌드 메서드
+  Widget? _buildMessageText() {
+    // 에러 메시지가 있으면 에러 메시지 표시
+    if (widget.errorText != null) {
+      return Text(
+        widget.errorText!,
+        style: AppTextStyles.captionRegular.copyWith(
+          color: AppColorStyles.error,
+        ),
+      );
+    }
+    // 성공 메시지가 있으면 성공 메시지 표시
+    else if (widget.successText != null) {
+      return Text(
+        widget.successText!,
+        style: AppTextStyles.captionRegular.copyWith(
+          color: AppColorStyles.success,
+        ),
+      );
+    }
+    // 메시지가 없으면 null 반환 (빈 공간)
+    return null;
   }
 }
