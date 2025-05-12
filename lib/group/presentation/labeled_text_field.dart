@@ -12,6 +12,7 @@ class LabeledTextField extends StatelessWidget {
   final Widget? suffix;
   final String? errorText;
   final FocusNode? focusNode;
+  final bool enabled;
 
   const LabeledTextField({
     super.key,
@@ -25,6 +26,7 @@ class LabeledTextField extends StatelessWidget {
     this.suffix,
     this.errorText,
     this.focusNode,
+    this.enabled = true,
   });
 
   @override
@@ -41,6 +43,7 @@ class LabeledTextField extends StatelessWidget {
           keyboardType: keyboardType,
           obscureText: obscureText,
           focusNode: focusNode,
+          enabled: enabled,
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
