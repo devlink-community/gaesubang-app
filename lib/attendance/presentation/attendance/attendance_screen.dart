@@ -83,7 +83,7 @@ class AttendanceScreen extends StatelessWidget {
 
   // 요일 라벨 (일~토)
   Widget _buildWeekdayLabels() {
-    final weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    final weekdays = ['SUN', 'MON', 'TUE', 'WEN', 'THU', 'FRI', 'SAT'];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
