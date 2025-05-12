@@ -27,13 +27,13 @@ class TermsScreen extends StatelessWidget {
             children: [
               // 상단 영역 - 이미지 및 설명
               Expanded(
-                flex: 3,
+                flex: 7,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     // 이미지 표시
                     Image.asset(
-                      'assets/images/gaesubang_mascot1.png', // 실제 앱에 맞는 이미지 경로
+                      'assets/images/gaesubang_mascot.png', // 실제 앱에 맞는 이미지 경로
                       width: 258,
                       height: 258,
                     ),
@@ -61,6 +61,7 @@ class TermsScreen extends StatelessWidget {
               Expanded(
                 flex: 4,
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end, // 하단 정렬
                   children: [
                     const SizedBox(height: 50),
                     // 전체 동의 체크박스
@@ -127,7 +128,7 @@ class TermsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
+              const SizedBox(height: 30),
               // 버튼 영역
               Padding(
                 padding: const EdgeInsets.only(bottom: 40.0),
@@ -139,6 +140,7 @@ class TermsScreen extends StatelessWidget {
                   foregroundColor: Colors.white,
                 ),
               ),
+              const SizedBox(height: 180),
             ],
           ),
         ),
