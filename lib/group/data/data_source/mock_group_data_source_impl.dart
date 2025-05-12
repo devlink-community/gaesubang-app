@@ -2,10 +2,12 @@ import 'dart:math';
 import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
+import 'package:intl/intl.dart';
 import 'group_data_source.dart';
 
 class MockGroupDataSourceImpl implements GroupDataSource {
   final Random _random = Random();
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
   @override
   Future<List<GroupDto>> fetchGroupList() async {
@@ -14,6 +16,15 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     return List.generate(15, (i) {
       final memberCount = _random.nextInt(10) + 1;
       final limitMemberCount = memberCount + _random.nextInt(10) + 5;
+
+      // 임의의 생성일과 수정일 생성
+      final now = DateTime.now();
+      final createdDate = now.subtract(
+        Duration(days: _random.nextInt(90)),
+      ); // 최대 90일 전
+      final updatedDate = createdDate.add(
+        Duration(days: _random.nextInt(30)),
+      ); // 생성일 이후 최대 30일 후
 
       // 그룹 소유자 생성
       final owner = MemberDto(
@@ -64,6 +75,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         limitMemberCount: limitMemberCount,
         owner: owner,
         imageUrl: 'assets/images/group_${i + 1}.png',
+        createdAt: _dateFormat.format(createdDate),
+        updatedAt: _dateFormat.format(updatedDate),
       );
     });
   }
