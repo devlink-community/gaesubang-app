@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/timer_session_dto.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_timer_status.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
+import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 
 class MockTimerDataSourceImpl implements TimerDataSource {
   // 메모리 내 스토리지 (이전 더미 세션 저장)
