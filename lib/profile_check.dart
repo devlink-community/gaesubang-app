@@ -91,6 +91,6 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(introRouterProvider);
-    return MaterialApp.router(routerConfig: introRouter);
+    return MaterialApp.router(routerConfig: router);
   }
 }

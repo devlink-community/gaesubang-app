@@ -10,9 +10,12 @@ import '../presentation/intro_screen_root.dart';
 part 'intro_route.g.dart';
 
 /// Intro 모듈의 라우트 정의
-final introRoutes = [
-  GoRoute(path: '/intro', builder: (context, state) => const IntroScreenRoot()),
-  // 설정 화면으로 이동하는 경로 추가
+final List<GoRoute> introRoutes = [
+  GoRoute(
+    path: '/intro',
+    name: 'intro', // 라우트 이름을 지정하면 타입 세이프하게 네비게이션 가능
+    builder: (context, state) => const IntroScreenRoot(),
+  ),
   GoRoute(
     path: '/settings',
     builder: (context, state) => const SettingsScreenRoot(),
@@ -42,5 +45,5 @@ final introRoutes = [
 
 @riverpod
 GoRouter introRouter(Ref ref) {
-  return GoRouter(initialLocation: '/intro', routes: introRoutes);
+  return GoRouter(initialLocation: '/intro', routes: [...introRoutes]);
 }
