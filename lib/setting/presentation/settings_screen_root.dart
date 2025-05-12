@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../component/custom_alert_dialog.dart';
 import 'settings_action.dart';
 import 'settings_notifier.dart';
 import 'settings_screen.dart';
@@ -93,22 +95,15 @@ class SettingsScreenRoot extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('로그아웃'),
-          content: const Text('로그아웃 하시겠습니까?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                notifier.onAction(action);
-              },
-              child: const Text('확인'),
-            ),
-          ],
+        return CustomAlertDialog(
+          title: "Are you sure ?",
+          message: "정말 로그아웃 하시겠습니까?",
+          cancelText: "Cancel",
+          confirmText: "Confrim",
+          onConfirm: () {
+            Navigator.pop(dialogContext);
+            notifier.onAction(action);
+          },
         );
       },
     );
@@ -122,22 +117,15 @@ class SettingsScreenRoot extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('회원 탈퇴'),
-          content: const Text('모든 데이터가 삭제됩니다. 정말 탈퇴하시겠습니까?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                notifier.onAction(action);
-              },
-              child: const Text('확인', style: TextStyle(color: Colors.red)),
-            ),
-          ],
+        return CustomAlertDialog(
+          title: "Are you sure ?",
+          message: "정말 회원탈퇴 하시겠습니까?\n 모든 데이터가 삭제됩니다.",
+          cancelText: "Cancel",
+          confirmText: "Confrim",
+          onConfirm: () {
+            Navigator.pop(dialogContext);
+            notifier.onAction(action);
+          },
         );
       },
     );
