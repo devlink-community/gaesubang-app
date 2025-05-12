@@ -6,27 +6,38 @@ import 'package:go_router/go_router.dart';
 import '../edit_intro_action.dart';
 import '../edit_intro_notifier.dart';
 
-class EditIntroRoot extends ConsumerWidget {
+class EditIntroRoot extends ConsumerStatefulWidget {
   const EditIntroRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // editIntroNotifierProvider로 변경
+  ConsumerState<EditIntroRoot> createState() => _EditIntroRootState();
+}
+
+class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
+  @override
+  void initState() {
+    super.initState();
+    // 화면 진입 시 프로필 정보 로드
+    Future.microtask(
+      () => ref.read(editIntroNotifierProvider.notifier).loadProfile,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(editIntroNotifierProvider);
     final notifier = ref.watch(editIntroNotifierProvider.notifier);
 
     return EditIntroScreen(
       state: state,
       onAction: (action) async {
-        switch (action) {
-          case OnSave():
-            await notifier.onAction(action);
-            if (!state.isError && state.isSuccess) {
-              context.pop(); // 저장 성공 시 이전 화면으로 이동
-            }
-            break;
-          default:
-            await notifier.onAction(action);
+        await notifier.onAction(action);
+
+        // OnSave 액션 처리 후 성공적으로 저장되었다면 뒤로 가기
+        if (action is OnSave && state.isSuccess && !state.isError) {
+          if (context.mounted) {
+            context.pop();
+          }
         }
       },
     );

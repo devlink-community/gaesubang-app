@@ -24,51 +24,59 @@ class EditIntroNotifier extends _$EditIntroNotifier {
     _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
     _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
 
-    // 초기 상태 반환 및 프로필 로드 시작
-    _loadProfile();
-
     return const EditIntroState();
   }
 
-  // 나머지 메서드는 이전 코드와 동일...
-  Future<void> _loadProfile() async {
+  Future<void> loadProfile() async {
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
-    try {
-      final member = await _getCurrentProfileUseCase.execute();
-      state = state.copyWith(isLoading: false, isSuccess: true, member: member);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필 정보를 불러올 수 없습니다.',
-      );
-    }
+    final memberResult = await _getCurrentProfileUseCase.execute();
+
+    memberResult.when(
+      data: (member) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true,
+          member: member,
+        );
+      },
+      error: (error, stackTrace) {
+        state = state.copyWith(
+          isLoading: false,
+          isError: true,
+          errorMessage: '프로필 정보를 불러올 수 없습니다.',
+        );
+      },
+      loading: () {
+        // 이미 위에서 loading 상태로 설정했으므로 여기서는 추가 작업 없음
+      },
+    );
   }
 
   Future<void> onAction(EditIntroAction action) async {
     switch (action) {
       case OnChangeNickname(:final nickname):
-        if (state.member != null) {
-          final updatedMember = state.member!.copyWith(nickname: nickname);
-          state = state.copyWith(member: updatedMember);
-        }
-        break;
-
+        _handleChangeNickname(nickname);
       case OnChangeMessage(:final message):
-        if (state.member != null) {
-          final updatedMember = state.member!.copyWith(description: message);
-          state = state.copyWith(member: updatedMember);
-        }
-        break;
-
+        _handleChangeMessage(message);
       case OnPickImage(:final image):
         await _updateProfileImage(image);
-        break;
-
       case OnSave():
         await _saveProfile();
-        break;
+    }
+  }
+
+  void _handleChangeNickname(String nickname) {
+    if (state.member != null) {
+      final updatedMember = state.member!.copyWith(nickname: nickname);
+      state = state.copyWith(member: updatedMember);
+    }
+  }
+
+  void _handleChangeMessage(String message) {
+    if (state.member != null) {
+      final updatedMember = state.member!.copyWith(description: message);
+      state = state.copyWith(member: updatedMember);
     }
   }
 
@@ -81,11 +89,28 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
     try {
       final xFile = XFile(image.path);
-      final updatedMember = await _updateProfileImageUseCase.execute(xFile);
-      state = state.copyWith(
-        isImageUploading: false,
-        isImageUploadSuccess: true,
-        member: updatedMember,
+      final updatedMemberResult = await _updateProfileImageUseCase.execute(
+        xFile,
+      );
+
+      updatedMemberResult.when(
+        data: (updatedMember) {
+          state = state.copyWith(
+            isImageUploading: false,
+            isImageUploadSuccess: true,
+            member: updatedMember,
+          );
+        },
+        error: (error, stackTrace) {
+          state = state.copyWith(
+            isImageUploading: false,
+            isImageUploadError: true,
+            imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다.',
+          );
+        },
+        loading: () {
+          // 이미 로딩 상태로 설정했으므로 추가 작업 없음
+        },
       );
     } catch (e) {
       state = state.copyWith(
@@ -96,29 +121,42 @@ class EditIntroNotifier extends _$EditIntroNotifier {
     }
   }
 
-  Future<bool> _saveProfile() async {
-    if (state.member == null) return false;
+  Future<void> _saveProfile() async {
+    if (state.member == null) return;
 
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
     try {
-      final updatedMember = await _updateProfileUseCase.execute(
+      final updatedMemberResult = await _updateProfileUseCase.execute(
         nickname: state.member!.nickname,
         intro: state.member!.description,
       );
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        member: updatedMember,
+
+      updatedMemberResult.when(
+        data: (updatedMember) {
+          state = state.copyWith(
+            isLoading: false,
+            isSuccess: true,
+            member: updatedMember,
+          );
+        },
+        error: (error, stackTrace) {
+          state = state.copyWith(
+            isLoading: false,
+            isError: true,
+            errorMessage: '프로필 정보를 수정할 수 없습니다.',
+          );
+        },
+        loading: () {
+          // 이미 로딩 상태로 설정했으므로 추가 작업 없음
+        },
       );
-      return true;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         isError: true,
         errorMessage: '프로필 정보를 수정할 수 없습니다.',
       );
-      return false;
     }
   }
 }

@@ -56,13 +56,9 @@ void main() {
   );
 }
 
-// IntroNotifier를 상속받아 build 메서드만 override하는 Mock Notifier
 class IntroNotifierMock extends IntroNotifier {
   final IntroState mockState;
 
-  // IntroNotifier에서 사용하는 UseCase들을 선언해줍니다.
-  // late final 키워드를 사용하여 build 메서드에서 초기화될 것임을 명시합니다.
-  // IntroNotifier의 필드 선언을 참고하여 동일하게 맞춰줍니다.
   @override
   late final FetchIntroUserUseCase _fetchUserUseCase;
   @override
@@ -78,11 +74,6 @@ class IntroNotifierMock extends IntroNotifier {
     _fetchStatsUseCase = ref.watch(fetchIntroStatsUseCaseProvider);
     return mockState;
   }
-
-  // onAction 등 다른 메서드들은 IntroNotifier의 것을 그대로 사용하거나,
-  // 필요에 따라 mock 환경에 맞게 override 할 수 있습니다.
-  // 예를 들어, onAction 내부에서 _fetchUserUseCase 등을 사용한다면
-  // 해당 use case들이 build 메서드에서 초기화되므로 정상 동작합니다.
 }
 
 class MyApp extends ConsumerWidget {

@@ -1,64 +1,23 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/styles/app_color_styles.dart';
+import '../../../core/styles/app_text_styles.dart';
+import '../edit_intro_action.dart';
+import '../states/edit_intro_state.dart';
 
-import '../../module/edit_intro_di.dart';
+class EditIntroScreen extends StatelessWidget {
+  final EditIntroState state;
+  final Future<void> Function(EditIntroAction action) onAction;
 
-class EditIntroScreen extends ConsumerStatefulWidget {
-  const EditIntroScreen({super.key});
-
-  @override
-  ConsumerState<EditIntroScreen> createState() => _EditIntroScreenState();
-}
-
-class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
-  final _nicknameController = TextEditingController();
-  final _introController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      ref.read(editIntroProvider.notifier).loadProfile();
-    });
-  }
-
-  @override
-  void dispose() {
-    _nicknameController.dispose();
-    _introController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      ref.read(editIntroProvider.notifier).updateProfileImage(image);
-    }
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final success = await ref
-        .read(editIntroProvider.notifier)
-        .updateProfile(
-          nickname: _nicknameController.text,
-          intro: _introController.text,
-        );
-
-    if (success && mounted) {
-      context.pop();
-    }
-  }
+  const EditIntroScreen({
+    super.key,
+    required this.state,
+    required this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(editIntroProvider);
-
     if (state.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -74,21 +33,26 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
       return const Scaffold(body: Center(child: Text('프로필 정보를 불러올 수 없습니다')));
     }
 
-    _nicknameController.text = member.nickname;
-    _introController.text = member.description;
+    // TextEditingController 생성은 필요할 때만 지역 변수로 사용
+    final nicknameController = TextEditingController(text: member.nickname);
+    final introController = TextEditingController(text: member.description);
+    final formKey = GlobalKey<FormState>();
+
+    // controller dispose는 StatelessWidget에서는 관리할 수 없음
+    // 이 경우 Root에서 관리하거나, 더 간단한 방식으로 구현해야 함
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('프로필 수정'),
+        title: Text('프로필 수정', style: AppTextStyles.heading3Bold),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -110,8 +74,8 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
+                        decoration: BoxDecoration(
+                          color: AppColorStyles.primary100,
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -119,7 +83,7 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
                             Icons.camera_alt,
                             color: Colors.white,
                           ),
-                          onPressed: _pickImage,
+                          onPressed: () => _pickImage(context),
                         ),
                       ),
                     ),
@@ -128,7 +92,7 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
               ),
               const SizedBox(height: 24),
               TextFormField(
-                controller: _nicknameController,
+                controller: nicknameController,
                 decoration: const InputDecoration(
                   labelText: '닉네임',
                   border: OutlineInputBorder(),
@@ -139,25 +103,61 @@ class _EditIntroScreenState extends ConsumerState<EditIntroScreen> {
                   }
                   return null;
                 },
+                onChanged: (value) {
+                  onAction(EditIntroAction.onChangeNickname(value));
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _introController,
+                controller: introController,
                 decoration: const InputDecoration(
                   labelText: '소개글',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
+                onChanged: (value) {
+                  onAction(EditIntroAction.onChangeMessage(value));
+                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _saveProfile,
-                child: const Text('저장하기'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColorStyles.primary100,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => _saveProfile(context, formKey),
+                child: Text(
+                  '저장하기',
+                  style: AppTextStyles.button1Medium.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _pickImage(BuildContext context) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      await onAction(EditIntroAction.onPickImage(File(image.path)));
+    }
+  }
+
+  Future<void> _saveProfile(
+    BuildContext context,
+    GlobalKey<FormState> formKey,
+  ) async {
+    if (formKey.currentState!.validate()) {
+      await onAction(const EditIntroAction.onSave());
+    }
   }
 }
