@@ -27,6 +27,7 @@ import '../domain/usecase/get_terms_info_use_case.dart';
 import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
 import '../presentation/forgot_password/forgot_password_screen_root.dart';
+import '../presentation/terms/terms_screen_root.dart';
 
 part 'auth_di.g.dart';
 
@@ -116,6 +117,12 @@ final List<GoRoute> authRoutes = [
   GoRoute(
     path: '/sign-up',
     builder: (context, state) => const SignupScreenRoot(),
+  ),
+
+  // 약관 화면 라우트 추가
+  GoRoute(
+    path: '/terms',
+    builder: (context, state) => const TermsScreenRoot(),
   ),
 
   GoRoute(path: '/home', builder: (context, state) => const _HomeMockScreen()),

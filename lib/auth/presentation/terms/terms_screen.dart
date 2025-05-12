@@ -31,23 +31,24 @@ class TermsScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+
                     // 이미지 표시
                     Image.asset(
-                      'assets/images/terms_mascot.png', // 실제 앱에 맞는 이미지 경로
-                      width: 120,
-                      height: 120,
+                      'assets/images/gaesubang_mascot.png', // 실제 앱에 맞는 이미지 경로
+                      width: 258,
+                      height: 258,
                     ),
                     const SizedBox(height: 24),
                     // 타이틀 텍스트
                     Text(
-                      '개인정보 및 이용약관에',
+                      '개수방 멤버쉽에',
                       style: AppTextStyles.subtitle1Bold.copyWith(
                         fontSize: 18,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     Text(
-                      '동의 정보를 확인해주세요.',
+                      '오신 것을 환영합니다.',
                       style: AppTextStyles.subtitle1Bold.copyWith(
                         fontSize: 18,
                       ),
@@ -62,6 +63,7 @@ class TermsScreen extends StatelessWidget {
                 flex: 4,
                 child: Column(
                   children: [
+                    const SizedBox(height: 50),
                     // 전체 동의 체크박스
                     _buildCheckbox(
                       title: '모든 약관에 동의합니다.',
@@ -69,9 +71,7 @@ class TermsScreen extends StatelessWidget {
                       onChanged: (value) => onAction(TermsAction.allAgreedChanged(value ?? false)),
                       bold: true,
                     ),
-                    const SizedBox(height: 8),
-                    const Divider(thickness: 1),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // 서비스 이용약관 동의 (필수)
                     _buildCheckboxWithButton(
