@@ -13,6 +13,9 @@ class UserStorage {
   final Map<String, ProfileDto> _profiles = {};
   final Map<String, String> _passwords = {}; // 비밀번호 저장 (실제로는 암호화해야 함)
 
+  // 약관 동의 정보 저장소
+  final Map<String, Map<String, dynamic>> _termsAgreements = {};
+
   // 현재 로그인된 사용자
   String? _currentUserId;
 
@@ -93,11 +96,23 @@ class UserStorage {
   }
 
   /// 사용자 추가 (회원가입)
-  void addUser(UserDto user, ProfileDto profile, String password) {
+  void addUser(UserDto user, ProfileDto profile, String password, {String? agreedTermsId}) {
     initialize();
     _users[user.email!] = user;
     _profiles[user.id!] = profile;
     _passwords[user.email!] = password;
+
+    // 약관 동의 ID가 있으면 사용자에 연결
+    if (agreedTermsId != null) {
+      final updatedUser = UserDto(
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname,
+        uid: user.uid,
+        agreedTermsId: agreedTermsId, // 약관 동의 ID 추가
+      );
+      _users[user.email!] = updatedUser;
+    }
   }
 
   /// 사용자 삭제 (계정삭제)
@@ -147,5 +162,35 @@ class UserStorage {
   bool isEmailAvailable(String email) {
     initialize();
     return !_users.containsKey(email.toLowerCase());
+  }
+
+  /// 약관 동의 정보 저장
+  Map<String, dynamic> saveTermsAgreement(Map<String, dynamic> termsData) {
+    final termsId = termsData['id'] as String;
+    _termsAgreements[termsId] = termsData;
+    return termsData;
+  }
+
+  /// 약관 정보 조회
+  Map<String, dynamic>? getTermsInfo(String termsId) {
+    return _termsAgreements[termsId];
+  }
+
+  /// 약관 동의 정보와 사용자 연결
+  void linkUserWithTerms(String userId, String termsId) {
+    final user = _users.values.firstWhere(
+          (user) => user.id == userId,
+      orElse: () => throw Exception('사용자를 찾을 수 없습니다'),
+    );
+
+    final updatedUser = UserDto(
+      id: user.id,
+      email: user.email,
+      nickname: user.nickname,
+      uid: user.uid,
+      agreedTermsId: termsId,
+    );
+
+    _users[user.email!] = updatedUser;
   }
 }
