@@ -1,9 +1,9 @@
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../auth/presentation/forgot_password/forgot_password_screen_root.dart';
 import '../../edit_intro/presentation/screens/edit_intro_root.dart';
 import '../presentation/intro_screen_root.dart';
 
@@ -28,8 +28,8 @@ final List<GoRoute> introRoutes = [
 
   // 다른 설정 관련 화면들도 필요에 따라 추가
   GoRoute(
-    path: '/change-password',
-    builder: (context, state) => const Placeholder(), // 임시 화면
+    path: '/forget-password',
+    builder: (context, state) => const ForgotPasswordScreenRoot(),
   ),
 ];
 

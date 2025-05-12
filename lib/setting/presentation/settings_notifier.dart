@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../domain/usecase/delete_account_usecase.dart';
+import '../../auth/domain/usecase/delete_account_use_case.dart';
 import '../domain/usecase/logout_usecase.dart';
 import '../module/settings_di.dart';
 import 'settings_action.dart';
@@ -46,7 +46,11 @@ class SettingsNotifier extends _$SettingsNotifier {
 
   Future<void> _handleDeleteAccount() async {
     state = state.copyWith(deleteAccountResult: const AsyncLoading());
-    final asyncResult = await _deleteAccountUseCase.execute();
+    // 현재 로그인된 사용자의 이메일을 가져오는 로직이 필요합니다.
+    // 임시로 'current@example.com'을 사용합니다.
+    // 실제 구현에서는 getCurrentUser() 등을 통해 가져와야 합니다.
+    final email = 'current@example.com'; // 실제 구현 필요
+    final asyncResult = await _deleteAccountUseCase.execute(email);
     state = state.copyWith(deleteAccountResult: asyncResult);
   }
 }

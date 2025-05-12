@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:flutter/material.dart';
 
 import '../../../auth/domain/model/member.dart';
@@ -51,12 +52,15 @@ class ProfileInfo extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.local_fire_department,
-                        color: primary,
+                        color: AppColorStyles.primary100,
                         size: 30,
                       ),
                       const SizedBox(width: 4),
                       // Member 모델에 streakDays 필드가 없다면 원하는 텍스트로 바꿔 주세요
-                      Text('1 Day', style: AppTextStyles.heading6Regular),
+                      Text(
+                        '${member.streakDays} Day',
+                        style: AppTextStyles.heading6Regular,
+                      ),
                     ],
                   ),
                 ],
