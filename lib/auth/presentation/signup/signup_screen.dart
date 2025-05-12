@@ -6,7 +6,6 @@ import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SignupScreen extends StatefulWidget {
   final SignupState state;
@@ -54,7 +53,19 @@ class _SignupScreenState extends State<SignupScreen> {
   void didUpdateWidget(covariant SignupScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 회원가입 성공 시 적절한 처리는 Root에서 수행
+    // 컨트롤러 값 동기화 - 필요한 경우에만 업데이트
+    if (widget.state.nickname != _nicknameController.text) {
+      _nicknameController.text = widget.state.nickname;
+    }
+    if (widget.state.email != _emailController.text) {
+      _emailController.text = widget.state.email;
+    }
+    if (widget.state.password != _passwordController.text) {
+      _passwordController.text = widget.state.password;
+    }
+    if (widget.state.passwordConfirm != _passwordConfirmController.text) {
+      _passwordConfirmController.text = widget.state.passwordConfirm;
+    }
   }
 
   @override
@@ -151,94 +162,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   const SizedBox(height: 32),
 
-                  // 닉네임 입력
-                  CustomTextField(
-                    label: '',
-                    hintText: 'nick name',
-                    controller: _nicknameController,
-                    focusNode: _nicknameFocusNode,
-                    errorText: widget.state.nicknameError,
-                    onChanged: (value) => widget.onAction(SignupAction.nicknameChanged(value)),
-                  ),
+                  // 입력 필드 섹션 - 간격 일정하게 유지
+                  _buildInputFields(),
 
-                  const SizedBox(height: 16),
-
-                  // 이메일 입력
-                  CustomTextField(
-                    label: '',
-                    hintText: 'Email address',
-                    controller: _emailController,
-                    focusNode: _emailFocusNode,
-                    keyboardType: TextInputType.emailAddress,
-                    errorText: widget.state.emailError,
-                    onChanged: (value) => widget.onAction(SignupAction.emailChanged(value)),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // 비밀번호 입력
-                  CustomTextField(
-                    label: '',
-                    hintText: 'Password',
-                    controller: _passwordController,
-                    focusNode: _passwordFocusNode,
-                    obscureText: true,
-                    errorText: widget.state.passwordError,
-                    onChanged: (value) => widget.onAction(SignupAction.passwordChanged(value)),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // 비밀번호 확인 입력
-                  CustomTextField(
-                    label: '',
-                    hintText: 'Password confirm',
-                    controller: _passwordConfirmController,
-                    focusNode: _passwordConfirmFocusNode,
-                    obscureText: true,
-                    errorText: widget.state.passwordConfirmError,
-                    onChanged: (value) => widget.onAction(SignupAction.passwordConfirmChanged(value)),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 이용약관 동의 (우측 정렬)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬
-                    children: [
-                      Checkbox(
-                        value: widget.state.agreeToTerms,
-                        onChanged: (value) => widget.onAction(
-                            SignupAction.agreeToTermsChanged(value ?? false)),
-                        activeColor: AppColorStyles.primary100,
-                      ),
-                      GestureDetector(
-                        onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
-                        child: Text(
-                          '회원가입 약관 보실께요~',
-                          style: AppTextStyles.body2Regular.copyWith(
-                            color: AppColorStyles.primary100,
-                            //decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // 약관 동의 에러 메시지
-                  if (widget.state.termsError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 16.0, top: 4.0),
-                      child: Align(
-                        alignment: Alignment.centerRight, // 에러 메시지도 우측 정렬
-                        child: Text(
-                          widget.state.termsError!,
-                          style: AppTextStyles.captionRegular.copyWith(
-                            color: AppColorStyles.error,
-                          ),
-                        ),
-                      ),
-                    ),
+                  // 이용약관 동의 섹션
+                  _buildTermsAgreement(),
 
                   const SizedBox(height: 32),
 
@@ -256,6 +184,111 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // 입력 필드 섹션 - 모듈화하여 가독성 향상
+  Widget _buildInputFields() {
+    return Column(
+      children: [
+        // 닉네임 입력
+        CustomTextField(
+          label: '',
+          hintText: 'nick name',
+          controller: _nicknameController,
+          focusNode: _nicknameFocusNode,
+          errorText: widget.state.nicknameError,
+          onChanged: (value) => widget.onAction(SignupAction.nicknameChanged(value)),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 이메일 입력
+        CustomTextField(
+          label: '',
+          hintText: 'Email address',
+          controller: _emailController,
+          focusNode: _emailFocusNode,
+          keyboardType: TextInputType.emailAddress,
+          errorText: widget.state.emailError,
+          onChanged: (value) => widget.onAction(SignupAction.emailChanged(value)),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 비밀번호 입력
+        CustomTextField(
+          label: '',
+          hintText: 'Password',
+          controller: _passwordController,
+          focusNode: _passwordFocusNode,
+          obscureText: true,
+          errorText: widget.state.passwordError,
+          onChanged: (value) => widget.onAction(SignupAction.passwordChanged(value)),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 비밀번호 확인 입력
+        CustomTextField(
+          label: '',
+          hintText: 'Password confirm',
+          controller: _passwordConfirmController,
+          focusNode: _passwordConfirmFocusNode,
+          obscureText: true,
+          errorText: widget.state.passwordConfirmError,
+          onChanged: (value) => widget.onAction(SignupAction.passwordConfirmChanged(value)),
+        ),
+      ],
+    );
+  }
+
+  // 이용약관 동의 섹션 - 모듈화하여 가독성 향상
+  Widget _buildTermsAgreement() {
+    return Column(
+      children: [
+        // 이용약관 동의 (우측 정렬)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬
+          children: [
+            Checkbox(
+              value: widget.state.agreeToTerms,
+              onChanged: widget.state.isTermsAgreed
+                  ? null // 약관에 이미 동의했으면 비활성화
+                  : (value) => widget.onAction(SignupAction.agreeToTermsChanged(value ?? false)),
+              activeColor: AppColorStyles.primary100,
+              // 비활성화 상태에서도 색상 유지
+              fillColor: widget.state.isTermsAgreed
+                  ? MaterialStateProperty.all(AppColorStyles.gray60)
+                  : null,
+            ),
+            GestureDetector(
+              onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
+              child: Text(
+                '회원가입 약관 보시겠어요?',
+                style: AppTextStyles.body2Regular.copyWith(
+                  color: AppColorStyles.gray80,
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // 약관 동의 에러 메시지 - 고정 높이로 일관성 유지
+        Container(
+          height: 24, // 에러 메시지 영역 고정 높이
+          padding: const EdgeInsets.only(right: 16.0),
+          alignment: Alignment.centerRight, // 에러 메시지도 우측 정렬
+          child: widget.state.termsError != null
+              ? Text(
+            widget.state.termsError!,
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.error,
+            ),
+          )
+              : null,
+        ),
+      ],
     );
   }
 }

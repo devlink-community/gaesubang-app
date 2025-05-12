@@ -16,7 +16,7 @@ class CustomTextField extends StatefulWidget {
     this.errorText,
     this.controller,
     this.onChanged,
-    this.focusNode, // 여기에 focusNode 매개변수 추가
+    this.focusNode,
   });
 
   final String label;
@@ -26,7 +26,7 @@ class CustomTextField extends StatefulWidget {
   final String? errorText;
   final TextEditingController? controller;
   final Function(String)? onChanged;
-  final FocusNode? focusNode; // 여기에 focusNode 필드 추가
+  final FocusNode? focusNode;
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -117,17 +117,20 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
         ),
 
-        // 에러 메시지
-        if (widget.errorText != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              widget.errorText!,
-              style: AppTextStyles.captionRegular.copyWith(
-                color: AppColorStyles.error,
-              ),
+        // 에러 메시지 영역 - 고정 높이로 유지
+        Container(
+          height: 24, // 에러 메시지 영역의 고정 높이
+          padding: const EdgeInsets.only(top: 4.0, left: 4.0),
+          alignment: Alignment.centerLeft,
+          child: widget.errorText != null
+              ? Text(
+            widget.errorText!,
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.error,
             ),
-          ),
+          )
+              : null, // 에러가 없을 때는 빈 공간으로 유지
+        ),
       ],
     );
   }

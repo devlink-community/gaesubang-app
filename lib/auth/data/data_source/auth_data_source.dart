@@ -11,6 +11,7 @@ abstract interface class AuthDataSource {
     required String email,
     required String password,
     required String nickname,
+    String? agreedTermsId, // 약관 동의 ID 추가
   });
 
   /// 현재 로그인 세션 확인
@@ -30,4 +31,13 @@ abstract interface class AuthDataSource {
 
   /// 계정삭제
   Future<void> deleteAccount(String email);
+
+  /// 약관 동의 정보 저장
+  Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData);
+
+  /// 약관 정보 조회
+  Future<Map<String, dynamic>> fetchTermsInfo();
+
+  /// 특정 약관 정보 조회
+  Future<Map<String, dynamic>?> getTermsInfo(String termsId);
 }

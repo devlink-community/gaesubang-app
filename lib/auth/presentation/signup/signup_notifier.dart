@@ -29,13 +29,21 @@ class SignupNotifier extends _$SignupNotifier {
   @override
   SignupState build() {
     _signupUseCase = ref.watch(signupUseCaseProvider);
-    _checkNicknameAvailabilityUseCase = ref.watch(checkNicknameAvailabilityUseCaseProvider);
-    _checkEmailAvailabilityUseCase = ref.watch(checkEmailAvailabilityUseCaseProvider);
+    _checkNicknameAvailabilityUseCase = ref.watch(
+      checkNicknameAvailabilityUseCaseProvider,
+    );
+    _checkEmailAvailabilityUseCase = ref.watch(
+      checkEmailAvailabilityUseCaseProvider,
+    );
     _validateNicknameUseCase = ref.watch(validateNicknameUseCaseProvider);
     _validateEmailUseCase = ref.watch(validateEmailUseCaseProvider);
     _validatePasswordUseCase = ref.watch(validatePasswordUseCaseProvider);
-    _validatePasswordConfirmUseCase = ref.watch(validatePasswordConfirmUseCaseProvider);
-    _validateTermsAgreementUseCase = ref.watch(validateTermsAgreementUseCaseProvider);
+    _validatePasswordConfirmUseCase = ref.watch(
+      validatePasswordConfirmUseCaseProvider,
+    );
+    _validateTermsAgreementUseCase = ref.watch(
+      validateTermsAgreementUseCaseProvider,
+    );
 
     return const SignupState();
   }
@@ -50,6 +58,7 @@ class SignupNotifier extends _$SignupNotifier {
         );
 
       case EmailChanged(:final email):
+      // 사용자 편의성을 위해 입력 중에는 원래 입력값 유지
         state = state.copyWith(
           email: email,
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
@@ -60,8 +69,13 @@ class SignupNotifier extends _$SignupNotifier {
           password: password,
           passwordError: null, // 사용자가 입력 중이면 에러 메시지 제거
           // 비밀번호가 변경되면 비밀번호 확인 유효성도 다시 검증
-          passwordConfirmError: state.passwordConfirm.isEmpty ? null :
-          await _validatePasswordConfirmUseCase.execute(password, state.passwordConfirm),
+          passwordConfirmError:
+          state.passwordConfirm.isEmpty
+              ? null
+              : await _validatePasswordConfirmUseCase.execute(
+            password,
+            state.passwordConfirm,
+          ),
         );
 
       case PasswordConfirmChanged(:final passwordConfirm):
@@ -92,6 +106,8 @@ class SignupNotifier extends _$SignupNotifier {
       case EmailFocusChanged(:final hasFocus):
         if (!hasFocus && state.email.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
+          // 이메일 주소는 데이터 저장/조회 시 소문자로 변환되지만
+          // 화면 표시는 사용자 입력 그대로 유지
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(emailError: error);
 
@@ -112,7 +128,9 @@ class SignupNotifier extends _$SignupNotifier {
         if (!hasFocus && state.passwordConfirm.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
           final error = await _validatePasswordConfirmUseCase.execute(
-              state.password, state.passwordConfirm);
+            state.password,
+            state.passwordConfirm,
+          );
           state = state.copyWith(passwordConfirmError: error);
         }
 
@@ -137,15 +155,16 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 닉네임 중복 확인
   Future<void> _performNicknameAvailabilityCheck() async {
-    state = state.copyWith(
-      nicknameAvailability: const AsyncValue.loading(),
-    );
+    state = state.copyWith(nicknameAvailability: const AsyncValue.loading());
 
-    final result = await _checkNicknameAvailabilityUseCase.execute(state.nickname);
+    final result = await _checkNicknameAvailabilityUseCase.execute(
+      state.nickname,
+    );
 
     state = state.copyWith(
       nicknameAvailability: result,
-      nicknameError: result.hasError
+      nicknameError:
+      result.hasError
           ? '닉네임 중복 확인 중 오류가 발생했습니다'
           : result.value == false
           ? '이미 사용 중인 닉네임입니다'
@@ -155,15 +174,15 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 이메일 중복 확인
   Future<void> _performEmailAvailabilityCheck() async {
-    state = state.copyWith(
-      emailAvailability: const AsyncValue.loading(),
-    );
+    state = state.copyWith(emailAvailability: const AsyncValue.loading());
 
+    // 데이터 비교를 위해 소문자로 변환하여 중복 체크
     final result = await _checkEmailAvailabilityUseCase.execute(state.email);
 
     state = state.copyWith(
       emailAvailability: result,
-      emailError: result.hasError
+      emailError:
+      result.hasError
           ? '이메일 중복 확인 중 오류가 발생했습니다'
           : result.value == false
           ? '이미 사용 중인 이메일입니다'
@@ -174,12 +193,20 @@ class SignupNotifier extends _$SignupNotifier {
   // 회원가입 실행
   Future<void> _performSignup() async {
     // 1. 모든 필드의 유효성 검증
-    final nicknameError = await _validateNicknameUseCase.execute(state.nickname);
+    final nicknameError = await _validateNicknameUseCase.execute(
+      state.nickname,
+    );
     final emailError = await _validateEmailUseCase.execute(state.email);
-    final passwordError = await _validatePasswordUseCase.execute(state.password);
+    final passwordError = await _validatePasswordUseCase.execute(
+      state.password,
+    );
     final passwordConfirmError = await _validatePasswordConfirmUseCase.execute(
-        state.password, state.passwordConfirm);
-    final termsError = await _validateTermsAgreementUseCase.execute(state.agreeToTerms);
+      state.password,
+      state.passwordConfirm,
+    );
+    final termsError = await _validateTermsAgreementUseCase.execute(
+      state.agreeToTerms,
+    );
 
     // 검증 결과 업데이트
     state = state.copyWith(
@@ -191,8 +218,11 @@ class SignupNotifier extends _$SignupNotifier {
     );
 
     // 유효성 검증 오류가 있으면 회원가입 진행 중단
-    if (nicknameError != null || emailError != null ||
-        passwordError != null || passwordConfirmError != null || termsError != null) {
+    if (nicknameError != null ||
+        emailError != null ||
+        passwordError != null ||
+        passwordConfirmError != null ||
+        termsError != null) {
       return;
     }
 
@@ -206,28 +236,45 @@ class SignupNotifier extends _$SignupNotifier {
     }
 
     // 중복 확인 결과가 유효하지 않으면 회원가입 진행 중단
-    if (state.nicknameAvailability?.value != true || state.emailAvailability?.value != true) {
+    if (state.nicknameAvailability?.value != true ||
+        state.emailAvailability?.value != true) {
       return;
     }
 
     // 3. 회원가입 실행
-    state = state.copyWith(
-      signupResult: const AsyncValue.loading(),
-    );
+    state = state.copyWith(signupResult: const AsyncValue.loading());
 
+    // 회원가입 시 이메일은 그대로 전달
+    // 소문자 변환은 Repository/DataSource 레벨에서 처리
     final result = await _signupUseCase.execute(
       email: state.email,
       password: state.password,
       nickname: state.nickname,
+      agreedTermsId: state.agreedTermsId, // 약관 동의 ID 전달
     );
 
-    state = state.copyWith(
-      signupResult: result,
-    );
+    state = state.copyWith(signupResult: result);
   }
 
   // 폼 리셋 (회원가입 성공 후 호출)
   void resetForm() {
     state = const SignupState();
+  }
+
+  // 약관 동의 ID 설정
+  void setAgreedTermsId(String termsId) {
+    state = state.copyWith(agreedTermsId: termsId);
+  }
+
+  // 약관 동의 상태 업데이트
+  void updateTermsAgreement({
+    required String agreedTermsId,
+    required bool isAgreed,
+  }) {
+    state = state.copyWith(
+      agreedTermsId: agreedTermsId,
+      isTermsAgreed: isAgreed,
+      agreeToTerms: isAgreed, // 약관 동의 체크박스도 함께 업데이트
+    );
   }
 }

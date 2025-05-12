@@ -11,6 +11,7 @@ class Member with _$Member {
     required this.uid,
     this.image = "",
     this.onAir = false,
+    this.agreedTermsId, // 동의한 약관 ID (단일 ID)
   });
 
   final String id;
@@ -19,4 +20,5 @@ class Member with _$Member {
   final String uid;
   final String image;
   final bool onAir;
+  final String? agreedTermsId; // 약관 동의 ID (하나만 저장)
 }

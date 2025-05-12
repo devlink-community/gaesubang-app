@@ -1,16 +1,40 @@
 // lib/auth/presentation/signup/signup_screen_root.dart
-import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
-import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart';
-import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
+import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart';
+import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen.dart';
 
-class SignupScreenRoot extends ConsumerWidget {
-  const SignupScreenRoot({super.key});
+class SignupScreenRoot extends ConsumerStatefulWidget {
+  final String? agreedTermsId;
+
+  const SignupScreenRoot({
+    super.key,
+    this.agreedTermsId,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SignupScreenRoot> createState() => _SignupScreenRootState();
+}
+
+class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
+  @override
+  void initState() {
+    super.initState();
+
+    // 약관 동의 ID가 있으면 설정
+    if (widget.agreedTermsId != null) {
+      // 다음 프레임에서 notifier 접근 (initState에서 ref.read 사용)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(signupNotifierProvider.notifier).setAgreedTermsId(widget.agreedTermsId!);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(signupNotifierProvider);
     final notifier = ref.watch(signupNotifierProvider.notifier);
 
@@ -43,37 +67,14 @@ class SignupScreenRoot extends ConsumerWidget {
             context.go('/');
 
           case NavigateToTerms():
-          // 약관 페이지로 이동 (현재 구현 예정 페이지가 없으므로 대화상자로 대체)
-            _showTermsDialog(context);
+          // 약관 페이지로 이동
+            context.push('/terms');
 
           default:
           // 나머지 액션은 Notifier에서 처리
             notifier.onAction(action);
         }
       },
-    );
-  }
-
-  // 약관 대화상자 표시 (임시)
-  void _showTermsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('이용약관'),
-        content: const SingleChildScrollView(
-          child: Text(
-            '이용약관 내용이 여기에 표시됩니다. 실제 애플리케이션에서는 '
-                '상세한 이용약관 텍스트가 포함되어야 합니다.\n\n'
-                '서비스 이용에 관한 약관, 개인정보 처리방침 등이 여기에 기술됩니다.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('닫기'),
-          ),
-        ],
-      ),
     );
   }
 }

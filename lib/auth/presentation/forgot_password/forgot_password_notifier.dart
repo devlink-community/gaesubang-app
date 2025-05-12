@@ -59,6 +59,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
       successMessage: null, // 전송 시작할 때 성공 메시지 초기화
     );
 
+    // 이메일 주소는 그대로 전달하고 소문자 변환은 DataSource에서 처리
     final result = await _resetPasswordUseCase.execute(state.email);
 
     // 성공 시 메시지 설정
