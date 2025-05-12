@@ -13,6 +13,7 @@ class Member with _$Member {
     this.onAir = false,
     this.agreedTermsId, // 동의한 약관 ID (단일 ID)
     this.description = "",
+    this.streakDays = 0,
   });
 
   final String id;
@@ -23,4 +24,5 @@ class Member with _$Member {
   final bool onAir;
   final String? agreedTermsId; // 약관 동의 ID (하나만 저장)
   final String description;
+  final int streakDays;
 }
