@@ -31,16 +31,6 @@ final List<GoRoute> introRoutes = [
     path: '/change-password',
     builder: (context, state) => const Placeholder(), // 임시 화면
   ),
-
-  GoRoute(
-    path: '/privacy-policy',
-    builder: (context, state) => const Placeholder(), // 임시 화면
-  ),
-
-  GoRoute(
-    path: '/app-info',
-    builder: (context, state) => const Placeholder(), // 임시 화면
-  ),
 ];
 
 @riverpod
