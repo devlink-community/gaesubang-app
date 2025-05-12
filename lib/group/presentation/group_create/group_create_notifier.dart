@@ -32,7 +32,12 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         state = state.copyWith(limitMemberCount: count);
 
       case HashTagAdded(:final tag):
-        if (tag.trim().isEmpty) return;
+        final trimmed = tag.trim();
+        if (trimmed.isEmpty ||
+            state.hashTags.any((t) => t.content == trimmed) ||
+            trimmed.length > 20) {
+          return;
+        }
         final newTag = HashTag(
           id: DateTime.now().toString(),
           content: tag.trim(),

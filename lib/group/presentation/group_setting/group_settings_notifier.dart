@@ -71,7 +71,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(imageUrl: imageUrl);
 
       case HashTagAdded(:final tag):
-        if (tag.trim().isEmpty) return;
+        final trimmed = tag.trim();
+        if (trimmed.isEmpty ||
+            state.hashTags.any((t) => t.content == trimmed) ||
+            trimmed.length > 20) {
+          return;
+        }
 
         final newTag = HashTag(
           id: DateTime.now().toString(),
