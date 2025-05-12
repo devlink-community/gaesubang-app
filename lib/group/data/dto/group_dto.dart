@@ -15,6 +15,8 @@ class GroupDto {
     this.limitMemberCount,
     this.owner,
     this.imageUrl,
+    this.createdAt,
+    this.updatedAt,
   });
 
   final String? id;
@@ -26,6 +28,9 @@ class GroupDto {
   final num? limitMemberCount;
   final MemberDto? owner;
   final String? imageUrl;
+
+  final String? createdAt;
+  final String? updatedAt;
 
   factory GroupDto.fromJson(Map<String, dynamic> json) =>
       _$GroupDtoFromJson(json);

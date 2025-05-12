@@ -46,7 +46,18 @@ extension GroupDtoMapper on GroupDto {
       limitMemberCount: limitMemberCount?.toInt() ?? 0,
       owner: owner?.toModel() ?? defaultOwner,
       imageUrl: imageUrl,
+      createdAt: _parseDateTime(createdAt),
+      updatedAt: _parseDateTime(updatedAt),
     );
+  }
+}
+
+DateTime _parseDateTime(String? dateTimeStr) {
+  if (dateTimeStr == null) return DateTime.now();
+  try {
+    return DateTime.parse(dateTimeStr);
+  } catch (_) {
+    return DateTime.now();
   }
 }
 
