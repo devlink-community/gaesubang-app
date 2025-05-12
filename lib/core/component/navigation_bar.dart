@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../styles/app_color_styles.dart';
 import '../styles/app_text_styles.dart';
 
 class AppBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final String? profileImageUrl; // 프로필 이미지 URL 추가
 
   const AppBottomNavigationBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.profileImageUrl, // 선택적 매개변수로 추가
   });
 
   @override
@@ -83,6 +86,7 @@ class AppBottomNavigationBar extends StatelessWidget {
 
   Widget _buildProfileItem(int index) {
     final isSelected = currentIndex == index;
+
     return InkWell(
       onTap: () => onTap(index),
       child: Column(
@@ -99,11 +103,13 @@ class AppBottomNavigationBar extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 10,
               backgroundImage: NetworkImage(
-                'https://via.placeholder.com/150', // 임시 프로필 이미지
+                profileImageUrl ??
+                    'https://via.placeholder.com/150', // 멤버 이미지 사용, 없으면 기본 이미지
               ),
+              backgroundColor: Colors.grey.shade200, // 이미지 로딩 중 보여질 배경색
             ),
           ),
           const SizedBox(height: 4),
