@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
 import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
 import 'package:devlink_mobile_app/auth/data/mapper/member_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/foundation.dart'; // debugPrint 사용을 위함
@@ -52,12 +53,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String nickname,
+    String? agreedTermsId,
   }) async {
     try {
       final response = await _authDataSource.createUser(
         email: email,
         password: password,
         nickname: nickname,
+        agreedTermsId: agreedTermsId,
       );
       final user = response.toUserDto().toModel();
       return Result.success(user);
@@ -125,6 +128,52 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _authDataSource.deleteAccount(email);
       return const Result.success(null);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
+
+  @override
+  Future<Result<TermsAgreement>> getTermsInfo() async {
+    try {
+      final response = await _authDataSource.fetchTermsInfo();
+      final termsAgreement = TermsAgreement(
+        id: response['id'] as String,
+        isAllAgreed: false,
+        isServiceTermsAgreed: false,
+        isPrivacyPolicyAgreed: false,
+        isMarketingAgreed: false,
+      );
+      return Result.success(termsAgreement);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
+
+  @override
+  Future<Result<TermsAgreement>> saveTermsAgreement(TermsAgreement terms) async {
+    try {
+      final Map<String, dynamic> termsData = {
+        'id': terms.id,
+        'isAllAgreed': terms.isAllAgreed,
+        'isServiceTermsAgreed': terms.isServiceTermsAgreed,
+        'isPrivacyPolicyAgreed': terms.isPrivacyPolicyAgreed,
+        'isMarketingAgreed': terms.isMarketingAgreed,
+        'agreedAt': terms.agreedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      };
+
+      final response = await _authDataSource.saveTermsAgreement(termsData);
+
+      return Result.success(TermsAgreement(
+        id: response['id'] as String,
+        isAllAgreed: response['isAllAgreed'] as bool,
+        isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool,
+        isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
+        isMarketingAgreed: response['isMarketingAgreed'] as bool,
+        agreedAt: response['agreedAt'] != null
+            ? DateTime.parse(response['agreedAt'] as String)
+            : null,
+      ));
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
