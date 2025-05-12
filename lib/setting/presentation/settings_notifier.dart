@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../domain/usecase/delete_account_usecase.dart';
+import '../../auth/domain/usecase/delete_account_use_case.dart';
 import '../domain/usecase/logout_usecase.dart';
 import '../module/settings_di.dart';
 import 'settings_action.dart';
