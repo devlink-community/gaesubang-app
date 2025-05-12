@@ -132,25 +132,3 @@ class SettingsScreenRoot extends ConsumerWidget {
     );
   }
 }
-
-void _showDeleteAccountConfirmDialog(
-  BuildContext context,
-  SettingsNotifier notifier,
-  SettingsAction action,
-) {
-  showDialog(
-    context: context,
-    builder: (BuildContext dialogContext) {
-      return CustomAlertDialog(
-        title: "Are you sure ?",
-        message: "정말 회원탈퇴 하시겠습니까?\n 모든 데이터가 삭제됩니다.",
-        cancelText: "Cancel",
-        confirmText: "Confrim",
-        onConfirm: () {
-          Navigator.pop(dialogContext);
-          notifier.onAction(action);
-        },
-      );
-    },
-  );
-}
