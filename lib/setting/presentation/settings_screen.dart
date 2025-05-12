@@ -42,11 +42,6 @@ class SettingsScreen extends StatelessWidget {
                         ),
                   ),
                   _buildSettingItem(
-                    title: '개인정보 수정',
-                    onTap:
-                        () => onAction(const SettingsAction.onTapEditProfile()),
-                  ),
-                  _buildSettingItem(
                     title: '개인정보 처리방침',
                     onTap:
                         () =>

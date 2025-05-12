@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'settings_action.dart';
 import 'settings_notifier.dart';
 import 'settings_screen.dart';
@@ -39,23 +40,43 @@ class SettingsScreenRoot extends ConsumerWidget {
 
     return SettingsScreen(
       state: state,
-      onAction: (action) {
+      onAction: (action) async {
         switch (action) {
           case OnTapEditProfile():
             context.push('/edit-profile');
           case OnTapChangePassword():
             context.push('/change-password');
           case OnTapPrivacyPolicy():
-            context.push('/privacy-policy');
+            // 웹 URL 열기
+            await _launchUrl('https://www.privacypolicygenerator.info/');
           case OnTapAppInfo():
-            context.push('/app-info');
+            // pub.dev로 연결
+            await _launchUrl('https://pub.dev/');
           case OnTapLogout():
             _showLogoutConfirmDialog(context, notifier, action);
           case OnTapDeleteAccount():
             _showDeleteAccountConfirmDialog(context, notifier, action);
+          case OpenUrlPrivacyPolicy():
+            await _launchUrl('https://www.privacypolicygenerator.info/');
+          case OpenUrlAppInfo():
+            await _launchUrl('https://pub.dev/');
         }
       },
     );
+  }
+
+  // URL 실행 메서드
+  Future<void> _launchUrl(String urlString) async {
+    try {
+      final Uri url = Uri.parse(urlString);
+      // 외부 앱을 사용하는 방식으로 변경
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
+      // 여기서 사용자에게 스낵바 등으로 알림을 줄 수 있습니다
+    }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {

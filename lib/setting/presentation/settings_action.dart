@@ -21,4 +21,9 @@ sealed class SettingsAction with _$SettingsAction {
 
   // 회원탈퇴 요청
   const factory SettingsAction.onTapDeleteAccount() = OnTapDeleteAccount;
+
+  // URL 연결 액션 추가
+  const factory SettingsAction.openUrlPrivacyPolicy() = OpenUrlPrivacyPolicy;
+
+  const factory SettingsAction.openUrlAppInfo() = OpenUrlAppInfo;
 }
