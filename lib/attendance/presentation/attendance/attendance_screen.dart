@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -26,19 +27,24 @@ class AttendanceScreen extends StatelessWidget {
         title: Text('출석부',
         style: AppTextStyles.heading3Bold,),
         backgroundColor: Colors.white,
+        foregroundColor: Colors.transparent, // 추가 설정
         elevation: 0,
+
       ),
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          _buildCalendarHeader(),
-          const SizedBox(height: 20),
-          _buildWeekdayLabels(),
-          const SizedBox(height: 10),
-          _buildCalendarBody(),
-          const SizedBox(height: 20),
-          _buildSelectedDateInfo(),
-        ],
+
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildCalendarHeader(),
+            const SizedBox(height: 20),
+            _buildWeekdayLabels(),
+            const SizedBox(height: 10),
+            _buildCalendarBody(),
+            const SizedBox(height: 20),
+            _buildSelectedDateInfo(),
+          ],
+        ),
       ),
     );
   }
