@@ -1,0 +1,1 @@
+enum CommunityTabType { popular, newest }

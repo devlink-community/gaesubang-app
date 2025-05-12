@@ -1,0 +1,1 @@
+enum BoardType { notice, free, qna }
