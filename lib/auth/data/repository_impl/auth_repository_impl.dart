@@ -1,3 +1,4 @@
+// lib/auth/data/repository_impl/auth_repository_impl.dart
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/profile_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
@@ -25,6 +26,8 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
+      // Repository에서는 이메일을 그대로 전달
+      // DataSource 레벨에서 이메일을 소문자로 변환하여 처리
       final response = await _authDataSource.fetchLogin(
         email: email,
         password: password,
@@ -56,6 +59,8 @@ class AuthRepositoryImpl implements AuthRepository {
     String? agreedTermsId,
   }) async {
     try {
+      // Repository에서는 이메일을 그대로 전달
+      // DataSource 레벨에서 이메일을 소문자로 변환하여 저장
       final response = await _authDataSource.createUser(
         email: email,
         password: password,
@@ -106,6 +111,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Result<bool>> checkEmailAvailability(String email) async {
     try {
+      // Repository에서는 이메일을 그대로 전달
+      // DataSource 레벨에서 이메일을 소문자로 변환하여 확인
       final isAvailable = await _authDataSource.checkEmailAvailability(email);
       return Result.success(isAvailable);
     } catch (e, st) {
@@ -116,6 +123,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Result<void>> resetPassword(String email) async {
     try {
+      // Repository에서는 이메일을 그대로 전달
+      // DataSource 레벨에서 이메일을 소문자로 변환하여 처리
       await _authDataSource.sendPasswordResetEmail(email);
       return const Result.success(null);
     } catch (e, st) {
@@ -126,6 +135,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Result<void>> deleteAccount(String email) async {
     try {
+      // Repository에서는 이메일을 그대로 전달
+      // DataSource 레벨에서 이메일을 소문자로 변환하여 처리
       await _authDataSource.deleteAccount(email);
       return const Result.success(null);
     } catch (e, st) {

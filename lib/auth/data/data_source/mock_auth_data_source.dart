@@ -16,10 +16,13 @@ class MockAuthDataSource implements AuthDataSource {
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final user = _storage.getUserByEmail(email);
+    // 이메일을 소문자로 변환
+    final lowercaseEmail = email.toLowerCase();
+
+    final user = _storage.getUserByEmail(lowercaseEmail);
 
     // 사용자 존재 확인 및 비밀번호 검증
-    if (user != null && _validatePassword(email, password)) {
+    if (user != null && _validatePassword(lowercaseEmail, password)) {
       _storage.login(user.id!);
       return user.toJson();
     } else {
@@ -36,8 +39,11 @@ class MockAuthDataSource implements AuthDataSource {
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
+    // 이메일을 소문자로 변환
+    final lowercaseEmail = email.toLowerCase();
+
     // 중복 체크
-    if (!_storage.isEmailAvailable(email)) {
+    if (!_storage.isEmailAvailable(lowercaseEmail)) {
       throw Exception('이미 사용 중인 이메일입니다');
     }
 
@@ -49,7 +55,7 @@ class MockAuthDataSource implements AuthDataSource {
     final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
     final userDto = UserDto(
       id: userId,
-      email: email,
+      email: lowercaseEmail, // 소문자로 변환된 이메일 저장
       nickname: nickname,
       uid: 'uid_$userId',
       agreedTermsId: agreedTermsId,
@@ -90,7 +96,8 @@ class MockAuthDataSource implements AuthDataSource {
   @override
   Future<bool> checkEmailAvailability(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return _storage.isEmailAvailable(email);
+    // 이메일을 소문자로 변환하여 확인
+    return _storage.isEmailAvailable(email.toLowerCase());
   }
 
   @override
@@ -102,8 +109,11 @@ class MockAuthDataSource implements AuthDataSource {
       throw Exception('유효하지 않은 이메일 형식입니다');
     }
 
+    // 이메일을 소문자로 변환
+    final lowercaseEmail = email.toLowerCase();
+
     // 가입된 이메일인지 확인
-    final user = _storage.getUserByEmail(email);
+    final user = _storage.getUserByEmail(lowercaseEmail);
     if (user == null) {
       throw Exception('등록되지 않은 이메일입니다');
     }
@@ -115,7 +125,10 @@ class MockAuthDataSource implements AuthDataSource {
   Future<void> deleteAccount(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final user = _storage.getUserByEmail(email);
+    // 이메일을 소문자로 변환
+    final lowercaseEmail = email.toLowerCase();
+
+    final user = _storage.getUserByEmail(lowercaseEmail);
     if (user == null) {
       throw Exception('사용자를 찾을 수 없습니다');
     }
@@ -125,7 +138,7 @@ class MockAuthDataSource implements AuthDataSource {
       throw Exception('로그인된 사용자만 계정을 삭제할 수 있습니다');
     }
 
-    _storage.deleteUser(email);
+    _storage.deleteUser(lowercaseEmail);
   }
 
   @override
@@ -158,6 +171,7 @@ class MockAuthDataSource implements AuthDataSource {
   // 비밀번호 검증 메서드
   bool _validatePassword(String email, String password) {
     // UserStorage에서 실제 비밀번호 검증
-    return _storage.validatePassword(email, password);
+    // 이메일을 소문자로 변환하여 검증
+    return _storage.validatePassword(email.toLowerCase(), password);
   }
 }

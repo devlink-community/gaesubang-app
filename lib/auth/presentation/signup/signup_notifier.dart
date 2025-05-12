@@ -50,7 +50,7 @@ class SignupNotifier extends _$SignupNotifier {
 
   Future<void> onAction(SignupAction action) async {
     switch (action) {
-      // 폼 입력값 변경 액션 처리
+    // 폼 입력값 변경 액션 처리
       case NicknameChanged(:final nickname):
         state = state.copyWith(
           nickname: nickname,
@@ -58,6 +58,7 @@ class SignupNotifier extends _$SignupNotifier {
         );
 
       case EmailChanged(:final email):
+      // 사용자 편의성을 위해 입력 중에는 원래 입력값 유지
         state = state.copyWith(
           email: email,
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
@@ -69,12 +70,12 @@ class SignupNotifier extends _$SignupNotifier {
           passwordError: null, // 사용자가 입력 중이면 에러 메시지 제거
           // 비밀번호가 변경되면 비밀번호 확인 유효성도 다시 검증
           passwordConfirmError:
-              state.passwordConfirm.isEmpty
-                  ? null
-                  : await _validatePasswordConfirmUseCase.execute(
-                    password,
-                    state.passwordConfirm,
-                  ),
+          state.passwordConfirm.isEmpty
+              ? null
+              : await _validatePasswordConfirmUseCase.execute(
+            password,
+            state.passwordConfirm,
+          ),
         );
 
       case PasswordConfirmChanged(:final passwordConfirm):
@@ -89,7 +90,7 @@ class SignupNotifier extends _$SignupNotifier {
           termsError: null, // 사용자가 체크하면 에러 메시지 제거
         );
 
-      // 포커스 변경 액션 처리 (필드 유효성 검증)
+    // 포커스 변경 액션 처리 (필드 유효성 검증)
       case NicknameFocusChanged(:final hasFocus):
         if (!hasFocus && state.nickname.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
@@ -105,6 +106,8 @@ class SignupNotifier extends _$SignupNotifier {
       case EmailFocusChanged(:final hasFocus):
         if (!hasFocus && state.email.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
+          // 이메일 주소는 데이터 저장/조회 시 소문자로 변환되지만
+          // 화면 표시는 사용자 입력 그대로 유지
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(emailError: error);
 
@@ -131,21 +134,21 @@ class SignupNotifier extends _$SignupNotifier {
           state = state.copyWith(passwordConfirmError: error);
         }
 
-      // 중복 확인 액션 처리
+    // 중복 확인 액션 처리
       case CheckNicknameAvailability():
         await _performNicknameAvailabilityCheck();
 
       case CheckEmailAvailability():
         await _performEmailAvailabilityCheck();
 
-      // 회원가입 제출 액션 처리
+    // 회원가입 제출 액션 처리
       case Submit():
         await _performSignup();
 
-      // 화면 이동 액션은 Root에서 처리됨
+    // 화면 이동 액션은 Root에서 처리됨
       case NavigateToLogin():
       case NavigateToTerms():
-        // Root에서 처리됨
+      // Root에서 처리됨
         break;
     }
   }
@@ -161,11 +164,11 @@ class SignupNotifier extends _$SignupNotifier {
     state = state.copyWith(
       nicknameAvailability: result,
       nicknameError:
-          result.hasError
-              ? '닉네임 중복 확인 중 오류가 발생했습니다'
-              : result.value == false
-              ? '이미 사용 중인 닉네임입니다'
-              : null,
+      result.hasError
+          ? '닉네임 중복 확인 중 오류가 발생했습니다'
+          : result.value == false
+          ? '이미 사용 중인 닉네임입니다'
+          : null,
     );
   }
 
@@ -173,16 +176,17 @@ class SignupNotifier extends _$SignupNotifier {
   Future<void> _performEmailAvailabilityCheck() async {
     state = state.copyWith(emailAvailability: const AsyncValue.loading());
 
+    // 데이터 비교를 위해 소문자로 변환하여 중복 체크
     final result = await _checkEmailAvailabilityUseCase.execute(state.email);
 
     state = state.copyWith(
       emailAvailability: result,
       emailError:
-          result.hasError
-              ? '이메일 중복 확인 중 오류가 발생했습니다'
-              : result.value == false
-              ? '이미 사용 중인 이메일입니다'
-              : null,
+      result.hasError
+          ? '이메일 중복 확인 중 오류가 발생했습니다'
+          : result.value == false
+          ? '이미 사용 중인 이메일입니다'
+          : null,
     );
   }
 
@@ -240,6 +244,8 @@ class SignupNotifier extends _$SignupNotifier {
     // 3. 회원가입 실행
     state = state.copyWith(signupResult: const AsyncValue.loading());
 
+    // 회원가입 시 이메일은 그대로 전달
+    // 소문자 변환은 Repository/DataSource 레벨에서 처리
     final result = await _signupUseCase.execute(
       email: state.email,
       password: state.password,

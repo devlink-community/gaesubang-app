@@ -27,6 +27,8 @@ class SignupUseCase {
       );
     }
 
+    // UseCase에서는 이메일을 그대로 전달
+    // 이메일 주소의 대소문자 정규화(소문자 변환)는 Repository/DataSource 레벨에서 처리
     final result = await _repository.signup(
       email: email,
       password: password,
