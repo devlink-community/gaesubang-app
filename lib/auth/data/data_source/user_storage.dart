@@ -62,9 +62,10 @@ class UserStorage {
         final profile = userData['profile'] as ProfileDto;
         final password = userData['password'] as String;
 
-        _users[user.email!] = user;
+        final normalizedEmail = user.email!.toLowerCase();
+        _users[normalizedEmail] = user;
         _profiles[user.id!] = profile;
-        _passwords[user.email!] = password;
+        _passwords[normalizedEmail] = password;
       }
     }
   }
@@ -77,7 +78,7 @@ class UserStorage {
   /// 사용자 조회 (이메일로)
   UserDto? getUserByEmail(String email) {
     initialize();
-    return _users[email];
+    return _users[email.toLowerCase()];
   }
 
   /// 프로필 조회 (ID로)
@@ -89,25 +90,29 @@ class UserStorage {
   /// 비밀번호 확인
   bool validatePassword(String email, String password) {
     initialize();
-    return _passwords[email] == password;
+    return _passwords[email.toLowerCase()] == password;
   }
 
   /// 사용자 추가 (회원가입)
   void addUser(UserDto user, ProfileDto profile, String password) {
     initialize();
-    _users[user.email!] = user;
+    final normalizedEmail = user.email!.toLowerCase();
+    _users[normalizedEmail] = user;
     _profiles[user.id!] = profile;
-    _passwords[user.email!] = password;
+    _passwords[normalizedEmail] = password;
+
   }
 
   /// 사용자 삭제 (계정삭제)
   void deleteUser(String email) {
     initialize();
-    final user = _users[email];
+    final normalizedEmail = email.toLowerCase();
+    final user = _users[normalizedEmail];
     if (user != null) {
       _profiles.remove(user.id);
-      _users.remove(email);
-      _passwords.remove(email);
+      _users.remove(normalizedEmail);
+      _passwords.remove(normalizedEmail);
+
       // 현재 로그인된 사용자가 삭제되면 로그아웃
       if (_currentUserId == user.id) {
         _currentUserId = null;
