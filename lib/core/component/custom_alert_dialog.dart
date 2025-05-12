@@ -84,7 +84,7 @@ class ContentBox extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColorStyles.primary100.withOpacity(0.2),
+                    color: AppColorStyles.primary100.withAlpha(30),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

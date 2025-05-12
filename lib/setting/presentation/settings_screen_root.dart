@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../component/custom_alert_dialog.dart';
+import '../../core/component/custom_alert_dialog.dart';
 import 'settings_action.dart';
 import 'settings_notifier.dart';
 import 'settings_screen.dart';
@@ -13,6 +13,7 @@ class SettingsScreenRoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // WidgetRef 파라미터 추가
     final state = ref.watch(settingsNotifierProvider);
     final notifier = ref.watch(settingsNotifierProvider.notifier);
 

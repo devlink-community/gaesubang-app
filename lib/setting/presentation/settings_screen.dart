@@ -24,7 +24,10 @@ class SettingsScreen extends StatelessWidget {
         automaticallyImplyLeading: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // 명시적으로 '/intro' 경로로 이동 (뒤로가기)
+            context.go('/intro');
+          },
         ),
       ),
       body: Column(
