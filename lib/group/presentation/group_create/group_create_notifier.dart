@@ -29,7 +29,8 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         state = state.copyWith(description: description);
 
       case LimitMemberCountChanged(:final count):
-        state = state.copyWith(limitMemberCount: count);
+        final validCount = count < 1 ? 1 : count;
+        state = state.copyWith(limitMemberCount: validCount);
 
       case HashTagAdded(:final tag):
         final trimmed = tag.trim();

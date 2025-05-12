@@ -65,7 +65,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(description: description);
 
       case LimitMemberCountChanged(:final count):
-        state = state.copyWith(limitMemberCount: count);
+        final validCount = count < 1 ? 1 : count;
+        state = state.copyWith(limitMemberCount: validCount);
 
       case ImageUrlChanged(:final imageUrl):
         state = state.copyWith(imageUrl: imageUrl);
