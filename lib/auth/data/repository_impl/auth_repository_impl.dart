@@ -18,7 +18,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required AuthDataSource authDataSource,
     required profileDataSource,
   }) : _authDataSource = authDataSource,
-        _profileDataSource = profileDataSource;
+       _profileDataSource = profileDataSource;
 
   @override
   Future<Result<Member>> login({
@@ -35,12 +35,15 @@ class AuthRepositoryImpl implements AuthRepository {
       final userDto = UserDto.fromJson(response);
 
       // 프로필 정보 가져오기
-      final profileResponse = await _profileDataSource.fetchUserProfile(userDto.id!);
+      final profileResponse = await _profileDataSource.fetchUserProfile(
+        userDto.id!,
+      );
       final profileDto = ProfileDto.fromJson(profileResponse);
 
       // DTO 병합 후 Member 모델로 변환
       final member = userDto.toModelFromProfile(profileDto);
 
+      // response를 UserDto로 변환 후 Model로 변환
       return Result.success(member);
     } catch (e, st) {
       // 디버깅용 로그
@@ -101,7 +104,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Result<bool>> checkNicknameAvailability(String nickname) async {
     try {
-      final isAvailable = await _authDataSource.checkNicknameAvailability(nickname);
+      final isAvailable = await _authDataSource.checkNicknameAvailability(
+        nickname,
+      );
       return Result.success(isAvailable);
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
@@ -169,12 +174,15 @@ class AuthRepositoryImpl implements AuthRepository {
       final termsAgreement = TermsAgreement(
         id: response['id'] as String,
         isAllAgreed: response['isAllAgreed'] as bool? ?? false,
-        isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool? ?? false,
-        isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool? ?? false,
+        isServiceTermsAgreed:
+            response['isServiceTermsAgreed'] as bool? ?? false,
+        isPrivacyPolicyAgreed:
+            response['isPrivacyPolicyAgreed'] as bool? ?? false,
         isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
-        agreedAt: response['agreedAt'] != null
-            ? DateTime.parse(response['agreedAt'] as String)
-            : null,
+        agreedAt:
+            response['agreedAt'] != null
+                ? DateTime.parse(response['agreedAt'] as String)
+                : null,
       );
       return Result.success(termsAgreement);
     } catch (e, st) {
@@ -183,7 +191,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<TermsAgreement>> saveTermsAgreement(TermsAgreement terms) async {
+  Future<Result<TermsAgreement>> saveTermsAgreement(
+    TermsAgreement terms,
+  ) async {
     try {
       final Map<String, dynamic> termsData = {
         'id': terms.id,
@@ -191,21 +201,26 @@ class AuthRepositoryImpl implements AuthRepository {
         'isServiceTermsAgreed': terms.isServiceTermsAgreed,
         'isPrivacyPolicyAgreed': terms.isPrivacyPolicyAgreed,
         'isMarketingAgreed': terms.isMarketingAgreed,
-        'agreedAt': terms.agreedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        'agreedAt':
+            terms.agreedAt?.toIso8601String() ??
+            DateTime.now().toIso8601String(),
       };
 
       final response = await _authDataSource.saveTermsAgreement(termsData);
 
-      return Result.success(TermsAgreement(
-        id: response['id'] as String,
-        isAllAgreed: response['isAllAgreed'] as bool,
-        isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool,
-        isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
-        isMarketingAgreed: response['isMarketingAgreed'] as bool,
-        agreedAt: response['agreedAt'] != null
-            ? DateTime.parse(response['agreedAt'] as String)
-            : null,
-      ));
+      return Result.success(
+        TermsAgreement(
+          id: response['id'] as String,
+          isAllAgreed: response['isAllAgreed'] as bool,
+          isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool,
+          isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
+          isMarketingAgreed: response['isMarketingAgreed'] as bool,
+          agreedAt:
+              response['agreedAt'] != null
+                  ? DateTime.parse(response['agreedAt'] as String)
+                  : null,
+        ),
+      );
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }

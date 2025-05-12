@@ -37,7 +37,9 @@ abstract interface class AuthRepository {
   Future<Result<void>> deleteAccount(String email);
 
   /// 약관 동의 정보 저장
-  Future<Result<TermsAgreement>> saveTermsAgreement(TermsAgreement termsAgreement);
+  Future<Result<TermsAgreement>> saveTermsAgreement(
+    TermsAgreement termsAgreement,
+  );
 
   /// 약관 정보 조회
   Future<Result<TermsAgreement?>> getTermsInfo(String? termsId);
