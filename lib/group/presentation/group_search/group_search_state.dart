@@ -1,4 +1,3 @@
-// lib/group/presentation/group_search/group_search_state.dart
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
