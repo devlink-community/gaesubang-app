@@ -17,10 +17,10 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
   @override
   void initState() {
     super.initState();
-    // 화면 진입 시 프로필 정보 로드
-    Future.microtask(
-      () => ref.read(editIntroNotifierProvider.notifier).loadProfile,
-    );
+    // 미세한 지연을 두고 프로필 로드 시작
+    Future.microtask(() {
+      ref.read(editIntroNotifierProvider.notifier).loadProfile();
+    });
   }
 
   @override
@@ -31,13 +31,15 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
     return EditIntroScreen(
       state: state,
       onAction: (action) async {
-        await notifier.onAction(action);
-
-        // OnSave 액션 처리 후 성공적으로 저장되었다면 뒤로 가기
-        if (action is OnSave && state.isSuccess && !state.isError) {
-          if (context.mounted) {
-            context.pop();
-          }
+        switch (action) {
+          case OnSave():
+            await notifier.onAction(action);
+            if (!state.isError && state.isSuccess) {
+              context.pop(); // 저장 성공 시 이전 화면으로 이동
+            }
+            break;
+          default:
+            await notifier.onAction(action);
         }
       },
     );

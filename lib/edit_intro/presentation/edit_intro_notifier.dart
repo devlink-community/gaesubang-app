@@ -24,60 +24,68 @@ class EditIntroNotifier extends _$EditIntroNotifier {
     _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
     _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
 
+    // 초기 상태만 반환하고, 프로필 로드는 별도 메서드로 분리
     return const EditIntroState();
   }
 
+  // 프로필 로드를 public 메서드로 변경하여 외부에서 호출 가능하게 함
   Future<void> loadProfile() async {
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
-    final memberResult = await _getCurrentProfileUseCase.execute();
+    try {
+      final result = await _getCurrentProfileUseCase.execute();
 
-    memberResult.when(
-      data: (member) {
+      if (result is AsyncData) {
         state = state.copyWith(
           isLoading: false,
           isSuccess: true,
-          member: member,
+          member: result.value,
         );
-      },
-      error: (error, stackTrace) {
+      } else if (result is AsyncError) {
+        final error = result.error;
         state = state.copyWith(
           isLoading: false,
           isError: true,
-          errorMessage: '프로필 정보를 불러올 수 없습니다.',
+          errorMessage: error.toString(),
         );
-      },
-      loading: () {
-        // 이미 위에서 loading 상태로 설정했으므로 여기서는 추가 작업 없음
-      },
-    );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isError: true,
+        errorMessage: '프로필 정보를 불러올 수 없습니다: ${e.toString()}',
+      );
+    }
   }
 
   Future<void> onAction(EditIntroAction action) async {
     switch (action) {
       case OnChangeNickname(:final nickname):
-        _handleChangeNickname(nickname);
+        if (state.member != null) {
+          final updatedMember = state.member!.copyWith(nickname: nickname);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
       case OnChangeMessage(:final message):
-        _handleChangeMessage(message);
+        if (state.member != null) {
+          final updatedMember = state.member!.copyWith(description: message);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
       case OnPickImage(:final image):
         await _updateProfileImage(image);
+        break;
+
       case OnSave():
         await _saveProfile();
+        break;
     }
   }
 
-  void _handleChangeNickname(String nickname) {
-    if (state.member != null) {
-      final updatedMember = state.member!.copyWith(nickname: nickname);
-      state = state.copyWith(member: updatedMember);
-    }
-  }
-
-  void _handleChangeMessage(String message) {
-    if (state.member != null) {
-      final updatedMember = state.member!.copyWith(description: message);
-      state = state.copyWith(member: updatedMember);
-    }
+  Future<void> updateProfileImage(XFile image) async {
+    await _updateProfileImage(File(image.path));
   }
 
   Future<void> _updateProfileImage(File image) async {
@@ -89,74 +97,70 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
     try {
       final xFile = XFile(image.path);
-      final updatedMemberResult = await _updateProfileImageUseCase.execute(
-        xFile,
-      );
+      final result = await _updateProfileImageUseCase.execute(xFile);
 
-      updatedMemberResult.when(
-        data: (updatedMember) {
-          state = state.copyWith(
-            isImageUploading: false,
-            isImageUploadSuccess: true,
-            member: updatedMember,
-          );
-        },
-        error: (error, stackTrace) {
-          state = state.copyWith(
-            isImageUploading: false,
-            isImageUploadError: true,
-            imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다.',
-          );
-        },
-        loading: () {
-          // 이미 로딩 상태로 설정했으므로 추가 작업 없음
-        },
-      );
+      if (result is AsyncData) {
+        state = state.copyWith(
+          isImageUploading: false,
+          isImageUploadSuccess: true,
+          member: result.value,
+        );
+      } else if (result is AsyncError) {
+        final error = result.error;
+        state = state.copyWith(
+          isImageUploading: false,
+          isImageUploadError: true,
+          imageUploadErrorMessage: error.toString(),
+        );
+      }
     } catch (e) {
       state = state.copyWith(
         isImageUploading: false,
         isImageUploadError: true,
-        imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다.',
+        imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다: ${e.toString()}',
       );
     }
   }
 
-  Future<void> _saveProfile() async {
-    if (state.member == null) return;
+  Future<bool> updateProfile({required String nickname, String? intro}) async {
+    return await _saveProfile();
+  }
+
+  Future<bool> _saveProfile() async {
+    if (state.member == null) return false;
 
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
     try {
-      final updatedMemberResult = await _updateProfileUseCase.execute(
+      final result = await _updateProfileUseCase.execute(
         nickname: state.member!.nickname,
         intro: state.member!.description,
       );
 
-      updatedMemberResult.when(
-        data: (updatedMember) {
-          state = state.copyWith(
-            isLoading: false,
-            isSuccess: true,
-            member: updatedMember,
-          );
-        },
-        error: (error, stackTrace) {
-          state = state.copyWith(
-            isLoading: false,
-            isError: true,
-            errorMessage: '프로필 정보를 수정할 수 없습니다.',
-          );
-        },
-        loading: () {
-          // 이미 로딩 상태로 설정했으므로 추가 작업 없음
-        },
-      );
+      if (result is AsyncData) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true,
+          member: result.value,
+        );
+        return true;
+      } else if (result is AsyncError) {
+        final error = result.error;
+        state = state.copyWith(
+          isLoading: false,
+          isError: true,
+          errorMessage: error.toString(),
+        );
+        return false;
+      }
+      return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         isError: true,
-        errorMessage: '프로필 정보를 수정할 수 없습니다.',
+        errorMessage: '프로필 정보를 수정할 수 없습니다: ${e.toString()}',
       );
+      return false;
     }
   }
 }
