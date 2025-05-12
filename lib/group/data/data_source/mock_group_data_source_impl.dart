@@ -74,12 +74,21 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 목록에서 ID로 그룹을 찾음
     final groups = await fetchGroupList();
-    final group = groups.firstWhere(
+    final originalGroup = groups.firstWhere(
       (group) => group.id == groupId,
       orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
     );
 
-    return group;
+    return GroupDto(
+      id: originalGroup.id,
+      name: originalGroup.name,
+      description: originalGroup.description,
+      members: originalGroup.members,
+      hashTags: originalGroup.hashTags,
+      limitMemberCount: originalGroup.limitMemberCount,
+      owner: originalGroup.owner,
+      imageUrl: originalGroup.imageUrl,
+    );
   }
 
   @override
