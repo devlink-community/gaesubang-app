@@ -117,6 +117,8 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         limitMemberCount: state.limitMemberCount,
         owner: owner,
         imageUrl: state.imageUrl,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       // UseCase 호출하여 그룹 생성
