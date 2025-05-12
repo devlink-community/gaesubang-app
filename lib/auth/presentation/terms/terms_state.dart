@@ -1,3 +1,4 @@
+// lib/auth/presentation/terms/terms_state.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'terms_state.freezed.dart';
@@ -11,7 +12,7 @@ class TermsState with _$TermsState {
     this.isMarketingAgreed = false,
     this.errorMessage,
     this.savedTermsId,
-    this.isSubmitting = false,
+    this.isSubmitting = false, // 추가
   });
 
   final bool isAllAgreed;
@@ -20,5 +21,5 @@ class TermsState with _$TermsState {
   final bool isMarketingAgreed;
   final String? errorMessage;
   final String? savedTermsId;
-  final bool isSubmitting;
+  final bool isSubmitting; // 추가
 }

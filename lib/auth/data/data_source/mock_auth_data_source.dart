@@ -32,6 +32,7 @@ class MockAuthDataSource implements AuthDataSource {
     required String email,
     required String password,
     required String nickname,
+    String? agreedTermsId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
@@ -51,6 +52,7 @@ class MockAuthDataSource implements AuthDataSource {
       email: email,
       nickname: nickname,
       uid: 'uid_$userId',
+      agreedTermsId: agreedTermsId,
     );
 
     final profileDto = ProfileDto(
@@ -60,7 +62,7 @@ class MockAuthDataSource implements AuthDataSource {
     );
 
     // 비밀번호는 별도 저장 (여기서는 간단히 구현)
-    _storage.addUser(userDto, profileDto, password);
+    _storage.addUser(userDto, profileDto, password, agreedTermsId: agreedTermsId);
 
     return userDto.toJson();
   }
@@ -124,6 +126,33 @@ class MockAuthDataSource implements AuthDataSource {
     }
 
     _storage.deleteUser(email);
+  }
+
+  @override
+  Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _storage.saveTermsAgreement(termsData);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchTermsInfo() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // 기본 약관 정보 반환
+    return {
+      'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
+      'isAllAgreed': false,
+      'isServiceTermsAgreed': false,
+      'isPrivacyPolicyAgreed': false,
+      'isMarketingAgreed': false,
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getTermsInfo(String termsId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _storage.getTermsInfo(termsId);
   }
 
   // 비밀번호 검증 메서드

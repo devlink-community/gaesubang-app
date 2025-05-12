@@ -134,15 +134,36 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<TermsAgreement>> getTermsInfo() async {
+  Future<Result<TermsAgreement?>> getTermsInfo(String? termsId) async {
     try {
-      final response = await _authDataSource.fetchTermsInfo();
+      // termsId가 없으면 기본 약관 정보 반환
+      if (termsId == null) {
+        final response = await _authDataSource.fetchTermsInfo();
+        final termsAgreement = TermsAgreement(
+          id: response['id'] as String,
+          isAllAgreed: false,
+          isServiceTermsAgreed: false,
+          isPrivacyPolicyAgreed: false,
+          isMarketingAgreed: false,
+        );
+        return Result.success(termsAgreement);
+      }
+
+      // termsId가 있으면 해당 약관 정보 조회
+      final response = await _authDataSource.getTermsInfo(termsId);
+      if (response == null) {
+        return const Result.success(null);
+      }
+
       final termsAgreement = TermsAgreement(
         id: response['id'] as String,
-        isAllAgreed: false,
-        isServiceTermsAgreed: false,
-        isPrivacyPolicyAgreed: false,
-        isMarketingAgreed: false,
+        isAllAgreed: response['isAllAgreed'] as bool? ?? false,
+        isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool? ?? false,
+        isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool? ?? false,
+        isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
+        agreedAt: response['agreedAt'] != null
+            ? DateTime.parse(response['agreedAt'] as String)
+            : null,
       );
       return Result.success(termsAgreement);
     } catch (e, st) {

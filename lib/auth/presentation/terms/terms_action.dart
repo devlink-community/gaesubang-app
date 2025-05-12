@@ -1,13 +1,10 @@
+// lib/auth/presentation/terms/terms_action.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'terms_action.freezed.dart';
 
 @freezed
-class TermsAction with _$TermsAction {
-  const TermsAction({
-    required int index,
-  });
-
+sealed class TermsAction with _$TermsAction {
   const factory TermsAction.allAgreedChanged(bool value) = AllAgreedChanged;
   const factory TermsAction.serviceTermsAgreedChanged(bool value) = ServiceTermsAgreedChanged;
   const factory TermsAction.privacyPolicyAgreedChanged(bool value) = PrivacyPolicyAgreedChanged;

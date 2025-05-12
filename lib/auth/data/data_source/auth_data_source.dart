@@ -36,5 +36,8 @@ abstract interface class AuthDataSource {
   Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData);
 
   /// 약관 정보 조회
+  Future<Map<String, dynamic>> fetchTermsInfo();
+
+  /// 특정 약관 정보 조회
   Future<Map<String, dynamic>?> getTermsInfo(String termsId);
 }

@@ -23,7 +23,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../domain/usecase/get_terms_info_use_case.dart';
 import '../domain/usecase/reset_password_use_case.dart';
+import '../domain/usecase/save_terms_agreement_use_case.dart';
 import '../presentation/forgot_password/forgot_password_screen_root.dart';
 
 part 'auth_di.g.dart';
@@ -88,10 +90,20 @@ ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
 ResetPasswordUseCase resetPasswordUseCase(Ref ref) =>
     ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
 
-// 계정삭제 관련 UseCase (새로 추가)
+// 계정삭제 관련 UseCase
 @riverpod
 DeleteAccountUseCase deleteAccountUseCase(Ref ref) =>
     DeleteAccountUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) =>
+    GetTermsInfoUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) =>
+    SaveTermsAgreementUseCase(repository: ref.watch(authRepositoryProvider));
+
+
 
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [

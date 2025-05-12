@@ -1,3 +1,4 @@
+// lib/auth/presentation/terms/terms_notifier.dart
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
@@ -25,7 +26,8 @@ class TermsNotifier extends _$TermsNotifier {
   }
 
   Future<void> _loadTermsInfo() async {
-    final result = await _getTermsInfoUseCase.execute();
+    // termsId가 없는 경우 기본 약관 정보 로드
+    final result = await _getTermsInfoUseCase.execute(null);
 
     if (result.hasValue && result.value != null) {
       // 약관 정보 로드 성공
@@ -44,15 +46,19 @@ class TermsNotifier extends _$TermsNotifier {
     switch (action) {
       case AllAgreedChanged(:final value):
         _handleAllAgreedChanged(value);
+        break;
 
       case ServiceTermsAgreedChanged(:final value):
         _handleServiceTermsAgreedChanged(value);
+        break;
 
       case PrivacyPolicyAgreedChanged(:final value):
         _handlePrivacyPolicyAgreedChanged(value);
+        break;
 
       case MarketingAgreedChanged(:final value):
         _handleMarketingAgreedChanged(value);
+        break;
 
       case ViewTermsDetail(:final termType):
       // Root에서 처리할 예정이므로 여기서는 로직 미구현
@@ -60,6 +66,7 @@ class TermsNotifier extends _$TermsNotifier {
 
       case Submit():
         await _handleSubmit();
+        break;
 
       case NavigateToSignup():
       case NavigateBack():
@@ -130,9 +137,10 @@ class TermsNotifier extends _$TermsNotifier {
 
     if (result.hasValue) {
       // 약관 동의 저장 성공
+      final savedTermsId = result.value?.id;
       state = state.copyWith(
         isSubmitting: false,
-        savedTermsId: result.value.id,
+        savedTermsId: savedTermsId,
         errorMessage: null,
       );
     } else if (result.hasError) {
