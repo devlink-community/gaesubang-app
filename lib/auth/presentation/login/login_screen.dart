@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     '비밀번호를 잊어버리셨나요?',
                     style: AppTextStyles.body2Regular.copyWith(
-                      color: AppColorStyles.primary100,
+                      color: AppColorStyles.gray80,
                     ),
                   ),
                 ),

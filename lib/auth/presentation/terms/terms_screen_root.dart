@@ -18,21 +18,19 @@ class TermsScreenRoot extends ConsumerWidget {
     final state = ref.watch(termsNotifierProvider);
     final notifier = ref.watch(termsNotifierProvider.notifier);
 
-    // 약관 동의 저장 완료 감지 - 수정된 부분
+// 약관 동의 저장 완료 감지 - 수정된 부분
     ref.listen(
-      termsNotifierProvider.select((value) => value.isSubmitting),
+      termsNotifierProvider.select((value) => value.savedTermsId),
           (previous, next) {
-        // 제출 중 상태가 true에서 false로 변했고, 에러 메시지가 없으며, savedTermsId가 있는 경우
-        if (previous == true && next == false &&
-            state.errorMessage == null &&
-            state.savedTermsId != null) {
+        // savedTermsId가 null이 아니고 이전과 다른 경우 (새로 저장된 경우)
+        if (next != null && previous != next) {
           // 약관 저장 성공 시 회원가입 화면으로 이동
           context.pop(); // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
 
           // 다음 프레임에서 signupNotifier 업데이트 (화면 전환 후)
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref.read(signupNotifierProvider.notifier).updateTermsAgreement(
-              agreedTermsId: state.savedTermsId!,
+              agreedTermsId: next,
               isAgreed: true,
             );
           });
