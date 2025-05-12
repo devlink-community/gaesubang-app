@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_action.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_state.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatelessWidget {
   final SettingsState state;
@@ -21,6 +22,10 @@ class SettingsScreen extends StatelessWidget {
         centerTitle: true,
         title: Text('환경설정', style: AppTextStyles.heading3Bold),
         automaticallyImplyLeading: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
       ),
       body: Column(
         children: [
