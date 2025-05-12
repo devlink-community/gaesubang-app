@@ -1,4 +1,5 @@
-// lib/community/presentation/community_list_notifier.dart
+// lib/community/presentation/community_list/community_list_notifier.dart
+
 import 'dart:async';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/load_post_list_use_case.dart';
@@ -7,9 +8,7 @@ import 'package:devlink_mobile_app/community/module/util/community_tab_type_enum
 
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_state.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
 
 part 'community_list_notifier.g.dart';
 
@@ -29,12 +28,7 @@ class CommunityListNotifier extends _$CommunityListNotifier {
   Future<void> _fetch() async {
     state = state.copyWith(postList: const AsyncLoading());
     final result = await _loadPostListUseCase.execute();
-    switch (result) {
-      case Success(data: final list):
-        state = state.copyWith(postList: AsyncData(list));
-      case Error(failure: final f):
-        state = state.copyWith(postList: AsyncError(f, StackTrace.current));
-    }
+    state = state.copyWith(postList: result);
   }
 
   /// 탭 변경·수동 새로고침 등 외부 Action 진입점

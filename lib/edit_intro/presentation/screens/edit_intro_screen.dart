@@ -9,7 +9,7 @@ import '../../../core/styles/app_text_styles.dart';
 import '../edit_intro_action.dart';
 import '../states/edit_intro_state.dart';
 
-class EditIntroScreen extends StatelessWidget {
+class EditIntroScreen extends StatefulWidget {
   final EditIntroState state;
   final void Function(EditIntroAction action) onAction;
 
@@ -20,14 +20,22 @@ class EditIntroScreen extends StatelessWidget {
   });
 
   @override
+  State<EditIntroScreen> createState() => _EditIntroScreenState();
+}
+
+class _EditIntroScreenState extends State<EditIntroScreen> {
+  // 로컬 이미지 파일을 저장할 변수 추가
+  File? _localImageFile;
+
+  @override
   Widget build(BuildContext context) {
     // 로딩 상태 처리
-    if (state.isLoading) {
+    if (widget.state.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // 에러 상태 처리
-    if (state.hasError) {
+    if (widget.state.hasError) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('프로필 수정'),
@@ -41,7 +49,7 @@ class EditIntroScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                state.errorMessage ?? '오류가 발생했습니다',
+                widget.state.errorMessage ?? '오류가 발생했습니다',
                 style: AppTextStyles.subtitle1Medium.copyWith(
                   color: AppColorStyles.error,
                 ),
@@ -59,7 +67,7 @@ class EditIntroScreen extends StatelessWidget {
     }
 
     // 멤버 정보가 없는 경우 처리
-    final member = state.member;
+    final member = widget.state.member;
     if (member == null) {
       return Scaffold(
         appBar: AppBar(
@@ -73,7 +81,12 @@ class EditIntroScreen extends StatelessWidget {
       );
     }
 
-    // UI 컴포넌트 - 여기서부터는 원래 코드와 크게 다르지 않지만 StatefulWidget에서 StatelessWidget으로 변경
+    // 텍스트 컨트롤러 초기화
+    final nicknameController = TextEditingController(text: member.nickname);
+    final descriptionController = TextEditingController(
+      text: member.description,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('프로필 수정', style: AppTextStyles.heading3Bold),
@@ -83,49 +96,53 @@ class EditIntroScreen extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: _buildBody(context, member),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, final member) {
-    // TextEditingController는 위젯 외부에서 생성하여 전달하는 것이 좋으나,
-    // 여기서는 간단히 처리
-    final nicknameController = TextEditingController(text: member.nickname);
-    final introController = TextEditingController(text: member.description);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildProfileImageSection(member),
-          const SizedBox(height: 24),
-          _buildNicknameField(nicknameController),
-          const SizedBox(height: 16),
-          _buildIntroField(introController),
-          const SizedBox(height: 24),
-          _buildSaveButton(context, nicknameController, introController),
-
-          // 이미지 업로드 상태 표시
-          if (state.isImageUploading)
-            const Padding(
-              padding: EdgeInsets.only(top: 16.0),
-              child: Center(child: CircularProgressIndicator()),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildProfileImageSection(member),
+            const SizedBox(height: 24),
+            _buildTextField(
+              controller: nicknameController,
+              labelText: '닉네임',
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangeNickname(value)),
             ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              controller: descriptionController,
+              labelText: '소개글',
+              maxLines: 5,
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangeMessage(value)),
+            ),
+            const SizedBox(height: 24),
+            _buildSaveButton(),
 
-          // 이미지 업로드 오류 표시
-          if (state.hasImageUploadError)
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: Text(
-                state.imageUploadErrorMessage ?? '이미지 업로드 오류',
-                style: AppTextStyles.body1Regular.copyWith(
-                  color: AppColorStyles.error,
-                ),
-                textAlign: TextAlign.center,
+            // 이미지 업로드 상태 표시
+            if (widget.state.isImageUploading)
+              const Padding(
+                padding: EdgeInsets.only(top: 16.0),
+                child: Center(child: CircularProgressIndicator()),
               ),
-            ),
-        ],
+
+            // 이미지 업로드 오류 표시
+            if (widget.state.hasImageUploadError)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Text(
+                  widget.state.imageUploadErrorMessage ?? '이미지 업로드 오류',
+                  style: AppTextStyles.body1Regular.copyWith(
+                    color: AppColorStyles.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -136,10 +153,15 @@ class EditIntroScreen extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 50,
+            // 로컬 이미지가 있으면 File 이미지를, 없으면 네트워크 이미지나 기본 아이콘 표시
             backgroundImage:
-                member.image.isNotEmpty ? NetworkImage(member.image) : null,
+                _localImageFile != null
+                    ? FileImage(_localImageFile!)
+                    : (member.image.isNotEmpty
+                        ? NetworkImage(member.image)
+                        : null),
             child:
-                member.image.isEmpty
+                (member.image.isEmpty && _localImageFile == null)
                     ? const Icon(Icons.person, size: 50)
                     : null,
           ),
@@ -162,34 +184,24 @@ class EditIntroScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNicknameField(TextEditingController controller) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required Function(String) onChanged,
+    int maxLines = 1,
+  }) {
     return TextFormField(
       controller: controller,
-      decoration: const InputDecoration(
-        labelText: '닉네임',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: labelText,
+        border: const OutlineInputBorder(),
       ),
-      onChanged: (value) => onAction(EditIntroAction.onChangeNickname(value)),
+      maxLines: maxLines,
+      onChanged: onChanged,
     );
   }
 
-  Widget _buildIntroField(TextEditingController controller) {
-    return TextFormField(
-      controller: controller,
-      decoration: const InputDecoration(
-        labelText: '소개글',
-        border: OutlineInputBorder(),
-      ),
-      maxLines: 10,
-      onChanged: (value) => onAction(EditIntroAction.onChangeMessage(value)),
-    );
-  }
-
-  Widget _buildSaveButton(
-    BuildContext context,
-    TextEditingController nicknameController,
-    TextEditingController introController,
-  ) {
+  Widget _buildSaveButton() {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColorStyles.primary100,
@@ -197,7 +209,7 @@ class EditIntroScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () => onAction(const EditIntroAction.onSave()),
+      onPressed: () => widget.onAction(const EditIntroAction.onSave()),
       child: Text(
         '저장하기',
         style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
@@ -208,8 +220,15 @@ class EditIntroScreen extends StatelessWidget {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
     if (image != null) {
-      onAction(EditIntroAction.onPickImage(File(image.path)));
+      // 로컬 상태에 이미지 파일 저장하고 UI 갱신
+      setState(() {
+        _localImageFile = File(image.path);
+      });
+
+      // 액션을 통해 이미지 업로드 프로세스 시작
+      widget.onAction(EditIntroAction.onPickImage(_localImageFile!));
     }
   }
 }

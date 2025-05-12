@@ -1,8 +1,8 @@
 // lib/community/presentation/community_detail/community_detail_notifier.dart
-import 'dart:async';
 
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
@@ -48,20 +48,20 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   Future<void> onAction(CommunityDetailAction action) async {
     switch (action) {
       case ToggleLike():
-        final res = await _toggleLike.execute(_postId);
-        _applyPostResult(res);
+        final result = await _toggleLike.execute(_postId);
+        state = state.copyWith(post: result);
 
       case ToggleBookmark():
-        final res = await _toggleBookmark.execute(_postId);
-        _applyPostResult(res);
+        final result = await _toggleBookmark.execute(_postId);
+        state = state.copyWith(post: result);
 
       case AddComment(:final content):
-        final res = await _createComment.execute(
+        final result = await _createComment.execute(
           postId: _postId,
           memberId: 'me', // TODO: 실제 로그인 유저 ID
           content: content,
         );
-        _applyCommentResult(res);
+        state = state.copyWith(comments: result);
     }
   }
 
@@ -74,30 +74,12 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     );
 
     // 2) 동시 요청
-    final postRes = _fetchDetail.execute(_postId);
-    final commentRes = _fetchComments.execute(_postId);
+    final postResult = await _fetchDetail.execute(_postId);
+    final commentResult = await _fetchComments.execute(_postId);
 
-    _applyPostResult(await postRes);
-    _applyCommentResult(await commentRes);
-  }
-
-  void _applyPostResult(Result<Post> res) {
-    switch (res) {
-      case Success<Post>(:final data):
-        state = state.copyWith(post: AsyncData(data));
-      case Error<Post>(:final failure):
-        state = state.copyWith(post: AsyncError(failure, StackTrace.current));
-    }
-  }
-
-  void _applyCommentResult(Result<List<Comment>> res) {
-    switch (res) {
-      case Success<List<Comment>>(:final data):
-        state = state.copyWith(comments: AsyncData(data));
-      case Error<List<Comment>>(:final failure):
-        state = state.copyWith(
-          comments: AsyncError(failure, StackTrace.current),
-        );
-    }
+    state = state.copyWith(
+      post: postResult,
+      comments: commentResult,
+    );
   }
 }
