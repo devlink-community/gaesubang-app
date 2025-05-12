@@ -143,6 +143,8 @@ class TermsNotifier extends _$TermsNotifier {
         savedTermsId: savedTermsId,
         errorMessage: null,
       );
+
+      // 여기서는 상태만 업데이트하고, 화면 이동은 Root에서 처리
     } else if (result.hasError) {
       // 약관 동의 저장 실패
       state = state.copyWith(
@@ -150,5 +152,11 @@ class TermsNotifier extends _$TermsNotifier {
         errorMessage: '약관 동의 저장에 실패했습니다.',
       );
     }
+  }
+
+
+
+  void resetState() {
+    state = const TermsState();
   }
 }

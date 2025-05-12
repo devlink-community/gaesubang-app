@@ -31,14 +31,13 @@ class TermsScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
                     // 이미지 표시
                     Image.asset(
-                      'assets/images/gaesubang_mascot.png', // 실제 앱에 맞는 이미지 경로
+                      'assets/images/gaesubang_mascot1.png', // 실제 앱에 맞는 이미지 경로
                       width: 258,
                       height: 258,
                     ),
-                    const SizedBox(height: 24),
+
                     // 타이틀 텍스트
                     Text(
                       '개수방 멤버쉽에',

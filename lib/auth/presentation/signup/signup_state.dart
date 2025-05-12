@@ -28,6 +28,10 @@ class SignupState with _$SignupState {
 
     // 회원가입 진행 상태
     this.signupResult,
+
+    // 약관 동의 ID 추가
+    this.agreedTermsId,
+    this.isTermsAgreed = false,
   });
 
   final String nickname;
@@ -46,4 +50,7 @@ class SignupState with _$SignupState {
   final AsyncValue<bool>? emailAvailability;
 
   final AsyncValue<Member>? signupResult;
+
+  final String? agreedTermsId;
+  final bool isTermsAgreed; // 약관 동의 여부
 }

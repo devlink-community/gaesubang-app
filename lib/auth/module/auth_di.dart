@@ -116,9 +116,12 @@ final List<GoRoute> authRoutes = [
   ),
   GoRoute(
     path: '/sign-up',
-    builder: (context, state) => const SignupScreenRoot(),
+    builder: (context, state) {
+      // Extra 파라미터 처리 (약관 동의 ID)
+      final termsId = state.extra as String?;
+      return SignupScreenRoot(agreedTermsId: termsId);
+    },
   ),
-
   // 약관 화면 라우트 추가
   GoRoute(
     path: '/terms',

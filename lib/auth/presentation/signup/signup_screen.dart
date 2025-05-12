@@ -208,9 +208,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Checkbox(
                         value: widget.state.agreeToTerms,
-                        onChanged: (value) => widget.onAction(
-                            SignupAction.agreeToTermsChanged(value ?? false)),
+                        onChanged: widget.state.isTermsAgreed
+                            ? null  // 약관에 이미 동의했으면 비활성화
+                            : (value) => widget.onAction(SignupAction.agreeToTermsChanged(value ?? false)),
                         activeColor: AppColorStyles.primary100,
+                        // 비활성화 상태에서도 색상 유지
+                        fillColor: widget.state.isTermsAgreed
+                            ? MaterialStateProperty.all(AppColorStyles.primary100)
+                            : null,
                       ),
                       GestureDetector(
                         onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
@@ -218,7 +223,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           '회원가입 약관 보실께요~',
                           style: AppTextStyles.body2Regular.copyWith(
                             color: AppColorStyles.primary100,
-                            //decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
