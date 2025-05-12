@@ -1,89 +1,39 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:devlink_mobile_app/edit_intro/domain/usecase/get_current_profile_usecase.dart';
-import 'package:devlink_mobile_app/edit_intro/domain/usecase/update_profile_usecase.dart';
-import 'package:devlink_mobile_app/edit_intro/domain/usecase/update_profile_image_usecase.dart';
-import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-final editIntroProvider =
-    StateNotifierProvider<EditIntroNotifier, EditIntroState>((ref) {
-      return EditIntroNotifier(
-        ref.watch(getCurrentProfileUseCaseProvider),
-        ref.watch(updateProfileUseCaseProvider),
-        ref.watch(updateProfileImageUseCaseProvider),
-      );
-    });
+import '../../auth/module/auth_di.dart';
+import '../data/repository_impl/edit_intro_repository_impl.dart';
+import '../domain/repository/edit_intro_repository.dart';
+import '../domain/usecase/get_current_profile_usecase.dart';
+import '../domain/usecase/update_profile_image_usecase.dart';
+import '../domain/usecase/update_profile_usecase.dart';
 
-class EditIntroNotifier extends StateNotifier<EditIntroState> {
-  final GetCurrentProfileUseCase _getCurrentProfileUseCase;
-  final UpdateProfileUseCase _updateProfileUseCase;
-  final UpdateProfileImageUseCase _updateProfileImageUseCase;
+part 'edit_intro_di.g.dart';
 
-  EditIntroNotifier(
-    this._getCurrentProfileUseCase,
-    this._updateProfileUseCase,
-    this._updateProfileImageUseCase,
-  ) : super(const EditIntroState());
+// Repository Provider
+@riverpod
+EditIntroRepository editIntroRepository(EditIntroRepositoryRef ref) {
+  return EditIntroRepositoryImpl(
+    authDataSource: ref.watch(authDataSourceProvider),
+    profileDataSource: ref.watch(profileDataSourceProvider),
+  );
+}
 
-  Future<void> loadProfile() async {
-    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
+// UseCase Providers
+@riverpod
+GetCurrentProfileUseCase getCurrentProfileUseCase(
+  GetCurrentProfileUseCaseRef ref,
+) {
+  return GetCurrentProfileUseCase(ref.watch(editIntroRepositoryProvider));
+}
 
-    try {
-      final member = await _getCurrentProfileUseCase();
-      state = state.copyWith(isLoading: false, isSuccess: true, member: member);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필 정보를 불러올 수 없습니다.',
-      );
-    }
-  }
+@riverpod
+UpdateProfileUseCase updateProfileUseCase(UpdateProfileUseCaseRef ref) {
+  return UpdateProfileUseCase(ref.watch(editIntroRepositoryProvider));
+}
 
-  Future<void> updateProfileImage(XFile image) async {
-    state = state.copyWith(
-      isImageUploading: true,
-      isImageUploadError: false,
-      imageUploadErrorMessage: null,
-    );
-
-    try {
-      final updatedMember = await _updateProfileImageUseCase(image);
-      state = state.copyWith(
-        isImageUploading: false,
-        isImageUploadSuccess: true,
-        member: updatedMember,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isImageUploading: false,
-        isImageUploadError: true,
-        imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다.',
-      );
-    }
-  }
-
-  Future<bool> updateProfile({required String nickname, String? intro}) async {
-    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
-
-    try {
-      final updatedMember = await _updateProfileUseCase(
-        nickname: nickname,
-        intro: intro,
-      );
-      state = state.copyWith(
-        isLoading: false,
-        isSuccess: true,
-        member: updatedMember,
-      );
-      return true;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필 정보를 수정할 수 없습니다.',
-      );
-      return false;
-    }
-  }
+@riverpod
+UpdateProfileImageUseCase updateProfileImageUseCase(
+  UpdateProfileImageUseCaseRef ref,
+) {
+  return UpdateProfileImageUseCase(ref.watch(editIntroRepositoryProvider));
 }
