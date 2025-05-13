@@ -1,4 +1,5 @@
 // lib/auth/presentation/signup/signup_screen.dart
+
 import 'package:devlink_mobile_app/auth/presentation/component/custom_button.dart';
 import 'package:devlink_mobile_app/auth/presentation/component/custom_text_field.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
@@ -93,16 +94,20 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // 포커스 변경 리스너
   void _onNicknameFocusChanged() {
-    // 포커스를 잃을 때만 유효성 검사 (중복 확인은 제외)
-    if (!_nicknameFocusNode.hasFocus) {
+    // 포커스를 잃을 때 유효성 검사 및 중복 확인 명시적 호출
+    if (!_nicknameFocusNode.hasFocus && _nicknameController.text.isNotEmpty) {
       widget.onAction(SignupAction.nicknameFocusChanged(false));
+      // 추가: 명시적으로 중복 확인 액션 호출
+      widget.onAction(const SignupAction.checkNicknameAvailability());
     }
   }
 
   void _onEmailFocusChanged() {
-    // 포커스를 잃을 때만 유효성 검사 (중복 확인은 제외)
-    if (!_emailFocusNode.hasFocus) {
+    // 포커스를 잃을 때 유효성 검사 및 중복 확인 명시적 호출
+    if (!_emailFocusNode.hasFocus && _emailController.text.isNotEmpty) {
       widget.onAction(SignupAction.emailFocusChanged(false));
+      // 추가: 명시적으로 중복 확인 액션 호출
+      widget.onAction(const SignupAction.checkEmailAvailability());
     }
   }
 
@@ -187,7 +192,8 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // 입력 필드 섹션 - 모듈화하여 가독성 향상
+
+// 입력 필드 섹션 - 모듈화하여 가독성 향상
   Widget _buildInputFields() {
     return Column(
       children: [
@@ -198,6 +204,7 @@ class _SignupScreenState extends State<SignupScreen> {
           controller: _nicknameController,
           focusNode: _nicknameFocusNode,
           errorText: widget.state.nicknameError,
+          successText: widget.state.nicknameSuccess, // 성공 메시지 추가
           onChanged: (value) => widget.onAction(SignupAction.nicknameChanged(value)),
         ),
 
@@ -211,12 +218,13 @@ class _SignupScreenState extends State<SignupScreen> {
           focusNode: _emailFocusNode,
           keyboardType: TextInputType.emailAddress,
           errorText: widget.state.emailError,
+          successText: widget.state.emailSuccess, // 성공 메시지 추가
           onChanged: (value) => widget.onAction(SignupAction.emailChanged(value)),
         ),
 
         const SizedBox(height: 10),
 
-        // 비밀번호 입력
+        // 비밀번호 입력 (기존 코드 유지)
         CustomTextField(
           label: '',
           hintText: 'Password',
@@ -229,7 +237,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
         const SizedBox(height: 10),
 
-        // 비밀번호 확인 입력
+        // 비밀번호 확인 입력 (기존 코드 유지)
         CustomTextField(
           label: '',
           hintText: 'Password confirm',
@@ -242,6 +250,8 @@ class _SignupScreenState extends State<SignupScreen> {
       ],
     );
   }
+
+
 
   // 이용약관 동의 섹션 - 모듈화하여 가독성 향상
   Widget _buildTermsAgreement() {

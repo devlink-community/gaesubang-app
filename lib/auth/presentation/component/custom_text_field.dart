@@ -1,4 +1,4 @@
-// lib/auth/presentation/component/custom_text_field.dart
+// lib/auth/presentation/component/custom_text_field.dart 수정
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -14,6 +14,7 @@ class CustomTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.errorText,
+    this.successText, // 성공 메시지 추가
     this.controller,
     this.onChanged,
     this.focusNode,
@@ -24,6 +25,7 @@ class CustomTextField extends StatefulWidget {
   final bool obscureText;
   final TextInputType keyboardType;
   final String? errorText;
+  final String? successText; // 성공 메시지 추가
   final TextEditingController? controller;
   final Function(String)? onChanged;
   final FocusNode? focusNode;
@@ -75,6 +77,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         widget.controller!.text.isNotEmpty) {
       borderColor = AppColorStyles.gray80;
     }
+    // 사용 가능 상태일 때도 원래 테두리 색상 유지 (여기서는 별도 처리 제거)
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,9 +120,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
         ),
 
-        // 에러 메시지 영역 - 고정 높이로 유지
+        // 에러/성공 메시지 영역 - 고정 높이로 유지
         Container(
-          height: 24, // 에러 메시지 영역의 고정 높이
+          height: 24, // 메시지 영역의 고정 높이
           padding: const EdgeInsets.only(top: 4.0, left: 4.0),
           alignment: Alignment.centerLeft,
           child: widget.errorText != null
@@ -129,7 +132,15 @@ class _CustomTextFieldState extends State<CustomTextField> {
               color: AppColorStyles.error,
             ),
           )
-              : null, // 에러가 없을 때는 빈 공간으로 유지
+          // 성공 메시지가 있으면 녹색으로 표시
+              : widget.successText != null
+              ? Text(
+            widget.successText!,
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.success,
+            ),
+          )
+              : null, // 에러나 성공 메시지가 없을 때는 빈 공간으로 유지
         ),
       ],
     );

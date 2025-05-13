@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 isLoading: loading,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 220),
             ],
           ),
         ),
