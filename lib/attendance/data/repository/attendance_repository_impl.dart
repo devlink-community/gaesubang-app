@@ -31,4 +31,24 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       return Result.error(mapExceptionToFailure(e, st));
     }
   }
+
+  @override
+  Future<Result<void>> recordTimerAttendance({
+    required String groupId,
+    required String memberId,
+    required DateTime date,
+    required int timeInMinutes,
+  }) async {
+    try {
+      await _dataSource.recordTimerAttendance(
+        groupId: groupId,
+        memberId: memberId,
+        date: date,
+        timeInMinutes: timeInMinutes,
+      );
+      return const Result.success(null);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
 }
