@@ -5,10 +5,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../presentation/community_list/community_list_screen_root.dart';
 
 final communityRoutes = [
-  GoRoute(
-    path: '/community',
-    builder: (context, state) => const CommunityListScreenRoot(),
-  ),
+  // GoRoute(
+  //   path: '/community',
+  //   builder: (context, state) => const CommunityListScreenRoot(),
+  // ),
   GoRoute(
     path: '/community/write',
     builder: (_, __) => const CommunityWriteScreenRoot(),
