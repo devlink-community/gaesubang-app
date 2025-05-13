@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/repository/notification_repository.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
 import 'package:flutter_test/flutter_test.dart';

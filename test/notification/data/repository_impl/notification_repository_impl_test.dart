@@ -2,7 +2,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
 import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 import 'package:devlink_mobile_app/notification/data/repository_impl/notification_repository_impl.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';

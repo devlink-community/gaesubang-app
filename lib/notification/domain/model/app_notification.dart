@@ -1,10 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'notification.freezed.dart';
+part 'app_notification.freezed.dart';
 
 // ignore_for_file: annotate_overrides
 @freezed
-class AppNotification with _$Notification {
+class AppNotification with _$AppNotification {
   final String id;
   final String userId;
   final NotificationType type;

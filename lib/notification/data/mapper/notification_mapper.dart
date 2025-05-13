@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 
 // DTO → Model 변환
 extension NotificationDtoMapper on NotificationDto {

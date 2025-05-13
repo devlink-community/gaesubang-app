@@ -6,7 +6,7 @@
 import 'dart:async' as _i3;
 
 import 'package:devlink_mobile_app/core/result/result.dart' as _i4;
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart'
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart'
     as _i5;
 import 'package:devlink_mobile_app/notification/domain/repository/notification_repository.dart'
     as _i2;

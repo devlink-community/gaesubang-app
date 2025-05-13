@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/delete_notification_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_all_notifications_as_read_use_case.dart';
