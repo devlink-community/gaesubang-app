@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'auth/module/auth_di.dart';
+import 'attendance/data/module/attendance_di.dart';
+
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
