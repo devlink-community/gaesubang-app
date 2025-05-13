@@ -15,6 +15,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Flutter Demo',
       routerConfig: router,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(),
     );
   }
