@@ -152,6 +152,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       limitMemberCount: state.limitMemberCount,
       owner: currentGroup.owner,
       imageUrl: state.imageUrl,
+      createdAt: currentGroup.createdAt,
+      updatedAt: DateTime.now(),
     );
 
     // 그룹 업데이트
