@@ -14,6 +14,7 @@ class GetNotificationsUseCase {
 
     switch (result) {
       case Success(:final data):
+        print('성공');
         return AsyncData(data);
       case Error(failure: final failure):
         return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
