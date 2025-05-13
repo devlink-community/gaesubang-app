@@ -1,9 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/model/group.dart';
 import '../../domain/repository/attendance_repository.dart';
 import '../../domain/usecase/get_attendance_by_month_use_case.dart';
 import '../../presentation/attendance/attendance_screen_root.dart';
@@ -34,24 +32,21 @@ GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
-    initialLocation: '/',
-    routes: [
+  // 테스트용 기본 그룹 가져오기
+  final defaultGroup = MockGroupDataSourceImpl.getDefaultGroup();
 
-      // 출석 화면
+  return GoRouter(
+    // 앱 시작 시 바로 출석부 화면으로 이동
+    initialLocation: '/attendance',
+    routes: [
+      // 출석 화면만 등록 (HomeScreen 없음)
       GoRoute(
         path: '/attendance',
         builder: (context, state) {
-          final group = state.extra as Group;
-          return AttendanceScreenRoot(group: group);
+          // 항상 기본 그룹 사용
+          return AttendanceScreenRoot(group: defaultGroup);
         },
       ),
-
-      // 필요한 경우 추가 라우트 설정
     ],
-    // 에러 핸들링
-    errorBuilder:
-        (context, state) =>
-            Scaffold(body: Center(child: Text('경로를 찾을 수 없습니다: ${state.uri}'))),
   );
 });
