@@ -4,13 +4,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 part 'notification_state.freezed.dart';
 
+// ignore_for_file: annotate_overrides
 @freezed
 class NotificationState with _$NotificationState {
-  @override
   final AsyncValue<List<Notification>> notifications;
-  @override
   final int unreadCount;
-  @override
   final String? errorMessage;
 
   const NotificationState({
