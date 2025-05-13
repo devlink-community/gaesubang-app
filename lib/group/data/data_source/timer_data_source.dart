@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/group/data/dto/timer_session_dto.dart';
+import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 
 abstract interface class TimerDataSource {
   /// 새 타이머 세션 시작
@@ -21,4 +22,7 @@ abstract interface class TimerDataSource {
 
   /// 유저의 진행 중인 타이머 조회
   Future<TimerSessionDto?> fetchActiveTimerSession(String userId);
+
+  /// 그룹의 멤버 타이머 상태 목록 조회
+  Future<List<MemberTimer>> fetchMemberTimers(String groupId);
 }
