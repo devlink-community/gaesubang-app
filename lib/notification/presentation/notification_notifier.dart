@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/delete_notification_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
@@ -31,9 +33,8 @@ class NotificationNotifier extends _$NotificationNotifier {
     );
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
 
-    // 초기 데이터 로딩
-    _loadNotifications();
-
+    // 초기 로딩은 별도 메서드로 처리하고, 초기 상태만 반환
+    Future.microtask(() => onAction(const NotificationAction.refresh()));
     return const NotificationState();
   }
 
@@ -57,34 +58,49 @@ class NotificationNotifier extends _$NotificationNotifier {
     }
   }
 
-  /// 알림 목록 로드
   Future<void> _loadNotifications() async {
-    // 로딩 상태로 설정
-    state = state.copyWith(notifications: const AsyncLoading());
+    print('알림 로딩 시작');
 
-    // UseCase 호출
-    final result = await _getNotificationsUseCase.execute(_currentUserId);
+    // 명시적으로 새 상태 객체 생성
+    state = NotificationState(
+      notifications: const AsyncLoading(),
+      unreadCount: state.unreadCount,
+      errorMessage: state.errorMessage,
+    );
 
-    // 상태 업데이트
-    switch (result) {
-      case AsyncData(:final value):
-        // 읽지 않은 알림 개수 계산
-        final unreadCount = value.where((n) => !n.isRead).length;
-        state = state.copyWith(
-          notifications: result,
+    try {
+      final result = await _getNotificationsUseCase.execute(_currentUserId);
+      print('UseCase 결과: $result');
+
+      if (result is AsyncData) {
+        final notifications = result.value ?? [];
+        final unreadCount = notifications.where((n) => !n.isRead).length;
+
+        // 완전히 새로운 상태 객체 생성
+        state = NotificationState(
+          notifications: AsyncData(notifications),
           unreadCount: unreadCount,
           errorMessage: null,
         );
 
-      case AsyncError(:final error):
-        state = state.copyWith(
-          notifications: result,
+        print('상태 업데이트 완료: ${state.notifications.runtimeType}');
+      } else if (result is AsyncError) {
+        // 오류 상태로 업데이트
+        state = NotificationState(
+          notifications: AsyncError(result.error!, result.stackTrace!),
+          unreadCount: state.unreadCount,
           errorMessage: '알림을 불러오는데 실패했습니다.',
         );
+      }
+    } catch (e, stack) {
+      print('예외 발생: $e');
 
-      case AsyncLoading():
-        // 이미 위에서 처리됨
-        break;
+      // 예외 상태로 업데이트
+      state = NotificationState(
+        notifications: AsyncError(e, stack),
+        unreadCount: state.unreadCount,
+        errorMessage: '알림을 불러오는데 실패했습니다: $e',
+      );
     }
   }
 
