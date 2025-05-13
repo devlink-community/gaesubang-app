@@ -7,7 +7,7 @@ part 'notification_state.freezed.dart';
 // ignore_for_file: annotate_overrides
 @freezed
 class NotificationState with _$NotificationState {
-  final AsyncValue<List<Notification>> notifications;
+  final AsyncValue<List<AppNotification>> notifications;
   final int unreadCount;
   final String? errorMessage;
 

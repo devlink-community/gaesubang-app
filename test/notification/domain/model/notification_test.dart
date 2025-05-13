@@ -5,7 +5,7 @@ void main() {
   group('Notification Model', () {
     test('생성자가 올바르게 값을 설정해야 함', () {
       final now = DateTime.now();
-      final notification = Notification(
+      final notification = AppNotification(
         id: 'test_id',
         userId: 'user_1',
         type: NotificationType.like,
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('선택적 매개변수가 올바르게 설정되어야 함', () {
-      final notification = Notification(
+      final notification = AppNotification(
         id: 'test_id',
         userId: 'user_1',
         type: NotificationType.comment,

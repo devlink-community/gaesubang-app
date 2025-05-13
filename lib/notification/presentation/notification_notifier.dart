@@ -112,7 +112,7 @@ class NotificationNotifier extends _$NotificationNotifier {
               currentNotifications.map((notification) {
                 if (notification.id == notificationId && !notification.isRead) {
                   // 알림 읽음 처리 및 읽지 않은 개수 감소
-                  return Notification(
+                  return AppNotification(
                     id: notification.id,
                     userId: notification.userId,
                     type: notification.type,
@@ -155,7 +155,7 @@ class NotificationNotifier extends _$NotificationNotifier {
           final updatedNotifications =
               currentNotifications.map((notification) {
                 if (!notification.isRead) {
-                  return Notification(
+                  return AppNotification(
                     id: notification.id,
                     userId: notification.userId,
                     type: notification.type,

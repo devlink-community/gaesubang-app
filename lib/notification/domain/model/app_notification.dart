@@ -4,7 +4,7 @@ part 'notification.freezed.dart';
 
 // ignore_for_file: annotate_overrides
 @freezed
-class Notification with _$Notification {
+class AppNotification with _$Notification {
   final String id;
   final String userId;
   final NotificationType type;
@@ -15,7 +15,7 @@ class Notification with _$Notification {
   final String? description;
   final String? imageUrl;
 
-  const Notification({
+  const AppNotification({
     required this.id,
     required this.userId,
     required this.type,

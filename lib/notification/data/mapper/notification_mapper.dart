@@ -3,8 +3,8 @@ import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
 
 // DTO → Model 변환
 extension NotificationDtoMapper on NotificationDto {
-  Notification toModel() {
-    return Notification(
+  AppNotification toModel() {
+    return AppNotification(
       id: id ?? '',
       userId: userId ?? '',
       type: _mapTypeStringToEnum(type),
@@ -34,7 +34,7 @@ extension NotificationDtoMapper on NotificationDto {
 }
 
 // Model → DTO 변환
-extension NotificationModelMapper on Notification {
+extension NotificationModelMapper on AppNotification {
   NotificationDto toDto() {
     return NotificationDto(
       id: id,
@@ -52,6 +52,6 @@ extension NotificationModelMapper on Notification {
 
 // List<NotificationDto> → List<Notification> 변환
 extension NotificationDtoListMapper on List<NotificationDto>? {
-  List<Notification> toModelList() =>
+  List<AppNotification> toModelList() =>
       this?.map((dto) => dto.toModel()).toList() ?? [];
 }

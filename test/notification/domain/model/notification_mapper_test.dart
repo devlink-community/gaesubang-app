@@ -46,7 +46,7 @@ void main() {
     });
 
     test('Model을 DTO로 변환해야 함', () {
-      final model = Notification(
+      final model = AppNotification(
         id: 'test_id',
         userId: 'user_1',
         type: NotificationType.follow,
