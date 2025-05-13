@@ -51,4 +51,39 @@ class MockAttendanceDataSource implements AttendanceDataSource {
       return memberOk && groupOk && date.compareTo(startKey) >= 0 && date.compareTo(endKey) <= 0;
     }).toList();
   }
+  // lib/attendance/data/data_source/mock_attendance_data_source.dart
+  @override
+  Future<void> recordTimerAttendance({
+    required String groupId,
+    required String memberId,
+    required DateTime date,
+    required int timeInMinutes,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final dateString = DateFormat('yyyy-MM-dd').format(date);
+
+    // 기존 데이터에서 해당하는 출석 기록 찾기
+    final existingIdx = _mockData.indexWhere((e) =>
+    e['memberId'] == memberId &&
+        e['date'] == dateString &&
+        e['groupId'] == groupId
+    );
+
+    if (existingIdx >= 0) {
+      // 기존 기록이 있으면 시간 추가
+      final currentTime = _mockData[existingIdx]['time'] as int;
+      _mockData[existingIdx]['time'] = currentTime + timeInMinutes;
+    } else {
+      // 없으면 새 기록 추가
+      _mockData.add({
+        'memberId': memberId,
+        'date': dateString,
+        'time': timeInMinutes,
+        'groupId': groupId,
+      });
+    }
+
+    print('출석 기록: ${_mockData.where((e) => e['date'] == dateString).toList()}');
+  }
 }
