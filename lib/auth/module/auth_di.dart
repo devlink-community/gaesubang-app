@@ -104,8 +104,6 @@ GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) =>
 SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) =>
     SaveTermsAgreementUseCase(repository: ref.watch(authRepositoryProvider));
 
-
-
 // ---------------- Route 부분 ----------------
 final List<GoRoute> authRoutes = [
   GoRoute(path: '/', builder: (context, state) => const LoginScreenRoot()),
@@ -123,29 +121,10 @@ final List<GoRoute> authRoutes = [
     },
   ),
   // 약관 화면 라우트 추가
-  GoRoute(
-    path: '/terms',
-    builder: (context, state) => const TermsScreenRoot(),
-  ),
-
-  GoRoute(path: '/home', builder: (context, state) => const _HomeMockScreen()),
-
-  // <<< 추가
+  GoRoute(path: '/terms', builder: (context, state) => const TermsScreenRoot()),
 ];
 
 @riverpod
 GoRouter router(Ref ref) {
   return GoRouter(initialLocation: '/', routes: [...authRoutes]);
-}
-
-
-// ---------- 홈 목업용 임시 스크린 ----------
-
-class _HomeMockScreen extends StatelessWidget {
-  const _HomeMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('🏠 Home Screen (Mock)')));
-  }
 }

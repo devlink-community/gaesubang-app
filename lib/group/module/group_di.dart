@@ -92,10 +92,10 @@ GetTimerSessionsUseCase getTimerSessionsUseCase(Ref ref) =>
     GetTimerSessionsUseCase(repository: ref.watch(timerRepositoryProvider));
 
 final List<GoRoute> groupRoutes = [
-  GoRoute(
-    path: '/group',
-    builder: (context, state) => const GroupListScreenRoot(),
-  ),
+  // GoRoute(
+  //   path: '/group',
+  //   builder: (context, state) => const GroupListScreenRoot(),
+  // ),
   GoRoute(
     path: '/group/create',
     builder: (context, state) => const GroupCreateScreenRoot(),
