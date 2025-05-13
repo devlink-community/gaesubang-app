@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/intro/module/intro_route.dart';
 import 'package:devlink_mobile_app/setting/module/settings_route.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../community/presentation/community_list/community_list_screen_root.dart';
@@ -15,8 +16,7 @@ import '../../intro/presentation/intro_screen_root.dart';
 part 'app_router.g.dart';
 
 @riverpod
-// ignore: deprecated_member_use_from_same_package
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
