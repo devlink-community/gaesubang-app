@@ -1,9 +1,9 @@
+import 'package:devlink_mobile_app/attendance/data/module/attendance_di.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter/material.dart';
 
-import '../../domain/model/attendance.dart';
 import '../../domain/model/group.dart';
 import '../../domain/usecase/get_attendance_by_month_use_case.dart';
 import 'attendance_action.dart';
@@ -17,7 +17,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   @override
   AttendanceState build() {
-    _getAttendancesByMonthUseCase = ref.watch(getAttendancesByMonthUseCase);
+    _getAttendancesByMonthUseCase = ref.watch(getAttendancesByMonthUseCaseProvider);
 
     // 현재 날짜 기준 초기 상태 설정
     final now = DateTime.now();

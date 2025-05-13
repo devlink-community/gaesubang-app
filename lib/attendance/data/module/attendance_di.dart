@@ -7,23 +7,24 @@ import '../data_source/attendance_data_source.dart';
 import '../data_source/mock_attendance_data_source_impl.dart';
 import '../repository/attendance_repository_impl.dart';
 
-
 part 'attendance_di.g.dart';
 
 // DataSource 프로바이더
 @riverpod
-AttendanceDataSource attendanceDataSource(AttendanceDataSourceRef ref) {
+AttendanceDataSource attendanceDataSource(Ref ref) {
   return MockAttendanceDataSourceImpl();
 }
 
 // Repository 프로바이더
 @riverpod
-AttendanceRepository attendanceRepository(AttendanceRepositoryRef ref) {
-  return AttendanceRepositoryImpl(ref.watch(attendanceDataSourceProvider));
+AttendanceRepository attendanceRepository(Ref ref) {
+  final dataSource = ref.watch(attendanceDataSourceProvider);
+  return AttendanceRepositoryImpl(dataSource);
 }
 
 // UseCase 프로바이더들
 @riverpod
-GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(GetAttendancesByMonthUseCaseRef ref) {
-  return GetAttendancesByMonthUseCase(ref.watch(attendanceRepositoryProvider));
+GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) {
+  final repository = ref.watch(attendanceRepositoryProvider);
+  return GetAttendancesByMonthUseCase(repository);
 }

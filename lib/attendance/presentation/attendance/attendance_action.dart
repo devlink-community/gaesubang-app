@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../../group/domain/model/group.dart';
+import '../../domain/model/group.dart'; // 수정된 임포트
 
 part 'attendance_action.freezed.dart';
 
