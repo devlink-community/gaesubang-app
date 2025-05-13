@@ -1,41 +1,29 @@
-// DataSource 프로바이더
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../domain/repository/attendance_repository.dart';
+import '../../domain/usecase/get_attendance_by_month_use_case.dart';
+import '../data_source/attendance_data_source.dart';
+import '../data_source/mock_attendance_data_source_impl.dart';
+import '../repository/attendance_repository_impl.dart';
+
+
+part 'attendance_di.g.dart';
+
+// DataSource 프로바이더
 @riverpod
-AttendanceDataSource groupDataSource(Ref ref) => MockAttendanceDataSourceImpl();
+AttendanceDataSource attendanceDataSource(AttendanceDataSourceRef ref) {
+  return MockAttendanceDataSourceImpl();
+}
 
 // Repository 프로바이더
 @riverpod
-AttendanceRepository groupRepository(Ref ref) =>
-    AttendanceRepositoryImpl(dataSource: ref.watch(DataSourceProvider));
+AttendanceRepository attendanceRepository(AttendanceRepositoryRef ref) {
+  return AttendanceRepositoryImpl(ref.watch(attendanceDataSourceProvider));
+}
 
 // UseCase 프로바이더들
 @riverpod
-GetAttendanceListUseCase getAttendanceListUseCase(Ref ref) =>
-    GetAttendanceListUseCase(repository: ref.watch(RepositoryProvider));
-
-
-// ==================== 그룹 타이머 관련 DI ====================
-
-// TimerDataSource 프로바이더
-@riverpod
-AttendanceDataSource timerDataSource(Ref ref) => MockAttendanceDataSourceImpl();
-
-// AttendanceRepository 프로바이더
-@riverpod
-AttendanceRepository timerRepository(Ref ref) =>
-    AttendanceRepositoryImpl(dataSource: ref.watch(DataSourceProvider));
-
-// Attendance UseCase 프로바이더들
-@riverpod
-StartAttendanceUseCase startAttendanceUseCase(Ref ref) =>
-    StartAttendanceUseCase(repository: ref.watch(RepositoryProvider));
-
-final List<GoRoute> groupRoutes = [
-  GoRoute(
-    path: '/group',
-    builder: (context, state) => const GroupListScreenRoot(),
-  ),
-]
+GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(GetAttendancesByMonthUseCaseRef ref) {
+  return GetAttendancesByMonthUseCase(ref.watch(attendanceRepositoryProvider));
+}
