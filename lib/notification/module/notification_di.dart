@@ -6,19 +6,20 @@ import 'package:devlink_mobile_app/notification/domain/usecase/delete_notificati
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_all_notifications_as_read_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_notification_as_read_use_case.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'notification_di.g.dart';
 
 // 데이터 소스 제공
 @riverpod
-NotificationDataSource notificationDataSource(NotificationDataSourceRef ref) {
+NotificationDataSource notificationDataSource(Ref ref) {
   return MockNotificationDataSourceImpl();
 }
 
 // 리포지토리 제공
 @riverpod
-NotificationRepository notificationRepository(NotificationRepositoryRef ref) {
+NotificationRepository notificationRepository(Ref ref) {
   return NotificationRepositoryImpl(
     dataSource: ref.watch(notificationDataSourceProvider),
   );
@@ -26,36 +27,28 @@ NotificationRepository notificationRepository(NotificationRepositoryRef ref) {
 
 // 유즈케이스 제공
 @riverpod
-GetNotificationsUseCase getNotificationsUseCase(
-  GetNotificationsUseCaseRef ref,
-) {
+GetNotificationsUseCase getNotificationsUseCase(Ref ref) {
   return GetNotificationsUseCase(
     repository: ref.watch(notificationRepositoryProvider),
   );
 }
 
 @riverpod
-MarkNotificationAsReadUseCase markNotificationAsReadUseCase(
-  MarkNotificationAsReadUseCaseRef ref,
-) {
+MarkNotificationAsReadUseCase markNotificationAsReadUseCase(Ref ref) {
   return MarkNotificationAsReadUseCase(
     repository: ref.watch(notificationRepositoryProvider),
   );
 }
 
 @riverpod
-MarkAllNotificationsAsReadUseCase markAllNotificationsAsReadUseCase(
-  MarkAllNotificationsAsReadUseCaseRef ref,
-) {
+MarkAllNotificationsAsReadUseCase markAllNotificationsAsReadUseCase(Ref ref) {
   return MarkAllNotificationsAsReadUseCase(
     repository: ref.watch(notificationRepositoryProvider),
   );
 }
 
 @riverpod
-DeleteNotificationUseCase deleteNotificationUseCase(
-  DeleteNotificationUseCaseRef ref,
-) {
+DeleteNotificationUseCase deleteNotificationUseCase(Ref ref) {
   return DeleteNotificationUseCase(
     repository: ref.watch(notificationRepositoryProvider),
   );
