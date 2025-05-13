@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../domain/model/group.dart';
+import '../../../group/domain/model/group.dart';
 
 part 'attendance_action.freezed.dart';
 

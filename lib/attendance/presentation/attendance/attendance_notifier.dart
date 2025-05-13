@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/module/attendance_di.dart';
 import '../../domain/model/attendance.dart';
 import '../../domain/usecase/get_attendance_by_month_use_case.dart';
-import '../../module/attendance_di.dart';
 import 'attendance_action.dart';
 import 'attendance_state.dart';
 

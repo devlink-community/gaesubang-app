@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../domain/model/group.dart';
+import '../../../group/domain/model/group.dart';
 import 'attendance_action.dart';
 import 'attendance_notifier.dart';
 import 'attendance_screen.dart';
