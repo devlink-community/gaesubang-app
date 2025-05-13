@@ -100,7 +100,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 onChanged: (value) => widget.onAction(ForgotPasswordAction.emailChanged(value)),
               ),
 
-              const Spacer(),
+              //const Spacer(),
+              const SizedBox(height: 348),
 
               // 이메일 발송하기 버튼 - CustomButton 활용
               CustomButton(

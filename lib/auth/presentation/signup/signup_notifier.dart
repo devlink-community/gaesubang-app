@@ -55,6 +55,7 @@ class SignupNotifier extends _$SignupNotifier {
         state = state.copyWith(
           nickname: nickname,
           nicknameError: null, // 사용자가 입력 중이면 에러 메시지 제거
+          nicknameSuccess: null, // 사용자가 입력 중이면 성공 메시지도 제거
         );
 
       case EmailChanged(:final email):
@@ -62,6 +63,7 @@ class SignupNotifier extends _$SignupNotifier {
         state = state.copyWith(
           email: email,
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
+          emailSuccess: null, // 사용자가 입력 중이면 성공 메시지도 제거
         );
 
       case PasswordChanged(:final password):
@@ -155,39 +157,67 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 닉네임 중복 확인
   Future<void> _performNicknameAvailabilityCheck() async {
-    state = state.copyWith(nicknameAvailability: const AsyncValue.loading());
+    state = state.copyWith(
+      nicknameAvailability: const AsyncValue.loading(),
+      nicknameSuccess: null, // 로딩 시작할 때 성공 메시지 초기화
+    );
 
     final result = await _checkNicknameAvailabilityUseCase.execute(
       state.nickname,
     );
 
-    state = state.copyWith(
-      nicknameAvailability: result,
-      nicknameError:
-      result.hasError
+    // 결과에 따라 에러 또는 성공 메시지 설정
+    if (result.hasValue && result.value == true) {
+      // 사용 가능한 경우
+      state = state.copyWith(
+        nicknameAvailability: result,
+        nicknameError: null,
+        nicknameSuccess: '사용 가능한 닉네임입니다',
+      );
+    } else {
+      // 사용 불가능하거나 에러가 발생한 경우
+      final errorMessage = result.hasError
           ? '닉네임 중복 확인 중 오류가 발생했습니다'
-          : result.value == false
-          ? '이미 사용 중인 닉네임입니다'
-          : null,
-    );
+          : '이미 사용 중인 닉네임입니다';
+
+      state = state.copyWith(
+        nicknameAvailability: result,
+        nicknameError: errorMessage,
+        nicknameSuccess: null,
+      );
+    }
   }
 
   // 이메일 중복 확인
   Future<void> _performEmailAvailabilityCheck() async {
-    state = state.copyWith(emailAvailability: const AsyncValue.loading());
+    state = state.copyWith(
+      emailAvailability: const AsyncValue.loading(),
+      emailSuccess: null, // 로딩 시작할 때 성공 메시지 초기화
+    );
 
     // 데이터 비교를 위해 소문자로 변환하여 중복 체크
     final result = await _checkEmailAvailabilityUseCase.execute(state.email);
 
-    state = state.copyWith(
-      emailAvailability: result,
-      emailError:
-      result.hasError
+    // 결과에 따라 에러 또는 성공 메시지 설정
+    if (result.hasValue && result.value == true) {
+      // 사용 가능한 경우
+      state = state.copyWith(
+        emailAvailability: result,
+        emailError: null,
+        emailSuccess: '사용 가능한 이메일입니다',
+      );
+    } else {
+      // 사용 불가능하거나 에러가 발생한 경우
+      final errorMessage = result.hasError
           ? '이메일 중복 확인 중 오류가 발생했습니다'
-          : result.value == false
-          ? '이미 사용 중인 이메일입니다'
-          : null,
-    );
+          : '이미 사용 중인 이메일입니다';
+
+      state = state.copyWith(
+        emailAvailability: result,
+        emailError: errorMessage,
+        emailSuccess: null,
+      );
+    }
   }
 
   // 회원가입 실행
