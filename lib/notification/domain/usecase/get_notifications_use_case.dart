@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/repository/notification_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 

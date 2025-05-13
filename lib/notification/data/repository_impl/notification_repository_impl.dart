@@ -1,7 +1,7 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
 import 'package:devlink_mobile_app/notification/data/mapper/notification_mapper.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/repository/notification_repository.dart';
 
 class NotificationRepositoryImpl implements NotificationRepository {
