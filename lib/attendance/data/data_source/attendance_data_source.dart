@@ -5,4 +5,12 @@ abstract interface class AttendanceDataSource {
     required DateTime startDate,
     required DateTime endDate,
   });
+
+  // 추가: 타이머 활동을 출석부에 반영
+  Future<void> recordTimerAttendance({
+    required String groupId,
+    required String memberId,
+    required DateTime date,
+    required int timeInMinutes,
+  });
 }
