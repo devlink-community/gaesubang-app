@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:intl/intl.dart';
 
+import '../../domain/model/group.dart';
+import '../../domain/model/member.dart';
 import 'attendance_data_source.dart';
 
 class MockAttendanceDataSourceImpl implements AttendanceDataSource {
@@ -181,5 +183,64 @@ class MockAttendanceDataSourceImpl implements AttendanceDataSource {
     }
 
     print('출석 기록: ${_mockData.where((e) => e['date'] == dateString).toList()}');
+  }
+}
+
+class MockGroupDataSourceImpl {
+  // 샘플 멤버 리스트
+  static final List<Member> _mockMembers = [
+    const Member(
+      id: 'user1',
+      email: 'user1@example.com',
+      nickname: '사용자1',
+      uid: 'uid1',
+    ),
+    const Member(
+      id: 'user2',
+      email: 'user2@example.com',
+      nickname: '사용자2',
+      uid: 'uid2',
+    ),
+    const Member(
+      id: 'user3',
+      email: 'user3@example.com',
+      nickname: '사용자3',
+      uid: 'uid3',
+    ),
+  ];
+
+  // 관리자 멤버
+  static const Member _ownerMember = Member(
+    id: 'owner1',
+    email: 'owner@example.com',
+    nickname: '관리자',
+    uid: 'uid0',
+  );
+
+  // 샘플 그룹 리스트
+  static final List<Group> mockGroups = [
+    Group(
+      id: 'group1',
+      name: '테스트 그룹',
+      description: '테스트 그룹 설명',
+      members: _mockMembers,
+      hashTags: const ['테스트', '출석'],
+      limitMemberCount: 10,
+      owner: _ownerMember,
+    ),
+    Group(
+      id: 'group2',
+      name: '스터디 그룹',
+      description: '플러터 스터디 그룹입니다.',
+      members: _mockMembers.sublist(0, 2),
+      hashTags: const ['플러터', '스터디', '개발'],
+      limitMemberCount: 5,
+      owner: _ownerMember,
+    ),
+  ];
+
+  // 기본 테스트용 그룹 가져오기
+  static Group getDefaultGroup() {
+    return mockGroups.first;
   }
 }
