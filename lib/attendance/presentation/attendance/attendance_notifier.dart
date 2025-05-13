@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/attendance/data/module/attendance_di.dart';
+import 'package:devlink_mobile_app/attendance/module/attendance_di.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,7 +17,9 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   @override
   AttendanceState build() {
-    _getAttendancesByMonthUseCase = ref.watch(getAttendancesByMonthUseCaseProvider);
+    _getAttendancesByMonthUseCase = ref.watch(
+      getAttendancesByMonthUseCaseProvider,
+    );
 
     // 현재 날짜 기준 초기 상태 설정
     final now = DateTime.now();
@@ -59,7 +61,8 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   Future<void> _handleChangeMonth(DateTime month) async {
     if (month.year == state.displayedMonth.year &&
-        month.month == state.displayedMonth.month) return;
+        month.month == state.displayedMonth.month)
+      return;
 
     state = state.copyWith(
       displayedMonth: month,
@@ -97,11 +100,14 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
 
-      if (attendance.time >= 240) { // 4시간 이상
+      if (attendance.time >= 240) {
+        // 4시간 이상
         colorMap[dateKey] = const Color(0xFF5D5FEF); // primary100
-      } else if (attendance.time >= 120) { // 2시간 이상
+      } else if (attendance.time >= 120) {
+        // 2시간 이상
         colorMap[dateKey] = const Color(0xFF7879F1); // primary80
-      } else if (attendance.time >= 30) { // 30분 이상
+      } else if (attendance.time >= 30) {
+        // 30분 이상
         colorMap[dateKey] = const Color(0xFFA5A6F6); // primary60
       } else {
         colorMap[dateKey] = Colors.grey.withOpacity(0.3);
