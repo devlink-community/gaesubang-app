@@ -3,7 +3,7 @@ import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
 
 abstract interface class NotificationRepository {
   /// 알림 목록 조회
-  Future<Result<List<Notification>>> getNotifications(String userId);
+  Future<Result<List<AppNotification>>> getNotifications(String userId);
 
   /// 특정 알림 읽음 처리
   Future<Result<bool>> markAsRead(String notificationId);

@@ -15,8 +15,8 @@ void main() {
   late GetNotificationsUseCase useCase;
 
   // Mockito에게 Result<List<Notification>> 타입의 더미 값 제공
-  provideDummy<Result<List<Notification>>>(
-    const Result.success(<Notification>[]),
+  provideDummy<Result<List<AppNotification>>>(
+    const Result.success(<AppNotification>[]),
   );
 
   setUp(() {
@@ -28,7 +28,7 @@ void main() {
     test('성공 시 AsyncData를 반환해야 함', () async {
       // 준비
       final notifications = [
-        Notification(
+        AppNotification(
           id: 'notification_1',
           userId: 'user_1',
           type: NotificationType.like,
@@ -46,7 +46,7 @@ void main() {
       final result = await useCase.execute('user_1');
 
       // 검증
-      expect(result, isA<AsyncData<List<Notification>>>());
+      expect(result, isA<AsyncData<List<AppNotification>>>());
       expect(result.value, notifications);
 
       verify(mockRepository.getNotifications('user_1')).called(1);
@@ -58,7 +58,7 @@ void main() {
 
       when(
         mockRepository.getNotifications('user_1'),
-      ).thenAnswer((_) async => Result<List<Notification>>.error(failure));
+      ).thenAnswer((_) async => Result<List<AppNotification>>.error(failure));
 
       // 실행
       final result = await useCase.execute('user_1');
