@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 
 abstract interface class NotificationRepository {
   /// 알림 목록 조회
