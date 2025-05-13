@@ -43,7 +43,7 @@ dependencies:
   fl_chart: ^0.71.0
   google_fonts: ^6.1.0
   url_launcher: ^6.3.1
-
+  intl: ^0.20.2
 
 
 dev_dependencies:
