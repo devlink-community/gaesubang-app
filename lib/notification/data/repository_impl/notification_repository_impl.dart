@@ -11,7 +11,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     : _dataSource = dataSource;
 
   @override
-  Future<Result<List<Notification>>> getNotifications(String userId) async {
+  Future<Result<List<AppNotification>>> getNotifications(String userId) async {
     try {
       final dtoList = await _dataSource.fetchNotifications(userId);
       return Result.success(dtoList.toModelList());

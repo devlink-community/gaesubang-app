@@ -9,7 +9,7 @@ class GetNotificationsUseCase {
   GetNotificationsUseCase({required NotificationRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<List<Notification>>> execute(String userId) async {
+  Future<AsyncValue<List<AppNotification>>> execute(String userId) async {
     final result = await _repository.getNotifications(userId);
 
     switch (result) {
