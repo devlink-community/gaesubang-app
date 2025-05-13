@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter/material.dart';
 
-import '../../data/module/attendance_di.dart';
 import '../../domain/model/attendance.dart';
+import '../../domain/model/group.dart';
 import '../../domain/usecase/get_attendance_by_month_use_case.dart';
 import 'attendance_action.dart';
 import 'attendance_state.dart';
@@ -17,7 +17,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   @override
   AttendanceState build() {
-    _getAttendancesByMonthUseCase = ref.watch(getAttendancesByMonthUseCaseProvider);
+    _getAttendancesByMonthUseCase = ref.watch(getAttendancesByMonthUseCase);
 
     // 현재 날짜 기준 초기 상태 설정
     final now = DateTime.now();
@@ -42,8 +42,8 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     }
   }
 
-  Future<void> _handleSelectGroup(dynamic group) async {
-    if (group == state.selectedGroup) return;
+  Future<void> _handleSelectGroup(Group group) async {
+    if (group.id == state.selectedGroup?.id) return;
 
     state = state.copyWith(
       selectedGroup: group,
@@ -97,14 +97,12 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
 
-      // 시간에 따른 색상 설정 (예: 시간이 길수록 진한 색상)
-      // 여기서는 간단한 예시로 30분 기준점을 사용
       if (attendance.time >= 240) { // 4시간 이상
-        colorMap[dateKey] = Colors.green;
+        colorMap[dateKey] = const Color(0xFF5D5FEF); // primary100
       } else if (attendance.time >= 120) { // 2시간 이상
-        colorMap[dateKey] = Colors.lightGreen;
+        colorMap[dateKey] = const Color(0xFF7879F1); // primary80
       } else if (attendance.time >= 30) { // 30분 이상
-        colorMap[dateKey] = Colors.lightGreen.withOpacity(0.5);
+        colorMap[dateKey] = const Color(0xFFA5A6F6); // primary60
       } else {
         colorMap[dateKey] = Colors.grey.withOpacity(0.3);
       }

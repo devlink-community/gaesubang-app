@@ -1,33 +1,128 @@
 import 'dart:async';
-
 import 'package:intl/intl.dart';
 
 import 'attendance_data_source.dart';
 
-class MockAttendanceDataSource implements AttendanceDataSource {
+class MockAttendanceDataSourceImpl implements AttendanceDataSource {
   final List<Map<String, dynamic>> _mockData = [
     {
       'memberId': 'user1',
       'date': '2025-05-01',
+      'time': 250,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-02',
+      'time': 10,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-03',
+      'time': 180,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-06',
+      'time': 60,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-08',
+      'time': 300,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-10',
+      'time': 120,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-12',
+      'time': 45,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-14',
+      'time': 200,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-15',
       'time': 30,
       'groupId': 'group1',
     },
     {
       'memberId': 'user1',
-      'date': '2025-05-08',
-      'time': 250,
+      'date': '2025-05-16',
+      'time': 270,
       'groupId': 'group1',
     },
     {
-      'memberId': 'user2',
-      'date': '2025-05-08',
-      'time': 130,
+      'memberId': 'user1',
+      'date': '2025-05-18',
+      'time': 90,
       'groupId': 'group1',
     },
     {
-      'memberId': 'user3',
-      'date': '2025-05-09',
-      'time': 60,
+      'memberId': 'user1',
+      'date': '2025-05-19',
+      'time': 150,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-20',
+      'time': 240,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-22',
+      'time': 75,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-23',
+      'time': 210,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-25',
+      'time': 160,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-26',
+      'time': 40,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-28',
+      'time': 290,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-30',
+      'time': 110,
+      'groupId': 'group1',
+    },
+    {
+      'memberId': 'user1',
+      'date': '2025-05-31',
+      'time': 190,
       'groupId': 'group1',
     },
   ];
@@ -39,6 +134,7 @@ class MockAttendanceDataSource implements AttendanceDataSource {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    // API 호출 시간을 시뮬레이션하기 위한 지연
     await Future.delayed(const Duration(milliseconds: 300));
 
     final startKey = DateFormat('yyyy-MM-dd').format(startDate);
@@ -51,7 +147,7 @@ class MockAttendanceDataSource implements AttendanceDataSource {
       return memberOk && groupOk && date.compareTo(startKey) >= 0 && date.compareTo(endKey) <= 0;
     }).toList();
   }
-  // lib/attendance/data/data_source/mock_attendance_data_source.dart
+
   @override
   Future<void> recordTimerAttendance({
     required String groupId,
