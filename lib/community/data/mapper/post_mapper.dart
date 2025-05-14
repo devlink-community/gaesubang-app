@@ -16,14 +16,34 @@ extension PostDtoMapper on PostDto {
         content: content ?? '',
         member: member?.toModel() ??
             Member(id: '', email: '', nickname: '', uid: '', onAir: false, image: ''),
-        userProfileImageUrl: userProfileImage ?? '',
-        boardType: boardType ?? BoardType.free,
+        userProfileImageUrl: userProfileImageUrl ?? '',
+        boardType: _parseBoardType(boardType),
         createdAt: createdAt ?? DateTime.now(),
         hashTags: (hashTags ?? []),
-        imageUrls: (mediaUrls ?? []),
+        imageUrls: (imageUrls ?? []),
         like: (like ?? []).map((e) => e.toModel()).toList(),
         comment: (comment ?? []).map((e) => e.toModel()).toList(),
       );
+      
+  // 문자열로 저장된 boardType을 enum으로 변환
+  BoardType _parseBoardType(dynamic boardTypeValue) {
+    if (boardTypeValue is BoardType) {
+      return boardTypeValue;
+    }
+    
+    if (boardTypeValue is String) {
+      try {
+        return BoardType.values.firstWhere(
+          (e) => e.name == boardTypeValue,
+          orElse: () => BoardType.free,
+        );
+      } catch (_) {
+        return BoardType.free;
+      }
+    }
+    
+    return BoardType.free;
+  }
 }
 
 extension on MemberDto {
