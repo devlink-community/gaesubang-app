@@ -23,14 +23,16 @@ class CommunityListScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('게시글 목록'),
-          leadingWidth: 100,
+          leadingWidth: 120,
           leading: Padding(
-            padding: const EdgeInsets.only(left: 16.0),
+            padding: const EdgeInsets.only(left: 8.0),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 PopupMenuButton(
                   initialValue: state.currentTab,
                   icon: const Icon(Icons.filter_alt_outlined),
+                  padding: EdgeInsets.zero,
                   itemBuilder: (context) {
                     return [
                       PopupMenuItem(
@@ -56,19 +58,21 @@ class CommunityListScreen extends StatelessWidget {
                     ];
                   },
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColorStyles.primary60,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  child: Center(
+                Flexible(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColorStyles.primary60,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
                       state.currentTab.name == 'popular' ? '인기순' : '최신순',
                       style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
