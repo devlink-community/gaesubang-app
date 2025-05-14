@@ -111,20 +111,24 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
     // 지연 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // 모든 사용자의 알림을 순회하며 해당 ID의 알림 찾아 삭제
-    for (var userId in _userNotifications.keys) {
-      final notifications = _userNotifications[userId]!;
-      final initialLength = notifications.length;
+    bool deleted = false;
 
-      _userNotifications[userId] =
-          notifications
+    // 모든 사용자의 알림에서 해당 ID를 가진 알림 삭제
+    for (var entry in _userNotifications.entries) {
+      final filtered =
+          entry.value
               .where((notification) => notification.id != notificationId)
               .toList();
 
-      // 목록 길이가 줄었으면 삭제 성공
-      return _userNotifications[userId]!.length < initialLength;
+      // 목록 길이가 변경되었다면 삭제된 것
+      if (filtered.length != entry.value.length) {
+        deleted = true;
+      }
+
+      // 필터링된 목록으로 갱신
+      _userNotifications[entry.key] = filtered;
     }
 
-    return false; // 알림을 찾지 못함
+    return deleted;
   }
 }
