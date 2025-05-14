@@ -132,9 +132,11 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(), // 배경 터치 시 키보드 내리기
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: SingleChildScrollView(
+          // SingleChildScrollView 추가 - 키보드가 올라올 때 스크롤 가능하게 함
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              // 기존 Column은 그대로 유지하여 디자인 보존
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -193,7 +195,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
 
-// 입력 필드 섹션 - 모듈화하여 가독성 향상
+  // 입력 필드 섹션 - 모듈화하여 가독성 향상
   Widget _buildInputFields() {
     return Column(
       children: [

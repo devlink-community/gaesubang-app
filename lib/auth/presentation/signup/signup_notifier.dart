@@ -298,7 +298,7 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 약관 동의 상태 업데이트
   void updateTermsAgreement({
-    required String agreedTermsId,
+    required String? agreedTermsId,
     required bool isAgreed,
   }) {
     state = state.copyWith(
