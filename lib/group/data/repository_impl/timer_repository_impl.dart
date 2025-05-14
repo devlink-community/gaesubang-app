@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
-import 'package:devlink_mobile_app/group/data/mepper/timer_mapper.dart';
+import 'package:devlink_mobile_app/group/data/mapper/timer_mapper.dart';
+import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
 import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
 
@@ -80,6 +81,18 @@ class TimerRepositoryImpl implements TimerRepository {
     } catch (e) {
       return Result.error(
         Failure(FailureType.unknown, '진행 중인 타이머 세션을 조회하는데 실패했습니다.', cause: e),
+      );
+    }
+  }
+
+  @override
+  Future<Result<List<MemberTimer>>> getMemberTimers(String groupId) async {
+    try {
+      final memberTimers = await _dataSource.fetchMemberTimers(groupId);
+      return Result.success(memberTimers);
+    } catch (e) {
+      return Result.error(
+        Failure(FailureType.unknown, '멤버 타이머 정보를 조회하는데 실패했습니다.', cause: e),
       );
     }
   }

@@ -22,6 +22,10 @@ class SignupState with _$SignupState {
     this.passwordConfirmError,
     this.termsError,
 
+    // 성공 메시지 추가
+    this.nicknameSuccess,
+    this.emailSuccess,
+
     // 중복 검사 결과
     this.nicknameAvailability,
     this.emailAvailability,
@@ -45,6 +49,10 @@ class SignupState with _$SignupState {
   final String? passwordError;
   final String? passwordConfirmError;
   final String? termsError;
+
+  // 성공 메시지 필드 추가
+  final String? nicknameSuccess;
+  final String? emailSuccess;
 
   final AsyncValue<bool>? nicknameAvailability;
   final AsyncValue<bool>? emailAvailability;

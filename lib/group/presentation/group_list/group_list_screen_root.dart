@@ -49,7 +49,7 @@ class GroupListScreenRoot extends ConsumerWidget {
       onAction: (action) {
         switch (action) {
           case OnTapSearch():
-            context.push('/search');
+            context.push('/group/search');
           case OnTapCreateGroup():
             context.push('/group/create');
           case OnCloseDialog():

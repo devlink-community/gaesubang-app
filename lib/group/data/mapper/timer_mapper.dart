@@ -8,8 +8,8 @@ extension TimerSessionDtoMapper on TimerSessionDto {
       id: id ?? '',
       groupId: groupId ?? '',
       userId: userId ?? '',
-      startTime: startTime ?? DateTime.now(),
-      endTime: endTime ?? DateTime.now(),
+      startTime: startTime ?? DateTime.fromMillisecondsSinceEpoch(0),
+      endTime: endTime ?? DateTime.fromMillisecondsSinceEpoch(0),
       duration: duration ?? 0,
       isCompleted: isCompleted ?? false,
     );

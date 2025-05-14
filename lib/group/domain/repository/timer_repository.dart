@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
 
 abstract interface class TimerRepository {
@@ -22,4 +23,7 @@ abstract interface class TimerRepository {
 
   /// 유저의 진행 중인 타이머 조회
   Future<Result<TimerSession?>> getActiveTimerSession(String userId);
+
+  /// 그룹의 멤버 타이머 상태 목록 조회
+  Future<Result<List<MemberTimer>>> getMemberTimers(String groupId);
 }

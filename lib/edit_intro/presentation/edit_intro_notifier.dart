@@ -30,17 +30,32 @@ class EditIntroNotifier extends _$EditIntroNotifier {
   // 프로필 로드를 public 메서드로 변경하여 외부에서 호출 가능하게 함
   Future<void> loadProfile() async {
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
-    final result = await _getCurrentProfileUseCase.execute();
 
-    switch (result) {
-      case Success(:final data):
-        state = state.copyWith(isLoading: false, isSuccess: true, member: data);
-      case Error(:final failure):
+    try {
+      final result = await _getCurrentProfileUseCase.execute();
+
+      if (result is AsyncData) {
+        // 성공적으로 데이터를 받은 경우
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true,
+          member: result.value,
+        );
+      } else if (result is AsyncError) {
+        // 에러가 발생한 경우
         state = state.copyWith(
           isLoading: false,
           isError: true,
-          errorMessage: failure.message,
+          errorMessage: result.error.toString(),
         );
+      }
+    } catch (e) {
+      // 예외 처리
+      state = state.copyWith(
+        isLoading: false,
+        isError: true,
+        errorMessage: '프로필을 불러오는 데 실패했습니다: ${e.toString()}',
+      );
     }
   }
 
