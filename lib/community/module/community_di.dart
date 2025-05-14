@@ -1,5 +1,6 @@
 // lib/community/module/community_di.dart
 import 'package:devlink_mobile_app/community/data/data_source/mock_post_data_source_impl.dart';
+import 'package:devlink_mobile_app/community/data/data_source/post_firebase_data_source.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_comment_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_post_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_comments_use_case.dart';
@@ -19,8 +20,11 @@ import '../domain/usecase/switch_tab_use_case.dart';
 part 'community_di.g.dart';
 
 // 데이터소스
+// @riverpod
+// PostDataSource postDataSource(Ref ref) => PostDataSourceImpl();
+
 @riverpod
-PostDataSource postDataSource(Ref ref) => PostDataSourceImpl();
+PostDataSource postDataSource(Ref ref) => PostFirebaseDataSource();
 
 // 레포지토리
 @riverpod
