@@ -5,18 +5,18 @@ part 'comment.freezed.dart';
 @freezed
 class Comment with _$Comment {
   const Comment({
-    required this.boardId,
-    required this.memberId,
+    required this.userId,
+    required this.userName,
+    required this.userProfileImage,
+    required this.text,
     required this.createdAt,
-    required this.content,
+    this.likeCount = 0,
   });
 
-  @override
-  final String boardId;
-  @override
-  final String memberId;
-  @override
+  final String userId;
+  final String userName;
+  final String userProfileImage;
+  final String text;
   final DateTime createdAt;
-  @override
-  final String content;
+  final int likeCount;
 }
