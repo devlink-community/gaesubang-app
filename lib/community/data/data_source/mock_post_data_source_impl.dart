@@ -1,10 +1,9 @@
-// lib/community/data/data_source/post_data_source_impl.dart
+// lib/community/data/data_source/mock_post_data_source_impl.dart
 import 'dart:math';
-import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto.dart';
+import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/like_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
-import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 import 'post_data_source.dart';
 
@@ -30,7 +29,9 @@ class PostDataSourceImpl implements PostDataSource {
   Future<PostDto> toggleLike(String postId) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     final dto = await fetchPostDetail(postId);
-    dto.like?.add(LikeDto(boardId: postId, memberId: 'me'));
+    dto.like?.add(
+      LikeDto(userId: 'user_me', userName: '현재 사용자', timestamp: DateTime.now()),
+    );
     return dto;
   }
 
@@ -57,10 +58,13 @@ class PostDataSourceImpl implements PostDataSource {
     final list = await fetchComments(postId);
     return [
       CommentDto(
-        boardId: postId,
-        memberId: memberId,
+        userId: memberId,
+        userName: "현재 사용자",
+        userProfileImage:
+            "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
+        text: content,
         createdAt: DateTime.now(),
-        content: content,
+        likeCount: 0,
       ),
       ...list,
     ];
@@ -96,26 +100,36 @@ class PostDataSourceImpl implements PostDataSource {
         image:
             'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
       ),
+      userProfileImage:
+          'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
       boardType: BoardType.free,
       createdAt: DateTime.now().subtract(Duration(minutes: i * 5)),
-      hashTag: [
-        HashTagDto(id: 't1', content: '#태그${i % 3}'),
-        if (i.isEven) HashTagDto(id: 't2', content: '#인기'),
-      ],
+      hashTags: ['#태그${i % 3}', if (i.isEven) '#인기'],
+      mediaUrls:
+          i % 3 == 0
+              ? [
+                'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
+              ]
+              : [],
       like: List.generate(
         likeCnt,
-        (idx) => LikeDto(boardId: 'post_$i', memberId: 'u$idx'),
+        (idx) => LikeDto(
+          userId: 'u$idx',
+          userName: 'user$idx',
+          timestamp: DateTime.now().subtract(Duration(hours: idx)),
+        ),
       ),
       comment: [_mockComment('post_$i', i)],
-      image:
-          "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
     );
   }
 
   CommentDto _mockComment(String postId, int i) => CommentDto(
-    boardId: postId,
-    memberId: 'u$i',
+    userId: 'u$i',
+    userName: '사용자$i',
+    userProfileImage:
+        'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
+    text: '저도 참여하고 싶습니다!',
     createdAt: DateTime(2025, 4, 28),
-    content: '저도 참여하고 싶습니다!',
+    likeCount: _rand.nextInt(50),
   );
 }
