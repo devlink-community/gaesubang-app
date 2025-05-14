@@ -6,8 +6,9 @@ part 'like_dto.g.dart';
 @freezed
 abstract class LikeDto with _$LikeDto {
   const factory LikeDto({
-    String? boardId,
-    String? memberId,
+    String? userId,
+    String? userName,
+    DateTime? timestamp,
   }) = _LikeDto;
 
   factory LikeDto.fromJson(Map<String, dynamic> json) =>
