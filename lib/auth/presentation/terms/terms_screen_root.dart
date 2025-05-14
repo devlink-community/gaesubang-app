@@ -18,7 +18,7 @@ class TermsScreenRoot extends ConsumerWidget {
     final state = ref.watch(termsNotifierProvider);
     final notifier = ref.watch(termsNotifierProvider.notifier);
 
-// 약관 동의 저장 완료 감지 - 수정된 부분
+    // 약관 동의 저장 완료 감지 - 수정된 부분
     ref.listen(
       termsNotifierProvider.select((value) => value.savedTermsId),
           (previous, next) {
@@ -47,7 +47,20 @@ class TermsScreenRoot extends ConsumerWidget {
           case NavigateToSignup():
             context.pop(); // 회원가입 화면으로 돌아가기
           case NavigateBack():
-            context.pop();
+          // 필수 약관에 동의했는지 확인 (서비스 이용 약관 + 개인정보 수집 동의)
+            final requiredTermsAgreed =
+                state.isServiceTermsAgreed && state.isPrivacyPolicyAgreed;
+
+            // 필수 약관에 동의하지 않은 경우, 회원가입 화면으로 돌아가면서
+            // 약관 동의 체크박스를 해제하도록 signupNotifier 업데이트
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(signupNotifierProvider.notifier).updateTermsAgreement(
+                agreedTermsId: null, // 약관 ID를 null로 설정
+                isAgreed: requiredTermsAgreed, // 필수 약관 동의 여부 전달
+              );
+            });
+
+            context.pop(); // 이전 화면(회원가입)으로 돌아가기
           default:
             notifier.onAction(action);
         }

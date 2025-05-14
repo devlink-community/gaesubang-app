@@ -1,3 +1,4 @@
+// lib/auth/presentation/terms/terms_screen.dart
 import 'package:devlink_mobile_app/auth/presentation/component/custom_button.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_state.dart';
@@ -20,50 +21,52 @@ class TermsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 상단 영역 - 이미지 및 설명
-              Expanded(
-                flex: 7,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // 이미지 표시
-                    Image.asset(
-                      'assets/images/gaesubang_mascot.png', // 실제 앱에 맞는 이미지 경로
-                      width: 258,
-                      height: 258,
-                    ),
+        // 키보드가 올라올 때 스크롤 가능하도록 SingleChildScrollView 추가
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            // 기존 Column은 그대로 유지하여 디자인 보존
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 상단 영역 - 이미지 및 설명
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.35,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // 이미지 표시
+                      Image.asset(
+                        'assets/images/gaesubang_mascot.png', // 실제 앱에 맞는 이미지 경로
+                        width: 258,
+                        height: 258,
+                      ),
 
-                    // 타이틀 텍스트
-                    Text(
-                      '개수방 멤버쉽에',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        fontSize: 18,
+                      // 타이틀 텍스트
+                      Text(
+                        '개수방 멤버쉽에',
+                        style: AppTextStyles.subtitle1Bold.copyWith(
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      '오신 것을 환영합니다.',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        fontSize: 18,
+                      Text(
+                        '오신 것을 환영합니다.',
+                        style: AppTextStyles.subtitle1Bold.copyWith(
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // 체크박스 영역
-              Expanded(
-                flex: 4,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end, // 하단 정렬
+                // 체크박스 영역
+                Column(
                   children: [
-                    const SizedBox(height: 50),
+                    // 위쪽 여백을 줄임
+                    const SizedBox(height: 88),
+
                     // 전체 동의 체크박스
                     _buildCheckbox(
                       title: '모든 약관에 동의합니다.',
@@ -113,41 +116,82 @@ class TermsScreen extends StatelessWidget {
                         const TermsAction.viewTermsDetail('marketing'),
                       ),
                     ),
-
-                    // 에러 메시지 표시
-                    if (state.errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16.0),
-                        child: Text(
-                          state.errorMessage!,
-                          style: AppTextStyles.captionRegular.copyWith(
-                            color: AppColorStyles.error,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 30),
-              // 버튼 영역
-              Padding(
-                padding: const EdgeInsets.only(bottom: 40.0),
-                child: CustomButton(
-                  text: '동의하고 계속하기',
-                  onPressed: () => onAction(const TermsAction.submit()),
-                  isLoading: state.isSubmitting,
-                  backgroundColor: AppColorStyles.primary100,
-                  foregroundColor: Colors.white,
+
+                // 에러 메시지 영역 - 조정
+                if (state.errorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 16.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                    decoration: BoxDecoration(
+                      color: AppColorStyles.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(
+                        color: AppColorStyles.error.withOpacity(0.5),
+                        width: 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColorStyles.error,
+                          size: 16.0,
+                        ),
+                        const SizedBox(width: 8.0),
+                        Expanded(
+                          child: Text(
+                            state.errorMessage!,
+                            style: AppTextStyles.captionRegular.copyWith(
+                              color: AppColorStyles.error,
+                            ),
+                            softWrap: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // 버튼 영역과 에러 메시지 사이 간격 조정
+                SizedBox(height: state.errorMessage != null ? 16.0 : 30.0),
+
+                // 버튼 영역
+                Column(
+                  children: [
+                    // 기존 버튼
+                    CustomButton(
+                      text: '동의하고 계속하기',
+                      onPressed: () => onAction(const TermsAction.submit()),
+                      isLoading: state.isSubmitting,
+                      backgroundColor: AppColorStyles.primary100,
+                      foregroundColor: Colors.white,
+                    ),
+
+                    // 추가된 회원가입으로 돌아가기 버튼
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => onAction(const TermsAction.navigateBack()),
+                      child: Text(
+                        '회원가입으로 돌아가기',
+                        style: AppTextStyles.body2Regular.copyWith(
+                          color: AppColorStyles.gray100,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 180),
-            ],
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  // 기존 _buildCheckbox, _buildCheckboxWithButton 메서드 유지
   // 기본 체크박스 위젯
   Widget _buildCheckbox({
     required String title,

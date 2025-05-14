@@ -60,76 +60,92 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 60),
-
-              // 제목
-              Text(
-                '비밀번호 재설정',
-                style: AppTextStyles.heading2Bold.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(), // 배경 터치시 키보드 내림
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: ConstrainedBox(
+                // 화면 높이만큼 최소 높이 설정
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom,
                 ),
-                textAlign: TextAlign.center,
-              ),
+                child: Column(
+                  // mainAxisAlignment를 제거하고 Column으로 구성
+                  children: [
+                    const SizedBox(height: 60),
 
-              const SizedBox(height: 16),
+                    // 제목
+                    Text(
+                      '비밀번호 재설정',
+                      style: AppTextStyles.heading2Bold.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
 
-              // 안내 텍스트
-              Text(
-                '입력하신 이메일로 비밀번호를 재설정할 수 있는\n링크를 전송합니다. 이메일을 작성해주세요.',
-                style: AppTextStyles.body1Regular.copyWith(
-                  color: AppColorStyles.gray100,
-                  fontSize: 14,
+                    const SizedBox(height: 16),
+
+                    // 안내 텍스트
+                    Text(
+                      '입력하신 이메일로 비밀번호를 재설정할 수 있는\n링크를 전송합니다. 이메일을 작성해주세요.',
+                      style: AppTextStyles.body1Regular.copyWith(
+                        color: AppColorStyles.gray100,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // 이메일 입력 필드 - CustomTextField 활용
+                    CustomTextField(
+                      label: '',
+                      hintText: 'Email address',
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      errorText: widget.state.emailError,
+                      onChanged: (value) => widget.onAction(ForgotPasswordAction.emailChanged(value)),
+                      focusNode: _emailFocusNode,
+                    ),
+
+                    // 여기에 Spacer 대신 조절 가능한 SizedBox 추가
+                    // 이 높이를 조절하여 입력란과 버튼 사이 간격 조정 가능
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.364),
+
+                    // 이메일 발송하기 버튼
+                    CustomButton(
+                      text: '이메일 발송하기',
+                      onPressed: () => widget.onAction(ForgotPasswordAction.sendResetEmail()),
+                      isLoading: isLoading,
+                      backgroundColor: AppColorStyles.primary100,
+                      foregroundColor: Colors.white,
+                      height: 50,
+                      width: double.infinity,
+                    ),
+
+                    const SizedBox(height: 5),
+
+                    // 로그인으로 돌아가기 텍스트 버튼
+                    TextButton(
+                      onPressed: () => widget.onAction(ForgotPasswordAction.navigateToLogin()),
+                      child: Text(
+                        '로그인으로 돌아가기',
+                        style: AppTextStyles.body2Regular.copyWith(
+                          color: AppColorStyles.gray100,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-
-              const SizedBox(height: 32),
-
-              // 이메일 입력 필드 - CustomTextField 활용
-              CustomTextField(
-                label: '',
-                hintText: 'Email address',
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                errorText: widget.state.emailError,
-                onChanged: (value) => widget.onAction(ForgotPasswordAction.emailChanged(value)),
-              ),
-
-              //const Spacer(),
-              const SizedBox(height: 348),
-
-              // 이메일 발송하기 버튼 - CustomButton 활용
-              CustomButton(
-                text: '이메일 발송하기',
-                onPressed: () => widget.onAction(ForgotPasswordAction.sendResetEmail()),
-                isLoading: isLoading,
-                backgroundColor: AppColorStyles.primary100,
-                foregroundColor: Colors.white,
-                height: 50,
-                width: double.infinity,
-              ),
-
-              const SizedBox(height: 16),
-
-              // 로그인으로 돌아가기 텍스트 버튼
-              TextButton(
-                onPressed: () => widget.onAction(ForgotPasswordAction.navigateToLogin()),
-                child: Text(
-                  '로그인으로 돌아가기',
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.gray100,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
         ),
       ),

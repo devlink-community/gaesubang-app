@@ -1,4 +1,4 @@
-// lib/auth/presentation/login_screen.dart
+// lib/auth/presentation/login/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
@@ -42,85 +42,90 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              // 로그인 타이틀
-              Text(
-                '로그인',
-                style: AppTextStyles.heading2Bold,
-              ),
-              const SizedBox(height: 8),
-              // 회원가입 안내 텍스트
-              Row(
-                children: [
-                  Text(
-                    '계정이 없으신가요?',
-                    style: AppTextStyles.body1Regular,
-                  ),
-                  TextButton(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            // 원래 레이아웃을 그대로 유지하되 스크롤 가능하도록 함
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 40),
+                // 로그인 타이틀
+                Text(
+                  '로그인',
+                  style: AppTextStyles.heading2Bold,
+                ),
+                const SizedBox(height: 8),
+                // 회원가입 안내 텍스트
+                Row(
+                  children: [
+                    Text(
+                      '계정이 없으신가요?',
+                      style: AppTextStyles.body1Regular,
+                    ),
+                    TextButton(
+                      onPressed: () => widget.onAction(
+                        const LoginAction.navigateToSignUp(),
+                      ),
+                      child: Text(
+                        '회원가입',
+                        style: AppTextStyles.body1Regular.copyWith(
+                          color: AppColorStyles.primary100,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                // 이메일 입력
+                CustomTextField(
+                  label: '',
+                  hintText: 'Email address',
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  onChanged: (value) => {},
+                ),
+                const SizedBox(height: 10),
+                // 비밀번호 입력
+                CustomTextField(
+                  label: '',
+                  hintText: 'Password',
+                  controller: passwordController,
+                  obscureText: true,
+                  onChanged: (value) => {},
+                ),
+                // 비밀번호 찾기 링크
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
                     onPressed: () => widget.onAction(
-                      const LoginAction.navigateToSignUp(),
+                      const LoginAction.navigateToForgetPassword(),
                     ),
                     child: Text(
-                      '회원가입',
-                      style: AppTextStyles.body1Regular.copyWith(
-                        color: AppColorStyles.primary100,
+                      '비밀번호를 잊어버리셨나요?',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: AppColorStyles.gray80,
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              // 이메일 입력
-              CustomTextField(
-                label: '',
-                hintText: 'Email address',
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                onChanged: (value) => {},
-              ),
-              const SizedBox(height: 10),
-              // 비밀번호 입력
-              CustomTextField(
-                label: '',
-                hintText: 'Password',
-                controller: passwordController,
-                obscureText: true,
-                onChanged: (value) => {},
-              ),
-              // 비밀번호 찾기 링크
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
+                ),
+                // 공간을 동일하게 유지하기 위해 SizedBox 사용
+                SizedBox(height: MediaQuery.of(context).size.height * 0.235),
+                // 로그인 버튼 (CustomButton 사용)
+                CustomButton(
+                  text: '로그인',
                   onPressed: () => widget.onAction(
-                    const LoginAction.navigateToForgetPassword(),
-                  ),
-                  child: Text(
-                    '비밀번호를 잊어버리셨나요?',
-                    style: AppTextStyles.body2Regular.copyWith(
-                      color: AppColorStyles.gray80,
+                    LoginAction.loginPressed(
+                      email: emailController.text,
+                      password: passwordController.text,
                     ),
                   ),
+                  isLoading: loading,
                 ),
-              ),
-              const Spacer(),
-              // 로그인 버튼 (CustomButton 사용)
-              CustomButton(
-                text: '로그인',
-                onPressed: () => widget.onAction(
-                  LoginAction.loginPressed(
-                    email: emailController.text,
-                    password: passwordController.text,
-                  ),
-                ),
-                isLoading: loading,
-              ),
-              const SizedBox(height: 220),
-            ],
+                // 기존 레이아웃의 하단 공간 유지
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
