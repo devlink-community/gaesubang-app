@@ -58,22 +58,21 @@ class CommunityListScreen extends StatelessWidget {
                     ];
                   },
                 ),
-                Flexible(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.primary60,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      state.currentTab.name == 'popular' ? '인기순' : '최신순',
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                Container(
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary60,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    state.currentTab.name == 'popular' ? '인기순' : '최신순',
+                    style: const TextStyle(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
