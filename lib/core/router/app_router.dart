@@ -26,11 +26,35 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(Ref ref) {
-  // 로그인 상태 감지를 위한 Provider는 필요 시 추가
+  // 로그인 상태 확인을 위한 Provider
+  // 실제 구현 시 아래 주석을 해제하고 로그인 상태 Provider를 사용
   // final authState = ref.watch(authStateProvider);
+  // final isLoggedIn = authState.value?.isLoggedIn ?? false;
+
+  // FIXME: 임시로 로그인 상태를 false로 설정 (로그인 상태 Provider 구현 시 수정 필요)
+  const bool isLoggedIn = false;
 
   return GoRouter(
-    initialLocation: '/', // 기본 경로는 홈으로 리다이렉트됨
+    initialLocation: isLoggedIn ? '/home' : '/login',
+    redirect: (context, state) {
+      // 현재 경로
+      final currentPath = state.uri.path;
+
+      // 로그인이 필요하지 않은 경로 목록
+      final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
+
+      // 로그인 상태에 따른 리다이렉트 처리
+      if (!isLoggedIn && !publicPaths.any(currentPath.startsWith)) {
+        // 로그인되지 않았고 공개 경로가 아닌 경우 로그인 화면으로 리다이렉트
+        return '/login';
+      } else if (isLoggedIn && publicPaths.any(currentPath.startsWith)) {
+        // 이미 로그인되었고 공개 경로에 접근하려는 경우 홈으로 리다이렉트
+        return '/home';
+      }
+
+      // 로그인 상태와 경로가 일치하면 리다이렉트 없음
+      return null;
+    },
     routes: [
       // === 인증 관련 라우트 (로그인 필요 없음) ===
       GoRoute(
@@ -53,9 +77,6 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const TermsScreenRoot(),
       ),
 
-      // === 기본 경로 -> 홈으로 리다이렉트 ===
-      GoRoute(path: '/', redirect: (_, __) => '/home'),
-
       // === 메인 탭 화면 (홈, 커뮤니티, 그룹, 알림, 프로필) ===
       ShellRoute(
         builder: (context, state, child) {
@@ -73,11 +94,9 @@ GoRouter appRouter(Ref ref) {
             currentIndex = 4;
           }
 
-          // 프로필 이미지 URL (로그인된 사용자에서 가져올 수 있음)
-          String? profileImageUrl;
-          // 유저 상태 활성화 시 아래 코드 사용
-          // final user = ref.watch(userProfileProvider).valueOrNull;
-          // profileImageUrl = user?.profileImageUrl;
+          // 프로필 이미지는 더 이상 외부 URL을 사용하지 않음
+          // 실제 사용자 프로필 구현 시 사용자 데이터에서 가져오도록 수정
+          const String? profileImageUrl = null;
 
           return Scaffold(
             body: child,
