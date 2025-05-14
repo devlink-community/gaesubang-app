@@ -7,7 +7,7 @@ docs/
 │   ├── roadmap.md                 # MVP + 확장 기능 정리
 │
 ├── arch/
-│   ├── folder.md                  # 기능 기반 폴더 구조
+│   ├── folder.md                  # 기능 기반 폴더 구[myDocuments.cannedSearch](../../../../../System/Library/CoreServices/Finder.app/Contents/Resources/MyLibraries/myDocuments.cannedSearch)조
 │   ├── layer.md                   # 레이어별 책임 및 흐름
 │   ├── result.md                  # Result + UiState 패턴
 │   ├── error.md                   # Failure/예외 처리 전략

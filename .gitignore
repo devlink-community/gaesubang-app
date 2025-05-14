@@ -132,3 +132,12 @@ app.*.symbols
 # tools - generated merge output
 _tools/*.md
 !_tools/README.md
+
+# Firebase config files
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Firebase CLI files
+.firebase/
+.firebaserc
+firebase-debug.log
