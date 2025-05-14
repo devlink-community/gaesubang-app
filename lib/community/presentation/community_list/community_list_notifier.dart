@@ -19,7 +19,7 @@ class CommunityListNotifier extends _$CommunityListNotifier {
     _loadPostListUseCase = ref.watch(loadPostListUseCaseProvider);
     // 비동기 로딩 → 결과 반영
     Future.microtask(_fetch);
-    return const CommunityListState(); // 초기값
+    return const CommunityListState(currentTab: CommunityTabType.newest); // 최신순으로 기본값 변경
   }
 
   late final LoadPostListUseCase _loadPostListUseCase;
@@ -28,7 +28,9 @@ class CommunityListNotifier extends _$CommunityListNotifier {
   Future<void> _fetch() async {
     state = state.copyWith(postList: const AsyncLoading());
     final result = await _loadPostListUseCase.execute();
-    state = state.copyWith(postList: result);
+    state = state.copyWith(
+      postList: result.whenData((list) => _applySort(list, state.currentTab))
+    );
   }
 
   /// 탭 변경·수동 새로고침 등 외부 Action 진입점
@@ -44,8 +46,14 @@ class CommunityListNotifier extends _$CommunityListNotifier {
             orElse: () => state.postList,
           ),
         );
-      default:
-        // UI 이동 Action 은 Root 에서 처리
+      case TapSearch():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
+        break;
+      case TapWrite():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
+        break;
+      case TapPost():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
         break;
     }
   }
