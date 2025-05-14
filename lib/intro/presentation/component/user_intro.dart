@@ -36,11 +36,26 @@ class ProfileInfo extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
-                  radius: 36,
-                  backgroundImage: NetworkImage(member.image),
-                  backgroundColor: Colors.grey.shade200,
-                ),
+                child:
+                    member.image.isNotEmpty
+                        ? CircleAvatar(
+                          radius: 36,
+                          backgroundImage: NetworkImage(member.image),
+                          backgroundColor: Colors.grey.shade200,
+                          onBackgroundImageError: (exception, stackTrace) {
+                            // 이미지 로딩 오류 시 기본 아이콘으로 대체
+                            return;
+                          },
+                        )
+                        : CircleAvatar(
+                          radius: 36,
+                          backgroundColor: Colors.grey.shade200,
+                          child: Icon(
+                            Icons.person,
+                            size: 36,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
               ),
               const SizedBox(width: 16),
               Column(

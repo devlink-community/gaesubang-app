@@ -3,7 +3,6 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/community/module/community_router.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/intro/module/intro_route.dart';
-import 'package:devlink_mobile_app/setting/module/settings_route.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../community/presentation/community_list/community_list_screen_root.dart';
 import '../../group/presentation/group_list/group_list_screen_root.dart';
 import '../../intro/presentation/intro_screen_root.dart';
+import '../component/navigation_bar.dart';
 
 part 'app_router.g.dart';
 
@@ -42,21 +42,14 @@ GoRouter appRouter(Ref ref) {
             currentIndex = 4;
           }
 
+          // 프로필 이미지 URL - 상태관리로부터 가져와야 함
+          String? profileImageUrl; // 실제 구현에서는 상태에서 가져와야 함
+
           return Scaffold(
             body: child,
-            bottomNavigationBar: BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-                BottomNavigationBarItem(icon: Icon(Icons.forum), label: '커뮤니티'),
-                BottomNavigationBarItem(icon: Icon(Icons.group), label: '그룹'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.notifications),
-                  label: '알림',
-                ),
-                BottomNavigationBarItem(icon: Icon(Icons.person), label: '프로필'),
-              ],
+            bottomNavigationBar: AppBottomNavigationBar(
               currentIndex: currentIndex,
+              profileImageUrl: profileImageUrl,
               onTap: (index) {
                 switch (index) {
                   case 0:
@@ -115,7 +108,6 @@ GoRouter appRouter(Ref ref) {
       ...introRoutes,
       ...communityRoutes,
       ...groupRoutes,
-      ...settingsRoutes,
     ],
 
     // 에러 페이지 처리
