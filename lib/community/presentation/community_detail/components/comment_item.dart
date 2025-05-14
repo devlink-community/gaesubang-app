@@ -11,7 +11,7 @@ class CommentItem extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         leading: const CircleAvatar(radius: 18),
         title: Text('테스트 유저', style: const TextStyle(fontSize: 14)),
-        subtitle: Text(comment.content),
+        subtitle: Text(comment.text),
         trailing: Text(
           '${comment.createdAt.year}-${comment.createdAt.month.toString().padLeft(2, '0')}-${comment.createdAt.day.toString().padLeft(2, '0')}',
           style: const TextStyle(fontSize: 11, color: Colors.grey),
