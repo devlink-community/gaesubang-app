@@ -24,8 +24,7 @@ GoRouter appRouter(Ref ref) {
       ...authRoutes,
 
       // 기본 경로 -> 홈으로 리다이렉트
-      GoRoute(path: '/', redirect: (_, __) => '/home'),
-
+      GoRoute(path: '/', redirect: (_, __) => '/home')
       // 메인 탭 화면 (홈, 그룹, 커뮤니티, 알림, 프로필)
       ShellRoute(
         builder: (context, state, child) {
