@@ -120,7 +120,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            value.image, // ⬅ 목 이미지
+                            'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp', // ⬅ 목 이미지
                             fit: BoxFit.cover,
                           ),
                         ),
