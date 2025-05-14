@@ -29,10 +29,16 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         state = state.copyWith(description: description);
 
       case LimitMemberCountChanged(:final count):
-        state = state.copyWith(limitMemberCount: count);
+        final validCount = count < 1 ? 1 : count;
+        state = state.copyWith(limitMemberCount: validCount);
 
       case HashTagAdded(:final tag):
-        if (tag.trim().isEmpty) return;
+        final trimmed = tag.trim();
+        if (trimmed.isEmpty ||
+            state.hashTags.any((t) => t.content == trimmed) ||
+            trimmed.length > 20) {
+          return;
+        }
         final newTag = HashTag(
           id: DateTime.now().toString(),
           content: tag.trim(),
@@ -111,6 +117,8 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         limitMemberCount: state.limitMemberCount,
         owner: owner,
         imageUrl: state.imageUrl,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       // UseCase 호출하여 그룹 생성

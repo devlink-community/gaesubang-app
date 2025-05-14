@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/core/router/app_router.dart';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -15,6 +16,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Flutter Demo',
       routerConfig: router,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(),
     );
   }
