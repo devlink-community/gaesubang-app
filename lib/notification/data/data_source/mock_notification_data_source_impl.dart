@@ -41,22 +41,6 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
       final testUser =
           'testUser'; // 이 값이 NotificationNotifier의 _currentUserId와 일치해야 함
 
-<<<<<<< HEAD
-      final notifications = List.generate(
-        10,
-        (index) => NotificationDto(
-          id: 'notification_$index',
-          userId: testUser,
-          type: index % 2 == 0 ? 'like' : 'comment',
-          targetId: 'post_${index % 5}',
-          senderName: '사용자${index + 1}',
-          createdAt: DateTime.now().subtract(Duration(hours: index)),
-          isRead: index > 5,
-          description: '게시글에 ${index % 2 == 0 ? "좋아요를 눌렀습니다" : "댓글을 남겼습니다"}',
-          imageUrl: 'https://example.com/avatar$index.jpg',
-        ),
-      );
-=======
       // 매우 간단한 알림 목록 생성 (복잡한 로직 제거)
       final notifications = [
         NotificationDto(
@@ -70,7 +54,6 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
           description: '게시글에 좋아요를 눌렀습니다',
         ),
       ];
->>>>>>> 274f82b (feat(notification): notification screen create, print debug 구현 및 notifier 수정 완료 (#116))
 
       _userNotifications[testUser] = notifications;
       print('목 데이터 초기화 완료: ${notifications.length}개 알림'); // 디버깅 로그
