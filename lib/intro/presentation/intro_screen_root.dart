@@ -29,7 +29,7 @@ class _IntroScreenRootState extends ConsumerState<IntroScreenRoot> {
               switch (action) {
                 case OpenSettings():
                   print('설정 버튼 클릭됨 - 설정 화면으로 이동 시도');
-                  context.go('/settings');
+                  context.push('/settings');
                   break;
                 case RefreshIntro():
                   print('새로고침 버튼 클릭됨');
