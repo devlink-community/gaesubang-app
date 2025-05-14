@@ -121,31 +121,45 @@ class NotificationNotifier extends _$NotificationNotifier {
     switch (result) {
       case AsyncData(:final value) when value:
         // 성공적으로 읽음 처리됨
-        // 현재 상태의 알림 목록 업데이트
         final currentNotifications = state.notifications.valueOrNull;
         if (currentNotifications != null) {
+          // 읽지 않은 상태였는지 플래그
+          bool wasUnread = false;
+
+          // 알림 목록 업데이트
           final updatedNotifications =
               currentNotifications.map((notification) {
-                if (notification.id == notificationId && !notification.isRead) {
-                  // 알림 읽음 처리 및 읽지 않은 개수 감소
-                  return AppNotification(
-                    id: notification.id,
-                    userId: notification.userId,
-                    type: notification.type,
-                    targetId: notification.targetId,
-                    senderName: notification.senderName,
-                    createdAt: notification.createdAt,
-                    isRead: true,
-                    description: notification.description,
-                    imageUrl: notification.imageUrl,
-                  );
+                if (notification.id == notificationId) {
+                  // 원래 읽지 않은 상태였는지 기록
+                  if (!notification.isRead) {
+                    wasUnread = true;
+
+                    // 알림 읽음 처리
+                    return AppNotification(
+                      id: notification.id,
+                      userId: notification.userId,
+                      type: notification.type,
+                      targetId: notification.targetId,
+                      senderName: notification.senderName,
+                      createdAt: notification.createdAt,
+                      isRead: true, // 읽음 상태로 변경
+                      description: notification.description,
+                      imageUrl: notification.imageUrl,
+                    );
+                  }
                 }
                 return notification;
               }).toList();
 
+          // 읽지 않은 알림이었을 경우에만 카운트 감소
+          final newUnreadCount =
+              wasUnread
+                  ? (state.unreadCount > 0 ? state.unreadCount - 1 : 0)
+                  : state.unreadCount;
+
           state = state.copyWith(
             notifications: AsyncData(updatedNotifications),
-            unreadCount: state.unreadCount - 1,
+            unreadCount: newUnreadCount,
           );
         }
 
