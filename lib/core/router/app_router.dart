@@ -19,40 +19,54 @@ import 'package:devlink_mobile_app/notification/presentation/notification_screen
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_router.g.dart';
 
+// 개발용 강제 로그인 상태를 관리하는 Provider
 @riverpod
-GoRouter appRouter(Ref ref) {
-  // 로그인 상태 확인을 위한 Provider
-  // 실제 구현 시 아래 주석을 해제하고 로그인 상태 Provider를 사용
-  // final authState = ref.watch(authStateProvider);
-  // final isLoggedIn = authState.value?.isLoggedIn ?? false;
+class DevLoginState extends _$DevLoginState {
+  @override
+  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작 (false이면 로그인 로직대로 동작)
 
-  // FIXME: 임시로 로그인 상태를 false로 설정 (로그인 상태 Provider 구현 시 수정 필요)
-  const bool isLoggedIn = false;
+  void toggle() => state = !state;
+  void enable() => state = true;
+  void disable() => state = false;
+}
+
+// GoRouter Provider
+@riverpod
+GoRouter appRouter(ref) {
+  // 개발용 강제 로그인 상태 구독
+  final devLogin = ref.watch(devLoginStateProvider);
 
   return GoRouter(
-    initialLocation: isLoggedIn ? '/home' : '/login',
+    initialLocation: devLogin ? '/home' : '/login',
     redirect: (context, state) {
+      // 루트 경로('/')에 대한 처리 추가
+      if (state.uri.path == '/') {
+        return devLogin ? '/home' : '/login';
+      }
+
       // 현재 경로
       final currentPath = state.uri.path;
 
       // 로그인이 필요하지 않은 경로 목록
       final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
 
-      // 로그인 상태에 따른 리다이렉트 처리
-      if (!isLoggedIn && !publicPaths.any(currentPath.startsWith)) {
-        // 로그인되지 않았고 공개 경로가 아닌 경우 로그인 화면으로 리다이렉트
-        return '/login';
-      } else if (isLoggedIn && publicPaths.any(currentPath.startsWith)) {
-        // 이미 로그인되었고 공개 경로에 접근하려는 경우 홈으로 리다이렉트
-        return '/home';
+      // 개발용 강제 로그인 모드가 활성화된 경우
+      if (devLogin) {
+        // 로그인 화면으로 가려는 경우 홈으로 리다이렉트
+        if (publicPaths.any(currentPath.startsWith)) {
+          return '/home';
+        }
+
+        // 다른 화면은 정상 이동
+        return null;
       }
 
-      // 로그인 상태와 경로가 일치하면 리다이렉트 없음
+      // 일반 모드에서는 임시로 모든 페이지 이동 허용
+      // 추후 실제 로그인 상태에 따른 리다이렉트 로직 구현 예정
       return null;
     },
     routes: [
