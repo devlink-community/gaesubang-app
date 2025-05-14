@@ -28,9 +28,19 @@ class CommunityListNotifier extends _$CommunityListNotifier {
   Future<void> _fetch() async {
     state = state.copyWith(postList: const AsyncLoading());
     final result = await _loadPostListUseCase.execute();
-    state = state.copyWith(
-      postList: result.whenData((list) => _applySort(list, state.currentTab))
-    );
+    
+    // switch-case 패턴 사용
+    switch (result) {
+      case AsyncData(:final value):
+        state = state.copyWith(
+          postList: AsyncData(_applySort(value, state.currentTab))
+        );
+      case AsyncError(:final error, :final stackTrace):
+        state = state.copyWith(postList: AsyncError(error, stackTrace));
+      case AsyncLoading():
+        // 이미 위에서 AsyncLoading으로 설정했으므로 여기서는 처리 불필요
+        break;
+    }
   }
 
   /// 탭 변경·수동 새로고침 등 외부 Action 진입점
