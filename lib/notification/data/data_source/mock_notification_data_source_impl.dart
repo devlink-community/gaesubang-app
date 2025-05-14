@@ -12,33 +12,43 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
   }
 
   void _initMockData() {
-    final testUser = 'testUser';
+    print('목 데이터 초기화 시작'); // 디버깅 로그
+    try {
+      final testUser =
+          'testUser'; // 이 값이 NotificationNotifier의 _currentUserId와 일치해야 함
 
-    final notifications = List.generate(
-      10,
-      (index) => NotificationDto(
-        id: 'notification_$index',
-        userId: testUser,
-        type: index % 2 == 0 ? 'like' : 'comment',
-        targetId: 'post_${index % 5}',
-        senderName: '사용자${index + 1}',
-        createdAt: DateTime.now().subtract(Duration(hours: index)),
-        isRead: index > 5,
-        description: '게시글에 ${index % 2 == 0 ? "좋아요를 눌렀습니다" : "댓글을 남겼습니다"}',
-        imageUrl: 'https://example.com/avatar$index.jpg',
-      ),
-    );
+      final notifications = List.generate(
+        10,
+        (index) => NotificationDto(
+          id: 'notification_$index',
+          userId: testUser,
+          type: index % 2 == 0 ? 'like' : 'comment',
+          targetId: 'post_${index % 5}',
+          senderName: '사용자${index + 1}',
+          createdAt: DateTime.now().subtract(Duration(hours: index)),
+          isRead: index > 5,
+          description: '게시글에 ${index % 2 == 0 ? "좋아요를 눌렀습니다" : "댓글을 남겼습니다"}',
+          imageUrl: 'https://example.com/avatar$index.jpg',
+        ),
+      );
 
-    _userNotifications[testUser] = notifications;
+      _userNotifications[testUser] = notifications;
+      print('목 데이터 초기화 완료: ${notifications.length}개 알림'); // 디버깅 로그
+    } catch (e) {
+      print('목 데이터 초기화 중 오류: $e'); // 예외 로깅
+    }
   }
 
   @override
   Future<List<NotificationDto>> fetchNotifications(String userId) async {
+    print('fetchNotifications 호출됨: userId=$userId'); // 디버깅 로그
     // 지연 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 500));
 
     // 해당 사용자의 알림이 없으면 빈 목록 반환
-    return _userNotifications[userId] ?? [];
+    final notifications = _userNotifications[userId] ?? [];
+    print('사용자($userId)의 알림 수: ${notifications.length}'); // 디버깅 로그
+    return notifications;
   }
 
   @override

@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 import 'package:devlink_mobile_app/notification/data/mapper/notification_mapper.dart';
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart';
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('Model을 DTO로 변환해야 함', () {
-      final model = Notification(
+      final model = AppNotification(
         id: 'test_id',
         userId: 'user_1',
         type: NotificationType.follow,

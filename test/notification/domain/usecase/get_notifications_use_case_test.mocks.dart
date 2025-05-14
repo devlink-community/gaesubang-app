@@ -6,7 +6,7 @@
 import 'dart:async' as _i3;
 
 import 'package:devlink_mobile_app/core/result/result.dart' as _i4;
-import 'package:devlink_mobile_app/notification/domain/model/notification.dart'
+import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart'
     as _i5;
 import 'package:devlink_mobile_app/notification/domain/repository/notification_repository.dart'
     as _i2;
@@ -37,19 +37,20 @@ class MockNotificationRepository extends _i1.Mock
   }
 
   @override
-  _i3.Future<_i4.Result<List<_i5.Notification>>> getNotifications(
+  _i3.Future<_i4.Result<List<_i5.AppNotification>>> getNotifications(
     String? userId,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getNotifications, [userId]),
-            returnValue: _i3.Future<_i4.Result<List<_i5.Notification>>>.value(
-              _i6.dummyValue<_i4.Result<List<_i5.Notification>>>(
-                this,
-                Invocation.method(#getNotifications, [userId]),
-              ),
-            ),
+            returnValue:
+                _i3.Future<_i4.Result<List<_i5.AppNotification>>>.value(
+                  _i6.dummyValue<_i4.Result<List<_i5.AppNotification>>>(
+                    this,
+                    Invocation.method(#getNotifications, [userId]),
+                  ),
+                ),
           )
-          as _i3.Future<_i4.Result<List<_i5.Notification>>>);
+          as _i3.Future<_i4.Result<List<_i5.AppNotification>>>);
 
   @override
   _i3.Future<_i4.Result<bool>> markAsRead(String? notificationId) =>
