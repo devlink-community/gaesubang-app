@@ -2,10 +2,9 @@
 import 'dart:typed_data';
 import 'package:devlink_mobile_app/community/presentation/community_write/components/selected_image_tile.dart';
 import 'package:flutter/material.dart';
-// import 'package:image_picker/image_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_state.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_action.dart';
-
 
 class CommunityWriteScreen extends StatefulWidget {
   const CommunityWriteScreen({
@@ -22,9 +21,9 @@ class CommunityWriteScreen extends StatefulWidget {
 }
 
 class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
-  final _titleCtrl   = TextEditingController();
+  final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
-  final _tagCtrl     = TextEditingController();
+  final _tagCtrl = TextEditingController();
 
   @override
   void didUpdateWidget(covariant CommunityWriteScreen oldWidget) {
@@ -46,9 +45,11 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
-            onPressed: loading
-                ? null
-                : () => widget.onAction(const CommunityWriteAction.submit()),
+            onPressed:
+                loading
+                    ? null
+                    : () =>
+                        widget.onAction(const CommunityWriteAction.submit()),
           ),
         ],
       ),
@@ -60,16 +61,17 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
             _buildLabeled('제목'),
             TextField(
               controller: _titleCtrl..text = widget.state.title,
-              onChanged: (v) =>
-                  widget.onAction(CommunityWriteAction.titleChanged(v)),
+              onChanged:
+                  (v) => widget.onAction(CommunityWriteAction.titleChanged(v)),
               decoration: _inputDeco('제목을 입력해'),
             ),
             const SizedBox(height: 16),
             _buildLabeled('내용'),
             TextField(
               controller: _contentCtrl..text = widget.state.content,
-              onChanged: (v) =>
-                  widget.onAction(CommunityWriteAction.contentChanged(v)),
+              onChanged:
+                  (v) =>
+                      widget.onAction(CommunityWriteAction.contentChanged(v)),
               decoration: _inputDeco('내용'),
               maxLines: 8,
             ),
@@ -85,29 +87,36 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
             ),
             Wrap(
               spacing: 6,
-              children: widget.state.hashTags
-                  .map((t) => Chip(
-                        label: Text(t),
-                        onDeleted: () =>
-                            widget.onAction(CommunityWriteAction.tagRemoved(t)),
-                      ))
-                  .toList(),
+              children:
+                  widget.state.hashTags
+                      .map(
+                        (t) => Chip(
+                          label: Text(t),
+                          onDeleted:
+                              () => widget.onAction(
+                                CommunityWriteAction.tagRemoved(t),
+                              ),
+                        ),
+                      )
+                      .toList(),
             ),
             const SizedBox(height: 16),
             _buildLabeled('이미지 추가'),
-            // Row(
-            //   children: [
-            //     _AddImageButton(onPick: _pickImage),
-            //     const SizedBox(width: 8),
-            //     ...widget.state.images.asMap().entries.map(
-            //           (e) => SelectedImageTile(
-            //             bytes: e.value,
-            //             onRemove: () => widget
-            //                 .onAction(CommunityWriteAction.imageRemoved(e.key)),
-            //           ),
-            //         ),
-            //   ],
-            // ),
+            Row(
+              children: [
+                _AddImageButton(onPick: _pickImage),
+                const SizedBox(width: 8),
+                ...widget.state.images.asMap().entries.map(
+                  (e) => SelectedImageTile(
+                    bytes: e.value,
+                    onRemove:
+                        () => widget.onAction(
+                          CommunityWriteAction.imageRemoved(e.key),
+                        ),
+                  ),
+                ),
+              ],
+            ),
             if (widget.state.errorMessage != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -127,27 +136,25 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
   }
 
   Widget _buildLabeled(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-      );
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+  );
 
   InputDecoration _inputDeco(String hint) => InputDecoration(
-        hintText: hint,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      );
+    hintText: hint,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  );
 
   /* ---------- 이미지 선택 ---------- */
-  // Future<void> _pickImage() async {
-  //   final picker = ImagePicker();
-  //   final xFile  = await picker.pickImage(source: ImageSource.gallery);
-  //   if (xFile != null) {
-  //     final bytes = await xFile.readAsBytes();
-  //     widget.onAction(CommunityWriteAction.imageAdded(bytes));
-  //   }
-  // }
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(source: ImageSource.gallery);
+    if (xFile != null) {
+      final bytes = await xFile.readAsBytes();
+      widget.onAction(CommunityWriteAction.imageAdded(bytes));
+    }
+  }
 }
 
 /* ---------------- Add-Image 버튼 ---------------- */
@@ -157,15 +164,15 @@ class _AddImageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onPick,
-        child: Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.add),
-        ),
-      );
+    onTap: onPick,
+    child: Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Icon(Icons.add),
+    ),
+  );
 }
