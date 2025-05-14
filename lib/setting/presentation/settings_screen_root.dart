@@ -51,7 +51,9 @@ class SettingsScreenRoot extends ConsumerWidget {
             context.push('/forget-password');
           case OnTapPrivacyPolicy():
             // 웹 URL 열기
-            await _launchUrl('https://www.privacypolicygenerator.info/');
+            await _launchUrl(
+              'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
+            );
           case OnTapAppInfo():
             // pub.dev로 연결
             await _launchUrl('https://pub.dev/');
@@ -60,7 +62,9 @@ class SettingsScreenRoot extends ConsumerWidget {
           case OnTapDeleteAccount():
             _showDeleteAccountConfirmDialog(context, notifier, action);
           case OpenUrlPrivacyPolicy():
-            await _launchUrl('https://www.privacypolicygenerator.info/');
+            await _launchUrl(
+              'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
+            );
           case OpenUrlAppInfo():
             await _launchUrl('https://pub.dev/');
         }
@@ -120,7 +124,7 @@ class SettingsScreenRoot extends ConsumerWidget {
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
           title: "Are you sure ?",
-          message: "정말 회원탈퇴 하시겠습니까?\n 모든 데이터가 삭제됩니다.",
+          message: "정말 회원탈퇴 하시겠습니까?\n 데이터는 직접 삭제하셔야 합니다. \n 회원정보가 사라집니다.",
           cancelText: "Cancel",
           confirmText: "Confirm",
           onConfirm: () {

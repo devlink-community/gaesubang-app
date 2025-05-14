@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
+import '../../../group/presentation/group_setting/group_settings_action.dart';
+import '../../../group/presentation/labeled_text_field.dart';
 import '../edit_intro_action.dart';
 import '../states/edit_intro_state.dart';
 
@@ -26,6 +28,41 @@ class EditIntroScreen extends StatefulWidget {
 class _EditIntroScreenState extends State<EditIntroScreen> {
   // 로컬 이미지 파일을 저장할 변수 추가
   File? _localImageFile;
+
+  // 텍스트 컨트롤러 선언
+  final _nicknameController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 초기 값 설정
+    _updateTextControllers();
+  }
+
+  @override
+  void didUpdateWidget(covariant EditIntroScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 상태가 변경되면 컨트롤러 업데이트
+    if (oldWidget.state != widget.state) {
+      _updateTextControllers();
+    }
+  }
+
+  void _updateTextControllers() {
+    final member = widget.state.member;
+    if (member != null) {
+      _nicknameController.text = member.nickname;
+      _descriptionController.text = member.description;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +118,6 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
       );
     }
 
-    // 텍스트 컨트롤러 초기화
-    final nicknameController = TextEditingController(text: member.nickname);
-    final descriptionController = TextEditingController(
-      text: member.description,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('프로필 수정', style: AppTextStyles.heading3Bold),
@@ -103,22 +134,30 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
           children: [
             _buildProfileImageSection(member),
             const SizedBox(height: 24),
-            _buildTextField(
-              controller: nicknameController,
-              labelText: '닉네임',
+
+            // 닉네임 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '닉네임',
+              hint: '닉네임을 입력하세요',
+              controller: _nicknameController,
               onChanged:
                   (value) =>
                       widget.onAction(EditIntroAction.onChangeNickname(value)),
             ),
+
             const SizedBox(height: 16),
-            _buildTextField(
-              controller: descriptionController,
-              labelText: '소개글',
+
+            // 소개글 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '소개글',
+              hint: '자신을 소개하는 글을 작성해보세요',
+              controller: _descriptionController,
               maxLines: 5,
               onChanged:
                   (value) =>
                       widget.onAction(EditIntroAction.onChangeMessage(value)),
             ),
+
             const SizedBox(height: 24),
             _buildSaveButton(),
 
@@ -181,23 +220,6 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required Function(String) onChanged,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: labelText,
-        border: const OutlineInputBorder(),
-      ),
-      maxLines: maxLines,
-      onChanged: onChanged,
     );
   }
 
