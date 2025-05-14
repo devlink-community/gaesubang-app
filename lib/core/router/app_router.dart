@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../auth/presentation/login/login_notifier.dart';
 import '../../community/presentation/community_list/community_list_screen_root.dart';
 import '../../group/presentation/group_list/group_list_screen_root.dart';
 import '../../intro/presentation/intro_screen_root.dart';
@@ -18,8 +17,8 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(Ref ref) {
-  final loginState = ref.watch(loginNotifierProvider);
-  final member = loginState.loginUserResult?.valueOrNull;
+  // final loginState = ref.watch(loginNotifierProvider);
+  // final member = loginState.loginUserResult?.valueOrNull;
   return GoRouter(
     initialLocation: '/',
     routes: [
@@ -33,7 +32,7 @@ GoRouter appRouter(Ref ref) {
       ShellRoute(
         builder: (context, state, child) {
           int currentIndex = 0; // 기본값 홈
-          final member = loginState.loginUserResult?.valueOrNull;
+          // final member = loginState.loginUserResult?.valueOrNull;
 
           final String path = state.uri.path;
           if (path.startsWith('/community')) {
@@ -46,7 +45,8 @@ GoRouter appRouter(Ref ref) {
             currentIndex = 4;
           }
 
-          final String? profileImageUrl = member?.image;
+          // final String? profileImageUrl = member?.image;
+          String? profileImageUrl;
 
           return Scaffold(
             body: child,
