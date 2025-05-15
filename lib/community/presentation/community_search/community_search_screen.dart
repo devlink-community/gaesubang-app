@@ -65,7 +65,8 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
         titleSpacing: 0, // 타이틀과 leading 위젯 사이의 간격 제거
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColorStyles.textPrimary),
-          onPressed: () => widget.onAction(const CommunitySearchAction.onGoBack()),
+          onPressed:
+              () => widget.onAction(const CommunitySearchAction.onGoBack()),
           padding: const EdgeInsets.only(left: 16.0), // 왼쪽 패딩 추가
         ),
         title: Padding(
@@ -166,10 +167,10 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
           // 검색 아이콘
           Container(
             margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: AppColorStyles.primary100,
-              shape: BoxShape.circle,
-            ),
+            // decoration: BoxDecoration(
+            //   color: AppColorStyles.primary100,
+            //   shape: BoxShape.circle,
+            // ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -183,7 +184,11 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(6.0),
-                  child: Icon(Icons.search, color: Colors.white, size: 16),
+                  child: Icon(
+                    Icons.search,
+                    color: AppColorStyles.primary100,
+                    size: 24,
+                  ),
                 ),
               ),
             ),
@@ -216,7 +221,7 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          padding: const EdgeInsets.only(top: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -266,7 +271,9 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap:
-                      () => widget.onAction(CommunitySearchAction.onSearch(query)),
+                      () => widget.onAction(
+                        CommunitySearchAction.onSearch(query),
+                      ),
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -298,7 +305,9 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
                           child: InkResponse(
                             onTap:
                                 () => widget.onAction(
-                                  CommunitySearchAction.onRemoveRecentSearch(query),
+                                  CommunitySearchAction.onRemoveRecentSearch(
+                                    query,
+                                  ),
                                 ),
                             radius: 12,
                             child: const Icon(
@@ -405,9 +414,9 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
             final post = value[index];
             return PostListItem(
               post: post,
-              onTap: () => widget.onAction(
-                CommunitySearchAction.onTapPost(post.id)
-              ),
+              onTap:
+                  () =>
+                      widget.onAction(CommunitySearchAction.onTapPost(post.id)),
             );
           },
         );

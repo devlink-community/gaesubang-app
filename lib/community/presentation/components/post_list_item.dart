@@ -1,15 +1,12 @@
 // lib/community/presentation/components/post_list_item.dart
-
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class PostListItem extends StatelessWidget {
-  const PostListItem({
-    super.key,
-    required this.post,
-    required this.onTap,
-  });
+  const PostListItem({super.key, required this.post, required this.onTap});
 
   final Post post;
   final VoidCallback onTap;
@@ -17,31 +14,31 @@ class PostListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 이미지 URL 결정 (빈 리스트면 기본 이미지 사용)
-    final imageUrl = post.imageUrls.isNotEmpty 
-        ? post.imageUrls.first 
-        : 'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp';
+    final imageUrl =
+        post.imageUrls.isNotEmpty
+            ? post.imageUrls.first
+            : 'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp';
+
+    // 날짜 포맷터
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    final formattedDate = dateFormat.format(post.createdAt.toLocal());
 
     return GestureDetector(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque, // 이 속성이 중요합니다 - 투명한 부분까지 터치 감지
+      behavior: HitTestBehavior.opaque, // 투명한 부분까지 터치 감지
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white, // 배경색 추가
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200), // 경계선 추가
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 이미지 - 원하는 크기로 조정 가능
+            // 이미지
             Container(
-              width: 100, // 원하는 너비로 조정
-              height: 100, // 원하는 높이로 조정
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: AppColorStyles.gray60,
+                color: AppColorStyles.gray40,
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.network(
@@ -49,10 +46,17 @@ class PostListItem extends StatelessWidget {
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColorStyles.primary100,
+                      ),
+                      strokeWidth: 2,
+                    ),
+                  );
                 },
                 errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
+                  return Icon(
                     Icons.image,
                     size: 30,
                     color: AppColorStyles.gray60,
@@ -69,19 +73,34 @@ class PostListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 날짜 및 작성자
-                  Text(
-                    '${post.createdAt.toLocal().year}-${post.createdAt.toLocal().month.toString().padLeft(2, '0')}-${post.createdAt.toLocal().day.toString().padLeft(2, '0')} · ${post.member.nickname}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  Row(
+                    children: [
+                      Text(
+                        formattedDate,
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.gray80,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('·'),
+                      const SizedBox(width: 4),
+                      Text(
+                        post.member.nickname,
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.gray100,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
 
                   // 제목
                   Text(
                     post.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    style: AppTextStyles.subtitle1Bold.copyWith(
+                      color: AppColorStyles.textPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -90,30 +109,48 @@ class PostListItem extends StatelessWidget {
                   const SizedBox(height: 8),
 
                   // 해시태그
-                  Text(
-                    post.hashTags.join(' '),
-                    style: const TextStyle(fontSize: 12, color: Colors.blue),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 8),
+                  if (post.hashTags.isNotEmpty) ...[
+                    Text(
+                      post.hashTags.map((tag) => '#$tag').join(' '),
+                      style: AppTextStyles.captionRegular.copyWith(
+                        color: AppColorStyles.primary80,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // 댓글 및 좋아요 수
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.comment, size: 16),
-                        const SizedBox(width: 4),
-                        Text('${post.comment.length}'),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.favorite_border, size: 16),
-                        const SizedBox(width: 4),
-                        Text('${post.like.length}'),
-                      ],
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(
+                        Icons.comment_outlined,
+                        size: 16,
+                        color: AppColorStyles.gray80,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${post.comment.length}',
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.gray100,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.favorite_border,
+                        size: 16,
+                        color: AppColorStyles.gray80,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${post.like.length}',
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.gray100,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
