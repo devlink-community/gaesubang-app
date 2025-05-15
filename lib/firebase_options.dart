@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'gaesubang-2f372.firebasestorage.app',
     iosBundleId: 'com.example.devlinkMobileApp',
   );
+
 }
