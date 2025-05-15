@@ -7,6 +7,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_search_notifier.g.dart';
 
+// lib/community/presentation/community_search/community_search_notifier.dart
+
 @riverpod
 class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   late final SearchPostsUseCase _searchPostsUseCase;
@@ -15,10 +17,23 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   CommunitySearchState build() {
     _searchPostsUseCase = ref.watch(searchPostsUseCaseProvider);
 
-    // 최근 검색어는 로컬 저장소에서 가져올 수 있지만, 여기서는 간단히 하드코딩
-    final recentSearches = ['Flutter', '커뮤니티', '개발자'];
+    // 최근 검색어 로드 (로컬 저장소에서 가져오는 로직 추가 가능)
+    // 현재는 간단히 하드코딩된 값 사용
+    final recentSearches = _loadRecentSearches();
 
     return CommunitySearchState(recentSearches: recentSearches);
+  }
+
+  // 최근 검색어 로드 (SharedPreferences 등으로 구현 가능)
+  List<String> _loadRecentSearches() {
+    // TODO: 실제로는 SharedPreferences에서 로드
+    return ['Flutter', '커뮤니티', '개발자'];
+  }
+
+  // 최근 검색어 저장 (SharedPreferences 등으로 구현 가능)
+  Future<void> _saveRecentSearches(List<String> searches) async {
+    // TODO: 실제로는 SharedPreferences에 저장
+    print('최근 검색어 저장: $searches');
   }
 
   Future<void> onAction(CommunitySearchAction action) async {
@@ -34,7 +49,7 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
 
         // 3. UseCase를 통해 검색 수행
         final results = await _searchPostsUseCase.execute(query);
-        
+
         // 4. 결과 반영
         state = state.copyWith(searchResults: results);
 
@@ -46,19 +61,23 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
             updatedRecentSearches.removeLast();
           }
           state = state.copyWith(recentSearches: updatedRecentSearches);
+          _saveRecentSearches(updatedRecentSearches);
         } else {
           // 이미 있으면 맨 앞으로 이동 (삭제 후 맨 앞에 추가)
           final updatedRecentSearches = [...state.recentSearches];
           updatedRecentSearches.remove(query);
           updatedRecentSearches.insert(0, query);
           state = state.copyWith(recentSearches: updatedRecentSearches);
+          _saveRecentSearches(updatedRecentSearches);
         }
+        break;
 
       case OnClearSearch():
         state = state.copyWith(
           query: '',
           searchResults: const AsyncValue.data([]),
         );
+        break;
 
       case OnTapPost(:final postId):
         // Root에서 처리할 네비게이션 액션
@@ -67,13 +86,17 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       case OnGoBack():
         // Root에서 처리할 네비게이션 액션
         break;
-        
+
       case OnRemoveRecentSearch(:final query):
         final updatedRecentSearches = [...state.recentSearches]..remove(query);
         state = state.copyWith(recentSearches: updatedRecentSearches);
+        _saveRecentSearches(updatedRecentSearches);
+        break;
 
       case OnClearAllRecentSearches():
         state = state.copyWith(recentSearches: []);
+        _saveRecentSearches([]);
+        break;
     }
   }
 }

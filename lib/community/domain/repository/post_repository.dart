@@ -23,7 +23,10 @@ abstract interface class PostRepository {
     required String content,
   });
 
-  /* ---------- NEW ---------- */
+  /* Search - 추가 */
+  Future<Result<List<Post>>> searchPosts(String query);
+
+  /* Create */
   Future<String> createPost({
     required String postId,
     required String title,

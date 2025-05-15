@@ -283,4 +283,56 @@ class PostFirebaseDataSource implements PostDataSource {
       throw Exception('게시글 작성에 실패했습니다: $e');
     }
   }
+
+  @override
+Future<List<PostDto>> searchPosts(String query) async {
+  try {
+    final lowercaseQuery = query.toLowerCase();
+    
+    // 전체 게시글 가져오기 (Firestore는 텍스트 검색에 제한적인 기능 제공)
+    final querySnapshot = await _postsCollection.get();
+    
+    // 클라이언트 측에서 필터링
+    final List<PostDto> searchResults = [];
+    
+    for (final doc in querySnapshot.docs) {
+      // 기본 데이터 가져오기
+      final data = doc.data();
+      data['id'] = doc.id;
+      
+      // 검색 조건 확인 (제목, 내용, 해시태그)
+      final title = (data['title'] as String? ?? '').toLowerCase();
+      final content = (data['content'] as String? ?? '').toLowerCase();
+      final hashTags = (data['hashTags'] as List<dynamic>? ?? [])
+          .map((tag) => (tag as String).toLowerCase())
+          .toList();
+      
+      // 검색 조건 확인
+      if (title.contains(lowercaseQuery) || 
+          content.contains(lowercaseQuery) || 
+          hashTags.any((tag) => tag.contains(lowercaseQuery))) {
+        
+        // member 컬렉션에서 작성자 정보 가져오기
+        final memberSnapshot = await doc.reference.collection('member').get();
+        if (memberSnapshot.docs.isNotEmpty) {
+          data['member'] = memberSnapshot.docs.first.data();
+        }
+        
+        // 좋아요 및 댓글 목록 가져오기
+        final likesSnapshot = await doc.reference.collection('likes').get();
+        data['like'] = likesSnapshot.docs.map((e) => e.data()).toList();
+        
+        final commentsSnapshot = await doc.reference.collection('comments').get();
+        data['comment'] = commentsSnapshot.docs.map((e) => e.data()).toList();
+        
+        // 결과에 추가
+        searchResults.add(PostDto.fromJson(data));
+      }
+    }
+    
+    return searchResults;
+  } catch (e) {
+    throw Exception('게시글 검색에 실패했습니다: $e');
+  }
+}
 }

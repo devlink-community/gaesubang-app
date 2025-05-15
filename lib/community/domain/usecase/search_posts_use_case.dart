@@ -10,24 +10,16 @@ class SearchPostsUseCase {
   final PostRepository _repo;
 
   Future<AsyncValue<List<Post>>> execute(String query) async {
-    // 1. 전체 게시글 목록을 가져오기
-    final result = await _repo.loadPostList();
+    // 쿼리가 빈 문자열이면 빈 목록 반환
+    if (query.trim().isEmpty) {
+      return const AsyncData(<Post>[]);
+    }
     
-    // 2. switch 패턴 매칭을 사용하여 결과 처리
+    final result = await _repo.searchPosts(query);
+    
     switch (result) {
       case Success(:final data):
-        // 3. 검색어로 필터링
-        final filteredPosts = data.where((post) {
-          final titleMatch = post.title.toLowerCase().contains(query.toLowerCase());
-          final contentMatch = post.content.toLowerCase().contains(query.toLowerCase());
-          final hashTagMatch = post.hashTags.any((tag) => 
-              tag.toLowerCase().contains(query.toLowerCase()));
-          
-          return titleMatch || contentMatch || hashTagMatch;
-        }).toList();
-        
-        return AsyncData(filteredPosts);
-        
+        return AsyncData(data);
       case Error(failure: final failure):
         return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
     }

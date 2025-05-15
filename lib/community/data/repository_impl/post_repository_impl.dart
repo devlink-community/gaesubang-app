@@ -75,6 +75,18 @@ class PostRepositoryImpl implements PostRepository {
     imageUris: imageUris,
   );
 
+  @override
+Future<Result<List<Post>>> searchPosts(String query) async {
+  try {
+    final posts = await _remote.searchPosts(query);
+    return Result.success(posts.toModelList());
+  } catch (e) {
+    return Result.error(
+      mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
+    );
+  }
+}
+
   /* ---------- Helper ---------- */
   Future<Result<T>> _wrap<T>(Future<T> Function() fn) async {
     try {
