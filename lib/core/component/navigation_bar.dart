@@ -47,10 +47,10 @@ class AppBottomNavigationBar extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(0, Icons.home_outlined),
-                  _buildNavItem(1, Icons.chat_bubble_outline),
-                  _buildNavItem(2, Icons.people_outline),
-                  _buildNavItem(3, Icons.notifications_none),
+                  _buildNavItem(0, 'assets/images/navi1.png'),
+                  _buildNavItem(1, 'assets/images/navi2.png'),
+                  _buildNavItem(2, 'assets/images/navi3.png'),
+                  _buildNavItem(3, 'assets/images/navi4.png'),
                   _buildProfileItem(4),
                 ],
               ),
@@ -61,14 +61,15 @@ class AppBottomNavigationBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon) {
+  Widget _buildNavItem(int index, String imagePath) {
     final isSelected = currentIndex == index;
     return InkWell(
       onTap: () => onTap(index),
-      child: Icon(
-        icon,
+      child: Image.asset(
+        imagePath,
+        width: 26,
+        height: 26,
         color: isSelected ? AppColorStyles.primary100 : Colors.grey,
-        size: 26, // 텍스트가 없어서 아이콘 크기를 약간 키웠습니다
       ),
     );
   }
