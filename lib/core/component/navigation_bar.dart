@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../styles/app_color_styles.dart';
@@ -21,7 +23,7 @@ class AppBottomNavigationBar extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withAlpha(10),
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, -1),
@@ -35,7 +37,7 @@ class AppBottomNavigationBar extends StatelessWidget {
           Container(
             height: 1,
             width: double.infinity,
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.grey.withAlpha(20),
           ),
           // 내비게이션 바
           SafeArea(
@@ -86,17 +88,35 @@ class AppBottomNavigationBar extends StatelessWidget {
             width: 2,
           ),
         ),
-        child: CircleAvatar(
-          radius: 11,
-          // 외부 URL을 사용하지 않고 기본 아이콘 표시
-          backgroundColor: Colors.grey.shade200,
-          child: const Icon(Icons.person, size: 14, color: Colors.grey),
-          // profileImageUrl이 있을 경우에만 네트워크 이미지 사용
-          // backgroundImage: profileImageUrl != null
-          //     ? NetworkImage(profileImageUrl!)
-          //     : null,
-        ),
+        child: _buildProfileImage(),
       ),
+    );
+  }
+
+  Widget _buildProfileImage() {
+    // 이미지 URL 없는 경우 기본 아이콘
+    if (profileImageUrl == null || profileImageUrl!.isEmpty) {
+      return CircleAvatar(
+        radius: 11,
+        backgroundColor: Colors.grey.shade200,
+        child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+      );
+    }
+
+    // 로컬 이미지 경로인 경우
+    if (profileImageUrl!.startsWith('/')) {
+      return CircleAvatar(
+        radius: 11,
+        backgroundImage: FileImage(File(profileImageUrl!)),
+        backgroundColor: Colors.grey.shade200,
+      );
+    }
+
+    // 네트워크 이미지인 경우
+    return CircleAvatar(
+      radius: 11,
+      backgroundImage: NetworkImage(profileImageUrl!),
+      backgroundColor: Colors.grey.shade200,
     );
   }
 }
