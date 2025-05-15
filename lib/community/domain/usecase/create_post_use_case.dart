@@ -1,30 +1,30 @@
 // lib/community/domain/usecase/create_post_use_case.dart
-import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/domain/repository/post_repository.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-/// 게시글 작성 요청
 class CreatePostUseCase {
-  CreatePostUseCase({required PostRepository repo}) : _repo = repo;
-  final PostRepository _repo;
+  final PostRepository _repository;
 
-  /// AsyncValue<String>으로 반환하도록 수정
-  Future<AsyncValue<String>> execute({
+  CreatePostUseCase({required PostRepository repo}) : _repository = repo;
+
+  Future<String> execute({
+    required String postId,  // 추가된 매개변수
     required String title,
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
   }) async {
     try {
-      final postId = await _repo.createPost(
+      final createdPostId = await _repository.createPost(
+        postId: postId,  // ID 전달
         title: title,
         content: content,
         hashTags: hashTags,
         imageUris: imageUris,
       );
-      return AsyncData(postId);
-    } catch (e, stackTrace) {
-      return AsyncError(e, stackTrace);
+      
+      return createdPostId;
+    } catch (e) {
+      throw Exception('게시글 생성에 실패했습니다: $e');
     }
   }
 }
