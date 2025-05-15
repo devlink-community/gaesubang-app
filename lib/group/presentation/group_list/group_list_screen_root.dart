@@ -15,11 +15,26 @@ class GroupListScreenRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupListNotifierProvider);
     final notifier = ref.watch(groupListNotifierProvider.notifier);
+
     ref.listen(
       groupListNotifierProvider.select((value) => value.selectedGroup),
       (previous, next) {
         if (next is AsyncData && next.value != null) {
-          _showGroupDialog(context, next.value!, notifier);
+          final group = next.value!;
+
+          // 현재 사용자가 이미 가입된 그룹인지 확인
+          final isJoined = notifier.isCurrentMemberInGroup(group);
+
+          if (isJoined) {
+            // 이미 가입된 그룹이면 바로 상세 페이지로 이동
+            context.push('/group/${group.id}');
+
+            // selectedGroup 초기화
+            notifier.onAction(const GroupListAction.resetSelectedGroup());
+          } else {
+            // 가입되지 않은 그룹이면 가입 다이얼로그 표시
+            _showGroupDialog(context, group, notifier);
+          }
         }
       },
     );

@@ -67,9 +67,13 @@ class GroupListScreen extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       itemBuilder: (context, index) {
         final group = groups[index];
+        final isJoined =
+            state.currentMember != null &&
+            group.members.any((member) => member.id == state.currentMember!.id);
         return GroupListItem(
           key: ValueKey('group_${group.id}'),
           group: group,
+          isCurrentMemberJoined: isJoined,
           onTap: () => onAction(GroupListAction.onTapGroup(group.id)),
         );
       },
