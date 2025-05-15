@@ -5,6 +5,7 @@ part 'community_detail_action.freezed.dart';
 
 @freezed
 sealed class CommunityDetailAction with _$CommunityDetailAction {
+  const factory CommunityDetailAction.refresh() = Refresh;
   const factory CommunityDetailAction.toggleLike() = ToggleLike;
   const factory CommunityDetailAction.toggleBookmark() = ToggleBookmark;
   const factory CommunityDetailAction.addComment(String content) = AddComment;

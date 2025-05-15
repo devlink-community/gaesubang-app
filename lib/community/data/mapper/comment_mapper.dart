@@ -4,10 +4,12 @@ import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 
 extension CommentDtoMapper on CommentDto {
   Comment toModel() => Comment(
-        boardId: boardId ?? '',
-        memberId: memberId ?? '',
+        userId: userId ?? '',
+        userName: userName ?? '',
+        userProfileImage: userProfileImage ?? '',
+        text: text ?? '',
         createdAt: createdAt ?? DateTime.now(),
-        content: content ?? '',
+        likeCount: likeCount ?? 0,
       );
 }
 

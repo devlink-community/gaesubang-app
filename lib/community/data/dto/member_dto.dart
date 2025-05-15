@@ -11,6 +11,7 @@ abstract class MemberDto with _$MemberDto {
     String? email,
     String? nickname,
     String? uid,
+    String? description,
     bool?   onAir,
     String? image,
   }) = _MemberDto;

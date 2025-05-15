@@ -22,72 +22,68 @@ class CommunityListScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: Stack(
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PopupMenuButton(
-                        initialValue: state.currentTab,
-                        icon: const Icon(Icons.filter_alt_outlined),
-                        itemBuilder: (context) {
-                          return [
-                            PopupMenuItem(
-                              child: Text('인기순'),
-                              onTap:
-                                  () => onAction(
-                                    const CommunityListAction.changeTab(
-                                      CommunityTabType.popular,
-                                    ),
-                                  ),
+          title: const Text('게시글 목록'),
+          leadingWidth: 120,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PopupMenuButton(
+                  initialValue: state.currentTab,
+                  icon: const Icon(Icons.filter_alt_outlined),
+                  padding: EdgeInsets.zero,
+                  itemBuilder: (context) {
+                    return [
+                      PopupMenuItem(
+                        value: CommunityTabType.newest,
+                        child: const Text('최신순'),
+                        onTap:
+                            () => onAction(
+                              const CommunityListAction.changeTab(
+                                CommunityTabType.newest,
+                              ),
                             ),
-                            PopupMenuItem(
-                              child: Text('최신순'),
-                              onTap:
-                                  () => onAction(
-                                    const CommunityListAction.changeTab(
-                                      CommunityTabType.newest,
-                                    ),
-                                  ),
+                      ),
+                      PopupMenuItem(
+                        value: CommunityTabType.popular,
+                        child: const Text('인기순'),
+                        onTap:
+                            () => onAction(
+                              const CommunityListAction.changeTab(
+                                CommunityTabType.popular,
+                              ),
                             ),
-                          ];
-                        },
                       ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColorStyles.primary60,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        child: Center(
-                          child: Text(
-                            state.currentTab.name == 'popular' ? '인기순' : '최신순',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ];
+                  },
+                ),
+                Container(
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary60,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    state.currentTab.name == 'popular' ? '인기순' : '최신순',
+                    style: const TextStyle(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-              Align(alignment: Alignment.center, child: const Text('게시글 목록')),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed:
-                      () => onAction(const CommunityListAction.tapSearch()),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          actions: [],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => onAction(const CommunityListAction.tapSearch()),
+            ),
+          ],
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () => onAction(const CommunityListAction.tapWrite()),
@@ -97,7 +93,6 @@ class CommunityListScreen extends StatelessWidget {
           onRefresh: () async => onAction(const CommunityListAction.refresh()),
           child: Column(
             children: [
-              // _buildTabBar(),
               Expanded(
                 child:
                     _buildPostList() ??

@@ -1,3 +1,4 @@
+// lib/community/presentation/community_list/community_list_screen_root.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -19,11 +20,20 @@ class CommunityListScreenRoot extends ConsumerWidget {
       onAction: (action) async {
         switch (action) {
           case TapPost(:final postId):
-            context.push('/community/$postId');                             // 상세 화면 경로 예시
+            await context.push('/community/$postId');
+            
           case TapSearch():
-            context.push('/community/search');
+            await context.push('/community/search');
+            
           case TapWrite():
-            context.push('/community/write');
+            // 게시글 작성 화면으로 이동하고, 결과(생성된 게시글 ID)를 받아옴
+            final result = await context.push('/community/write');
+            
+            // 작성 완료 후 돌아왔을 때, 새로고침 액션 실행
+            if (result != null) {
+              await notifier.onAction(const CommunityListAction.refresh());
+            }
+            
           default:
             await notifier.onAction(action);
         }

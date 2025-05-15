@@ -5,18 +5,27 @@ import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:flutter/material.dart';
 
 class PostListItem extends StatelessWidget {
-  const PostListItem({super.key, required this.post, required this.onTap});
+  const PostListItem({
+    super.key,
+    required this.post,
+    required this.onTap,
+  });
 
   final Post post;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    // 이미지 URL 결정 (빈 리스트면 기본 이미지 사용)
+    final imageUrl = post.imageUrls.isNotEmpty 
+        ? post.imageUrls.first 
+        : 'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp';
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque, // 이 속성이 중요합니다 - 투명한 부분까지 터치 감지
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white, // 배경색 추가
@@ -36,7 +45,7 @@ class PostListItem extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.network(
-                post.image,
+                imageUrl,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
@@ -82,7 +91,7 @@ class PostListItem extends StatelessWidget {
 
                   // 해시태그
                   Text(
-                    post.hashTag.map((e) => e.content).join(' '),
+                    post.hashTags.join(' '),
                     style: const TextStyle(fontSize: 12, color: Colors.blue),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -1,5 +1,4 @@
 // lib/community/presentation/community_detail/community_detail_notifier.dart
-
 import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -47,18 +46,24 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   /* ---------- public actions ---------- */
   Future<void> onAction(CommunityDetailAction action) async {
     switch (action) {
+      case Refresh():
+        await _loadAll();
+
       case ToggleLike():
+        state = state.copyWith(post: const AsyncLoading());
         final result = await _toggleLike.execute(_postId);
         state = state.copyWith(post: result);
 
       case ToggleBookmark():
+        state = state.copyWith(post: const AsyncLoading());
         final result = await _toggleBookmark.execute(_postId);
         state = state.copyWith(post: result);
 
       case AddComment(:final content):
+        state = state.copyWith(comments: const AsyncLoading());
         final result = await _createComment.execute(
           postId: _postId,
-          memberId: 'me', // TODO: 실제 로그인 유저 ID
+          memberId: 'user1', // 현재 로그인한 사용자 ID
           content: content,
         );
         state = state.copyWith(comments: result);
@@ -77,9 +82,6 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     final postResult = await _fetchDetail.execute(_postId);
     final commentResult = await _fetchComments.execute(_postId);
 
-    state = state.copyWith(
-      post: postResult,
-      comments: commentResult,
-    );
+    state = state.copyWith(post: postResult, comments: commentResult);
   }
 }

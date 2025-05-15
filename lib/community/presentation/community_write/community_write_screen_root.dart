@@ -9,7 +9,7 @@ class CommunityWriteScreenRoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state    = ref.watch(communityWriteNotifierProvider);
+    final state = ref.watch(communityWriteNotifierProvider);
     final notifier = ref.read(communityWriteNotifierProvider.notifier);
 
     return CommunityWriteScreen(

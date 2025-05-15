@@ -21,8 +21,12 @@ abstract interface class PostDataSource {
     required String content,
   });
 
-  /* ---------- NEW : 게시글 작성 ---------- */
+  /* Search - 추가 */
+  Future<List<PostDto>> searchPosts(String query);
+
+  /* Create */
   Future<String> createPost({
+    required String postId,
     required String title,
     required String content,
     required List<String> hashTags,

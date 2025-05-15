@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.d
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
+import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart'; // 추가
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
@@ -177,6 +178,11 @@ GoRouter appRouter(ref) {
               GoRoute(
                 path: 'write',
                 builder: (context, state) => const CommunityWriteScreenRoot(),
+              ),
+              // 커뮤니티 검색 화면 (추가)
+              GoRoute(
+                path: 'search',
+                builder: (context, state) => const CommunitySearchScreenRoot(),
               ),
               // 커뮤니티 상세 페이지
               GoRoute(

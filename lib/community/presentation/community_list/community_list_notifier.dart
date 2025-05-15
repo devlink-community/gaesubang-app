@@ -12,6 +12,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_list_notifier.g.dart';
 
+
 @riverpod
 class CommunityListNotifier extends _$CommunityListNotifier {
   @override
@@ -19,7 +20,7 @@ class CommunityListNotifier extends _$CommunityListNotifier {
     _loadPostListUseCase = ref.watch(loadPostListUseCaseProvider);
     // 비동기 로딩 → 결과 반영
     Future.microtask(_fetch);
-    return const CommunityListState(); // 초기값
+    return const CommunityListState(currentTab: CommunityTabType.newest); // 최신순으로 기본값 설정
   }
 
   late final LoadPostListUseCase _loadPostListUseCase;
@@ -28,24 +29,40 @@ class CommunityListNotifier extends _$CommunityListNotifier {
   Future<void> _fetch() async {
     state = state.copyWith(postList: const AsyncLoading());
     final result = await _loadPostListUseCase.execute();
-    state = state.copyWith(postList: result);
+    
+    // switch-case 패턴 사용
+    switch (result) {
+      case AsyncData(:final value):
+        state = state.copyWith(
+          postList: AsyncData(_applySort(value, state.currentTab))
+        );
+      case AsyncError(:final error, :final stackTrace):
+        state = state.copyWith(postList: AsyncError(error, stackTrace));
+      case AsyncLoading():
+        // 이미 위에서 AsyncLoading으로 설정했으므로 여기서는 처리 불필요
+        break;
+    }
   }
 
   /// 탭 변경·수동 새로고침 등 외부 Action 진입점
   Future<void> onAction(CommunityListAction action) async {
     switch (action) {
       case Refresh():
-        await _fetch();
+        await _fetch(); // 전체 목록 다시 불러오기
+        
       case ChangeTab(:final tab):
-        state = state.copyWith(
-          currentTab: tab,
-          postList: state.postList.maybeWhen(
-            data: (list) => AsyncData(_applySort(list, tab)),
-            orElse: () => state.postList,
-          ),
-        );
-      default:
-        // UI 이동 Action 은 Root 에서 처리
+        // 탭 변경 시 게시글 다시 불러오기 (추가)
+        state = state.copyWith(currentTab: tab);
+        await _fetch(); // 전체 목록 다시 불러온 후 정렬 적용
+        
+      case TapSearch():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
+        break;
+      case TapWrite():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
+        break;
+      case TapPost():
+        // 화면 이동은 Root에서 처리하므로 여기서는 아무 작업도 수행하지 않음
         break;
     }
   }
