@@ -105,16 +105,16 @@ class AppTheme {
         ),
       ),
 
-      // 아웃라인 버튼 테마
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColorStyles.primary100,
-          side: BorderSide(color: AppColorStyles.primary100),
-          textStyle: AppTextStyles.button1Medium,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
+      // // 아웃라인 버튼 테마
+      // outlinedButtonTheme: OutlinedButtonThemeData(
+      //   style: OutlinedButton.styleFrom(
+      //     foregroundColor: AppColorStyles.primary100,
+      //     side: BorderSide(color: AppColorStyles.primary100),
+      //     textStyle: AppTextStyles.button1Medium,
+      //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      //   ),
+      // ),
 
       // 카드 테마
       cardTheme: CardTheme(

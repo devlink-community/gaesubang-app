@@ -15,6 +15,7 @@ import 'package:devlink_mobile_app/group/presentation/group_search/group_search_
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mock_screen.dart';
+import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
@@ -165,7 +166,7 @@ GoRouter appRouter(ref) {
           // === 홈 탭 ===
           GoRoute(
             path: '/home',
-            builder: (context, state) => const _HomeMockScreen(),
+            builder: (context, state) => const HomeScreenRoot(),
             // 추후 실제 홈 화면으로 대체
           ),
 
