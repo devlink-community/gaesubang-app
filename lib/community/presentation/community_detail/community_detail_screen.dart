@@ -43,6 +43,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();   // 👉 메모리 누수 방지
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
