@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/router/app_router.dart';
-
+import 'package:devlink_mobile_app/core/styles/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -17,7 +17,9 @@ class MyApp extends ConsumerWidget {
       title: 'Flutter Demo',
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(),
+      theme: AppTheme.lightTheme, // 라이트 테마 적용
+      darkTheme: AppTheme.darkTheme, // 다크 테마 적용
+      themeMode: ThemeMode.system, // 시스템 설정에 따라 테마 변경
     );
   }
 }

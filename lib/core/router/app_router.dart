@@ -15,7 +15,7 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mock_screen.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
-import 'package:devlink_mobile_app/notification/presentation/notification_screen.root.dart';
+import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
