@@ -1,4 +1,4 @@
-// lib/community/presentation/community_write/widget/selected_image_tile.dart
+// lib/community/presentation/community_write/components/selected_image_tile.dart
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
@@ -14,7 +14,7 @@ class SelectedImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Stack(
-        children: [
+        children: <Widget>[
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.memory(

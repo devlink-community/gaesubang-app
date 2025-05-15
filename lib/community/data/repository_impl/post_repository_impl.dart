@@ -62,11 +62,13 @@ class PostRepositoryImpl implements PostRepository {
   /* ---------- NEW ---------- */
   @override
   Future<String> createPost({
+    required String postId,
     required String title,
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
   }) => _remote.createPost(
+    postId: postId,
     title: title,
     content: content,
     hashTags: hashTags,
