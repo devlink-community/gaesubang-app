@@ -90,7 +90,7 @@ class AppTheme {
           foregroundColor: AppColorStyles.white,
           textStyle: AppTextStyles.button1Medium,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
           elevation: 2,
         ),
       ),
