@@ -48,7 +48,7 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
 
           // 약간의 지연 후 화면 전환
           Future.delayed(const Duration(milliseconds: 1500), () {
-            context.go('/profile');
+            context.push('/profile');
           });
         } else if (state.isError) {
           // 에러 시 에러 메시지 표시

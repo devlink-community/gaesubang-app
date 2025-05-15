@@ -1,6 +1,8 @@
+import 'package:devlink_mobile_app/edit_intro/data/data_sourcce/user_storage_profile_update.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../auth/data/data_source/auth_data_source.dart';
 import '../../../auth/data/data_source/profile_data_source.dart';
+import '../../../auth/data/data_source/user_storage.dart';
 import '../../../auth/data/dto/profile_dto.dart';
 import '../../../auth/data/dto/user_dto.dart';
 import '../../../auth/data/mapper/member_mapper.dart';
@@ -11,6 +13,7 @@ import '../../domain/repository/edit_intro_repository.dart';
 class EditIntroRepositoryImpl implements EditIntroRepository {
   final AuthDataSource _authDataSource;
   final ProfileDataSource _profileDataSource;
+  final UserStorage _userStorage = UserStorage.instance; // UserStorage 인스턴스 추가
 
   EditIntroRepositoryImpl({
     required AuthDataSource authDataSource,
@@ -75,20 +78,30 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
     String? intro,
   }) async {
     try {
-      // 실제 구현에서는 API 호출
-      // 여기서는 현재 프로필 가져와서 업데이트된 내용으로 반환
-      final userResult = await getCurrentProfile();
+      // UserStorage 확장 메서드를 사용하여 프로필 업데이트
+      final success = _userStorage.updateCurrentUserProfile(
+        nickname: nickname,
+        description: intro,
+      );
 
-      switch (userResult) {
-        case Success(:final data):
-          final updatedMember = data.copyWith(
-            nickname: nickname,
-            description: intro ?? data.description,
-          );
-          return Result.success(updatedMember);
+      if (success) {
+        // 업데이트된 후 새로운 프로필 정보 가져오기
+        return await getCurrentProfile();
+      } else {
+        // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
+        final userResult = await getCurrentProfile();
 
-        case Error(:final failure):
-          return Result.error(failure);
+        switch (userResult) {
+          case Success(:final data):
+            final updatedMember = data.copyWith(
+              nickname: nickname,
+              description: intro ?? data.description,
+            );
+            return Result.success(updatedMember);
+
+          case Error(:final failure):
+            return Result.error(failure);
+        }
       }
     } catch (e, st) {
       // 개발/테스트 환경에서는 모의 데이터 반환
@@ -111,21 +124,25 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
   @override
   Future<Result<Member>> updateProfileImage(XFile image) async {
     try {
-      // 실제 구현에서는 이미지 업로드 API 호출
-      // 여기서는 현재 프로필 가져와서 이미지 경로만 수정하여 반환
-      final userResult = await getCurrentProfile();
+      // UserStorage 확장 메서드를 사용하여 이미지 업데이트
+      final success = _userStorage.updateCurrentUserImage(image.path);
 
-      switch (userResult) {
-        case Success(:final data):
-          // 로컬 파일 경로를 사용하지만, 실제로는 서버에 업로드 후 URL을 받아야 함
-          // 여기서는 임시 URL 사용
-          final updatedMember = data.copyWith(
-            image: 'https://via.placeholder.com/150',
-          );
-          return Result.success(updatedMember);
+      if (success) {
+        // 업데이트된 후 새로운 프로필 정보 가져오기
+        return await getCurrentProfile();
+      } else {
+        // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
+        final userResult = await getCurrentProfile();
 
-        case Error(:final failure):
-          return Result.error(failure);
+        switch (userResult) {
+          case Success(:final data):
+            // 로컬 파일 경로를 사용
+            final updatedMember = data.copyWith(image: image.path);
+            return Result.success(updatedMember);
+
+          case Error(:final failure):
+            return Result.error(failure);
+        }
       }
     } catch (e, st) {
       // 개발/테스트 환경에서는 모의 데이터 반환
@@ -134,7 +151,7 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
         email: 'user@example.com',
         nickname: '사용자',
         uid: 'mock-uid',
-        image: 'https://via.placeholder.com/150?text=Updated',
+        image: image.path, // 로컬 파일 경로 사용
         description: '이미지 업로드 완료',
       );
 
