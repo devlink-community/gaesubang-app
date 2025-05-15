@@ -48,7 +48,7 @@ class SettingsScreenRoot extends ConsumerWidget {
             context.push('/edit-profile');
           case OnTapChangePassword():
             // 비밀번호 변경을 위해 비밀번호 찾기 화면으로 이동
-            context.push('/forget-password');
+            context.push('/forgot-password-2');
           case OnTapPrivacyPolicy():
             // 웹 URL 열기
             await _launchUrl(

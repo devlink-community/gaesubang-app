@@ -35,7 +35,7 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
           case OnSave():
             await notifier.onAction(action);
             if (!state.isError && state.isSuccess) {
-              context.pop(); // 저장 성공 시 이전 화면으로 이동
+              context.go('/profile'); // 저장 성공 시 이전 화면으로 이동
             }
             break;
           default:

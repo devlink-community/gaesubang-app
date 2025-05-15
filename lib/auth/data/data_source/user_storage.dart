@@ -35,7 +35,8 @@ class UserStorage {
           // 더 안정적인, 인터넷 연결이 가능한 이미지 URL로 교체
           'profile': ProfileDto(
             userId: 'user1',
-            image: 'assets/images/user1.jpeg',
+            image:
+                'https://i.pinimg.com/236x/31/fd/53/31fd53b6dc87e714783b5c52531ba6fb.jpg',
             onAir: false,
           ),
           'password': 'password123',
