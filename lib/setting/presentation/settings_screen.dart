@@ -1,3 +1,4 @@
+// lib/setting/presentation/settings_screen.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_action.dart';
@@ -19,117 +20,209 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text('환경설정', style: AppTextStyles.heading3Bold),
+        title: Text('환경설정', style: AppTextStyles.heading6Bold),
         automaticallyImplyLeading: true,
+        elevation: 0, // 그림자 제거로 더 현대적인 느낌
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: 30, right: 30),
-              child: ListView(
-                children: [
-                  _buildSettingItem(
-                    title: '프로필 수정',
-                    onTap:
-                        () => onAction(const SettingsAction.onTapEditProfile()),
-                  ),
-                  _buildSettingItem(
-                    title: '비밀번호 수정',
-                    onTap:
-                        () => onAction(
-                          const SettingsAction.onTapChangePassword(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, top: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 카테고리 제목
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, bottom: 12),
+                      child: Text(
+                        '계정 설정',
+                        style: AppTextStyles.subtitle1Bold.copyWith(
+                          color: AppColorStyles.gray80,
+                          fontSize: 14,
                         ),
+                      ),
+                    ),
+
+                    // 계정 섹션
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: AppColorStyles.gray40,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildSettingItem(
+                            title: '프로필 수정',
+                            icon: Icons.person_outline,
+                            iconColor: AppColorStyles.primary100,
+                            onTap:
+                                () => onAction(
+                                  const SettingsAction.onTapEditProfile(),
+                                ),
+                          ),
+
+                          _buildSettingItem(
+                            title: '비밀번호 수정',
+                            icon: Icons.lock_outline,
+                            iconColor: AppColorStyles.primary100,
+                            onTap:
+                                () => onAction(
+                                  const SettingsAction.onTapChangePassword(),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 정보 섹션 제목
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        top: 24,
+                        bottom: 12,
+                      ),
+                      child: Text(
+                        '앱 정보',
+                        style: AppTextStyles.subtitle1Bold.copyWith(
+                          color: AppColorStyles.gray80,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+
+                    // 정보 섹션
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: AppColorStyles.gray40,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildSettingItem(
+                            title: '개인정보 처리방침',
+                            icon: Icons.security_outlined,
+                            iconColor: AppColorStyles.info,
+                            onTap:
+                                () => onAction(
+                                  const SettingsAction.onTapPrivacyPolicy(),
+                                ),
+                          ),
+
+                          _buildSettingItem(
+                            title: '앱 사용 오픈 소스',
+                            icon: Icons.info_outline,
+                            iconColor: AppColorStyles.info,
+                            onTap:
+                                () => onAction(
+                                  const SettingsAction.onTapAppInfo(),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 하단 버튼 섹션
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      label: Text('로그아웃'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColorStyles.primary100,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: AppTextStyles.button1Medium,
+                      ),
+                      onPressed:
+                          () => onAction(const SettingsAction.onTapLogout()),
+                    ),
                   ),
-                  _buildSettingItem(
-                    title: '개인정보 처리방침',
-                    onTap:
-                        () =>
-                            onAction(const SettingsAction.onTapPrivacyPolicy()),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      label: Text('회원탈퇴'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColorStyles.gray80,
+                        side: BorderSide(color: AppColorStyles.gray60),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: AppTextStyles.button1Medium,
+                      ),
+                      onPressed:
+                          () => onAction(
+                            const SettingsAction.onTapDeleteAccount(),
+                          ),
+                    ),
                   ),
-                  _buildSettingItem(
-                    title: '앱 사용 오픈 소스',
-                    onTap: () => onAction(const SettingsAction.onTapAppInfo()),
-                  ),
+                  const SizedBox(height: 16),
+                  // Text(
+                  //   '버전 1.0.0',
+                  //   style: AppTextStyles.captionRegular.copyWith(
+                  //     color: AppColorStyles.gray80,
+                  //   ),
+                  // ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(30),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColorStyles.primary100,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed:
-                        () => onAction(const SettingsAction.onTapLogout()),
-                    child: Text(
-                      '로그아웃',
-                      style: AppTextStyles.button1Medium.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                      side: const BorderSide(color: Colors.grey),
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed:
-                        () =>
-                            onAction(const SettingsAction.onTapDeleteAccount()),
-                    child: Text(
-                      '회원탈퇴',
-                      style: AppTextStyles.button1Medium.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Text(
-                //   '버전 ${state.appVersion}',
-                //   style: AppTextStyles.captionRegular.copyWith(color: Colors.grey),
-                // )
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  // 설정 항목 위젯 - 아이콘 추가
   Widget _buildSettingItem({
     required String title,
+    required IconData icon,
     required VoidCallback onTap,
+    Color? iconColor,
   }) {
     return ListTile(
-      title: Text(title, style: AppTextStyles.subtitle1Medium),
-      trailing: const Icon(Icons.chevron_right),
+      leading: Icon(
+        icon,
+        color: iconColor ?? AppColorStyles.primary100,
+        size: 24,
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.subtitle1Medium.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey,
+      ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
-        vertical: 8.0,
+        vertical: 6.0,
       ),
       onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 }

@@ -24,10 +24,23 @@ class TagInputField extends StatefulWidget {
 
 class _TagInputFieldState extends State<TagInputField> {
   final TextEditingController _tagController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _hasFocus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() {
+        _hasFocus = _focusNode.hasFocus;
+      });
+    });
+  }
 
   @override
   void dispose() {
     _tagController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -53,6 +66,17 @@ class _TagInputFieldState extends State<TagInputField> {
 
   @override
   Widget build(BuildContext context) {
+    // 상태에 따른 테두리 색상 설정
+    Color borderColor = AppColorStyles.gray40; // 기본 색상은 그레이
+
+    if (_hasFocus) {
+      // 포커스 상태
+      borderColor = AppColorStyles.primary100;
+    } else if (_tagController.text.isNotEmpty) {
+      // 입력값이 있는 상태
+      borderColor = AppColorStyles.gray80;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -62,10 +86,23 @@ class _TagInputFieldState extends State<TagInputField> {
             Expanded(
               child: TextField(
                 controller: _tagController,
+                focusNode: _focusNode,
                 decoration: InputDecoration(
                   hintText: widget.hintText,
+                  hintStyle: AppTextStyles.body1Regular.copyWith(
+                    color: AppColorStyles.gray60,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColorStyles.primary100),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -83,6 +120,13 @@ class _TagInputFieldState extends State<TagInputField> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: Text(
                 '추가',
@@ -105,8 +149,16 @@ class _TagInputFieldState extends State<TagInputField> {
                   widget.tags.map((tag) {
                     return Chip(
                       label: Text(tag.content),
+                      labelStyle: AppTextStyles.body2Regular,
+                      backgroundColor: AppColorStyles.gray40.withOpacity(0.3),
                       deleteIcon: const Icon(Icons.close, size: 16),
                       onDeleted: () => widget.onRemoveTag(tag.content),
+                      deleteIconColor: AppColorStyles.gray80,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: AppColorStyles.gray40),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                     );
                   }).toList(),
             ),

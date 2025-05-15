@@ -94,7 +94,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (widget.state.hasError) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('프로필 수정'),
+          title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -127,7 +127,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (member == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('프로필 수정'),
+          title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -139,7 +139,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('프로필 수정', style: AppTextStyles.heading3Bold),
+        title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -147,7 +147,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -158,6 +158,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
             LabeledTextField(
               label: '닉네임',
               hint: '닉네임을 입력하세요',
+
               controller: _nicknameController,
               onChanged:
                   (value) =>
