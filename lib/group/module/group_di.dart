@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source_impl.dart';
 import 'package:devlink_mobile_app/group/data/data_source/mock_timer_data_source_impl.dart';
@@ -9,6 +10,7 @@ import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
@@ -95,10 +97,14 @@ ResumeTimerUseCase resumeTimerUseCase(Ref ref) =>
 GetTimerSessionsUseCase getTimerSessionsUseCase(Ref ref) =>
     GetTimerSessionsUseCase(repository: ref.watch(timerRepositoryProvider));
 
-// 새로 추가된 UseCase 프로바이더
 @riverpod
 GetMemberTimersUseCase getMemberTimersUseCase(Ref ref) =>
     GetMemberTimersUseCase(repository: ref.watch(timerRepositoryProvider));
+
+// mock임
+@riverpod
+GetCurrentMemberUseCase getCurrentMemberUseCase(Ref ref) =>
+    GetCurrentMemberUseCase();
 
 final List<GoRoute> groupRoutes = [
   // GoRoute(
