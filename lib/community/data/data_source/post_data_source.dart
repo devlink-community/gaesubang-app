@@ -23,6 +23,7 @@ abstract interface class PostDataSource {
 
   /* ---------- NEW : 게시글 작성 ---------- */
   Future<String> createPost({
+    required String postId,
     required String title,
     required String content,
     required List<String> hashTags,
