@@ -48,7 +48,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     switch (action) {
       case Refresh():
         await _loadAll();
-      
+
       case ToggleLike():
         state = state.copyWith(post: const AsyncLoading());
         final result = await _toggleLike.execute(_postId);
@@ -82,9 +82,6 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     final postResult = await _fetchDetail.execute(_postId);
     final commentResult = await _fetchComments.execute(_postId);
 
-    state = state.copyWith(
-      post: postResult,
-      comments: commentResult,
-    );
+    state = state.copyWith(post: postResult, comments: commentResult);
   }
 }
