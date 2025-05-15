@@ -1,3 +1,5 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/gradient_wave_animation.dart';
@@ -25,6 +27,7 @@ class GroupTimerScreen extends StatefulWidget {
 class _GroupTimerScreenState extends State<GroupTimerScreen> {
   late ScrollController _scrollController;
   bool _isTimerVisible = true;
+  bool _isMessageExpanded = false; // 메시지 펼치기/접기 상태
 
   @override
   void initState() {
@@ -111,11 +114,8 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
                 ),
               ),
 
-              // 메시지 영역
+              // 메시지 영역 (해시태그 포함)
               SliverToBoxAdapter(child: _buildMessage()),
-
-              // 해시태그 영역
-              SliverToBoxAdapter(child: _buildHashTags()),
 
               // 멤버 섹션 헤더
               SliverToBoxAdapter(child: _buildMemberSectionHeader()),
@@ -153,10 +153,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
     return AppBar(
       title: Text(
         widget.state.groupName,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        style: AppTextStyles.heading6Bold.copyWith(color: Colors.white),
       ),
       centerTitle: true,
       elevation: 0,
@@ -183,17 +180,15 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
             width: 4,
             height: 16,
             decoration: BoxDecoration(
-              color: const Color(0xFF8080FF),
+              color: AppColorStyles.primary100,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             '함께 공부 중인 멤버 (${widget.state.participantCount}/${widget.state.totalMemberCount})',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+            style: AppTextStyles.subtitle1Bold.copyWith(
+              color: AppColorStyles.textPrimary,
             ),
           ),
         ],
@@ -205,10 +200,12 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
   Widget _buildFloatingTimerContainer() {
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 200),
-      top: _isTimerVisible ? -80 : 0, // 보이지 않을 때는 위로 숨김
+      top: _isTimerVisible ? -80 : 0,
+      // 보이지 않을 때는 위로 숨김
       left: 0,
       right: 0,
-      height: 56, // 높이를 명시적으로 지정
+      height: 56,
+      // 높이를 명시적으로 지정
       child: Material(
         elevation: 4,
         color: Colors.transparent,
@@ -279,7 +276,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Colors.white.withAlpha(30),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -302,7 +299,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withAlpha(30),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -317,7 +314,6 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
     );
   }
 
-  // 메시지 영역
   Widget _buildMessage() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -325,73 +321,88 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(color: AppColorStyles.gray40),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.chat_bubble_outline,
-                size: 16,
-                color: Color(0xFF6B6B6B),
-              ),
-              SizedBox(width: 8),
-              Text(
-                '그룹 메시지',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6B6B6B),
+          // 헤더 - 아이콘과 타이틀, 토글 버튼
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isMessageExpanded = !_isMessageExpanded;
+              });
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 16,
+                      color: AppColorStyles.gray100,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '그룹 메시지',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColorStyles.gray100,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '안녕하세요. 저희는 소금빵을 먹으며 공부하는 소막입니다.\n'
-            '다들 소금빵 좋아하시나요?\n'
-            '한 줄이라도 코드를 나가주세요.',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: Color(0xFF333333),
+                // 확장/축소 아이콘
+                Icon(
+                  _isMessageExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 22,
+                  color: AppColorStyles.gray100,
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  // 해시태그 영역
-  Widget _buildHashTags() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children:
-            widget.state.hashTags.map((tag) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6E6FA),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '#$tag',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8080FF),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            }).toList(),
+          // 메시지 내용 - 확장 시에만 표시
+          if (_isMessageExpanded) ...[
+            const SizedBox(height: 8),
+            Text(
+              '안녕하세요. 저희는 소금빵을 먹으며 공부하는 소막입니다.\n'
+              '다들 소금빵 좋아하시나요?\n'
+              '한 줄이라도 코드를 나가주세요.',
+              style: AppTextStyles.body1Regular.copyWith(
+                height: 1.4,
+                color: AppColorStyles.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // 해시태그
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  widget.state.hashTags.map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColorStyles.primary60.withAlpha(20),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '#$tag',
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.primary100,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+            ),
+          ],
+        ],
       ),
     );
   }
