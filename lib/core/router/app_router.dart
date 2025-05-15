@@ -100,6 +100,7 @@ GoRouter appRouter(ref) {
       ),
 
       // === 메인 탭 화면 (홈, 커뮤니티, 그룹, 알림, 프로필) ===
+      // ShellRoute 부분 수정
       ShellRoute(
         builder: (context, state, child) {
           // 현재 활성화된 탭 인덱스 계산
@@ -109,9 +110,7 @@ GoRouter appRouter(ref) {
           if (path.startsWith('/community')) {
             currentIndex = 1;
           } else if (path.startsWith('/group')) {
-            currentIndex = 2;
-          } else if (path.startsWith('/notifications')) {
-            currentIndex = 3;
+            currentIndex = 3; // 그룹을 인덱스 3으로 변경
           } else if (path.startsWith('/profile')) {
             currentIndex = 4;
           }
@@ -149,15 +148,22 @@ GoRouter appRouter(ref) {
                     context.go('/community');
                     break;
                   case 2:
-                    context.go('/group');
+                    // 가운데 버튼은 드롭다운 메뉴를 표시하므로 탭 이동 처리하지 않음
                     break;
                   case 3:
-                    context.go('/notifications');
+                    context.go('/group'); // 그룹 탭으로 이동
                     break;
                   case 4:
                     context.go('/profile');
                     break;
                 }
+              },
+              // 드롭다운 메뉴의 액션 핸들러
+              onCreatePost: () {
+                context.push('/community/write');
+              },
+              onCreateGroup: () {
+                context.push('/group/create');
               },
             ),
           );
@@ -290,14 +296,4 @@ GoRouter appRouter(ref) {
           body: Center(child: Text('요청한 경로 "${state.uri.path}"를 찾을 수 없습니다')),
         ),
   );
-}
-
-/// Mock 스크린들
-class _HomeMockScreen extends StatelessWidget {
-  const _HomeMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('🏠 Home Screen (Mock)')));
-  }
 }
