@@ -65,6 +65,9 @@ class GroupListScreen extends StatelessWidget {
     return ListView.builder(
       itemCount: groups.length,
       physics: const BouncingScrollPhysics(),
+      addAutomaticKeepAlives: true, // 항목을 메모리에 유지
+      addRepaintBoundaries: true, // 재그리기 경계 추가
+      cacheExtent: 500,
       itemBuilder: (context, index) {
         final group = groups[index];
         final isJoined =
