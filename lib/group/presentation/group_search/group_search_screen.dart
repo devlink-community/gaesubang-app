@@ -402,10 +402,20 @@ class _GroupSearchScreenState extends State<GroupSearchScreen> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           itemCount: value.length,
           separatorBuilder: (context, index) => const SizedBox(height: 8),
+          physics: const BouncingScrollPhysics(),
+          addAutomaticKeepAlives: true, // 항목을 메모리에 유지
+          addRepaintBoundaries: true, // 재그리기 경계 추가
           itemBuilder: (context, index) {
             final group = value[index];
+            final isJoined =
+                widget.state.currentMember != null &&
+                group.members.any(
+                  (member) => member.id == widget.state.currentMember!.id,
+                );
             return GroupListItem(
+              key: ValueKey('group_${group.id}'),
               group: group,
+              isCurrentMemberJoined: isJoined,
               onTap:
                   () => widget.onAction(GroupSearchAction.onTapGroup(group.id)),
             );

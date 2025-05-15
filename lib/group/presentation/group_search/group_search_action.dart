@@ -14,4 +14,8 @@ sealed class GroupSearchAction with _$GroupSearchAction {
       OnRemoveRecentSearch;
   const factory GroupSearchAction.onClearAllRecentSearches() =
       OnClearAllRecentSearches;
+
+  const factory GroupSearchAction.onJoinGroup(String groupId) = OnJoinGroup;
+  const factory GroupSearchAction.resetSelectedGroup() = ResetSelectedGroup;
+  const factory GroupSearchAction.onCloseDialog() = OnCloseDialog;
 }
