@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
@@ -11,13 +12,11 @@ part 'group_list_notifier.g.dart';
 @riverpod
 class GroupListNotifier extends _$GroupListNotifier {
   late final GetGroupListUseCase _getGroupListUseCase;
-  late final GetGroupDetailUseCase _getGroupDetailUseCase;
   late final JoinGroupUseCase _joinGroupUseCase;
 
   @override
   GroupListState build() {
     _getGroupListUseCase = ref.watch(getGroupListUseCaseProvider);
-    _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
     _joinGroupUseCase = ref.watch(joinGroupUseCaseProvider);
 
     _loadGroupList();
@@ -30,10 +29,15 @@ class GroupListNotifier extends _$GroupListNotifier {
     state = state.copyWith(groupList: asyncResult);
   }
 
-  Future<void> _getGroupDetail(String groupId) async {
-    state = state.copyWith(selectedGroup: const AsyncLoading());
-    final asyncResult = await _getGroupDetailUseCase.execute(groupId);
-    state = state.copyWith(selectedGroup: asyncResult);
+  void _selectGroup(String groupId) {
+    if (state.groupList is AsyncData) {
+      final groups = (state.groupList as AsyncData<List<Group>>).value;
+      final selectedGroup = groups.firstWhere(
+        (group) => group.id == groupId,
+        orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
+      );
+      state = state.copyWith(selectedGroup: AsyncData(selectedGroup));
+    }
   }
 
   Future<void> _joinGroup(String groupId) async {
@@ -47,22 +51,17 @@ class GroupListNotifier extends _$GroupListNotifier {
       case OnLoadGroupList():
         await _loadGroupList();
       case OnTapGroup(:final groupId):
-        if (state.selectedGroup is AsyncLoading ||
-            (state.selectedGroup is AsyncData &&
-                (state.selectedGroup as AsyncData).value?.id == groupId)) {
-          return;
-        }
-        await _getGroupDetail(groupId);
+        _selectGroup(groupId);
       case OnJoinGroup(:final groupId):
         await _joinGroup(groupId);
+      case ResetSelectedGroup():
+        // selectedGroup 초기화
+        state = state.copyWith(selectedGroup: const AsyncData(null));
       case OnTapSearch():
-        // 검색 화면은 Root에서 처리
         break;
       case OnCloseDialog():
-        // 다이얼로그 닫기는 Root에서 처리
         break;
       case OnTapCreateGroup():
-        // 그룹 생성 화면은 Root에서 처리
         break;
     }
   }

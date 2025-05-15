@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/group_join_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
@@ -14,8 +15,6 @@ class GroupListScreenRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupListNotifierProvider);
     final notifier = ref.watch(groupListNotifierProvider.notifier);
-
-    // 선택된 그룹을 관찰하고 변경되면 다이얼로그 표시
     ref.listen(
       groupListNotifierProvider.select((value) => value.selectedGroup),
       (previous, next) {
@@ -25,7 +24,37 @@ class GroupListScreenRoot extends ConsumerWidget {
       },
     );
 
-    // OnJoinGroup 액션을 직접 처리
+    ref.listen(
+      groupListNotifierProvider.select((value) => value.joinGroupResult),
+      (previous, next) {
+        if (previous is AsyncLoading) {
+          if (next is AsyncData) {
+            final selectedGroup = state.selectedGroup;
+            if (selectedGroup is AsyncData && selectedGroup.value != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    '그룹에 성공적으로 참여했습니다!',
+                    style: TextStyle(color: AppColorStyles.white),
+                  ),
+                  backgroundColor: AppColorStyles.primary100,
+                ),
+              );
+              final groupId = selectedGroup.value!.id;
+              context.push('/group/$groupId');
+            }
+          } else if (next is AsyncError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('참여 실패: ${next.error}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+    );
+
     return GroupListScreen(
       state: state,
       onAction: (action) {
@@ -35,16 +64,9 @@ class GroupListScreenRoot extends ConsumerWidget {
           case OnTapCreateGroup():
             context.push('/group/create');
           case OnCloseDialog():
+            // 다이얼로그 닫을 때 selectedGroup 초기화
+            notifier.onAction(const GroupListAction.resetSelectedGroup());
             Navigator.of(context).pop();
-          case OnJoinGroup(:final groupId):
-            // 서버 요청은 Notifier에 위임하지만 UI 처리는 여기서
-            notifier.onAction(action);
-
-            // 다이얼로그 닫기
-            Navigator.of(context).pop();
-
-            // 바로 해당 그룹 페이지로 이동
-            context.push('/group/$groupId');
           default:
             notifier.onAction(action);
         }
@@ -64,20 +86,27 @@ class GroupListScreenRoot extends ConsumerWidget {
         return GroupJoinDialog(
           group: group,
           onAction: (action) {
-            // 다이얼로그 내에서의 액션을 여기서 바로 전달
-            // 이렇게 하면 Root의 onAction으로 전달됨
-            if (action is OnJoinGroup) {
-              Navigator.of(context).pop(); // 다이얼로그 닫기
-              notifier.onAction(action); // 참여 요청 처리
+            switch (action) {
+              case OnCloseDialog():
+                // 다이얼로그 닫을 때 selectedGroup 초기화
+                notifier.onAction(const GroupListAction.resetSelectedGroup());
+                Navigator.of(context).pop();
 
-              // 이동 처리를 직접 수행
-              Future.delayed(const Duration(milliseconds: 100), () {
-                if (context.mounted) {
-                  context.push('/group/${(action).groupId}');
-                }
-              });
-            } else {
-              notifier.onAction(action);
+              case OnJoinGroup():
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      '그룹 참여 중...',
+                      style: TextStyle(color: AppColorStyles.white),
+                    ),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                notifier.onAction(action);
+
+              default:
+                notifier.onAction(action);
             }
           },
         );
