@@ -1,4 +1,4 @@
-// lib/auth/presentation/component/custom_text_field.dart 수정
+// lib/auth/presentation/component/custom_text_field.dart
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -18,6 +18,9 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.onChanged,
     this.focusNode,
+    // 새로 추가된 속성
+    this.onFieldSubmitted,
+    this.textInputAction = TextInputAction.next,
   });
 
   final String label;
@@ -29,6 +32,9 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
   final Function(String)? onChanged;
   final FocusNode? focusNode;
+  // 새로 추가된 속성
+  final Function(String)? onFieldSubmitted;
+  final TextInputAction textInputAction;
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -103,6 +109,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
             obscureText: _obscureText, // 동적으로 변경되는 _obscureText 사용
             keyboardType: widget.keyboardType,
             onChanged: widget.onChanged,
+            // 새로 추가된 속성 설정
+            onSubmitted: widget.onFieldSubmitted,
+            textInputAction: widget.textInputAction,
             style: AppTextStyles.body1Regular,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
