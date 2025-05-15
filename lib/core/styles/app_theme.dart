@@ -16,7 +16,7 @@ class AppTheme {
 
       // 기본 색상 설정
       primaryColor: AppColorStyles.primary100,
-      scaffoldBackgroundColor: AppColorStyles.background,
+      scaffoldBackgroundColor: AppColorStyles.white,
 
       // ColorScheme 설정
       colorScheme: ColorScheme(
@@ -73,12 +73,13 @@ class AppTheme {
 
       // AppBar 테마
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColorStyles.white,
         foregroundColor: AppColorStyles.textPrimary,
         elevation: 0,
         centerTitle: true,
+        scrolledUnderElevation: 0,
         titleTextStyle: AppTextStyles.heading6Bold.copyWith(
-          color: AppColorStyles.white,
+          color: AppColorStyles.black,
         ),
       ),
 
@@ -121,41 +122,6 @@ class AppTheme {
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(8),
-      ),
-
-      // 입력 필드 테마
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColorStyles.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColorStyles.gray60),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColorStyles.gray60),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColorStyles.primary100, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColorStyles.error, width: 2),
-        ),
-        hintStyle: AppTextStyles.body1Regular.copyWith(
-          color: AppColorStyles.gray80,
-        ),
-        labelStyle: AppTextStyles.body1Regular.copyWith(
-          color: AppColorStyles.gray100,
-        ),
-        errorStyle: AppTextStyles.captionRegular.copyWith(
-          color: AppColorStyles.error,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
       ),
 
       // 리스트 타일 테마
