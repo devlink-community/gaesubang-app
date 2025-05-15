@@ -143,8 +143,7 @@ class SettingsScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: ElevatedButton.icon(
-                      label: Text('로그아웃'),
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColorStyles.primary100,
                         foregroundColor: Colors.white,
@@ -155,14 +154,19 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       onPressed:
                           () => onAction(const SettingsAction.onTapLogout()),
+                      child: Text(
+                        '로그아웃',
+                        style: AppTextStyles.button1Medium.copyWith(
+                          color: AppColorStyles.white,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: OutlinedButton.icon(
-                      label: Text('회원탈퇴'),
+                    child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColorStyles.gray80,
                         side: BorderSide(color: AppColorStyles.gray60),
@@ -175,6 +179,7 @@ class SettingsScreen extends StatelessWidget {
                           () => onAction(
                             const SettingsAction.onTapDeleteAccount(),
                           ),
+                      child: Text('회원탈퇴'),
                     ),
                   ),
                   const SizedBox(height: 16),
