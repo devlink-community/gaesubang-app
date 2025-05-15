@@ -21,8 +21,8 @@ class GroupListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Group', style: AppTextStyles.heading6Bold),
-        centerTitle: true,
+        title: const Text('그룹을 모집합니다!', style: AppTextStyles.heading6Bold),
+        centerTitle: false, // 명시적으로 false로 설정하여 좌측 정렬
         actions: [
           IconButton(
             icon: const Icon(
