@@ -82,6 +82,10 @@ extension UserStorageProfileUpdate on UserStorage {
       }
 
       // 프로필 정보 가져오기
+      if (user.id == null) {
+        debugPrint('현재 로그인된 사용자의 ID가 없습니다.');
+        return false;
+      }
       final profile = getProfileById(user.id!);
       if (profile == null) {
         debugPrint('현재 사용자의 프로필을 찾을 수 없습니다.');

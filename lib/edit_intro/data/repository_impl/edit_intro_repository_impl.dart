@@ -1,6 +1,7 @@
-import 'package:devlink_mobile_app/edit_intro/data/data_sourcce/user_storage_profile_update.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:devlink_mobile_app/edit_intro/data/data_source/user_storage_profile_update.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../../auth/data/data_source/auth_data_source.dart';
 import '../../../auth/data/data_source/profile_data_source.dart';
 import '../../../auth/data/data_source/user_storage.dart';
@@ -215,7 +216,8 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
         email: 'user@example.com',
         nickname: '사용자',
         uid: 'mock-uid',
-        image: image.path, // 로컬 파일 경로 사용
+        image: image.path,
+        // 로컬 파일 경로 사용
         description: '이미지 업로드 완료',
       );
 
