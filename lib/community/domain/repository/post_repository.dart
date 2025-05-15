@@ -25,6 +25,7 @@ abstract interface class PostRepository {
 
   /* ---------- NEW ---------- */
   Future<String> createPost({
+    required String postId,
     required String title,
     required String content,
     required List<String> hashTags,
