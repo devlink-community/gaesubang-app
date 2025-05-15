@@ -5,7 +5,9 @@ import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
 /// 통합 사용자 데이터 저장소 (싱글톤)
 class UserStorage {
   UserStorage._internal();
+
   static final UserStorage _instance = UserStorage._internal();
+
   static UserStorage get instance => _instance;
 
   // 전체 사용자 데이터
@@ -24,38 +26,103 @@ class UserStorage {
     if (_users.isEmpty) {
       final defaultUsers = [
         {
-          'user': UserDto(id: 'user1', email: 'test1@example.com'.toLowerCase(), nickname: '사용자1', uid: 'uid1'),
-          'profile': ProfileDto(userId: 'user1', image: '', onAir: false),
+          'user': UserDto(
+            id: 'user1',
+            email: 'test1@example.com'.toLowerCase(),
+            nickname: '사용자1',
+            uid: 'uid1',
+          ),
+          // 더 안정적인, 인터넷 연결이 가능한 이미지 URL로 교체
+          'profile': ProfileDto(
+            userId: 'user1',
+            image:
+                'https://i.pinimg.com/236x/31/fd/53/31fd53b6dc87e714783b5c52531ba6fb.jpg',
+            onAir: false,
+          ),
           'password': 'password123',
         },
         {
-          'user': UserDto(id: 'user2', email: 'test2@example.com'.toLowerCase(), nickname: '사용자2', uid: 'uid2'),
-          'profile': ProfileDto(userId: 'user2', image: '', onAir: true),
+          'user': UserDto(
+            id: 'user2',
+            email: 'test2@example.com'.toLowerCase(),
+            nickname: '사용자2',
+            uid: 'uid2',
+          ),
+          'profile': ProfileDto(
+            userId: 'user2',
+            image: 'assets/images/user1.jpeg',
+            onAir: true,
+          ),
           'password': 'password123',
         },
         {
-          'user': UserDto(id: 'user3', email: 'test3@example.com'.toLowerCase(), nickname: '사용자3', uid: 'uid3'),
-          'profile': ProfileDto(userId: 'user3', image: '', onAir: false),
+          'user': UserDto(
+            id: 'user3',
+            email: 'test3@example.com'.toLowerCase(),
+            nickname: '사용자3',
+            uid: 'uid3',
+          ),
+          'profile': ProfileDto(
+            userId: 'user3',
+            image: 'https://picsum.photos/200?random=2',
+            onAir: false,
+          ),
           'password': 'password123',
         },
         {
-          'user': UserDto(id: 'user4', email: 'test4@example.com'.toLowerCase(), nickname: '사용자4', uid: 'uid4'),
-          'profile': ProfileDto(userId: 'user4', image: '', onAir: true),
+          'user': UserDto(
+            id: 'user4',
+            email: 'test4@example.com'.toLowerCase(),
+            nickname: '사용자4',
+            uid: 'uid4',
+          ),
+          'profile': ProfileDto(
+            userId: 'user4',
+            image: 'https://picsum.photos/200?random=3',
+            onAir: true,
+          ),
           'password': 'password123',
         },
         {
-          'user': UserDto(id: 'user5', email: 'test5@example.com'.toLowerCase(), nickname: '사용자5', uid: 'uid5'),
-          'profile': ProfileDto(userId: 'user5', image: '', onAir: false),
+          'user': UserDto(
+            id: 'user5',
+            email: 'test5@example.com'.toLowerCase(),
+            nickname: '사용자5',
+            uid: 'uid5',
+          ),
+          'profile': ProfileDto(
+            userId: 'user5',
+            image: 'https://picsum.photos/200?random=4',
+            onAir: false,
+          ),
           'password': 'password123',
         },
         {
-          'user': UserDto(id: 'user6', email: 'admin@example.com'.toLowerCase(), nickname: '관리자', uid: 'uid6'),
-          'profile': ProfileDto(userId: 'user6', image: '', onAir: true),
+          'user': UserDto(
+            id: 'user6',
+            email: 'admin@example.com'.toLowerCase(),
+            nickname: '관리자',
+            uid: 'uid6',
+          ),
+          'profile': ProfileDto(
+            userId: 'user6',
+            image: 'https://picsum.photos/200?random=5',
+            onAir: true,
+          ),
           'password': 'admin123',
         },
         {
-          'user': UserDto(id: 'user7', email: 'developer@example.com'.toLowerCase(), nickname: '개발자', uid: 'uid7'),
-          'profile': ProfileDto(userId: 'user7', image: '', onAir: true),
+          'user': UserDto(
+            id: 'user7',
+            email: 'developer@example.com'.toLowerCase(),
+            nickname: '개발자',
+            uid: 'uid7',
+          ),
+          'profile': ProfileDto(
+            userId: 'user7',
+            image: 'https://picsum.photos/200?random=6',
+            onAir: true,
+          ),
           'password': 'dev123',
         },
       ];
@@ -98,7 +165,12 @@ class UserStorage {
   }
 
   /// 사용자 추가 (회원가입)
-  void addUser(UserDto user, ProfileDto profile, String password, {String? agreedTermsId}) {
+  void addUser(
+    UserDto user,
+    ProfileDto profile,
+    String password, {
+    String? agreedTermsId,
+  }) {
     initialize();
     // 이메일을 소문자로 변환하여 저장
     final lowercaseEmail = user.email!.toLowerCase();
@@ -164,7 +236,7 @@ class UserStorage {
   UserDto? get currentUser {
     if (_currentUserId == null) return null;
     return _users.values.firstWhere(
-          (user) => user.id == _currentUserId,
+      (user) => user.id == _currentUserId,
       orElse: () => throw Exception('현재 사용자를 찾을 수 없습니다'),
     );
   }
@@ -172,7 +244,9 @@ class UserStorage {
   /// 닉네임 중복 체크
   bool isNicknameAvailable(String nickname) {
     initialize();
-    return !_users.values.any((user) => user.nickname?.toLowerCase() == nickname.toLowerCase());
+    return !_users.values.any(
+      (user) => user.nickname?.toLowerCase() == nickname.toLowerCase(),
+    );
   }
 
   /// 이메일 중복 체크
@@ -197,7 +271,7 @@ class UserStorage {
   /// 약관 동의 정보와 사용자 연결
   void linkUserWithTerms(String userId, String termsId) {
     final user = _users.values.firstWhere(
-          (user) => user.id == userId,
+      (user) => user.id == userId,
       orElse: () => throw Exception('사용자를 찾을 수 없습니다'),
     );
 

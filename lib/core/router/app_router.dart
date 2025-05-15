@@ -21,16 +21,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../auth/data/data_source/user_storage.dart';
+import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
+import '../../setting/presentation/forgot_password_screen_root_2.dart';
+
 part 'app_router.g.dart';
 
 // 개발용 강제 로그인 상태를 관리하는 Provider
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작 (false이면 로그인 로직대로 동작)
+  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작 (false이면 로그인 로직대로 동작)
 
   void toggle() => state = !state;
+
   void enable() => state = true;
+
   void disable() => state = false;
 }
 
@@ -110,7 +116,22 @@ GoRouter appRouter(ref) {
 
           // 프로필 이미지는 더 이상 외부 URL을 사용하지 않음
           // 실제 사용자 프로필 구현 시 사용자 데이터에서 가져오도록 수정
-          const String? profileImageUrl = null;
+          final userStorage = UserStorage.instance;
+          final currentUser = userStorage.currentUser;
+          String? profileImageUrl;
+
+          if (currentUser != null) {
+            // 현재 로그인된 사용자의 프로필 이미지 가져오기
+            final profile = userStorage.getProfileById(currentUser.id!);
+            profileImageUrl = profile?.image;
+          } else {
+            // 개발 모드에서 첫 번째 사용자의 이미지 사용
+            final defaultUser = userStorage.getUserByEmail('test1@example.com');
+            if (defaultUser != null) {
+              final profile = userStorage.getProfileById(defaultUser.id!);
+              profileImageUrl = profile?.image;
+            }
+          }
 
           return Scaffold(
             body: child,
@@ -219,7 +240,10 @@ GoRouter appRouter(ref) {
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const IntroScreenRoot(),
+            builder: (context, state) {
+              // 강제로 새로 생성하여 항상 최신 데이터를 로드하도록 함
+              return const IntroScreenRoot();
+            },
           ),
         ],
       ),
@@ -232,6 +256,15 @@ GoRouter appRouter(ref) {
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditIntroRoot(),
+      ),
+      GoRoute(
+        path: '/forgot-password-2',
+        builder: (context, state) => const ForgotPasswordScreenRoot2(),
+      ),
+      // demo router
+      GoRoute(
+        path: '/profile-edit-demo',
+        builder: (context, state) => const ProfileEditDemoScreen(),
       ),
 
       // === 유저 프로필 보기 (그룹에서 사용) ===

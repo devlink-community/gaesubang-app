@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:flutter/material.dart';
 
@@ -7,13 +9,10 @@ import '../../../core/styles/app_text_styles.dart';
 class ProfileInfo extends StatelessWidget {
   final Member member;
 
-  const ProfileInfo({Key? key, required this.member}) : super(key: key);
+  const ProfileInfo({super.key, required this.member});
 
   @override
   Widget build(BuildContext context) {
-    // 테마에서 primaryColor를 불러와서 스테이크 아이콘 색으로 사용
-    final primary = Theme.of(context).primaryColor;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
@@ -36,26 +35,7 @@ class ProfileInfo extends StatelessWidget {
                     ),
                   ],
                 ),
-                child:
-                    member.image.isNotEmpty
-                        ? CircleAvatar(
-                          radius: 36,
-                          backgroundImage: NetworkImage(member.image),
-                          backgroundColor: Colors.grey.shade200,
-                          onBackgroundImageError: (exception, stackTrace) {
-                            // 이미지 로딩 오류 시 기본 아이콘으로 대체
-                            return;
-                          },
-                        )
-                        : CircleAvatar(
-                          radius: 36,
-                          backgroundColor: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.person,
-                            size: 36,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
+                child: _buildProfileImage(),
               ),
               const SizedBox(width: 16),
               Column(
@@ -100,6 +80,45 @@ class ProfileInfo extends StatelessWidget {
           const SizedBox(height: 12),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileImage() {
+    // 이미지 경로가 있는지 확인
+    if (member.image.isEmpty) {
+      // 기본 아이콘 표시
+      return CircleAvatar(
+        radius: 36,
+        backgroundColor: Colors.grey.shade200,
+        child: Icon(Icons.person, size: 36, color: Colors.grey.shade400),
+      );
+    }
+
+    // 이미지가 File 형식인지 확인 (로컬 이미지인 경우)
+    if (member.image.startsWith('/')) {
+      // 로컬 파일 경로인 경우
+      return CircleAvatar(
+        radius: 36,
+        backgroundImage: FileImage(File(member.image)),
+        backgroundColor: Colors.grey.shade200,
+        onBackgroundImageError: (exception, stackTrace) {
+          // 이미지 로딩 오류 시 처리
+          debugPrint('이미지 로딩 오류: $exception');
+          return;
+        },
+      );
+    }
+
+    // 네트워크 이미지인 경우
+    return CircleAvatar(
+      radius: 36,
+      backgroundImage: NetworkImage(member.image),
+      backgroundColor: Colors.grey.shade200,
+      onBackgroundImageError: (exception, stackTrace) {
+        // 이미지 로딩 오류 시 처리
+        debugPrint('이미지 로딩 오류: $exception');
+        return;
+      },
     );
   }
 }

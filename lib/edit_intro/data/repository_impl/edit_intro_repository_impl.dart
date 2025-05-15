@@ -1,6 +1,10 @@
+import 'package:devlink_mobile_app/edit_intro/data/data_source/user_storage_profile_update.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../../auth/data/data_source/auth_data_source.dart';
 import '../../../auth/data/data_source/profile_data_source.dart';
+import '../../../auth/data/data_source/user_storage.dart';
 import '../../../auth/data/dto/profile_dto.dart';
 import '../../../auth/data/dto/user_dto.dart';
 import '../../../auth/data/mapper/member_mapper.dart';
@@ -11,6 +15,7 @@ import '../../domain/repository/edit_intro_repository.dart';
 class EditIntroRepositoryImpl implements EditIntroRepository {
   final AuthDataSource _authDataSource;
   final ProfileDataSource _profileDataSource;
+  final UserStorage _userStorage = UserStorage.instance; // UserStorage 인스턴스 추가
 
   EditIntroRepositoryImpl({
     required AuthDataSource authDataSource,
@@ -49,8 +54,15 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
 
       // Member 객체로 변환
       final member = userDto.toModelFromProfile(profileDto);
+
+      // 디버그 로그 추가
+      debugPrint('현재 프로필 조회: ${member.nickname}, ${member.description}');
+
       return Result.success(member);
-    } catch (e, st) {
+    } catch (e) {
+      // 에러 로그 추가
+      debugPrint('프로필 조회 실패: $e');
+
       // 에러 발생 시 모의 데이터 반환 (개발/테스트 환경용)
       // 실제 환경에서는 적절한 에러 처리가 필요합니다
       final mockMember = Member(
@@ -75,22 +87,62 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
     String? intro,
   }) async {
     try {
-      // 실제 구현에서는 API 호출
-      // 여기서는 현재 프로필 가져와서 업데이트된 내용으로 반환
-      final userResult = await getCurrentProfile();
+      // 디버그 로그 추가
+      debugPrint('리포지토리 - 프로필 업데이트 시작: $nickname, $intro');
 
-      switch (userResult) {
-        case Success(:final data):
-          final updatedMember = data.copyWith(
-            nickname: nickname,
-            description: intro ?? data.description,
-          );
-          return Result.success(updatedMember);
+      // UserStorage 확장 메서드를 사용하여 프로필 업데이트
+      final success = _userStorage.updateCurrentUserProfile(
+        nickname: nickname,
+        description: intro,
+      );
 
-        case Error(:final failure):
-          return Result.error(failure);
+      // 결과 로그 추가
+      debugPrint('프로필 업데이트 결과: $success');
+
+      if (success) {
+        // 업데이트된 후 새로운 프로필 정보 가져오기
+        final result = await getCurrentProfile();
+
+        // 성공 시 로그 추가 - 패턴 매칭 사용
+        switch (result) {
+          case Success(:final data):
+            debugPrint(
+              '업데이트 후 프로필 조회 성공: ${data.nickname}, ${data.description}',
+            );
+            break;
+          case Error(:final failure):
+            debugPrint('업데이트 후 프로필 조회 실패: ${failure.message}');
+            break;
+        }
+
+        return result;
+      } else {
+        // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
+        final userResult = await getCurrentProfile();
+
+        switch (userResult) {
+          case Success(:final data):
+            final updatedMember = data.copyWith(
+              nickname: nickname,
+              description: intro ?? data.description,
+            );
+
+            // 실패 처리 로그 추가
+            debugPrint(
+              '프로필 업데이트 실패 후 UI 업데이트: ${updatedMember.nickname}, ${updatedMember.description}',
+            );
+
+            return Result.success(updatedMember);
+
+          case Error(:final failure):
+            debugPrint('프로필 업데이트 완전 실패: ${failure.message}');
+            return Result.error(failure);
+        }
       }
-    } catch (e, st) {
+    } catch (e) {
+      // 예외 로그 추가
+      debugPrint('프로필 업데이트 예외 발생: $e');
+
       // 개발/테스트 환경에서는 모의 데이터 반환
       final mockMember = Member(
         id: 'mock-id',
@@ -111,30 +163,61 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
   @override
   Future<Result<Member>> updateProfileImage(XFile image) async {
     try {
-      // 실제 구현에서는 이미지 업로드 API 호출
-      // 여기서는 현재 프로필 가져와서 이미지 경로만 수정하여 반환
-      final userResult = await getCurrentProfile();
+      // 디버그 로그 추가
+      debugPrint('리포지토리 - 이미지 업데이트 시작: ${image.path}');
 
-      switch (userResult) {
-        case Success(:final data):
-          // 로컬 파일 경로를 사용하지만, 실제로는 서버에 업로드 후 URL을 받아야 함
-          // 여기서는 임시 URL 사용
-          final updatedMember = data.copyWith(
-            image: 'https://via.placeholder.com/150',
-          );
-          return Result.success(updatedMember);
+      // UserStorage 확장 메서드를 사용하여 이미지 업데이트
+      final success = _userStorage.updateCurrentUserImage(image.path);
 
-        case Error(:final failure):
-          return Result.error(failure);
+      // 결과 로그 추가
+      debugPrint('이미지 업데이트 결과: $success');
+
+      if (success) {
+        // 업데이트된 후 새로운 프로필 정보 가져오기
+        final result = await getCurrentProfile();
+
+        // 성공 시 로그 추가 - 패턴 매칭 사용
+        switch (result) {
+          case Success(:final data):
+            debugPrint('이미지 업데이트 후 프로필 조회 성공: ${data.image}');
+            break;
+          case Error(:final failure):
+            debugPrint('이미지 업데이트 후 프로필 조회 실패: ${failure.message}');
+            break;
+        }
+
+        return result;
+      } else {
+        // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
+        final userResult = await getCurrentProfile();
+
+        switch (userResult) {
+          case Success(:final data):
+            // 로컬 파일 경로를 사용
+            final updatedMember = data.copyWith(image: image.path);
+
+            // 실패 처리 로그 추가
+            debugPrint('이미지 업데이트 실패 후 UI 업데이트: ${updatedMember.image}');
+
+            return Result.success(updatedMember);
+
+          case Error(:final failure):
+            debugPrint('이미지 업데이트 완전 실패: ${failure.message}');
+            return Result.error(failure);
+        }
       }
-    } catch (e, st) {
+    } catch (e) {
+      // 예외 로그 추가
+      debugPrint('이미지 업데이트 예외 발생: $e');
+
       // 개발/테스트 환경에서는 모의 데이터 반환
       final mockMember = Member(
         id: 'mock-id',
         email: 'user@example.com',
         nickname: '사용자',
         uid: 'mock-uid',
-        image: 'https://via.placeholder.com/150?text=Updated',
+        image: image.path,
+        // 로컬 파일 경로 사용
         description: '이미지 업로드 완료',
       );
 
