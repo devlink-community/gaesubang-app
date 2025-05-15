@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/edit_intro/data/data_sourcce/user_storage_profile_update.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../auth/data/data_source/auth_data_source.dart';
 import '../../../auth/data/data_source/profile_data_source.dart';
@@ -52,8 +53,15 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
 
       // Member 객체로 변환
       final member = userDto.toModelFromProfile(profileDto);
+
+      // 디버그 로그 추가
+      debugPrint('현재 프로필 조회: ${member.nickname}, ${member.description}');
+
       return Result.success(member);
-    } catch (e, st) {
+    } catch (e) {
+      // 에러 로그 추가
+      debugPrint('프로필 조회 실패: $e');
+
       // 에러 발생 시 모의 데이터 반환 (개발/테스트 환경용)
       // 실제 환경에서는 적절한 에러 처리가 필요합니다
       final mockMember = Member(
@@ -78,15 +86,35 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
     String? intro,
   }) async {
     try {
+      // 디버그 로그 추가
+      debugPrint('리포지토리 - 프로필 업데이트 시작: $nickname, $intro');
+
       // UserStorage 확장 메서드를 사용하여 프로필 업데이트
       final success = _userStorage.updateCurrentUserProfile(
         nickname: nickname,
         description: intro,
       );
 
+      // 결과 로그 추가
+      debugPrint('프로필 업데이트 결과: $success');
+
       if (success) {
         // 업데이트된 후 새로운 프로필 정보 가져오기
-        return await getCurrentProfile();
+        final result = await getCurrentProfile();
+
+        // 성공 시 로그 추가 - 패턴 매칭 사용
+        switch (result) {
+          case Success(:final data):
+            debugPrint(
+              '업데이트 후 프로필 조회 성공: ${data.nickname}, ${data.description}',
+            );
+            break;
+          case Error(:final failure):
+            debugPrint('업데이트 후 프로필 조회 실패: ${failure.message}');
+            break;
+        }
+
+        return result;
       } else {
         // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
         final userResult = await getCurrentProfile();
@@ -97,13 +125,23 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
               nickname: nickname,
               description: intro ?? data.description,
             );
+
+            // 실패 처리 로그 추가
+            debugPrint(
+              '프로필 업데이트 실패 후 UI 업데이트: ${updatedMember.nickname}, ${updatedMember.description}',
+            );
+
             return Result.success(updatedMember);
 
           case Error(:final failure):
+            debugPrint('프로필 업데이트 완전 실패: ${failure.message}');
             return Result.error(failure);
         }
       }
-    } catch (e, st) {
+    } catch (e) {
+      // 예외 로그 추가
+      debugPrint('프로필 업데이트 예외 발생: $e');
+
       // 개발/테스트 환경에서는 모의 데이터 반환
       final mockMember = Member(
         id: 'mock-id',
@@ -124,12 +162,30 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
   @override
   Future<Result<Member>> updateProfileImage(XFile image) async {
     try {
+      // 디버그 로그 추가
+      debugPrint('리포지토리 - 이미지 업데이트 시작: ${image.path}');
+
       // UserStorage 확장 메서드를 사용하여 이미지 업데이트
       final success = _userStorage.updateCurrentUserImage(image.path);
 
+      // 결과 로그 추가
+      debugPrint('이미지 업데이트 결과: $success');
+
       if (success) {
         // 업데이트된 후 새로운 프로필 정보 가져오기
-        return await getCurrentProfile();
+        final result = await getCurrentProfile();
+
+        // 성공 시 로그 추가 - 패턴 매칭 사용
+        switch (result) {
+          case Success(:final data):
+            debugPrint('이미지 업데이트 후 프로필 조회 성공: ${data.image}');
+            break;
+          case Error(:final failure):
+            debugPrint('이미지 업데이트 후 프로필 조회 실패: ${failure.message}');
+            break;
+        }
+
+        return result;
       } else {
         // 업데이트 실패 시 기존 프로필 정보를 가져와 업데이트된 값으로 변경 (UI 목적으로)
         final userResult = await getCurrentProfile();
@@ -138,13 +194,21 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
           case Success(:final data):
             // 로컬 파일 경로를 사용
             final updatedMember = data.copyWith(image: image.path);
+
+            // 실패 처리 로그 추가
+            debugPrint('이미지 업데이트 실패 후 UI 업데이트: ${updatedMember.image}');
+
             return Result.success(updatedMember);
 
           case Error(:final failure):
+            debugPrint('이미지 업데이트 완전 실패: ${failure.message}');
             return Result.error(failure);
         }
       }
-    } catch (e, st) {
+    } catch (e) {
+      // 예외 로그 추가
+      debugPrint('이미지 업데이트 예외 발생: $e');
+
       // 개발/테스트 환경에서는 모의 데이터 반환
       final mockMember = Member(
         id: 'mock-id',

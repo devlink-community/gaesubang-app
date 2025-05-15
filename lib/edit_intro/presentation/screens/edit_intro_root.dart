@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../intro/presentation/intro_notifier.dart';
 import '../edit_intro_action.dart';
 import '../edit_intro_notifier.dart';
 
@@ -48,7 +49,11 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
 
           // 약간의 지연 후 화면 전환
           Future.delayed(const Duration(milliseconds: 1500), () {
-            context.push('/profile');
+            // IntroNotifierProvider 무효화 - 프로필 화면이 다시 로드되도록 함
+            ref.invalidate(introNotifierProvider);
+
+            // 프로필 화면으로 이동
+            context.go('/profile');
           });
         } else if (state.isError) {
           // 에러 시 에러 메시지 표시

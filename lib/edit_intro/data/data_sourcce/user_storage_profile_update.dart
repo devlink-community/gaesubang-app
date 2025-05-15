@@ -16,14 +16,23 @@ extension UserStorageProfileUpdate on UserStorage {
       initialize();
 
       final user = currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        debugPrint('현재 로그인된 사용자가 없습니다.');
+        return false;
+      }
 
       // 프로필 정보 가져오기
       final profile = getProfileById(user.id!);
-      if (profile == null) return false;
+      if (profile == null) {
+        debugPrint('현재 사용자의 프로필을 찾을 수 없습니다.');
+        return false;
+      }
 
       // 현재 비밀번호 - 실제로는 보안상 이렇게 하면 안 되지만 목업용으로만 사용
-      final password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
+      String password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
+
+      // 비밀번호 검증은 UserStorage의 private 멤버인 _passwords에 직접 접근할 수 없으므로
+      // validatePassword 메서드를 사용하거나 목업 환경에서는 기본 비밀번호 사용
 
       // 새 UserDto와 ProfileDto 생성
       final updatedUserDto = UserDto(
@@ -42,7 +51,7 @@ extension UserStorageProfileUpdate on UserStorage {
       );
 
       // 현재 로그인 상태 저장
-      final loggedInUserId = this.currentUserId;
+      final loggedInUserId = currentUserId;
 
       // 사용자 정보 업데이트 (addUser는 기존 사용자를 덮어씀)
       addUser(updatedUserDto, updatedProfileDto, password);
@@ -67,14 +76,23 @@ extension UserStorageProfileUpdate on UserStorage {
       initialize();
 
       final user = currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        debugPrint('현재 로그인된 사용자가 없습니다.');
+        return false;
+      }
 
       // 프로필 정보 가져오기
       final profile = getProfileById(user.id!);
-      if (profile == null) return false;
+      if (profile == null) {
+        debugPrint('현재 사용자의 프로필을 찾을 수 없습니다.');
+        return false;
+      }
 
       // 현재 비밀번호 - 실제로는 보안상 이렇게 하면 안 되지만 목업용으로만 사용
-      final password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
+      String password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
+
+      // 비밀번호 검증은 UserStorage의 private 멤버인 _passwords에 직접 접근할 수 없으므로
+      // validatePassword 메서드를 사용하거나 목업 환경에서는 기본 비밀번호 사용
 
       // 새 ProfileDto 생성 (이미지 경로만 변경)
       final updatedProfileDto = ProfileDto(
@@ -85,7 +103,7 @@ extension UserStorageProfileUpdate on UserStorage {
       );
 
       // 현재 로그인 상태 저장
-      final loggedInUserId = this.currentUserId;
+      final loggedInUserId = currentUserId;
 
       // 사용자 정보 업데이트 (addUser는 기존 사용자를 덮어씀)
       addUser(user, updatedProfileDto, password);

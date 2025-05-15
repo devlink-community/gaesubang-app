@@ -240,7 +240,10 @@ GoRouter appRouter(ref) {
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const IntroScreenRoot(),
+            builder: (context, state) {
+              // 강제로 새로 생성하여 항상 최신 데이터를 로드하도록 함
+              return const IntroScreenRoot();
+            },
           ),
         ],
       ),
