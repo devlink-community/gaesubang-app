@@ -22,22 +22,47 @@ class CommunityListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('커뮤니티', style: AppTextStyles.heading6Bold),
-        leadingWidth: 120,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: _buildFilterDropdown(), // 드롭다운 필터로 변경
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            color: AppColorStyles.textPrimary,
-            onPressed: () => onAction(const CommunityListAction.tapSearch()),
+      // Custom AppBar 대신 PreferredSize 위젯 사용
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: SafeArea(
+          child: Container(
+            height: kToolbarHeight,
+            color: Colors.white,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 제목 (중앙에 정렬)
+                const Center(
+                  child: Text('수다방', style: AppTextStyles.heading6Bold),
+                ),
+
+                // 왼쪽과 오른쪽 요소들을 포함하는 Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 필터 드롭다운 (왼쪽에 고정)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16.0),
+                      child: _buildFilterDropdown(),
+                    ),
+
+                    // 빈 공간 (중앙을 비워둠)
+                    const Spacer(),
+
+                    // 검색 아이콘 (오른쪽에 고정)
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      color: AppColorStyles.textPrimary,
+                      onPressed:
+                          () => onAction(const CommunityListAction.tapSearch()),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.white,
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => onAction(const CommunityListAction.tapWrite()),
@@ -45,10 +70,13 @@ class CommunityListScreen extends StatelessWidget {
         elevation: 2,
         child: const Icon(Icons.edit, color: Colors.white),
       ),
-      body: RefreshIndicator(
-        color: AppColorStyles.primary100,
-        onRefresh: () async => onAction(const CommunityListAction.refresh()),
-        child: _buildBody(),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: RefreshIndicator(
+          color: AppColorStyles.primary100,
+          onRefresh: () async => onAction(const CommunityListAction.refresh()),
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -57,29 +85,37 @@ class CommunityListScreen extends StatelessWidget {
   Widget _buildFilterDropdown() {
     return Row(
       children: [
+        // 향상된 드롭다운 메뉴
         PopupMenuButton<CommunityTabType>(
           initialValue: state.currentTab,
           offset: const Offset(0, 40),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: AppColorStyles.gray40, width: 0.5),
           ),
+          elevation: 3,
+          color: Colors.white,
+          position: PopupMenuPosition.under,
           onSelected: (CommunityTabType tab) {
             onAction(CommunityListAction.changeTab(tab));
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColorStyles.primary60.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColorStyles.primary60, width: 1),
-            ),
+
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Icon(
+                  state.currentTab == CommunityTabType.newest
+                      ? Icons.access_time
+                      : Icons.trending_up_rounded,
+                  size: 16,
+                  color: AppColorStyles.primary100,
+                ),
+                const SizedBox(width: 6),
                 Text(
                   state.currentTab == CommunityTabType.newest ? '최신순' : '인기순',
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: AppTextStyles.body1Regular.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppColorStyles.primary100,
                   ),
@@ -87,7 +123,7 @@ class CommunityListScreen extends StatelessWidget {
                 const SizedBox(width: 4),
                 const Icon(
                   Icons.arrow_drop_down,
-                  size: 20,
+                  size: 18,
                   color: AppColorStyles.primary100,
                 ),
               ],
@@ -95,77 +131,117 @@ class CommunityListScreen extends StatelessWidget {
           ),
           itemBuilder:
               (context) => [
+                // 최신순 메뉴 아이템
                 PopupMenuItem<CommunityTabType>(
                   value: CommunityTabType.newest,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  height: 40,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color:
-                            state.currentTab == CommunityTabType.newest
-                                ? AppColorStyles.primary100
-                                : AppColorStyles.gray80,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color:
+                                state.currentTab == CommunityTabType.newest
+                                    ? AppColorStyles.primary100
+                                    : AppColorStyles.gray80,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '최신순',
+                            style: AppTextStyles.body1Regular.copyWith(
+                              fontWeight:
+                                  state.currentTab == CommunityTabType.newest
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                              color:
+                                  state.currentTab == CommunityTabType.newest
+                                      ? AppColorStyles.primary100
+                                      : AppColorStyles.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '최신순',
-                        style: TextStyle(
-                          fontWeight:
-                              state.currentTab == CommunityTabType.newest
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                      if (state.currentTab == CommunityTabType.newest)
+                        Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColorStyles.primary100,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.check,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                      if (state.currentTab == CommunityTabType.newest)
-                        const Spacer()
-                      else
-                        const SizedBox.shrink(),
-                      if (state.currentTab == CommunityTabType.newest)
-                        const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: AppColorStyles.primary100,
-                        )
-                      else
-                        const SizedBox.shrink(),
                     ],
                   ),
                 ),
+                // 구분선 추가
+                const PopupMenuDivider(height: 1),
+                // 인기순 메뉴 아이템
                 PopupMenuItem<CommunityTabType>(
                   value: CommunityTabType.popular,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  height: 40,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        Icons.trending_up_rounded,
-                        size: 16,
-                        color:
-                            state.currentTab == CommunityTabType.popular
-                                ? AppColorStyles.primary100
-                                : AppColorStyles.gray80,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.trending_up_rounded,
+                            size: 16,
+                            color:
+                                state.currentTab == CommunityTabType.popular
+                                    ? AppColorStyles.primary100
+                                    : AppColorStyles.gray80,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '인기순',
+                            style: AppTextStyles.body1Regular.copyWith(
+                              fontWeight:
+                                  state.currentTab == CommunityTabType.popular
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                              color:
+                                  state.currentTab == CommunityTabType.popular
+                                      ? AppColorStyles.primary100
+                                      : AppColorStyles.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '인기순',
-                        style: TextStyle(
-                          fontWeight:
-                              state.currentTab == CommunityTabType.popular
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                      if (state.currentTab == CommunityTabType.popular)
+                        Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColorStyles.primary100,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.check,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                      if (state.currentTab == CommunityTabType.popular)
-                        const Spacer()
-                      else
-                        const SizedBox.shrink(),
-                      if (state.currentTab == CommunityTabType.popular)
-                        const Icon(
-                          Icons.check,
-                          size: 16,
-                          color: AppColorStyles.primary100,
-                        )
-                      else
-                        const SizedBox.shrink(),
                     ],
                   ),
                 ),
