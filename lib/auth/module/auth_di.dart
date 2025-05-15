@@ -9,25 +9,18 @@ import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availabili
 import 'package:devlink_mobile_app/auth/domain/usecase/delete_account_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/reset_password_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_confirm_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_use_case.dart';
-import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
-import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/reset_password_use_case.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../domain/usecase/get_terms_info_use_case.dart';
-import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
-import '../presentation/forgot_password/forgot_password_screen_root.dart';
-import '../presentation/terms/terms_screen_root.dart';
 
 part 'auth_di.g.dart';
 
@@ -64,20 +57,26 @@ SignupUseCase signupUseCase(Ref ref) =>
 
 @riverpod
 CheckNicknameAvailabilityUseCase checkNicknameAvailabilityUseCase(Ref ref) =>
-    CheckNicknameAvailabilityUseCase(repository: ref.watch(authRepositoryProvider));
+    CheckNicknameAvailabilityUseCase(
+      repository: ref.watch(authRepositoryProvider),
+    );
 
 @riverpod
 CheckEmailAvailabilityUseCase checkEmailAvailabilityUseCase(Ref ref) =>
-    CheckEmailAvailabilityUseCase(repository: ref.watch(authRepositoryProvider));
+    CheckEmailAvailabilityUseCase(
+      repository: ref.watch(authRepositoryProvider),
+    );
 
 @riverpod
-ValidateNicknameUseCase validateNicknameUseCase(Ref ref) => ValidateNicknameUseCase();
+ValidateNicknameUseCase validateNicknameUseCase(Ref ref) =>
+    ValidateNicknameUseCase();
 
 @riverpod
 ValidateEmailUseCase validateEmailUseCase(Ref ref) => ValidateEmailUseCase();
 
 @riverpod
-ValidatePasswordUseCase validatePasswordUseCase(Ref ref) => ValidatePasswordUseCase();
+ValidatePasswordUseCase validatePasswordUseCase(Ref ref) =>
+    ValidatePasswordUseCase();
 
 @riverpod
 ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) =>
@@ -103,28 +102,3 @@ GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) =>
 @riverpod
 SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) =>
     SaveTermsAgreementUseCase(repository: ref.watch(authRepositoryProvider));
-
-// ---------------- Route 부분 ----------------
-final List<GoRoute> authRoutes = [
-  GoRoute(path: '/', builder: (context, state) => const LoginScreenRoot()),
-
-  GoRoute(
-    path: '/forget-password',
-    builder: (context, state) => const ForgotPasswordScreenRoot(),
-  ),
-  GoRoute(
-    path: '/sign-up',
-    builder: (context, state) {
-      // Extra 파라미터 처리 (약관 동의 ID)
-      final termsId = state.extra as String?;
-      return SignupScreenRoot(agreedTermsId: termsId);
-    },
-  ),
-  // 약관 화면 라우트 추가
-  GoRoute(path: '/terms', builder: (context, state) => const TermsScreenRoot()),
-];
-
-@riverpod
-GoRouter router(Ref ref) {
-  return GoRouter(initialLocation: '/', routes: [...authRoutes]);
-}
