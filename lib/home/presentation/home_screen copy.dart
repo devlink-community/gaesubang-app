@@ -29,15 +29,19 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       title: Row(
         children: [
-          // 코드 아이콘 대신 로고 이미지 사용
-          SizedBox(
-            width: 60,
-            child: Image.asset(
-              'assets/images/gaesubang_mascot.png',
-              fit: BoxFit.contain,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary80.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.code_rounded,
+              color: AppColorStyles.primary80,
+              size: 20,
             ),
           ),
-
+          const SizedBox(width: 12),
           Text(
             '개수방',
             style: AppTextStyles.heading6Bold.copyWith(
@@ -101,8 +105,8 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 24),
 
-                  // 오늘의 공부 팁 카드
-                  _buildTodayTipCard(),
+                  // 오늘의 할 일 카드
+                  _buildTodayToDoCard(),
 
                   const SizedBox(height: 24),
 
@@ -162,7 +166,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               _buildStatCard('학습 시간', '32시간', Icons.timer_outlined),
               const SizedBox(width: 12),
-              _buildStatCard('연속 출석일', '12일', Icons.task_alt_outlined),
+              _buildStatCard('완료한 과제', '12개', Icons.task_alt_outlined),
               const SizedBox(width: 12),
               _buildStatCard('참여 그룹', '3개', Icons.group_outlined),
             ],
@@ -198,7 +202,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTodayTipCard() {
+  Widget _buildTodayToDoCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -206,12 +210,12 @@ class HomeScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.indigo.shade400, Colors.indigo.shade800],
+          colors: [Colors.teal.shade600, Colors.teal.shade800],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.2),
+            color: Colors.teal.withOpacity(0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -232,7 +236,7 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '오늘의 공부 팁',
+                  '오늘의 과제',
                   style: AppTextStyles.body1Regular.copyWith(
                     color: Colors.white,
                   ),
@@ -246,40 +250,69 @@ class HomeScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.tips_and_updates_outlined,
+                  Icons.assignment_outlined,
                   color: Colors.white,
                   size: 20,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            '집중력 향상을 위한 포모도로 기법',
-            style: AppTextStyles.subtitle1Bold.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '25분 집중, 5분 휴식의 사이클을 반복하는 포모도로 기법은 집중력 향상에 효과적입니다. 4번의 사이클마다 15-30분의 긴 휴식을 취하세요.',
-            style: AppTextStyles.body2Regular.copyWith(
-              color: Colors.white.withOpacity(0.9),
-              height: 1.5,
-            ),
-          ),
           const SizedBox(height: 20),
           Row(
             children: [
-              _buildTipStep('1', '25분 집중'),
-              _buildTipStep('2', '5분 휴식'),
-              _buildTipStep('3', '반복'),
-              _buildTipStep('4', '긴 휴식'),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '남은 과제',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '3개',
+                      style: AppTextStyles.heading6Bold.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withOpacity(0.3),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '완료한 과제',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '8개',
+                      style: AppTextStyles.heading6Bold.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.indigo.shade700,
+              foregroundColor: Colors.teal.shade700,
               backgroundColor: Colors.white,
               elevation: 0,
               minimumSize: const Size(double.infinity, 48),
@@ -287,40 +320,7 @@ class HomeScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text('더 많은 팁 보기', style: AppTextStyles.body1Regular),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTipStep(String number, String text) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            text,
-            style: AppTextStyles.captionRegular.copyWith(
-              color: Colors.white.withOpacity(0.9),
-            ),
-            textAlign: TextAlign.center,
+            child: Text('과제 확인하기', style: AppTextStyles.body1Regular),
           ),
         ],
       ),

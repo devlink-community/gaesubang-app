@@ -60,6 +60,7 @@ class MockHomeDataSourceImpl implements HomeDataSource {
       ),
     ];
 
+    // DiceBear API를 사용하여 그룹 프로필 이미지 생성
     return [
       Group(
         id: 'group1',
@@ -72,7 +73,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         ],
         limitMemberCount: 10,
         owner: mockOwner,
-        imageUrl: 'https://example.com/group1.jpg',
+        // DiceBear API 사용 - Avataaars 스타일
+        imageUrl:
+            'https://api.dicebear.com/6.x/avataaars/png?seed=group1&backgroundColor=b6e3f4',
         createdAt: DateTime.now().subtract(const Duration(days: 30)),
         updatedAt: DateTime.now().subtract(const Duration(days: 5)),
       ),
@@ -87,7 +90,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         ],
         limitMemberCount: 8,
         owner: mockOwner,
-        imageUrl: 'https://example.com/group2.jpg',
+        // DiceBear API 사용 - Bottts 스타일 (로봇 아바타)
+        imageUrl:
+            'https://api.dicebear.com/6.x/bottts/png?seed=group2&backgroundColor=ffdfbf',
         createdAt: DateTime.now().subtract(const Duration(days: 25)),
         updatedAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
@@ -102,9 +107,45 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         ],
         limitMemberCount: 12,
         owner: mockOwner,
-        imageUrl: 'https://example.com/group3.jpg',
+        // DiceBear API 사용 - Micah 스타일
+        imageUrl:
+            'https://api.dicebear.com/6.x/micah/png?seed=group3&backgroundColor=d1d4f9',
         createdAt: DateTime.now().subtract(const Duration(days: 15)),
         updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      Group(
+        id: 'group4',
+        name: '코딩덕후',
+        description: '알고리즘 문제 풀이 그룹입니다.',
+        members: members,
+        hashTags: [
+          HashTag(id: 'tag7', content: '알고리즘'),
+          HashTag(id: 'tag8', content: '코딩테스트'),
+        ],
+        limitMemberCount: 15,
+        owner: mockOwner,
+        // DiceBear API 사용 - Adventurer 스타일
+        imageUrl:
+            'https://api.dicebear.com/6.x/adventurer/png?seed=group4&backgroundColor=c0aede',
+        createdAt: DateTime.now().subtract(const Duration(days: 10)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
+      ),
+      Group(
+        id: 'group5',
+        name: '알고왕',
+        description: '자료구조 스터디 그룹입니다.',
+        members: members,
+        hashTags: [
+          HashTag(id: 'tag9', content: '자료구조'),
+          HashTag(id: 'tag10', content: '컴퓨터공학'),
+        ],
+        limitMemberCount: 10,
+        owner: mockOwner,
+        // DiceBear API 사용 - Lorelei 스타일
+        imageUrl:
+            'https://api.dicebear.com/6.x/lorelei/png?seed=group5&backgroundColor=ffd5dc',
+        createdAt: DateTime.now().subtract(const Duration(days: 20)),
+        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
       ),
     ];
   }
@@ -120,19 +161,24 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         email: 'author1@example.com',
         nickname: '개수발',
         uid: 'author1-uid',
-        image: 'https://example.com/avatar1.jpg',
+        // DiceBear API를 사용하여 저자 프로필 이미지 생성
+        image: 'https://api.dicebear.com/6.x/micah/png?seed=author1',
       ),
       Member(
         id: 'author2',
         email: 'author2@example.com',
-        nickname: '문신용',
+        nickname: '문성용',
         uid: 'author2-uid',
+        // DiceBear API를 사용하여 저자 프로필 이미지 생성
+        image: 'https://api.dicebear.com/6.x/micah/png?seed=author2',
       ),
       Member(
         id: 'author3',
         email: 'author3@example.com',
         nickname: '강지원',
         uid: 'author3-uid',
+        // DiceBear API를 사용하여 저자 프로필 이미지 생성
+        image: 'https://api.dicebear.com/6.x/micah/png?seed=author3',
       ),
     ];
 
@@ -142,11 +188,13 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         title: '개발팀 앱 제작',
         content: '플러터로 개발하는 방법을 공유합니다.',
         member: mockAuthors[0],
-        userProfileImageUrl: 'https://example.com/avatar1.jpg',
+        // DiceBear API를 사용한 이미지 URL
+        userProfileImageUrl:
+            'https://api.dicebear.com/6.x/micah/png?seed=author1',
         boardType: BoardType.free,
         createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
-        hashTags: ['텀프로젝트', 'flutter'], // 문자열 리스트로 변경
-        imageUrls: ['https://example.com/post1.jpg'], // 문자열 리스트로 변경
+        hashTags: ['텀프로젝트', 'flutter'],
+        imageUrls: ['https://picsum.photos/id/237/400/300'], // Lorem Picsum 사용
         like: List.generate(
           7,
           (index) => Like(
@@ -160,7 +208,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
           (index) => Comment(
             userId: 'user$index',
             userName: '사용자$index',
-            userProfileImage: 'https://example.com/avatar$index.jpg',
+            // DiceBear API를 사용한 이미지 URL
+            userProfileImage:
+                'https://api.dicebear.com/6.x/micah/png?seed=user$index',
             text: '댓글 내용 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index)),
           ),
@@ -171,25 +221,29 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         title: '이것은 인기 게시글 입니다.',
         content: '인기 게시글 내용입니다.',
         member: mockAuthors[1],
-        userProfileImageUrl: 'https://example.com/default-profile.jpg',
+        // DiceBear API를 사용한 이미지 URL
+        userProfileImageUrl:
+            'https://api.dicebear.com/6.x/micah/png?seed=author2',
         boardType: BoardType.free,
         createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
-        hashTags: ['인기글'], // 문자열 리스트로 변경
-        imageUrls: ['https://picsum.photos/200/300'], // 문자열 리스트로 변경
+        hashTags: ['인기글'],
+        imageUrls: ['https://picsum.photos/id/1/400/300'], // Lorem Picsum 사용
         like: List.generate(
           4,
           (index) => Like(
-            userId: 'user$index',
-            userName: '사용자$index',
+            userId: 'user${index + 10}',
+            userName: '사용자${index + 10}',
             timestamp: DateTime.now().subtract(Duration(hours: index + 2)),
           ),
         ),
         comment: List.generate(
           3,
           (index) => Comment(
-            userId: 'user$index',
-            userName: '사용자$index',
-            userProfileImage: 'https://example.com/default-profile.jpg',
+            userId: 'user${index + 10}',
+            userName: '사용자${index + 10}',
+            // DiceBear API를 사용한 이미지 URL
+            userProfileImage:
+                'https://api.dicebear.com/6.x/micah/png?seed=user${index + 10}',
             text: '댓글 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index + 2)),
           ),
@@ -200,28 +254,32 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         title: '개발자커뮤니티 앱 제작',
         content: '함께 개발할 분을 찾습니다.',
         member: mockAuthors[2],
-        userProfileImageUrl: 'https://example.com/default-profile.jpg',
+        // DiceBear API를 사용한 이미지 URL
+        userProfileImageUrl:
+            'https://api.dicebear.com/6.x/micah/png?seed=author3',
         boardType: BoardType.qna,
         createdAt: DateTime.now().subtract(const Duration(days: 3, hours: 12)),
-        hashTags: ['텀프로젝트', 'flutter'], // 문자열 리스트로 변경
-        imageUrls: ['https://picsum.photos/200/300'], // 문자열 리스트로 변경
+        hashTags: ['텀프로젝트', 'flutter'],
+        imageUrls: ['https://picsum.photos/id/20/400/300'], // Lorem Picsum 사용
         like: List.generate(
           7,
           (index) => Like(
-            userId: 'user$index',
-            userName: '사용자$index',
+            userId: 'user${index + 20}',
+            userName: '사용자${index + 20}',
             timestamp: DateTime.now().subtract(Duration(hours: index + 5)),
           ),
         ),
         comment: List.generate(
           7,
           (index) => Comment(
-            userId: 'user$index',
-            userName: '사용자$index',
-            userProfileImage: 'https://example.com/default-profile.jpg',
+            userId: 'user${index + 20}',
+            userName: '사용자${index + 20}',
+            // DiceBear API를 사용한 이미지 URL
+            userProfileImage:
+                'https://api.dicebear.com/6.x/micah/png?seed=user${index + 20}',
             text: '댓글입니다 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index + 5)),
-            likeCount: index, // likeCount 추가
+            likeCount: index,
           ),
         ),
       ),
