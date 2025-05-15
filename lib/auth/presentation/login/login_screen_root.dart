@@ -20,8 +20,8 @@ class LoginScreenRoot extends ConsumerWidget {
     ref.listen(loginNotifierProvider, (previous, next) {
       final loginResult = next.loginUserResult;
       if (loginResult?.hasValue == true) {
+        debugPrint('로그인 성공 - 홈 화면으로 이동');
         context.go('/home');
-        ref.read(loginNotifierProvider.notifier).logout();
       }
 
       // 에러 발생 시 스낵바로 표시
@@ -38,10 +38,7 @@ class LoginScreenRoot extends ConsumerWidget {
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
       }
     });
@@ -52,10 +49,13 @@ class LoginScreenRoot extends ConsumerWidget {
         switch (action) {
           case NavigateToForgetPassword():
             context.push('/forget-password');
+            break;
           case NavigateToSignUp():
             context.push('/sign-up');
+            break;
           case LoginPressed():
             await notifier.onAction(action);
+            break;
         }
       },
     );

@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_notifier.g.dart';
@@ -21,12 +22,15 @@ class LoginNotifier extends _$LoginNotifier {
     switch (action) {
       case LoginPressed(:final email, :final password):
         await _handleLogin(email, password);
+        break;
 
       case NavigateToForgetPassword():
-      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        break;
 
       case NavigateToSignUp():
-      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        break;
     }
   }
 
@@ -40,6 +44,11 @@ class LoginNotifier extends _$LoginNotifier {
       email: email, // 원본 이메일 그대로 전달
       password: password,
     );
+
+    debugPrint('로그인 결과: ${asyncResult.hasValue ? '성공' : '실패'}');
+    if (asyncResult.hasError) {
+      debugPrint('로그인 에러: ${asyncResult.error}');
+    }
 
     state = state.copyWith(loginUserResult: asyncResult);
   }
