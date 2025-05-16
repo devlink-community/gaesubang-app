@@ -60,7 +60,7 @@ class SignupNotifier extends _$SignupNotifier {
         );
 
       case EmailChanged(:final email):
-      // 사용자 편의성을 위해 입력 중에는 원래 입력값 유지
+      // 사용자 편의성을 위해 입력 중에는 유효성 검사 없이 원래 입력값만 유지
         state = state.copyWith(
           email: email,
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
@@ -107,15 +107,13 @@ class SignupNotifier extends _$SignupNotifier {
         }
 
       case EmailFocusChanged(:final hasFocus):
-        if (!hasFocus && state.email.isNotEmpty) {
-          // 포커스를 잃을 때만 유효성 검증
-          // 이메일 주소는 데이터 저장/조회 시 소문자로 변환되지만
-          // 화면 표시는 사용자 입력 그대로 유지
+        if (!hasFocus) {
+          // 포커스를 잃을 때만 유효성 검증 (빈 값도 검증)
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(emailError: error);
 
-          // 이메일이 유효하면 중복 확인
-          if (error == null) {
+          // 이메일이 유효하면 중복 확인, 유효하지 않으면 중복 확인 스킵
+          if (error == null && state.email.isNotEmpty) {
             await _performEmailAvailabilityCheck();
           }
         }
@@ -142,7 +140,13 @@ class SignupNotifier extends _$SignupNotifier {
         await _performNicknameAvailabilityCheck();
 
       case CheckEmailAvailability():
-        await _performEmailAvailabilityCheck();
+      // 먼저 이메일 형식 유효성 검사 후 중복 확인
+        final error = await _validateEmailUseCase.execute(state.email);
+        if (error != null) {
+          state = state.copyWith(emailError: error);
+        } else {
+          await _performEmailAvailabilityCheck();
+        }
 
     // 회원가입 제출 액션 처리
       case Submit():
