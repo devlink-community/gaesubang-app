@@ -39,6 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     // 로딩 중이면 로딩 인디케이터 표시
     final loading = widget.state.loginUserResult?.isLoading ?? false;
+    // 오류 메시지 가져오기
+    final errorMessage = widget.state.loginErrorMessage;
 
     return Scaffold(
       body: SafeArea(
@@ -65,8 +67,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextButton(
                             onPressed:
                                 () => widget.onAction(
-                                  const LoginAction.navigateToSignUp(),
-                                ),
+                              const LoginAction.navigateToSignUp(),
+                            ),
                             child: Text(
                               '회원가입',
                               style: AppTextStyles.body1Regular.copyWith(
@@ -100,8 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: TextButton(
                           onPressed:
                               () => widget.onAction(
-                                const LoginAction.navigateToForgetPassword(),
-                              ),
+                            const LoginAction.navigateToForgetPassword(),
+                          ),
                           child: Text(
                             '비밀번호를 잊어버리셨나요?',
                             style: AppTextStyles.body2Regular.copyWith(
@@ -110,6 +112,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+
+                      // 오류 메시지 표시 영역 추가
+                      if (errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColorStyles.error.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColorStyles.error.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColorStyles.error,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  errorMessage,
+                                  style: AppTextStyles.body2Regular.copyWith(
+                                    color: AppColorStyles.error,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       // 추가 여백
                       const SizedBox(height: 20),
                     ],
@@ -124,11 +160,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   text: '로그인',
                   onPressed:
                       () => widget.onAction(
-                        LoginAction.loginPressed(
-                          email: emailController.text,
-                          password: passwordController.text,
-                        ),
-                      ),
+                    LoginAction.loginPressed(
+                      email: emailController.text,
+                      password: passwordController.text,
+                    ),
+                  ),
                   isLoading: loading,
                 ),
               ),
