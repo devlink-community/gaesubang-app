@@ -48,12 +48,6 @@ class HomeScreen extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search, size: 26),
-          color: Colors.grey[700],
-          tooltip: '검색',
-          onPressed: () {},
-        ),
-        IconButton(
           icon: Stack(
             alignment: Alignment.topRight,
             children: [

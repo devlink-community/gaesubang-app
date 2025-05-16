@@ -29,14 +29,11 @@ import '../../setting/presentation/forgot_password_screen_root_2.dart';
 
 part 'app_router.g.dart';
 
-// 바텀 네비게이션 바가 없어야 하는 경로 목록
-final _pathsWithoutBottomNav = ['/community/write', '/group/create'];
-
 // 개발용 강제 로그인 상태를 관리하는 Provider
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
+  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작
 
   void toggle() => state = !state;
   void enable() => state = true;
@@ -95,31 +92,9 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const TermsScreenRoot(),
       ),
 
-      // === 쉘 라우트 (모든 화면을 포함) ===
+      // === 네비게이션 바 있는 메인 쉘 라우트 (메인 탭 화면들만 포함) ===
       ShellRoute(
         builder: (context, state, child) {
-          // 현재 경로
-          final String path = state.uri.path;
-
-          // 바텀 네비게이션 바 표시 여부 결정
-          final shouldShowBottomNav =
-              !_pathsWithoutBottomNav.any((p) => path.startsWith(p));
-
-          // 현재 활성화된 탭 인덱스 계산
-          int currentIndex = 0; // 기본값 홈
-
-          if (path.startsWith('/community') &&
-              !path.contains('/write') &&
-              !path.contains('/search')) {
-            currentIndex = 1;
-          } else if (path.startsWith('/group') &&
-              !path.contains('/create') &&
-              !path.contains('/search')) {
-            currentIndex = 3; // 그룹을 인덱스 3으로 변경
-          } else if (path.startsWith('/profile')) {
-            currentIndex = 4;
-          }
-
           // 프로필 이미지
           final userStorage = UserStorage.instance;
           final currentUser = userStorage.currentUser;
@@ -136,42 +111,51 @@ GoRouter appRouter(AppRouterRef ref) {
             }
           }
 
+          // 현재 활성화된 탭 인덱스 계산
+          int currentIndex = 0; // 기본값 홈
+          final String path = state.uri.path;
+
+          if (path == '/community') {
+            currentIndex = 1;
+          } else if (path == '/group') {
+            currentIndex = 3; // 그룹을 인덱스 3으로 변경
+          } else if (path == '/profile') {
+            currentIndex = 4;
+          }
+
           return Scaffold(
             body: child,
-            bottomNavigationBar:
-                shouldShowBottomNav
-                    ? AppBottomNavigationBar(
-                      currentIndex: currentIndex,
-                      profileImageUrl: profileImageUrl,
-                      onTap: (index) {
-                        switch (index) {
-                          case 0:
-                            context.go('/home');
-                            break;
-                          case 1:
-                            context.go('/community');
-                            break;
-                          case 2:
-                            // 가운데 버튼은 드롭다운 메뉴를 표시
-                            break;
-                          case 3:
-                            context.go('/group');
-                            break;
-                          case 4:
-                            context.go('/profile');
-                            break;
-                        }
-                      },
-                      onCreatePost: () {
-                        // 게시글 작성 화면으로 이동
-                        context.push('/community/write');
-                      },
-                      onCreateGroup: () {
-                        // 그룹 생성 화면으로 이동
-                        context.push('/group/create');
-                      },
-                    )
-                    : null,
+            bottomNavigationBar: AppBottomNavigationBar(
+              currentIndex: currentIndex,
+              profileImageUrl: profileImageUrl,
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    context.go('/home');
+                    break;
+                  case 1:
+                    context.go('/community');
+                    break;
+                  case 2:
+                    // 가운데 버튼은 드롭다운 메뉴를 표시
+                    break;
+                  case 3:
+                    context.go('/group');
+                    break;
+                  case 4:
+                    context.go('/profile');
+                    break;
+                }
+              },
+              onCreatePost: () {
+                // 게시글 작성 화면으로 이동
+                context.push('/community/write');
+              },
+              onCreateGroup: () {
+                // 그룹 생성 화면으로 이동
+                context.push('/group/create');
+              },
+            ),
           );
         },
         routes: [
@@ -180,114 +164,96 @@ GoRouter appRouter(AppRouterRef ref) {
             path: '/home',
             builder: (context, state) => const HomeScreenRoot(),
           ),
-
-          // === 커뮤니티 탭 ===
+          // === 커뮤니티 목록 탭 ===
           GoRoute(
             path: '/community',
             builder: (context, state) => const CommunityListScreenRoot(),
-            routes: [
-              // 게시글 작성
-              GoRoute(
-                path: 'write',
-                builder: (context, state) => const CommunityWriteScreenRoot(),
-              ),
-              // 커뮤니티 검색 화면
-              GoRoute(
-                path: 'search',
-                builder: (context, state) => const CommunitySearchScreenRoot(),
-              ),
-              // 커뮤니티 상세 페이지
-              GoRoute(
-                path: ':id',
-                builder:
-                    (context, state) => CommunityDetailScreenRoot(
-                      postId: state.pathParameters['id']!,
-                    ),
-              ),
-            ],
           ),
-
-          // === 그룹 탭 ===
+          // === 그룹 목록 탭 ===
           GoRoute(
             path: '/group',
             builder: (context, state) => const GroupListScreenRoot(),
-            routes: [
-              // 그룹 생성
-              GoRoute(
-                path: 'create',
-                builder: (context, state) => const GroupCreateScreenRoot(),
-              ),
-              // 그룹 검색
-              GoRoute(
-                path: 'search',
-                builder: (context, state) => const GroupSearchScreenRoot(),
-              ),
-              // 그룹 상세
-              GoRoute(
-                path: ':id',
-                builder:
-                    (context, state) => GroupTimerScreenRoot(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-              // 그룹 출석
-              GoRoute(
-                path: ':id/attendance',
-                builder:
-                    (context, state) => MockGroupAttendanceScreen(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-              // 그룹 설정
-              GoRoute(
-                path: ':id/settings',
-                builder:
-                    (context, state) => GroupSettingsScreenRoot(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-            ],
           ),
-
-          // === 알림 탭 ===
-          GoRoute(
-            path: '/notifications',
-            builder: (context, state) => const NotificationScreenRoot(),
-          ),
-
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
             builder: (context, state) => const IntroScreenRoot(),
           ),
-
-          // === 프로필 관련 독립 라우트 ===
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreenRoot(),
-          ),
-          GoRoute(
-            path: '/edit-profile',
-            builder: (context, state) => const EditIntroRoot(),
-          ),
-          GoRoute(
-            path: '/forgot-password-2',
-            builder: (context, state) => const ForgotPasswordScreenRoot2(),
-          ),
-          // demo router
-          GoRoute(
-            path: '/profile-edit-demo',
-            builder: (context, state) => const ProfileEditDemoScreen(),
-          ),
-
-          // === 유저 프로필 보기 ===
-          GoRoute(
-            path: '/user/:id/profile',
-            builder:
-                (context, state) =>
-                    MockUserProfileScreen(userId: state.pathParameters['id']!),
-          ),
         ],
+      ),
+
+      // === 쉘 밖에 있는 페이지들 (바텀 네비게이션 바 없음) ===
+
+      // --- 커뮤니티 관련 디테일/액션 페이지들 ---
+      GoRoute(
+        path: '/community/write',
+        builder: (context, state) => const CommunityWriteScreenRoot(),
+      ),
+      GoRoute(
+        path: '/community/search',
+        builder: (context, state) => const CommunitySearchScreenRoot(),
+      ),
+      GoRoute(
+        path: '/community/:id',
+        builder:
+            (context, state) =>
+                CommunityDetailScreenRoot(postId: state.pathParameters['id']!),
+      ),
+
+      // --- 그룹 관련 디테일/액션 페이지들 ---
+      GoRoute(
+        path: '/group/create',
+        builder: (context, state) => const GroupCreateScreenRoot(),
+      ),
+      GoRoute(
+        path: '/group/search',
+        builder: (context, state) => const GroupSearchScreenRoot(),
+      ),
+      GoRoute(
+        path: '/group/:id',
+        builder:
+            (context, state) =>
+                GroupTimerScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/attendance',
+        builder:
+            (context, state) =>
+                MockGroupAttendanceScreen(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/settings',
+        builder:
+            (context, state) =>
+                GroupSettingsScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+
+      // --- 기타 페이지들 ---
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationScreenRoot(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreenRoot(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditIntroRoot(),
+      ),
+      GoRoute(
+        path: '/forgot-password-2',
+        builder: (context, state) => const ForgotPasswordScreenRoot2(),
+      ),
+      GoRoute(
+        path: '/profile-edit-demo',
+        builder: (context, state) => const ProfileEditDemoScreen(),
+      ),
+      GoRoute(
+        path: '/user/:id/profile',
+        builder:
+            (context, state) =>
+                MockUserProfileScreen(userId: state.pathParameters['id']!),
       ),
     ],
 

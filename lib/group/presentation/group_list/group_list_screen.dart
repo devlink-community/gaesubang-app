@@ -3,7 +3,7 @@ import 'package:devlink_mobile_app/core/component/gradient_app_bar.dart';
 import 'package:devlink_mobile_app/core/component/search_bar_component.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/group/presentation/group_list/components/group_list_skeleton.dart';
+import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list_item.dart';
@@ -337,7 +337,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
             child: Column(
               children: [
                 // 스켈레톤 UI 추가
-                const GroupListSkeleton(itemCount: 3),
+                const ListSkeleton(itemCount: 3),
 
                 // 하단 로딩 표시 (선택적)
                 Container(
