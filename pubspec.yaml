@@ -50,6 +50,7 @@ dependencies:
   firebase_storage: ^12.4.5
   firebase_messaging: ^15.2.5
   flutter_local_notifications: ^19.2.0
+  line_icons: ^2.0.3
 
 dev_dependencies:
   flutter_test:

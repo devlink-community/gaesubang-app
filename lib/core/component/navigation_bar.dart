@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:line_icons/line_icons.dart';
 
 import '../styles/app_color_styles.dart';
 import '../styles/app_text_styles.dart';
@@ -127,11 +128,11 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildNavItem(0, 'assets/images/navi1.png'),
-                      _buildNavItem(1, 'assets/images/navi2.png'),
+                      _buildNavItem(0, LineIcons.paw),
+                      _buildNavItem(1, LineIcons.comment),
                       // 중앙 버튼 - 수정된 부분
                       _buildCenterButton(),
-                      _buildNavItem(3, 'assets/images/navi3.png'),
+                      _buildNavItem(3, LineIcons.userFriends),
                       _buildProfileItem(4),
                     ],
                   ),
@@ -180,14 +181,13 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     );
   }
 
-  Widget _buildNavItem(int index, String imagePath) {
+  Widget _buildNavItem(int index, IconData iconData) {
     final isSelected = widget.currentIndex == index;
     return InkWell(
       onTap: () => widget.onTap(index),
-      child: Image.asset(
-        imagePath,
-        width: 26,
-        height: 26,
+      child: Icon(
+        iconData,
+        size: 26,
         color: isSelected ? AppColorStyles.primary100 : Colors.grey,
       ),
     );
