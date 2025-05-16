@@ -1,10 +1,7 @@
 // lib/auth/presentation/signup/signup_notifier.dart
 
-import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_case.dart';
@@ -14,6 +11,8 @@ import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -60,20 +59,23 @@ class SignupNotifier extends _$SignupNotifier {
           nickname: nickname,
           nicknameError: null, // 사용자가 입력 중이면 에러 메시지 제거
           nicknameSuccess: null, // 사용자가 입력 중이면 성공 메시지도 제거
+          formErrorMessage: null, // 통합 오류 메시지도 제거
         );
 
       case EmailChanged(:final email):
-      // 사용자 편의성을 위해 입력 중에는 유효성 검사 없이 원래 입력값만 유지
+      // 사용자 편의성을 위해 입력 중에는 원래 입력값 유지
         state = state.copyWith(
           email: email,
           emailError: null, // 사용자가 입력 중이면 에러 메시지 제거
           emailSuccess: null, // 사용자가 입력 중이면 성공 메시지도 제거
+          formErrorMessage: null, // 통합 오류 메시지도 제거
         );
 
       case PasswordChanged(:final password):
         state = state.copyWith(
           password: password,
           passwordError: null, // 사용자가 입력 중이면 에러 메시지 제거
+          formErrorMessage: null, // 통합 오류 메시지도 제거
           // 비밀번호가 변경되면 비밀번호 확인 유효성도 다시 검증
           passwordConfirmError:
           state.passwordConfirm.isEmpty
@@ -88,12 +90,14 @@ class SignupNotifier extends _$SignupNotifier {
         state = state.copyWith(
           passwordConfirm: passwordConfirm,
           passwordConfirmError: null, // 사용자가 입력 중이면 에러 메시지 제거
+          formErrorMessage: null, // 통합 오류 메시지도 제거
         );
 
       case AgreeToTermsChanged(:final agree):
         state = state.copyWith(
           agreeToTerms: agree,
           termsError: null, // 사용자가 체크하면 에러 메시지 제거
+          formErrorMessage: null, // 통합 오류 메시지도 제거
         );
 
     // 포커스 변경 액션 처리 (필드 유효성 검증)
@@ -101,7 +105,7 @@ class SignupNotifier extends _$SignupNotifier {
         if (!hasFocus && state.nickname.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
           final error = await _validateNicknameUseCase.execute(state.nickname);
-          state = state.copyWith(nicknameError: error);
+          state = state.copyWith(nicknameError: error, formErrorMessage: null);
 
           // 닉네임이 유효하면 중복 확인
           if (error == null) {
@@ -110,13 +114,15 @@ class SignupNotifier extends _$SignupNotifier {
         }
 
       case EmailFocusChanged(:final hasFocus):
-        if (!hasFocus) {
-          // 포커스를 잃을 때만 유효성 검증 (빈 값도 검증)
+        if (!hasFocus && state.email.isNotEmpty) {
+          // 포커스를 잃을 때만 유효성 검증
+          // 이메일 주소는 데이터 저장/조회 시 소문자로 변환되지만
+          // 화면 표시는 사용자 입력 그대로 유지
           final error = await _validateEmailUseCase.execute(state.email);
-          state = state.copyWith(emailError: error);
+          state = state.copyWith(emailError: error, formErrorMessage: null);
 
-          // 이메일이 유효하면 중복 확인, 유효하지 않으면 중복 확인 스킵
-          if (error == null && state.email.isNotEmpty) {
+          // 이메일이 유효하면 중복 확인
+          if (error == null) {
             await _performEmailAvailabilityCheck();
           }
         }
@@ -125,7 +131,7 @@ class SignupNotifier extends _$SignupNotifier {
         if (!hasFocus && state.password.isNotEmpty) {
           // 포커스를 잃을 때만 유효성 검증
           final error = await _validatePasswordUseCase.execute(state.password);
-          state = state.copyWith(passwordError: error);
+          state = state.copyWith(passwordError: error, formErrorMessage: null);
         }
 
       case PasswordConfirmFocusChanged(:final hasFocus):
@@ -135,7 +141,7 @@ class SignupNotifier extends _$SignupNotifier {
             state.password,
             state.passwordConfirm,
           );
-          state = state.copyWith(passwordConfirmError: error);
+          state = state.copyWith(passwordConfirmError: error, formErrorMessage: null);
         }
 
     // 중복 확인 액션 처리
@@ -143,13 +149,7 @@ class SignupNotifier extends _$SignupNotifier {
         await _performNicknameAvailabilityCheck();
 
       case CheckEmailAvailability():
-      // 먼저 이메일 형식 유효성 검사 후 중복 확인
-        final error = await _validateEmailUseCase.execute(state.email);
-        if (error != null) {
-          state = state.copyWith(emailError: error);
-        } else {
-          await _performEmailAvailabilityCheck();
-        }
+        await _performEmailAvailabilityCheck();
 
     // 회원가입 제출 액션 처리
       case Submit():
@@ -168,6 +168,7 @@ class SignupNotifier extends _$SignupNotifier {
     state = state.copyWith(
       nicknameAvailability: const AsyncValue.loading(),
       nicknameSuccess: null, // 로딩 시작할 때 성공 메시지 초기화
+      formErrorMessage: null, // 통합 오류 메시지도 초기화
     );
 
     final result = await _checkNicknameAvailabilityUseCase.execute(
@@ -181,6 +182,7 @@ class SignupNotifier extends _$SignupNotifier {
         nicknameAvailability: result,
         nicknameError: null,
         nicknameSuccess: '사용 가능한 닉네임입니다',
+        formErrorMessage: null,
       );
     } else {
       // 사용 불가능하거나 에러가 발생한 경우
@@ -192,6 +194,7 @@ class SignupNotifier extends _$SignupNotifier {
         nicknameAvailability: result,
         nicknameError: errorMessage,
         nicknameSuccess: null,
+        formErrorMessage: null,
       );
     }
   }
@@ -201,6 +204,7 @@ class SignupNotifier extends _$SignupNotifier {
     state = state.copyWith(
       emailAvailability: const AsyncValue.loading(),
       emailSuccess: null, // 로딩 시작할 때 성공 메시지 초기화
+      formErrorMessage: null, // 통합 오류 메시지도 초기화
     );
 
     // 데이터 비교를 위해 소문자로 변환하여 중복 체크
@@ -213,6 +217,7 @@ class SignupNotifier extends _$SignupNotifier {
         emailAvailability: result,
         emailError: null,
         emailSuccess: '사용 가능한 이메일입니다',
+        formErrorMessage: null,
       );
     } else {
       // 사용 불가능하거나 에러가 발생한 경우
@@ -224,12 +229,16 @@ class SignupNotifier extends _$SignupNotifier {
         emailAvailability: result,
         emailError: errorMessage,
         emailSuccess: null,
+        formErrorMessage: null,
       );
     }
   }
 
   // 회원가입 실행
   Future<void> _performSignup() async {
+    // 폼 전체 오류 메시지 초기화
+    state = state.copyWith(formErrorMessage: null);
+
     // 1. 모든 필드의 유효성 검증
     final nicknameError = await _validateNicknameUseCase.execute(
       state.nickname,
@@ -255,12 +264,15 @@ class SignupNotifier extends _$SignupNotifier {
       termsError: termsError,
     );
 
-    // 유효성 검증 오류가 있으면 회원가입 진행 중단
+    // 유효성 검증 오류가 있으면 통합 오류 메시지 설정 및 회원가입 진행 중단
     if (nicknameError != null ||
         emailError != null ||
         passwordError != null ||
         passwordConfirmError != null ||
         termsError != null) {
+      state = state.copyWith(
+        formErrorMessage: '입력 정보를 확인해주세요', // 통합 오류 메시지 설정
+      );
       return;
     }
 
@@ -276,57 +288,17 @@ class SignupNotifier extends _$SignupNotifier {
     // 중복 확인 결과가 유효하지 않으면 회원가입 진행 중단
     if (state.nicknameAvailability?.value != true ||
         state.emailAvailability?.value != true) {
+      state = state.copyWith(
+        formErrorMessage: '닉네임 또는 이메일 중복을 확인해주세요', // 통합 오류 메시지 설정
+      );
       return;
     }
 
-    // 3. 약관 동의 처리
-    // 약관 동의 체크는 했지만 약관 ID가 없는 경우 (약관 페이지 방문 없이 체크한 경우)
-    String? termsId = state.agreedTermsId;
-    if (state.agreeToTerms && termsId == null) {
-      // 약관 ID 생성 및 필수 약관 동의 처리
-      final getTermsInfoUseCase = ref.read(getTermsInfoUseCaseProvider);
-      final saveTermsAgreementUseCase = ref.read(saveTermsAgreementUseCaseProvider);
-
-      // 새 약관 정보 가져오기
-      final termsInfoResult = await getTermsInfoUseCase.execute(null);
-
-      if (termsInfoResult.hasValue && termsInfoResult.value != null) {
-        // 새 약관에 동의 표시
-        final termsAgreement = TermsAgreement(
-          id: termsInfoResult.value!.id,
-          isAllAgreed: true,
-          isServiceTermsAgreed: true,
-          isPrivacyPolicyAgreed: true,
-          isMarketingAgreed: true, // 마케팅 동의도 기본으로 포함
-          agreedAt: DateTime.now(),
-        );
-
-        // 약관 동의 저장
-        final saveResult = await saveTermsAgreementUseCase.execute(termsAgreement);
-
-        if (saveResult.hasValue) {
-          // 저장된 약관 ID 설정
-          termsId = saveResult.value?.id;
-          // 상태 업데이트
-          state = state.copyWith(agreedTermsId: termsId);
-        } else if (saveResult.hasError) {
-          // 약관 저장 실패 시 오류 표시
-          state = state.copyWith(
-            termsError: '약관 동의 정보를 저장할 수 없습니다. 다시 시도해주세요.',
-          );
-          return;
-        }
-      } else if (termsInfoResult.hasError) {
-        // 약관 정보 로드 실패 시 오류 표시
-        state = state.copyWith(
-          termsError: '약관 정보를 불러올 수 없습니다. 다시 시도해주세요.',
-        );
-        return;
-      }
-    }
-
-    // 4. 회원가입 실행
-    state = state.copyWith(signupResult: const AsyncValue.loading());
+    // 3. 회원가입 실행
+    state = state.copyWith(
+      signupResult: const AsyncValue.loading(),
+      formErrorMessage: null, // 로딩 시작 시 오류 메시지 초기화
+    );
 
     // 회원가입 시 이메일은 그대로 전달
     // 소문자 변환은 Repository/DataSource 레벨에서 처리
@@ -334,10 +306,46 @@ class SignupNotifier extends _$SignupNotifier {
       email: state.email,
       password: state.password,
       nickname: state.nickname,
-      agreedTermsId: termsId, // 업데이트된 약관 동의 ID 전달
+      agreedTermsId: state.agreedTermsId, // 약관 동의 ID 전달
     );
 
-    state = state.copyWith(signupResult: result);
+    // 회원가입 결과 처리
+    if (result.hasError) {
+      final error = result.error;
+      String errorMessage = '회원가입에 실패했습니다';
+
+      // 에러 타입에 따른 사용자 친화적 메시지 처리
+      if (error is Failure) {
+        switch (error.type) {
+          case FailureType.validation:
+            errorMessage = error.message;
+            break;
+          case FailureType.network:
+            errorMessage = '네트워크 연결을 확인해주세요';
+            break;
+          case FailureType.timeout:
+            errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+            break;
+          default:
+            errorMessage = error.message;
+        }
+      }
+
+      // 디버그 정보 로깅
+      debugPrint('회원가입 에러: $error');
+
+      // 오류 메시지와 함께 상태 업데이트
+      state = state.copyWith(
+        signupResult: result,
+        formErrorMessage: errorMessage,
+      );
+    } else {
+      // 성공 시 오류 메시지 제거 및 결과 업데이트
+      state = state.copyWith(
+        signupResult: result,
+        formErrorMessage: null,
+      );
+    }
   }
 
   // 폼 리셋 (회원가입 성공 후 호출)
@@ -347,7 +355,10 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 약관 동의 ID 설정
   void setAgreedTermsId(String termsId) {
-    state = state.copyWith(agreedTermsId: termsId);
+    state = state.copyWith(
+      agreedTermsId: termsId,
+      formErrorMessage: null, // ID 설정 시 오류 메시지 초기화
+    );
   }
 
   // 약관 동의 상태 업데이트
@@ -359,6 +370,7 @@ class SignupNotifier extends _$SignupNotifier {
       agreedTermsId: agreedTermsId,
       isTermsAgreed: isAgreed,
       agreeToTerms: isAgreed, // 약관 동의 체크박스도 함께 업데이트
+      formErrorMessage: null, // 상태 업데이트 시 오류 메시지 초기화
     );
   }
 }
