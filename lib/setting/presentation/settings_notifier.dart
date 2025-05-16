@@ -30,7 +30,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       case OnTapEditProfile():
       case OnTapChangePassword():
       case OnTapPrivacyPolicy():
-      case OnTapAppInfo():
+      case OnTapOpenSourceLicenses():
       // URL 열기 액션들도 Root에서 처리됨
       case OpenUrlPrivacyPolicy():
       case OpenUrlAppInfo():

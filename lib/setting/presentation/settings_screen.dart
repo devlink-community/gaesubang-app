@@ -124,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
                             iconColor: AppColorStyles.info,
                             onTap:
                                 () => onAction(
-                                  const SettingsAction.onTapAppInfo(),
+                                  const SettingsAction.OnTapOpenSourceLicenses(),
                                 ),
                           ),
                         ],

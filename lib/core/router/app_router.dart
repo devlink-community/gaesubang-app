@@ -18,6 +18,7 @@ import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mo
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/setting/presentation/open_source_license_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -259,6 +260,10 @@ GoRouter appRouter(ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreenRoot(),
+      ),
+      GoRoute(
+        path: '/open-source-licenses',
+        builder: (context, state) => const OpenSourceLicenseScreenRoot(),
       ),
       GoRoute(
         path: '/edit-profile',
