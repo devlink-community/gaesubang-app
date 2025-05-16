@@ -215,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             iconColor: AppColorStyles.info,
                             onTap:
                                 () => widget.onAction(
-                                  const SettingsAction.OnTapOpenSourceLicenses(),
+                                  const SettingsAction.onTapOpenSourceLicenses(),
                                 ),
                           ),
                         ]),
