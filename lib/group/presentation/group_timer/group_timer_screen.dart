@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
@@ -5,6 +6,7 @@ import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/gradient_wave_animation.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_grid.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_section_header.dart';
+import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/components/timer_display.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
@@ -34,6 +36,24 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 멤버 이미지 URLs 수집
+    final List<String> imageUrls = [];
+    for (final member in widget.state.memberTimers) {
+      if (member.imageUrl.isNotEmpty) {
+        imageUrls.add(member.imageUrl);
+      }
+    }
+
+    // 이미지 사전 캐싱
+    if (imageUrls.isNotEmpty) {
+      AppImage.precacheImages(imageUrls, context);
+    }
   }
 
   void _onScroll() {
@@ -126,6 +146,12 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
                 color: const Color(0xFF4CAF50),
                 icon: Icons.check_circle,
                 members: _getActiveMembers(),
+                isLoading:
+                    //widget.state.isLoading ||
+                    widget
+                        .state
+                        .memberTimers
+                        .isEmpty, // 로딩 상태 또는 멤버가 없을 때 로딩 표시
               ),
 
               // 휴식 중인 멤버 섹션
@@ -134,6 +160,12 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
                 color: Colors.grey,
                 icon: Icons.nightlight,
                 members: _getInactiveMembers(),
+                isLoading:
+                    // widget.state.isLoading ||
+                    widget
+                        .state
+                        .memberTimers
+                        .isEmpty, // 로딩 상태 또는 멤버가 없을 때 로딩 표시
               ),
 
               // 바닥 여백
@@ -225,7 +257,28 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
     required Color color,
     required IconData icon,
     required List<MemberTimer> members,
+    bool isLoading = false, // 로딩 상태 파라미터 추가
   }) {
+    // 로딩 중이면서 멤버가 없는 경우 스켈레톤 UI 표시
+    if (isLoading && members.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 섹션 헤더 - 분리된 컴포넌트 사용
+              MemberSectionHeader(title: title, color: color, icon: icon),
+
+              // 스켈레톤 UI 표시
+              const MemberSkeleton(count: 4),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 멤버가 없는 경우 빈 공간 반환
     if (members.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
