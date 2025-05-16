@@ -60,6 +60,7 @@ class HomeNotifier extends _$HomeNotifier {
       case OnTapGroup():
       case OnTapPopularPost():
       case OnTapSettings():
+      case OnTapNotification():
         break;
     }
   }

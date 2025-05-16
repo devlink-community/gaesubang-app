@@ -43,6 +43,11 @@ class HomeScreenRoot extends ConsumerWidget {
             // 설정 페이지로 이동
             context.push('/settings');
             break;
+
+          case OnTapNotification():
+            // 알림 페이지로 이동
+            context.push('/notifications');
+            break;
         }
       },
     );

@@ -18,4 +18,7 @@ sealed class HomeAction with _$HomeAction {
 
   /// 설정 버튼 클릭
   const factory HomeAction.onTapSettings() = OnTapSettings;
+
+  /// 알림 버튼 클릭
+  const factory HomeAction.onTapNotification() = OnTapNotification;
 }
