@@ -18,7 +18,6 @@ import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mo
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
-import 'package:devlink_mobile_app/setting/presentation/open_source_license_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -27,8 +26,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../auth/data/data_source/user_storage.dart';
 import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
 import '../../setting/presentation/forgot_password_screen_root_2.dart';
+import '../../setting/presentation/open_source_license_screen_root.dart';
 
 part 'app_router.g.dart';
+
+// 바텀 네비게이션 바가 없어야 하는 경로 목록
+final _pathsWithoutBottomNav = ['/community/write', '/group/create'];
 
 // 개발용 강제 로그인 상태를 관리하는 Provider
 @riverpod
@@ -45,7 +48,7 @@ class DevLoginState extends _$DevLoginState {
 
 // GoRouter Provider
 @riverpod
-GoRouter appRouter(ref) {
+GoRouter appRouter(AppRouterRef ref) {
   // 개발용 강제 로그인 상태 구독
   final devLogin = ref.watch(devLoginStateProvider);
 
@@ -69,13 +72,8 @@ GoRouter appRouter(ref) {
         if (publicPaths.any(currentPath.startsWith)) {
           return '/home';
         }
-
-        // 다른 화면은 정상 이동
-        return null;
       }
 
-      // 일반 모드에서는 임시로 모든 페이지 이동 허용
-      // 추후 실제 로그인 상태에 따른 리다이렉트 로직 구현 예정
       return null;
     },
     routes: [
@@ -100,35 +98,40 @@ GoRouter appRouter(ref) {
         builder: (context, state) => const TermsScreenRoot(),
       ),
 
-      // === 메인 탭 화면 (홈, 커뮤니티, 그룹, 알림, 프로필) ===
+      // === 쉘 라우트 (모든 화면을 포함) ===
       ShellRoute(
         builder: (context, state, child) {
-          // 현재 활성화된 탭 인덱스 계산
-          int currentIndex = 0; // 기본값 홈
+          // 현재 경로
           final String path = state.uri.path;
 
-          if (path.startsWith('/community')) {
+          // 바텀 네비게이션 바 표시 여부 결정
+          final shouldShowBottomNav =
+              !_pathsWithoutBottomNav.any((p) => path.startsWith(p));
+
+          // 현재 활성화된 탭 인덱스 계산
+          int currentIndex = 0; // 기본값 홈
+
+          if (path.startsWith('/community') &&
+              !path.contains('/write') &&
+              !path.contains('/search')) {
             currentIndex = 1;
-          } else if (path.startsWith('/group')) {
-            currentIndex = 2;
-          } else if (path.startsWith('/notifications')) {
-            currentIndex = 3;
+          } else if (path.startsWith('/group') &&
+              !path.contains('/create') &&
+              !path.contains('/search')) {
+            currentIndex = 3; // 그룹을 인덱스 3으로 변경
           } else if (path.startsWith('/profile')) {
             currentIndex = 4;
           }
 
-          // 프로필 이미지는 더 이상 외부 URL을 사용하지 않음
-          // 실제 사용자 프로필 구현 시 사용자 데이터에서 가져오도록 수정
+          // 프로필 이미지
           final userStorage = UserStorage.instance;
           final currentUser = userStorage.currentUser;
           String? profileImageUrl;
 
           if (currentUser != null) {
-            // 현재 로그인된 사용자의 프로필 이미지 가져오기
             final profile = userStorage.getProfileById(currentUser.id!);
             profileImageUrl = profile?.image;
           } else {
-            // 개발 모드에서 첫 번째 사용자의 이미지 사용
             final defaultUser = userStorage.getUserByEmail('test1@example.com');
             if (defaultUser != null) {
               final profile = userStorage.getProfileById(defaultUser.id!);
@@ -138,29 +141,40 @@ GoRouter appRouter(ref) {
 
           return Scaffold(
             body: child,
-            bottomNavigationBar: AppBottomNavigationBar(
-              currentIndex: currentIndex,
-              profileImageUrl: profileImageUrl,
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    context.go('/home');
-                    break;
-                  case 1:
-                    context.go('/community');
-                    break;
-                  case 2:
-                    context.go('/group');
-                    break;
-                  case 3:
-                    context.go('/notifications');
-                    break;
-                  case 4:
-                    context.go('/profile');
-                    break;
-                }
-              },
-            ),
+            bottomNavigationBar:
+                shouldShowBottomNav
+                    ? AppBottomNavigationBar(
+                      currentIndex: currentIndex,
+                      profileImageUrl: profileImageUrl,
+                      onTap: (index) {
+                        switch (index) {
+                          case 0:
+                            context.go('/home');
+                            break;
+                          case 1:
+                            context.go('/community');
+                            break;
+                          case 2:
+                            // 가운데 버튼은 드롭다운 메뉴를 표시
+                            break;
+                          case 3:
+                            context.go('/group');
+                            break;
+                          case 4:
+                            context.go('/profile');
+                            break;
+                        }
+                      },
+                      onCreatePost: () {
+                        // 게시글 작성 화면으로 이동
+                        context.go('/community/write');
+                      },
+                      onCreateGroup: () {
+                        // 그룹 생성 화면으로 이동
+                        context.go('/group/create');
+                      },
+                    )
+                    : null,
           );
         },
         routes: [
@@ -168,7 +182,6 @@ GoRouter appRouter(ref) {
           GoRoute(
             path: '/home',
             builder: (context, state) => const HomeScreenRoot(),
-            // 추후 실제 홈 화면으로 대체
           ),
 
           // === 커뮤니티 탭 ===
@@ -176,12 +189,12 @@ GoRouter appRouter(ref) {
             path: '/community',
             builder: (context, state) => const CommunityListScreenRoot(),
             routes: [
-              // 커뮤니티 글 작성
+              // 게시글 작성
               GoRoute(
                 path: 'write',
                 builder: (context, state) => const CommunityWriteScreenRoot(),
               ),
-              // 커뮤니티 검색 화면 (추가)
+              // 커뮤니티 검색 화면
               GoRoute(
                 path: 'search',
                 builder: (context, state) => const CommunitySearchScreenRoot(),
@@ -248,10 +261,7 @@ GoRouter appRouter(ref) {
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
-            builder: (context, state) {
-              // 강제로 새로 생성하여 항상 최신 데이터를 로드하도록 함
-              return const IntroScreenRoot();
-            },
+            builder: (context, state) => const IntroScreenRoot(),
           ),
         ],
       ),

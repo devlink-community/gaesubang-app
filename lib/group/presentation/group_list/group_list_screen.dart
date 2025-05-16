@@ -58,7 +58,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
           _buildBody(),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -507,44 +506,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
       case GroupFilter.joined:
         return () => setState(() => _selectedFilter = GroupFilter.all);
     }
-  }
-
-  // 플로팅 액션 버튼
-  Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColorStyles.primary100,
-            Color.fromARGB(255, 102, 102, 255),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColorStyles.primary100.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      height: 56,
-      width: 56,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap:
-              () => widget.onAction(const GroupListAction.onTapCreateGroup()),
-          child: const Center(
-            child: Icon(Icons.add, color: Colors.white, size: 28),
-          ),
-        ),
-      ),
-    );
   }
 }
 

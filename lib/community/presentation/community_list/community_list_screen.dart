@@ -3,9 +3,10 @@ import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'community_list_state.dart';
-import 'community_list_action.dart';
+
 import '../components/post_list_item.dart';
+import 'community_list_action.dart';
+import 'community_list_state.dart';
 
 class CommunityListScreen extends StatelessWidget {
   const CommunityListScreen({
@@ -37,12 +38,6 @@ class CommunityListScreen extends StatelessWidget {
             onPressed: () => onAction(const CommunityListAction.tapSearch()),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => onAction(const CommunityListAction.tapWrite()),
-        backgroundColor: AppColorStyles.primary100,
-        elevation: 2,
-        child: const Icon(Icons.edit, color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -272,18 +267,12 @@ class CommunityListScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () => onAction(const CommunityListAction.tapWrite()),
-            icon: const Icon(Icons.edit),
-            label: const Text('글쓰기'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColorStyles.primary100,
-              side: BorderSide(color: AppColorStyles.primary100),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          Text(
+            '아래 중앙 버튼을 눌러 새 게시글을 작성할 수 있습니다',
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.primary100,
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

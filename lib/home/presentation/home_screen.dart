@@ -1,9 +1,9 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:line_icons/line_icons.dart';
 
 import 'component/group_section.dart';
-import 'component/notice_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
 import 'home_state.dart';
@@ -57,7 +57,7 @@ class HomeScreen extends StatelessWidget {
           icon: Stack(
             alignment: Alignment.topRight,
             children: [
-              const Icon(Icons.notifications_outlined, size: 26),
+              const Icon(LineIcons.bell, size: 26),
               Container(
                 width: 8,
                 height: 8,
@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
           ),
           color: Colors.grey[700],
           tooltip: '알림',
-          onPressed: () {},
+          onPressed: () => onAction(const HomeAction.onTapNotification()),
         ),
         IconButton(
           icon: const Icon(Icons.settings_outlined, size: 26),

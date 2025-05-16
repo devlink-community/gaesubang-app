@@ -12,9 +12,6 @@ class CommunityWriteScreenRoot extends ConsumerWidget {
     final state = ref.watch(communityWriteNotifierProvider);
     final notifier = ref.read(communityWriteNotifierProvider.notifier);
 
-    return CommunityWriteScreen(
-      state: state,
-      onAction: notifier.onAction,
-    );
+    return CommunityWriteScreen(state: state, onAction: notifier.onAction);
   }
 }
