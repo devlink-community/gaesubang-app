@@ -269,8 +269,8 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     return InkWell(
       onTap: () => widget.onTap(index),
       child: Container(
-        width: 26,
-        height: 26,
+        width: 35,
+        height: 35,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
