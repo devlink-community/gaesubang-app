@@ -4,10 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
 import '../styles/app_color_styles.dart';
-import '../styles/app_text_styles.dart';
-
-// lib/core/component/navigation_bar.dart
-// 기존 코드 유지하고 수정이 필요한 부분만 변경
 
 class AppBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -35,7 +31,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
   late Animation<double> _animation;
   bool _isExpanded = false;
 
-  // 메뉴가 열려있을 때 바깥쪽 탭을 감지하기 위한 OverlayEntry
+  // 오버레이 엔트리
   OverlayEntry? _overlayEntry;
 
   @override
@@ -72,20 +68,96 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     });
   }
 
-  // 오버레이를 표시하여 메뉴 외부 탭을 감지
   void _showOverlay() {
     _removeOverlay();
 
     _overlayEntry = OverlayEntry(
       builder:
-          (context) => GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _toggleMenu,
-            child: Container(color: Colors.transparent),
+          (context) => Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _toggleMenu,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.black.withOpacity(0.3), // 반투명 배경 추가
+                child: Stack(
+                  children: [
+                    // 드롭다운 메뉴
+                    Positioned(
+                      bottom: 90, // 바텀 네비게이션 바 위에 위치
+                      left: 0,
+                      right: 0,
+                      child: Center(child: _buildDropdownMenu()),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
     );
 
     Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  Widget _buildDropdownMenu() {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - _animation.value)), // 아래에서 위로 슬라이드
+          child: Opacity(
+            opacity: _animation.value,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 15,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onCreatePost != null)
+                    _buildMenuItem(
+                      icon: LineIcons.pen,
+                      label: '게시글 작성',
+                      onTap: () {
+                        _toggleMenu();
+                        widget.onCreatePost!();
+                      },
+                    ),
+                  if (widget.onCreatePost != null &&
+                      widget.onCreateGroup != null)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Colors.grey.withOpacity(0.1),
+                    ),
+                  if (widget.onCreateGroup != null)
+                    _buildMenuItem(
+                      icon: LineIcons.users,
+                      label: '그룹 생성',
+                      onTap: () {
+                        _toggleMenu();
+                        widget.onCreateGroup!();
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _removeOverlay() {
@@ -95,89 +167,47 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // 바텀 네비게이션 바
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(10),
-                spreadRadius: 0,
-                blurRadius: 10,
-                offset: const Offset(0, -1),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, -1),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단 구분선
-              Container(
-                height: 1,
-                width: double.infinity,
-                color: Colors.grey.withAlpha(20),
-              ),
-              // 내비게이션 바
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildNavItem(0, LineIcons.paw),
-                      _buildNavItem(1, LineIcons.comment),
-                      // 중앙 버튼 - 수정된 부분
-                      _buildCenterButton(),
-                      _buildNavItem(3, LineIcons.userFriends),
-                      _buildProfileItem(4),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 상단 구분선
+          Container(
+            height: 1,
+            width: double.infinity,
+            color: Colors.grey.withAlpha(20),
           ),
-        ),
-
-        // 드롭다운 메뉴 - 수정된 부분
-        if (_isExpanded)
-          Positioned(
-            bottom: 80,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+          // 내비게이션 바
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  if (widget.onCreatePost != null)
-                    _buildMenuItem(
-                      icon: Icons.edit_rounded,
-                      label: '게시글 작성',
-                      onTap: () {
-                        _toggleMenu();
-                        widget.onCreatePost!();
-                      },
-                      color: AppColorStyles.secondary01,
-                    ),
-                  const SizedBox(height: 12),
-                  if (widget.onCreateGroup != null)
-                    _buildMenuItem(
-                      icon: Icons.group_add,
-                      label: '그룹 생성',
-                      onTap: () {
-                        _toggleMenu();
-                        widget.onCreateGroup!();
-                      },
-                      color: AppColorStyles.primary100,
-                    ),
+                  _buildNavItem(0, LineIcons.paw),
+                  _buildNavItem(1, LineIcons.comment),
+                  // 중앙 버튼
+                  _buildCenterButton(),
+                  _buildNavItem(3, LineIcons.userFriends),
+                  _buildProfileItem(4),
                 ],
               ),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -193,20 +223,19 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     );
   }
 
-  // 수정된 중앙 버튼
   Widget _buildCenterButton() {
     return GestureDetector(
       onTap: _toggleMenu,
       child: Container(
-        width: 48,
-        height: 48,
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
           color: AppColorStyles.primary100,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
               color: AppColorStyles.primary100.withOpacity(0.3),
-              blurRadius: 6,
+              blurRadius: 8,
               spreadRadius: 1,
               offset: const Offset(0, 2),
             ),
@@ -239,8 +268,8 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     return InkWell(
       onTap: () => widget.onTap(index),
       child: Container(
-        width: 26, // 다른 아이콘과 크기 맞춤
-        height: 26, // 다른 아이콘과 크기 맞춤
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
@@ -280,46 +309,44 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     );
   }
 
-  // 수정된 메뉴 아이템
+  // 새로운 메뉴 아이템 디자인
   Widget _buildMenuItem({
     required IconData icon,
     required String label,
     required Function() onTap,
-    required Color color,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                spreadRadius: 0,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.03),
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.button2Regular.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Icon(icon, color: Colors.black, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
               ),
-            ],
-          ),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Colors.grey.shade400,
+            ),
+          ],
         ),
       ),
     );
