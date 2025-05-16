@@ -343,6 +343,7 @@ class _SignupScreenState extends State<SignupScreen> {
             widget.state.termsError!,
             style: AppTextStyles.captionRegular.copyWith(
               color: AppColorStyles.error,
+
             ),
           )
               : null,
