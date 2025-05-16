@@ -109,8 +109,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           errorText: widget.state.emailError,
                           onChanged:
                               (value) => widget.onAction(
-                                ForgotPasswordAction.emailChanged(value),
-                              ),
+                            ForgotPasswordAction.emailChanged(value),
+                          ),
                           focusNode: _emailFocusNode,
                           // 필드 완료 시 추가 동작
                           onFieldSubmitted: (_) {
@@ -120,6 +120,71 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           },
                           textInputAction: TextInputAction.done,
                         ),
+
+                        const SizedBox(height: 24),
+
+                        // 통합 오류 메시지 표시
+                        if (widget.state.formErrorMessage != null)
+                          Container(
+                            margin: const EdgeInsets.only(top: 0, bottom: 24),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColorStyles.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColorStyles.error.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: AppColorStyles.error,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.state.formErrorMessage!,
+                                    style: AppTextStyles.body2Regular.copyWith(
+                                      color: AppColorStyles.error,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // 성공 메시지 표시 (이미 전송된 경우)
+                        if (widget.state.successMessage != null &&
+                            widget.state.resetPasswordResult?.hasValue == true)
+                          Container(
+                            margin: const EdgeInsets.only(top: 0, bottom: 24),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColorStyles.success.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColorStyles.success.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  color: AppColorStyles.success,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.state.successMessage!,
+                                    style: AppTextStyles.body2Regular.copyWith(
+                                      color: AppColorStyles.success,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         // 콘텐츠 영역 아래 추가 여백
                         const SizedBox(height: 40),
@@ -136,8 +201,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       text: '이메일 발송하기',
                       onPressed:
                           () => widget.onAction(
-                            ForgotPasswordAction.sendResetEmail(),
-                          ),
+                        ForgotPasswordAction.sendResetEmail(),
+                      ),
                       isLoading: isLoading,
                       backgroundColor: AppColorStyles.primary100,
                       foregroundColor: Colors.white,
@@ -151,8 +216,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     TextButton(
                       onPressed:
                           () => widget.onAction(
-                            ForgotPasswordAction.navigateToLogin(),
-                          ),
+                        ForgotPasswordAction.navigateToLogin(),
+                      ),
                       child: Text(
                         '로그인으로 돌아가기',
                         style: AppTextStyles.body2Regular.copyWith(
