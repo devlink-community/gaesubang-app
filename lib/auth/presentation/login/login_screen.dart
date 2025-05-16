@@ -37,10 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 로딩 중이면 로딩 인디케이터 표시
+    // 로딩 상태 확인
     final loading = widget.state.loginUserResult?.isLoading ?? false;
-    // 오류 메시지 가져오기
-    final errorMessage = widget.state.loginErrorMessage;
 
     return Scaffold(
       body: SafeArea(
@@ -59,11 +57,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 40),
                       // 로그인 타이틀
                       Text('로그인', style: AppTextStyles.heading2Bold),
-                      const SizedBox(height: 8),
                       // 회원가입 안내 텍스트
                       Row(
                         children: [
-                          Text('계정이 없으신가요?', style: AppTextStyles.body1Regular),
+                          Text(
+                            '계정이 없으신가요?',
+                            style: AppTextStyles.body1Regular,
+                          ),
                           TextButton(
                             onPressed:
                                 () => widget.onAction(
@@ -113,38 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      // 오류 메시지 표시 영역 추가
-                      if (errorMessage != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColorStyles.error.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColorStyles.error.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                color: AppColorStyles.error,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  errorMessage,
-                                  style: AppTextStyles.body2Regular.copyWith(
-                                    color: AppColorStyles.error,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      // 오류 메시지 UI 제거 (Snackbar로 대체)
 
                       // 추가 여백
                       const SizedBox(height: 20),
