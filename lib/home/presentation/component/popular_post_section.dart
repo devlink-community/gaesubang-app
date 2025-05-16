@@ -87,7 +87,14 @@ class PopularPostSection extends StatelessWidget {
     final authorName = post.member.nickname;
 
     return InkWell(
-      onTap: () => onTapPost(post.id),
+      onTap: () {
+        if (post.id.isNotEmpty) {  // ID가 비어있지 않은지 확인
+          print('게시글 클릭: ${post.id}');
+          onTapPost(post.id);
+        } else {
+          print('게시글 ID가 비어 있습니다.');
+        }
+      },
       child: Card(
         margin: const EdgeInsets.symmetric(vertical: 8),
         elevation: 0,
