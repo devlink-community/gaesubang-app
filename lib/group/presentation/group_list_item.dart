@@ -54,7 +54,7 @@ class GroupListItem extends StatelessWidget {
                     // 제목 영역
                     _buildGroupNameWithOwner(),
                     const SizedBox(height: 8),
-                    _buildHashTags(),
+                    // _buildHashTags(), // xorm
                     const Spacer(),
                     // 하단정보 행
                     _buildBottomInfoRow(),
@@ -142,30 +142,30 @@ class GroupListItem extends StatelessWidget {
           ),
 
         // 활성 상태 표시 (참여 중인 경우)
-        if (isCurrentMemberJoined)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: AppColorStyles.secondary01,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColorStyles.secondary01.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(Icons.check, color: Colors.white, size: 14),
-              ),
-            ),
-          ),
+        // if (isCurrentMemberJoined)
+        //   Positioned(
+        //     top: 8,
+        //     right: 8,
+        //     child: Container(
+        //       width: 24,
+        //       height: 24,
+        //       decoration: BoxDecoration(
+        //         color: AppColorStyles.secondary01,
+        //         shape: BoxShape.circle,
+        //         border: Border.all(color: Colors.white, width: 2),
+        //         boxShadow: [
+        //           BoxShadow(
+        //             color: AppColorStyles.secondary01.withValues(alpha: 0.3),
+        //             blurRadius: 6,
+        //             offset: const Offset(0, 2),
+        //           ),
+        //         ],
+        //       ),
+        //       child: const Center(
+        //         child: Icon(Icons.check, color: Colors.white, size: 14),
+        //       ),
+        //     ),
+        //   ),
       ],
     );
   }
