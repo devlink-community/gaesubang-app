@@ -1,7 +1,8 @@
-// lib/group/presentation/group_timer/components/member_timer_item.dart
-import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 import 'package:flutter/material.dart';
+
+import '../../../../core/styles/app_color_styles.dart';
+import '../../../../core/styles/app_text_styles.dart';
 
 class MemberTimerItem extends StatelessWidget {
   const MemberTimerItem({
@@ -31,19 +32,41 @@ class MemberTimerItem extends StatelessWidget {
                 border: Border.all(
                   color:
                       status == MemberTimerStatus.active
-                          ? const Color(0xFF8080FF)
-                          : const Color(0xFFE0E0E0),
+                          ? AppColorStyles.primary100
+                          : AppColorStyles.gray40,
                   width: 2,
                 ),
+                boxShadow:
+                    status == MemberTimerStatus.active
+                        ? [
+                          BoxShadow(
+                            color: AppColorStyles.primary80.withOpacity(0.15),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                        : null,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(26),
-                child: AppImage.profile(
-                  imagePath: imageUrl,
-                  size: 50,
-                  backgroundColor: Colors.grey.shade100,
-                  foregroundColor: Colors.grey.shade400,
-                ),
+                child:
+                    imageUrl.isNotEmpty
+                        ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              size: 24,
+                              color: AppColorStyles.gray60,
+                            );
+                          },
+                        )
+                        : Icon(
+                          Icons.person,
+                          size: 24,
+                          color: AppColorStyles.gray60,
+                        ),
               ),
             ),
 
@@ -56,14 +79,20 @@ class MemberTimerItem extends StatelessWidget {
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4CAF50),
+                    color: AppColorStyles.success,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColorStyles.success.withOpacity(0.3),
+                        blurRadius: 4,
+                        spreadRadius: 0,
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-            // 잠자는 상태 아이콘
             if (status == MemberTimerStatus.sleeping)
               Positioned(
                 bottom: 0,
@@ -72,7 +101,7 @@ class MemberTimerItem extends StatelessWidget {
                   width: 14,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.grey,
+                    color: AppColorStyles.gray80,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -81,29 +110,49 @@ class MemberTimerItem extends StatelessWidget {
           ],
         ),
 
-        // 타이머 표시
-        Container(
-          margin: const EdgeInsets.only(top: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color:
-                status == MemberTimerStatus.sleeping
-                    ? Colors.grey.shade200
-                    : const Color(0xFFE6E6FA),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            status == MemberTimerStatus.sleeping ? 'zzz' : timeDisplay,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color:
-                  status == MemberTimerStatus.sleeping
-                      ? Colors.grey
-                      : const Color(0xFF8080FF),
+        // 타이머 표시 - 상태에 따라 다른 위젯 표시
+        status == MemberTimerStatus.sleeping
+            ? Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColorStyles.gray40.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.nightlight_round,
+                    size: 10,
+                    color: AppColorStyles.gray80,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '휴식중',
+                    style: AppTextStyles.captionRegular.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColorStyles.gray80,
+                    ),
+                  ),
+                ],
+              ),
+            )
+            : Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                timeDisplay.toString(),
+                style: AppTextStyles.captionRegular.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColorStyles.primary100,
+                ),
+              ),
             ),
-          ),
-        ),
       ],
     );
   }
