@@ -182,7 +182,38 @@ class _SignupScreenState extends State<SignupScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 24),
+
+                        // 통합 오류 메시지 표시 영역 추가
+                        if (widget.state.formErrorMessage != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColorStyles.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColorStyles.error.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: AppColorStyles.error,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    widget.state.formErrorMessage!,
+                                    style: AppTextStyles.body2Regular.copyWith(
+                                      color: AppColorStyles.error,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         // 입력 필드 섹션
                         _buildInputFields(context),
@@ -343,10 +374,9 @@ class _SignupScreenState extends State<SignupScreen> {
             widget.state.termsError!,
             style: AppTextStyles.captionRegular.copyWith(
               color: AppColorStyles.error,
-
             ),
           )
-              : null,
+              : null, // 에러나 성공 메시지가 없을 때는 빈 공간으로 유지
         ),
       ],
     );
