@@ -12,7 +12,8 @@ class TermsState with _$TermsState {
     this.isMarketingAgreed = false,
     this.errorMessage,
     this.savedTermsId,
-    this.isSubmitting = false, // 추가
+    this.isSubmitting = false,
+    this.formErrorMessage, // 통합 오류 메시지 필드 추가
   });
 
   final bool isAllAgreed;
@@ -21,5 +22,6 @@ class TermsState with _$TermsState {
   final bool isMarketingAgreed;
   final String? errorMessage;
   final String? savedTermsId;
-  final bool isSubmitting; // 추가
+  final bool isSubmitting;
+  final String? formErrorMessage; // 통합 오류 메시지 필드
 }
