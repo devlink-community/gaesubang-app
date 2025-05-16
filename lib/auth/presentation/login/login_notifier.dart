@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -25,17 +26,30 @@ class LoginNotifier extends _$LoginNotifier {
         break;
 
       case NavigateToForgetPassword():
-        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
         break;
 
       case NavigateToSignUp():
-        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
         break;
     }
   }
 
   Future<void> _handleLogin(String email, String password) async {
-    state = state.copyWith(loginUserResult: const AsyncLoading());
+    // 입력값 기본 검증
+    if (email.isEmpty || password.isEmpty) {
+      state = state.copyWith(
+        loginErrorMessage: '이메일과 비밀번호를 모두 입력해주세요',
+        loginUserResult: null,
+      );
+      return;
+    }
+
+    // 로딩 상태 설정
+    state = state.copyWith(
+      loginErrorMessage: null, // 기존 에러 메시지 초기화
+      loginUserResult: const AsyncLoading(),
+    );
 
     // 이메일 주소는 그대로 전달 - 소문자 변환은 Repository/DataSource 레벨에서 처리
     // 사용자가 입력한 이메일 주소 형식을 UI에서는 유지하고,
@@ -45,12 +59,43 @@ class LoginNotifier extends _$LoginNotifier {
       password: password,
     );
 
-    debugPrint('로그인 결과: ${asyncResult.hasValue ? '성공' : '실패'}');
+    // 로그인 결과 처리
     if (asyncResult.hasError) {
-      debugPrint('로그인 에러: ${asyncResult.error}');
-    }
+      // 에러 발생 시 상세 로깅 (디버그 모드에서만)
+      final error = asyncResult.error;
+      debugPrint('로그인 에러: ${error.toString()}');
 
-    state = state.copyWith(loginUserResult: asyncResult);
+      // 에러 타입에 따른 사용자 친화적 메시지 처리
+      String friendlyMessage = '로그인에 실패했습니다';
+
+      if (error is Failure) {
+        switch (error.type) {
+          case FailureType.unauthorized:
+            friendlyMessage = error.message;
+            break;
+          case FailureType.network:
+            friendlyMessage = '네트워크 연결을 확인해주세요';
+            break;
+          case FailureType.timeout:
+            friendlyMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+            break;
+          default:
+            friendlyMessage = error.message;
+        }
+      }
+
+      // 친화적 메시지 설정 및 에러 상태 업데이트
+      state = state.copyWith(
+        loginErrorMessage: friendlyMessage,
+        loginUserResult: asyncResult,
+      );
+    } else {
+      // 성공 시 상태 업데이트 (에러 메시지 제거)
+      state = state.copyWith(
+        loginErrorMessage: null,
+        loginUserResult: asyncResult,
+      );
+    }
   }
 
   void logout() {

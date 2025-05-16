@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 로딩 중이면 로딩 인디케이터 표시
+    // 로딩 상태 확인
     final loading = widget.state.loginUserResult?.isLoading ?? false;
 
     return Scaffold(
@@ -57,16 +57,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 40),
                       // 로그인 타이틀
                       Text('로그인', style: AppTextStyles.heading2Bold),
-                      const SizedBox(height: 8),
                       // 회원가입 안내 텍스트
                       Row(
                         children: [
-                          Text('계정이 없으신가요?', style: AppTextStyles.body1Regular),
+                          Text(
+                            '계정이 없으신가요?',
+                            style: AppTextStyles.body1Regular,
+                          ),
                           TextButton(
                             onPressed:
                                 () => widget.onAction(
-                                  const LoginAction.navigateToSignUp(),
-                                ),
+                              const LoginAction.navigateToSignUp(),
+                            ),
                             child: Text(
                               '회원가입',
                               style: AppTextStyles.body1Regular.copyWith(
@@ -100,8 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: TextButton(
                           onPressed:
                               () => widget.onAction(
-                                const LoginAction.navigateToForgetPassword(),
-                              ),
+                            const LoginAction.navigateToForgetPassword(),
+                          ),
                           child: Text(
                             '비밀번호를 잊어버리셨나요?',
                             style: AppTextStyles.body2Regular.copyWith(
@@ -110,6 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+
+                      // 오류 메시지 UI 제거 (Snackbar로 대체)
+
                       // 추가 여백
                       const SizedBox(height: 20),
                     ],
@@ -124,11 +129,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   text: '로그인',
                   onPressed:
                       () => widget.onAction(
-                        LoginAction.loginPressed(
-                          email: emailController.text,
-                          password: passwordController.text,
-                        ),
-                      ),
+                    LoginAction.loginPressed(
+                      email: emailController.text,
+                      password: passwordController.text,
+                    ),
+                  ),
                   isLoading: loading,
                 ),
               ),

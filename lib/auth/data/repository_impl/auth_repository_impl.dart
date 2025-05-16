@@ -1,4 +1,5 @@
 // lib/auth/data/repository_impl/auth_repository_impl.dart
+import 'package:devlink_mobile_app/auth/core/utils/auth_exception_mapper.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/profile_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
@@ -18,7 +19,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required AuthDataSource authDataSource,
     required profileDataSource,
   }) : _authDataSource = authDataSource,
-       _profileDataSource = profileDataSource;
+        _profileDataSource = profileDataSource;
 
   @override
   Future<Result<Member>> login({
@@ -50,7 +51,8 @@ class AuthRepositoryImpl implements AuthRepository {
       debugPrint('Login error: $e');
       debugPrint('StackTrace: $st');
 
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -73,7 +75,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = response.toUserDto().toModel();
       return Result.success(user);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -87,7 +90,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = response.toUserDto().toModel();
       return Result.success(user);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -97,7 +101,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await _authDataSource.signOut();
       return const Result.success(null);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -109,7 +114,8 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Result.success(isAvailable);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -121,7 +127,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final isAvailable = await _authDataSource.checkEmailAvailability(email);
       return Result.success(isAvailable);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -133,7 +140,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await _authDataSource.sendPasswordResetEmail(email);
       return const Result.success(null);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -145,7 +153,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await _authDataSource.deleteAccount(email);
       return const Result.success(null);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
@@ -175,25 +184,26 @@ class AuthRepositoryImpl implements AuthRepository {
         id: response['id'] as String,
         isAllAgreed: response['isAllAgreed'] as bool? ?? false,
         isServiceTermsAgreed:
-            response['isServiceTermsAgreed'] as bool? ?? false,
+        response['isServiceTermsAgreed'] as bool? ?? false,
         isPrivacyPolicyAgreed:
-            response['isPrivacyPolicyAgreed'] as bool? ?? false,
+        response['isPrivacyPolicyAgreed'] as bool? ?? false,
         isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
         agreedAt:
-            response['agreedAt'] != null
-                ? DateTime.parse(response['agreedAt'] as String)
-                : null,
+        response['agreedAt'] != null
+            ? DateTime.parse(response['agreedAt'] as String)
+            : null,
       );
       return Result.success(termsAgreement);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 
   @override
   Future<Result<TermsAgreement>> saveTermsAgreement(
-    TermsAgreement terms,
-  ) async {
+      TermsAgreement terms,
+      ) async {
     try {
       final Map<String, dynamic> termsData = {
         'id': terms.id,
@@ -202,7 +212,7 @@ class AuthRepositoryImpl implements AuthRepository {
         'isPrivacyPolicyAgreed': terms.isPrivacyPolicyAgreed,
         'isMarketingAgreed': terms.isMarketingAgreed,
         'agreedAt':
-            terms.agreedAt?.toIso8601String() ??
+        terms.agreedAt?.toIso8601String() ??
             DateTime.now().toIso8601String(),
       };
 
@@ -216,13 +226,14 @@ class AuthRepositoryImpl implements AuthRepository {
           isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
           isMarketingAgreed: response['isMarketingAgreed'] as bool,
           agreedAt:
-              response['agreedAt'] != null
-                  ? DateTime.parse(response['agreedAt'] as String)
-                  : null,
+          response['agreedAt'] != null
+              ? DateTime.parse(response['agreedAt'] as String)
+              : null,
         ),
       );
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      // 새로운 AuthExceptionMapper 사용
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
 }

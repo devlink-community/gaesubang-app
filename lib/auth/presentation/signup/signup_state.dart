@@ -22,6 +22,9 @@ class SignupState with _$SignupState {
     this.passwordConfirmError,
     this.termsError,
 
+    // 통합 오류 메시지 추가
+    this.formErrorMessage,
+
     // 성공 메시지 추가
     this.nicknameSuccess,
     this.emailSuccess,
@@ -49,6 +52,9 @@ class SignupState with _$SignupState {
   final String? passwordError;
   final String? passwordConfirmError;
   final String? termsError;
+
+  // 통합 오류 메시지 필드
+  final String? formErrorMessage;
 
   // 성공 메시지 필드 추가
   final String? nicknameSuccess;

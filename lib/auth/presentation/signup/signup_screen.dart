@@ -182,7 +182,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 24),
 
                         // 입력 필드 섹션
                         _buildInputFields(context),
@@ -333,20 +333,22 @@ class _SignupScreenState extends State<SignupScreen> {
           ],
         ),
 
-        // 약관 동의 에러 메시지 - 고정 높이로 일관성 유지
-        Container(
-          height: 24, // 에러 메시지 영역 고정 높이
-          padding: const EdgeInsets.only(right: 16.0),
-          alignment: Alignment.centerRight, // 에러 메시지도 우측 정렬
-          child: widget.state.termsError != null
-              ? Text(
-            widget.state.termsError!,
-            style: AppTextStyles.captionRegular.copyWith(
-              color: AppColorStyles.error,
+        // 약관 동의 에러 메시지 추가 (이 부분이 추가됨)
+        if (widget.state.termsError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, right: 8.0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                widget.state.termsError!,
+                style: AppTextStyles.captionRegular.copyWith(
+                  color: AppColorStyles.error,
+                ),
+              ),
             ),
-          )
-              : null,
-        ),
+          ),
+
+        const SizedBox(height: 12),
       ],
     );
   }

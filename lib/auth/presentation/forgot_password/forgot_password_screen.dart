@@ -109,8 +109,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           errorText: widget.state.emailError,
                           onChanged:
                               (value) => widget.onAction(
-                                ForgotPasswordAction.emailChanged(value),
-                              ),
+                            ForgotPasswordAction.emailChanged(value),
+                          ),
                           focusNode: _emailFocusNode,
                           // 필드 완료 시 추가 동작
                           onFieldSubmitted: (_) {
@@ -120,6 +120,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           },
                           textInputAction: TextInputAction.done,
                         ),
+
+                        // 통합 오류 메시지 및 성공 메시지 UI 제거 (SnackBar로 대체)
 
                         // 콘텐츠 영역 아래 추가 여백
                         const SizedBox(height: 40),
@@ -136,8 +138,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       text: '이메일 발송하기',
                       onPressed:
                           () => widget.onAction(
-                            ForgotPasswordAction.sendResetEmail(),
-                          ),
+                        ForgotPasswordAction.sendResetEmail(),
+                      ),
                       isLoading: isLoading,
                       backgroundColor: AppColorStyles.primary100,
                       foregroundColor: Colors.white,
@@ -151,8 +153,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     TextButton(
                       onPressed:
                           () => widget.onAction(
-                            ForgotPasswordAction.navigateToLogin(),
-                          ),
+                        ForgotPasswordAction.navigateToLogin(),
+                      ),
                       child: Text(
                         '로그인으로 돌아가기',
                         style: AppTextStyles.body2Regular.copyWith(
