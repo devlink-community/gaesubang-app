@@ -182,6 +182,7 @@ class AppTheme {
   /// 다크 모드 테마
   static ThemeData get darkTheme {
     return ThemeData(
+      fontFamily: 'Roboto',
       useMaterial3: true,
       brightness: Brightness.dark,
 
