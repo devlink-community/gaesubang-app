@@ -33,6 +33,11 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot> {
     final state = ref.watch(groupTimerNotifierProvider);
     final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
+    // 디버깅 로그 추가
+    print(
+      '🔄 GroupTimerScreenRoot building with groupId: ${widget.groupId}, groupName: ${state.groupName}',
+    );
+
     return GroupTimerScreen(
       state: state,
       onAction: (action) async {
