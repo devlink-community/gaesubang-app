@@ -13,8 +13,9 @@ sealed class SettingsAction with _$SettingsAction {
   // 개인정보 처리방침 화면으로 이동
   const factory SettingsAction.onTapPrivacyPolicy() = OnTapPrivacyPolicy;
 
-  // 앱 정보 화면으로 이동
-  const factory SettingsAction.onTapAppInfo() = OnTapAppInfo;
+  // 오픈소스 라이센스 화면으로 이동
+  const factory SettingsAction.OnTapOpenSourceLicenses() =
+      OnTapOpenSourceLicenses;
 
   // 로그아웃 요청
   const factory SettingsAction.onTapLogout() = OnTapLogout;

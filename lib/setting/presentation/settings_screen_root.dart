@@ -54,9 +54,8 @@ class SettingsScreenRoot extends ConsumerWidget {
             await _launchUrl(
               'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
             );
-          case OnTapAppInfo():
-            // pub.dev로 연결
-            await _launchUrl('https://pub.dev/');
+          case OnTapOpenSourceLicenses():
+            context.push('/open-source-licenses');
           case OnTapLogout():
             _showLogoutConfirmDialog(context, notifier, action);
           case OnTapDeleteAccount():

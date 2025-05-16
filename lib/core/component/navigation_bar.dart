@@ -65,6 +65,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
         _animationController.reverse().whenComplete(() {
           if (mounted) _removeOverlay();
         });
+      }
     });
   }
 
