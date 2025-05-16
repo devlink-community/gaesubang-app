@@ -20,11 +20,11 @@ import '../domain/usecase/switch_tab_use_case.dart';
 part 'community_di.g.dart';
 
 // 데이터소스
-// @riverpod
-// PostDataSource postDataSource(Ref ref) => PostDataSourceImpl();
-
 @riverpod
-PostDataSource postDataSource(Ref ref) => PostFirebaseDataSource();
+PostDataSource postDataSource(Ref ref) => PostDataSourceImpl();
+
+// @riverpod
+// PostDataSource postDataSource(Ref ref) => PostFirebaseDataSource();
 
 // 레포지토리
 @riverpod
