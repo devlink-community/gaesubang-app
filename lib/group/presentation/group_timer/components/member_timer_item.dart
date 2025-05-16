@@ -1,3 +1,5 @@
+// lib/group/presentation/group_timer/components/member_timer_item.dart
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 import 'package:flutter/material.dart';
 
@@ -36,24 +38,12 @@ class MemberTimerItem extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(26),
-                child:
-                    imageUrl.isNotEmpty
-                        ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.person,
-                              size: 24,
-                              color: Colors.grey,
-                            );
-                          },
-                        )
-                        : const Icon(
-                          Icons.person,
-                          size: 24,
-                          color: Colors.grey,
-                        ),
+                child: AppImage.profile(
+                  imagePath: imageUrl,
+                  size: 50,
+                  backgroundColor: Colors.grey.shade100,
+                  foregroundColor: Colors.grey.shade400,
+                ),
               ),
             ),
 
