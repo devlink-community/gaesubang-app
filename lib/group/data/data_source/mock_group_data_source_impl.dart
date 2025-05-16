@@ -1,10 +1,12 @@
 import 'dart:math';
+
 import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
 import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:intl/intl.dart';
+
 import 'group_data_source.dart';
 
 class MockGroupDataSourceImpl implements GroupDataSource {
@@ -15,6 +17,27 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   final List<GroupDto> _groups = [];
   bool _initialized = false;
 
+  // DiceBear API 기반 이미지 URL 생성 함수
+  String _generateDiceBearUrl() {
+    // 개발/코딩/기술 테마에 적합한 스타일 선택
+    final styles = [
+      'bottts', // 로봇형 아바타
+      'pixel-art', // 픽셀 아트 스타일
+      'identicon', // GitHub 스타일 아이덴티콘
+      'shapes', // 기하학적 모양
+      'initials', // 이니셜 기반 (그룹 이름의 첫 글자)
+    ];
+    final style = styles[_random.nextInt(styles.length)];
+
+    // 랜덤 시드 값 생성 (그룹마다 다른 이미지가 나오도록)
+    final seed =
+        DateTime.now().millisecondsSinceEpoch.toString() +
+        _random.nextInt(10000).toString();
+
+    // DiceBear API URL 생성
+    return 'https://api.dicebear.com/7.x/$style/png?seed=$seed&size=200';
+  }
+
   // 기본 사용자 목록 (제공된 초기화 데이터와 일치)
   final List<Map<String, dynamic>> _defaultUsers = [
     {
@@ -24,7 +47,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '사용자1',
         uid: 'uid1',
       ),
-      'profile': ProfileDto(userId: 'user1', image: '', onAir: false),
+      'profile': ProfileDto(
+        userId: 'user1',
+        image: 'https://randomuser.me/api/portraits/men/1.jpg',
+        onAir: false,
+      ),
       'password': 'password123',
     },
     {
@@ -34,7 +61,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '사용자2',
         uid: 'uid2',
       ),
-      'profile': ProfileDto(userId: 'user2', image: '', onAir: true),
+      'profile': ProfileDto(
+        userId: 'user2',
+        image: 'https://randomuser.me/api/portraits/women/2.jpg',
+        onAir: true,
+      ),
       'password': 'password123',
     },
     {
@@ -44,7 +75,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '사용자3',
         uid: 'uid3',
       ),
-      'profile': ProfileDto(userId: 'user3', image: '', onAir: false),
+      'profile': ProfileDto(
+        userId: 'user3',
+        image: 'https://randomuser.me/api/portraits/men/3.jpg',
+        onAir: false,
+      ),
       'password': 'password123',
     },
     {
@@ -54,7 +89,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '사용자4',
         uid: 'uid4',
       ),
-      'profile': ProfileDto(userId: 'user4', image: '', onAir: true),
+      'profile': ProfileDto(
+        userId: 'user4',
+        image: 'https://randomuser.me/api/portraits/women/4.jpg',
+        onAir: true,
+      ),
       'password': 'password123',
     },
     {
@@ -64,7 +103,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '사용자5',
         uid: 'uid5',
       ),
-      'profile': ProfileDto(userId: 'user5', image: '', onAir: false),
+      'profile': ProfileDto(
+        userId: 'user5',
+        image: 'https://randomuser.me/api/portraits/men/5.jpg',
+        onAir: false,
+      ),
       'password': 'password123',
     },
     {
@@ -74,7 +117,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '관리자',
         uid: 'uid6',
       ),
-      'profile': ProfileDto(userId: 'user6', image: '', onAir: true),
+      'profile': ProfileDto(
+        userId: 'user6',
+        image: 'https://randomuser.me/api/portraits/women/6.jpg',
+        onAir: true,
+      ),
       'password': 'admin123',
     },
     {
@@ -84,7 +131,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         nickname: '개발자',
         uid: 'uid7',
       ),
-      'profile': ProfileDto(userId: 'user7', image: '', onAir: true),
+      'profile': ProfileDto(
+        userId: 'user7',
+        image: 'https://randomuser.me/api/portraits/men/7.jpg',
+        onAir: true,
+      ),
       'password': 'dev123',
     },
   ];
@@ -159,6 +210,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
           groupName = '${owner.nickname}의 모임';
         }
 
+        // DiceBear API로 그룹 이미지 URL 생성
+        final imageUrl = _generateDiceBearUrl();
+
         return GroupDto(
           id: 'group_$i',
           name: groupName,
@@ -168,7 +222,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
           hashTags: hashTags,
           limitMemberCount: limitMemberCount,
           owner: owner,
-          imageUrl: 'assets/images/group_${(i % 5) + 1}.png', // 5개의 기본 이미지 순환
+          imageUrl: imageUrl,
+          // DiceBear API 이미지 URL 사용
           createdAt: _dateFormat.format(createdDate),
           updatedAt: _dateFormat.format(updatedDate),
         );
@@ -188,12 +243,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       image: profile.image,
       onAir: profile.onAir,
     );
-  }
-
-  // 랜덤하게 사용자를 선택
-  Map<String, dynamic> _getRandomUser() {
-    final index = _random.nextInt(_defaultUsers.length);
-    return _defaultUsers[index];
   }
 
   @override
@@ -257,16 +306,23 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     final newId = 'group_${DateTime.now().millisecondsSinceEpoch}';
     final now = DateTime.now();
 
+    // DiceBear API로 그룹 이미지 URL 생성
+    final imageUrl = _generateDiceBearUrl();
+
     // 새 그룹 DTO 생성
     final createdGroup = GroupDto(
       id: newId,
       name: groupDto.name,
       description: groupDto.description,
-      members: groupDto.members ?? [], // null 방지
-      hashTags: groupDto.hashTags ?? [], // null 방지
-      limitMemberCount: groupDto.limitMemberCount?.toInt() ?? 10, // 기본값 제공
+      members: groupDto.members ?? [],
+      // null 방지
+      hashTags: groupDto.hashTags ?? [],
+      // null 방지
+      limitMemberCount: groupDto.limitMemberCount?.toInt() ?? 10,
+      // 기본값 제공
       owner: groupDto.owner,
-      imageUrl: groupDto.imageUrl,
+      imageUrl: imageUrl,
+      // DiceBear API로 생성된 이미지 URL
       createdAt: _dateFormat.format(now),
       updatedAt: _dateFormat.format(now),
     );
@@ -324,7 +380,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     print('🔍 Left group: $groupId');
   }
 
-  @override
   Future<List<GroupDto>> searchGroups(String query) async {
     await Future.delayed(const Duration(milliseconds: 500));
     await _initializeIfNeeded();

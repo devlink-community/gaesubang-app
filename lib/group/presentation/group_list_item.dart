@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
@@ -30,7 +31,7 @@ class GroupListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               offset: const Offset(0, 4),
             ),
@@ -79,7 +80,7 @@ class GroupListItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColorStyles.primary100.withOpacity(0.1),
+                color: AppColorStyles.primary100.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -98,7 +99,7 @@ class GroupListItem extends StatelessWidget {
             child: Container(
               width: 100,
               height: 100,
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -107,7 +108,7 @@ class GroupListItem extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -123,7 +124,7 @@ class GroupListItem extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -154,7 +155,7 @@ class GroupListItem extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColorStyles.secondary01.withOpacity(0.3),
+                    color: AppColorStyles.secondary01.withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -200,23 +201,12 @@ class GroupListItem extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child:
-                    group.owner.image.isNotEmpty
-                        ? Image.network(
-                          group.owner.image,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) => const Icon(
-                                Icons.person,
-                                size: 10,
-                                color: AppColorStyles.gray100,
-                              ),
-                        )
-                        : const Icon(
-                          Icons.person,
-                          size: 10,
-                          color: AppColorStyles.gray100,
-                        ),
+                child: AppImage.profile(
+                  imagePath: group.owner.image,
+                  size: 16,
+                  backgroundColor: AppColorStyles.gray40,
+                  foregroundColor: AppColorStyles.gray100,
+                ),
               ),
             ),
             const SizedBox(width: 4),
@@ -272,49 +262,36 @@ class GroupListItem extends StatelessWidget {
   Widget _buildGroupImage() {
     if (group.imageUrl == null) {
       return Container(
-        color: AppColorStyles.primary100.withOpacity(0.2),
+        color: AppColorStyles.primary100.withValues(alpha: 0.2),
         child: Center(
           child: Icon(
             Icons.groups_rounded,
             size: 40,
-            color: AppColorStyles.primary100.withOpacity(0.7),
+            color: AppColorStyles.primary100.withValues(alpha: 0.7),
           ),
         ),
       );
     }
 
-    if (group.imageUrl!.startsWith('assets/') ||
-        group.imageUrl!.startsWith('asset/')) {
-      return Image.asset(
-        group.imageUrl!,
-        fit: BoxFit.cover,
-        width: 100,
-        height: 100,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildImageErrorWidget();
-        },
-      );
-    } else {
-      return Image.network(
-        group.imageUrl!,
-        fit: BoxFit.cover,
-        width: 100,
-        height: 100,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildImageErrorWidget();
-        },
-      );
-    }
-  }
-
-  // 이미지 에러 위젯
-  Widget _buildImageErrorWidget() {
-    return Container(
-      color: AppColorStyles.primary100.withOpacity(0.2),
-      child: Icon(
-        Icons.broken_image_rounded,
-        size: 30,
-        color: AppColorStyles.primary100.withOpacity(0.7),
+    // AppImage 컴포넌트 사용으로 수정 + 캐싱 및 크기 최적화 옵션 추가
+    return AppImage(
+      path: group.imageUrl,
+      width: 100,
+      height: 100,
+      fit: BoxFit.cover,
+      cacheWidth: 200, // 디바이스 픽셀 비율 고려(2배)
+      cacheHeight: 200, // 디바이스 픽셀 비율 고려(2배)
+      useMemoryCache: true,
+      placeholderType: AppImagePlaceholder.imageIcon,
+      placeholderWidget: Container(
+        color: AppColorStyles.primary100.withValues(alpha: 0.2),
+        child: Center(
+          child: Icon(
+            Icons.groups_rounded,
+            size: 40,
+            color: AppColorStyles.primary100.withValues(alpha: 0.7),
+          ),
+        ),
       ),
     );
   }
@@ -324,7 +301,7 @@ class GroupListItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColorStyles.secondary01.withOpacity(0.1),
+        color: AppColorStyles.secondary01.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -353,7 +330,7 @@ class GroupListItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColorStyles.primary100.withOpacity(0.1),
+        color: AppColorStyles.primary100.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -377,7 +354,7 @@ class GroupListItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColorStyles.gray40.withOpacity(0.2),
+        color: AppColorStyles.gray40.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -418,7 +395,7 @@ class GroupListItem extends StatelessWidget {
               (tag) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColorStyles.primary100.withOpacity(0.1),
+                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -436,7 +413,7 @@ class GroupListItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: AppColorStyles.gray40.withOpacity(0.2),
+              color: AppColorStyles.gray40.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(

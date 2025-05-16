@@ -1,13 +1,15 @@
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/component/gradient_app_bar.dart';
 import 'package:devlink_mobile_app/core/component/search_bar_component.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-
+import 'package:devlink_mobile_app/group/presentation/group_list/components/group_list_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../domain/model/group.dart';
 
 enum GroupFilter {
@@ -35,6 +37,45 @@ class GroupListScreen extends StatefulWidget {
 
 class _GroupListScreenState extends State<GroupListScreen> {
   GroupFilter _selectedFilter = GroupFilter.all;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    print(
+      'didChangeDependencies 호출됨, 상태: ${widget.state.groupList.runtimeType}',
+    );
+
+    // AsyncValue 패턴 매칭으로 올바르게 접근
+    switch (widget.state.groupList) {
+      case AsyncData(:final value):
+        _precacheImages(value);
+        break;
+      default:
+        // 로딩 중이거나 에러 상태면 아무 작업도 하지 않음
+        break;
+    }
+  }
+
+  void _precacheImages(List<Group> groups) {
+    // 화면에 표시될 가능성이 높은 첫 10개 그룹만 사전 로드
+    final List<String> imageUrls = [];
+
+    for (final group in groups.take(10)) {
+      if (group.imageUrl != null && group.imageUrl!.isNotEmpty) {
+        imageUrls.add(group.imageUrl!);
+      }
+
+      // 방장 이미지도 사전 로드
+      if (group.owner.image.isNotEmpty) {
+        imageUrls.add(group.owner.image);
+      }
+    }
+
+    if (imageUrls.isNotEmpty) {
+      AppImage.precacheImages(imageUrls, context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +133,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
         height: 50,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppColorStyles.gray40.withOpacity(0.15),
+          color: AppColorStyles.gray40.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(25),
         ),
         child: Row(
@@ -119,8 +160,9 @@ class _GroupListScreenState extends State<GroupListScreen> {
                             isSelected
                                 ? [
                                   BoxShadow(
-                                    color: AppColorStyles.primary100
-                                        .withOpacity(0.2),
+                                    color: AppColorStyles.primary100.withValues(
+                                      alpha: 0.2,
+                                    ),
                                     blurRadius: 4,
                                     spreadRadius: 1,
                                     offset: const Offset(0, 1),
@@ -289,26 +331,39 @@ class _GroupListScreenState extends State<GroupListScreen> {
   Widget _buildBody() {
     switch (widget.state.groupList) {
       case AsyncLoading():
-        return SliverFillRemaining(
-          child: Center(
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          sliver: SliverToBoxAdapter(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 45,
-                  height: 45,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColorStyles.primary100,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '그룹을 불러오는 중...',
-                  style: AppTextStyles.body1Regular.copyWith(
-                    color: AppColorStyles.gray100,
+                // 스켈레톤 UI 추가
+                const GroupListSkeleton(itemCount: 3),
+
+                // 하단 로딩 표시 (선택적)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColorStyles.primary100,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '그룹 정보를 불러오는 중...',
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.gray100,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -371,13 +426,13 @@ class _GroupListScreenState extends State<GroupListScreen> {
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withOpacity(0.1),
+                      color: AppColorStyles.primary100.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       _getEmptyStateIcon(),
                       size: 60,
-                      color: AppColorStyles.primary100.withOpacity(0.7),
+                      color: AppColorStyles.primary100.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -425,21 +480,18 @@ class _GroupListScreenState extends State<GroupListScreen> {
                     (member) => member.id == widget.state.currentMember!.id,
                   );
 
-              return Hero(
-                tag: 'group_${group.id}',
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: GroupListItem(
-                      key: ValueKey('group_${group.id}'),
-                      group: group,
-                      isCurrentMemberJoined: isJoined,
-                      onTap:
-                          () => widget.onAction(
-                            GroupListAction.onTapGroup(group.id),
-                          ),
-                    ),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: GroupListItem(
+                    key: ValueKey('group_${group.id}'),
+                    group: group,
+                    isCurrentMemberJoined: isJoined,
+                    onTap:
+                        () => widget.onAction(
+                          GroupListAction.onTapGroup(group.id),
+                        ),
                   ),
                 ),
               );
@@ -541,7 +593,7 @@ class _StickyFilterBarDelegate extends SliverPersistentHeaderDelegate {
             overlapsContent
                 ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
