@@ -164,11 +164,11 @@ GoRouter appRouter(AppRouterRef ref) {
                       },
                       onCreatePost: () {
                         // 게시글 작성 화면으로 이동
-                        context.go('/community/write');
+                        context.push('/community/write');
                       },
                       onCreateGroup: () {
                         // 그룹 생성 화면으로 이동
-                        context.go('/group/create');
+                        context.push('/group/create');
                       },
                     )
                     : null,
