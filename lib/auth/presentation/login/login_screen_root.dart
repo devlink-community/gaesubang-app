@@ -1,3 +1,4 @@
+// lib/auth/presentation/login/login_screen_root.dart
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
@@ -7,7 +8,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'login_notifier.dart';
 
-// lib/auth/presentation/login/login_screen_root.dart
 class LoginScreenRoot extends ConsumerWidget {
   const LoginScreenRoot({super.key});
 
@@ -16,17 +16,16 @@ class LoginScreenRoot extends ConsumerWidget {
     final state = ref.watch(loginNotifierProvider);
     final notifier = ref.watch(loginNotifierProvider.notifier);
 
-    // 로그인 성공 감지 후 이동
-    ref.listen(loginNotifierProvider, (previous, next) {
-      final loginResult = next.loginUserResult;
-      if (loginResult?.hasValue == true) {
-        debugPrint('로그인 성공 - 홈 화면으로 이동');
+    // 로그인 결과 상태 감지
+    ref.listen(loginNotifierProvider.select((value) => value.loginUserResult), (previous, next) {
+      // 로그인 성공 시 홈 화면으로 이동
+      if (next?.hasValue == true) {
         context.go('/home');
       }
 
-      // 에러 발생 시 스낵바로 표시
-      if (loginResult?.hasError == true) {
-        final error = loginResult!.error;
+      // 로그인 실패 시 Snackbar로 에러 메시지 표시
+      if (next?.hasError == true) {
+        final error = next!.error;
         String errorMessage;
 
         if (error is Failure) {
@@ -37,8 +36,31 @@ class LoginScreenRoot extends ConsumerWidget {
           errorMessage = '로그인 중 오류가 발생했습니다';
         }
 
+        // SnackBar로 에러 메시지 표시
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
+
+    // 별도로 에러 메시지 상태 감지
+    ref.listen(loginNotifierProvider.select((value) => value.loginErrorMessage), (previous, next) {
+      if (next != null) {
+        // SnackBar로 에러 메시지 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     });
@@ -53,7 +75,7 @@ class LoginScreenRoot extends ConsumerWidget {
           case NavigateToSignUp():
             context.push('/sign-up');
             break;
-          case LoginPressed():
+          default:
             await notifier.onAction(action);
             break;
         }
