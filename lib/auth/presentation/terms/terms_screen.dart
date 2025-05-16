@@ -61,36 +61,7 @@ class TermsScreen extends StatelessWidget {
                   ),
                 ),
 
-                // 통합 오류 메시지 표시 영역 추가
-                if (state.formErrorMessage != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 16, bottom: 16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColorStyles.error.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: AppColorStyles.error,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            state.formErrorMessage!,
-                            style: AppTextStyles.body2Regular.copyWith(
-                              color: AppColorStyles.error,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // 통합 오류 메시지 UI 제거 (SnackBar로 대체)
 
                 // 체크박스 영역
                 Column(
@@ -150,42 +121,10 @@ class TermsScreen extends StatelessWidget {
                   ],
                 ),
 
-                // 에러 메시지 영역 - 조정
-                if (state.errorMessage != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 16.0),
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(
-                        color: AppColorStyles.error.withOpacity(0.5),
-                        width: 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: AppColorStyles.error,
-                          size: 16.0,
-                        ),
-                        const SizedBox(width: 8.0),
-                        Expanded(
-                          child: Text(
-                            state.errorMessage!,
-                            style: AppTextStyles.captionRegular.copyWith(
-                              color: AppColorStyles.error,
-                            ),
-                            softWrap: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // 에러 메시지 영역 UI 제거 (SnackBar로 대체)
 
-                // 버튼 영역과 에러 메시지 사이 간격 조정
-                SizedBox(height: state.errorMessage != null ? 16.0 : 30.0),
+                // 여백 조정
+                const SizedBox(height: 30),
 
                 // 버튼 영역
                 Column(
