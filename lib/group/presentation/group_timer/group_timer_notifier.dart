@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
@@ -20,6 +21,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   late final ResumeTimerUseCase _resumeTimerUseCase;
   late final GetTimerSessionsUseCase _getTimerSessionsUseCase;
   late final GetMemberTimersUseCase _getMemberTimersUseCase; // 새로 추가
+  late final GetGroupDetailUseCase _getGroupDetailUseCase; // 새로 추가
 
   @override
   GroupTimerState build() {
@@ -31,6 +33,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
     _getMemberTimersUseCase = ref.watch(
       getMemberTimersUseCaseProvider,
     ); // 새로 추가
+    _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider); // 새로 추가
 
     // 화면 이탈 시 타이머 정리
     ref.onDispose(() {
@@ -180,15 +183,37 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
   // 그룹 ID 설정
   Future<void> _handleSetGroupId(String groupId) async {
+    print('📊 Setting group ID in notifier: $groupId');
+
     state = state.copyWith(groupId: groupId);
 
-    // 기본 그룹 정보 설정 (실제 구현에서는 API 호출로 대체)
-    state = state.copyWith(
-      groupName: "문성용 왕팬맨",
-      participantCount: 4,
-      totalMemberCount: 6,
-      hashTags: ["왕팬맨", "#코더", "#코코아"],
-    );
+    // 그룹 세부 정보 로드 (이 부분을 강화)
+    try {
+      // 그룹 세부 정보 로드
+      final groupDetailResult = await _getGroupDetailUseCase.execute(groupId);
+
+      // 그룹 세부 정보 로드 성공 여부 체크 및 안전하게 처리
+      switch (groupDetailResult) {
+        case AsyncData(:final value):
+          print('📊 Successfully loaded group detail: ${value.name}');
+
+          // 상태 업데이트
+          state = state.copyWith(
+            groupName: value.name,
+            participantCount: value.memberCount,
+            totalMemberCount: value.limitMemberCount,
+            hashTags: value.hashTags.map((tag) => tag.content).toList(),
+          );
+
+        case AsyncError(:final error):
+          print('❌ Failed to load group detail: $error');
+
+        case AsyncLoading():
+          print('⏳ Loading group detail...');
+      }
+    } catch (e) {
+      print('❌ Error loading group detail: $e');
+    }
 
     await _loadGroupSessions(groupId);
     await _checkActiveSession();
