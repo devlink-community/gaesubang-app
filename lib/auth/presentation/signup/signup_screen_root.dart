@@ -84,9 +84,10 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
       }
     });
 
-    // 통합 오류 메시지 감지
+    // 통합 오류 메시지 감지 - 약관 관련 오류는 제외
     ref.listen(signupNotifierProvider.select((value) => value.formErrorMessage), (previous, next) {
-      if (next != null) {
+      // 폼 에러 메시지가 있고, 약관 관련 메시지가 아닌 경우에만 SnackBar 표시
+      if (next != null && !next.contains('약관에 동의') && !next.contains('약관')) {
         // 폼 에러 메시지를 SnackBar로 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -16,16 +16,32 @@ class LoginScreenRoot extends ConsumerWidget {
     final state = ref.watch(loginNotifierProvider);
     final notifier = ref.watch(loginNotifierProvider.notifier);
 
-    // 로그인 결과 상태 감지
-    ref.listen(loginNotifierProvider.select((value) => value.loginUserResult), (previous, next) {
+    // 로그인 결과 상태와 에러 메시지를 함께 감지 (두 상태 모두 변경됨)
+    ref.listen(loginNotifierProvider, (previous, current) {
       // 로그인 성공 시 홈 화면으로 이동
-      if (next?.hasValue == true) {
+      if (current.loginUserResult?.hasValue == true) {
         context.go('/home');
       }
 
-      // 로그인 실패 시 Snackbar로 에러 메시지 표시
-      if (next?.hasError == true) {
-        final error = next!.error;
+      // 오류 메시지가 있는 경우에만 SnackBar 표시
+      final errorMessage = current.loginErrorMessage;
+      final hasLoginError = current.loginUserResult?.hasError == true;
+
+      // 에러 메시지가 있거나 로그인 결과에 오류가 있는 경우 (둘 중 하나만 처리)
+      if (errorMessage != null) {
+        // SnackBar로 에러 메시지 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade800,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else if (hasLoginError && previous?.loginUserResult != current.loginUserResult) {
+        // loginUserResult에 오류가 있고, 이전 상태와 다를 경우에만 처리
+        final error = current.loginUserResult!.error;
         String errorMessage;
 
         if (error is Failure) {
@@ -40,22 +56,6 @@ class LoginScreenRoot extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red.shade800,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    });
-
-    // 별도로 에러 메시지 상태 감지
-    ref.listen(loginNotifierProvider.select((value) => value.loginErrorMessage), (previous, next) {
-      if (next != null) {
-        // SnackBar로 에러 메시지 표시
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next),
             backgroundColor: Colors.red.shade800,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),

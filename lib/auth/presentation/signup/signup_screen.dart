@@ -184,8 +184,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                         const SizedBox(height: 24),
 
-                        // 통합 오류 메시지 UI 제거 (SnackBar로 대체)
-
                         // 입력 필드 섹션
                         _buildInputFields(context),
 
@@ -335,7 +333,21 @@ class _SignupScreenState extends State<SignupScreen> {
           ],
         ),
 
-        // 약관 동의 에러 메시지 UI 제거 (SnackBar로 대체)
+        // 약관 동의 에러 메시지 추가 (이 부분이 추가됨)
+        if (widget.state.termsError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, right: 8.0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                widget.state.termsError!,
+                style: AppTextStyles.captionRegular.copyWith(
+                  color: AppColorStyles.error,
+                ),
+              ),
+            ),
+          ),
+
         const SizedBox(height: 12),
       ],
     );

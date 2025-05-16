@@ -25,16 +25,7 @@ class TermsScreenRoot extends ConsumerWidget {
           (previous, next) {
         // savedTermsId가 null이 아니고 이전과 다른 경우 (새로 저장된 경우)
         if (next != null && previous != next) {
-          // 약관 저장 성공 메시지 표시
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('약관 동의가 저장되었습니다.'),
-              backgroundColor: Colors.green.shade700,
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          // 성공 메시지 제거 (SnackBar 표시하지 않음)
 
           // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
           context.pop();

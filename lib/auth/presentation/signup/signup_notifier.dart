@@ -264,12 +264,17 @@ class SignupNotifier extends _$SignupNotifier {
       termsError: termsError,
     );
 
+    // 약관 동의 오류가 있는 경우 다른 오류 메시지는 표시하지 않음
+    if (termsError != null) {
+      // 약관 오류만 설정하고 다른 통합 오류 메시지는 설정하지 않음
+      return;
+    }
+
     // 유효성 검증 오류가 있으면 통합 오류 메시지 설정 및 회원가입 진행 중단
     if (nicknameError != null ||
         emailError != null ||
         passwordError != null ||
-        passwordConfirmError != null ||
-        termsError != null) {
+        passwordConfirmError != null) {
       state = state.copyWith(
         formErrorMessage: '입력 정보를 확인해주세요', // 통합 오류 메시지 설정
       );
