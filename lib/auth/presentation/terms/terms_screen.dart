@@ -61,11 +61,42 @@ class TermsScreen extends StatelessWidget {
                   ),
                 ),
 
+                // 통합 오류 메시지 표시 영역 추가
+                if (state.formErrorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 16, bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColorStyles.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColorStyles.error.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: AppColorStyles.error,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            state.formErrorMessage!,
+                            style: AppTextStyles.body2Regular.copyWith(
+                              color: AppColorStyles.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // 체크박스 영역
                 Column(
                   children: [
                     // 위쪽 여백을 줄임
-                    const SizedBox(height: 88),
+                    const SizedBox(height: 48),
 
                     // 전체 동의 체크박스
                     _buildCheckbox(
@@ -191,7 +222,6 @@ class TermsScreen extends StatelessWidget {
     );
   }
 
-  // 기존 _buildCheckbox, _buildCheckboxWithButton 메서드 유지
   // 기본 체크박스 위젯
   Widget _buildCheckbox({
     required String title,
