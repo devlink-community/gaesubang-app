@@ -8,114 +8,124 @@ import '../../../core/styles/app_text_styles.dart';
 
 class ProfileInfo extends StatelessWidget {
   final Member member;
+  final bool compact; // 컴팩트 모드 옵션 추가
 
-  const ProfileInfo({super.key, required this.member});
+  const ProfileInfo({
+    super.key,
+    required this.member,
+    this.compact = false, // 기본값은 false
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // 프로필 사진
-              Container(
-                width: 72, // radius 36 * 2
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(40),
-                      spreadRadius: 2,
-                      blurRadius: 6,
-                      offset: const Offset(0, 3), // 그림자 위치 조정
-                    ),
-                  ],
-                ),
-                child: _buildProfileImage(),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(member.nickname, style: AppTextStyles.heading6Bold),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        color: AppColorStyles.primary100,
-                        size: 30,
-                      ),
-                      const SizedBox(width: 4),
-                      // Member 모델에 streakDays 필드가 없다면 원하는 텍스트로 바꿔 주세요
-                      Text(
-                        '${member.streakDays} Day',
-                        style: AppTextStyles.heading6Regular,
-                      ),
-                    ],
+    // 컴팩트 모드에 따라 크기 조정
+    final double imageSize = compact ? 60.0 : 72.0;
+    final double iconSize = compact ? 24.0 : 30.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            // 프로필 사진
+            Container(
+              width: imageSize,
+              height: imageSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(40),
+                    spreadRadius: 2,
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-            ],
-          ),
-
-          // 소개글
-          if (member.description.isNotEmpty) ...[
-            const SizedBox(height: 15),
-            Text(
-              member.description,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-              softWrap: true, // 자동 줄바꿈 허용
-              overflow: TextOverflow.visible, // 넘치는 텍스트도 보이게
-              textAlign: TextAlign.start, // 정렬은 왼쪽
+              child: _buildProfileImage(),
+            ),
+            SizedBox(width: compact ? 12 : 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.nickname,
+                  style:
+                      compact
+                          ? AppTextStyles.subtitle1Bold
+                          : AppTextStyles.heading6Bold,
+                ),
+                SizedBox(height: compact ? 2 : 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      color: AppColorStyles.primary100,
+                      size: iconSize,
+                    ),
+                    SizedBox(width: compact ? 2 : 4),
+                    Text(
+                      '${member.streakDays} Day',
+                      style:
+                          compact
+                              ? AppTextStyles.subtitle2Regular
+                              : AppTextStyles.heading6Regular,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
+        ),
 
-          const SizedBox(height: 12),
+        // 소개글 (컴팩트 모드에서는 생략 가능)
+        if (!compact && member.description.isNotEmpty) ...[
+          const SizedBox(height: 15),
+          Text(
+            member.description,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            softWrap: true,
+            overflow: TextOverflow.visible,
+            textAlign: TextAlign.start,
+          ),
         ],
-      ),
+      ],
     );
   }
 
   Widget _buildProfileImage() {
-    // 이미지 경로가 있는지 확인
+    // 이미지 처리 로직은 기존과 동일
     if (member.image.isEmpty) {
-      // 기본 아이콘 표시
       return CircleAvatar(
-        radius: 36,
+        radius: compact ? 30 : 36,
         backgroundColor: Colors.grey.shade200,
-        child: Icon(Icons.person, size: 36, color: Colors.grey.shade400),
+        child: Icon(
+          Icons.person,
+          size: compact ? 30 : 36,
+          color: Colors.grey.shade400,
+        ),
       );
     }
 
-    // 이미지가 File 형식인지 확인 (로컬 이미지인 경우)
     if (member.image.startsWith('/')) {
-      // 로컬 파일 경로인 경우
       return CircleAvatar(
-        radius: 36,
+        radius: compact ? 30 : 36,
         backgroundImage: FileImage(File(member.image)),
         backgroundColor: Colors.grey.shade200,
         onBackgroundImageError: (exception, stackTrace) {
-          // 이미지 로딩 오류 시 처리
           debugPrint('이미지 로딩 오류: $exception');
           return;
         },
       );
     }
 
-    // 네트워크 이미지인 경우
     return CircleAvatar(
-      radius: 36,
+      radius: compact ? 30 : 36,
       backgroundImage: NetworkImage(member.image),
       backgroundColor: Colors.grey.shade200,
       onBackgroundImageError: (exception, stackTrace) {
-        // 이미지 로딩 오류 시 처리
         debugPrint('이미지 로딩 오류: $exception');
         return;
       },

@@ -18,9 +18,11 @@ import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mo
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/setting/presentation/open_source_license_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../auth/data/data_source/user_storage.dart';
@@ -33,7 +35,7 @@ part 'app_router.g.dart';
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작
+  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
 
   void toggle() => state = !state;
   void enable() => state = true;
@@ -42,7 +44,7 @@ class DevLoginState extends _$DevLoginState {
 
 // GoRouter Provider
 @riverpod
-GoRouter appRouter(AppRouterRef ref) {
+GoRouter appRouter(Ref ref) {
   // 개발용 강제 로그인 상태 구독
   final devLogin = ref.watch(devLoginStateProvider);
 
@@ -236,6 +238,10 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreenRoot(),
+      ),
+      GoRoute(
+        path: '/open-source-licenses',
+        builder: (context, state) => const OpenSourceLicenseScreenRoot(),
       ),
       GoRoute(
         path: '/edit-profile',

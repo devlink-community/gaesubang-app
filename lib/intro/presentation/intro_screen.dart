@@ -10,83 +10,164 @@ import 'component/user_intro.dart';
 import 'intro_action.dart';
 import 'intro_state.dart';
 
-class IntroScreen extends StatelessWidget {
+class IntroScreen extends StatefulWidget {
   final IntroState state;
   final Future<void> Function(IntroAction) onAction;
 
   const IntroScreen({super.key, required this.state, required this.onAction});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 0, // 그림자 제거하여 현대적인 느낌
-        backgroundColor: Colors.white, // 배경색을 흰색으로
-        title: Text(
-          '프로필',
-          style: AppTextStyles.heading6Bold.copyWith(
-            color: AppColorStyles.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.settings_outlined,
-              color: AppColorStyles.gray80, // 아이콘 색상 변경
-            ),
-            iconSize: 26, // 크기 약간 축소
-            onPressed: () => onAction(const OpenSettings()),
-          ),
-        ],
+  State<IntroScreen> createState() => _IntroScreenState();
+}
+
+class _IntroScreenState extends State<IntroScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
+  late Animation<double> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _fadeInAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<double>(begin: 30, end: 0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
       ),
-      body: RefreshIndicator(
-        color: AppColorStyles.primary100,
-        onRefresh: () async {
-          // 당겨서 새로고침 기능 추가
-          await onAction(const RefreshIntro());
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
+    );
 
-                // 프로필 영역 - 카드 스타일로 개선
-                _buildProfileCard(),
+    _animationController.forward();
+  }
 
-                const SizedBox(height: 24),
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
-                // 통계 섹션 헤더 추가
-                Row(
-                  children: [
-                    Icon(
-                      Icons.timer_outlined,
-                      color: AppColorStyles.primary100,
-                      size: 20,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // 전체 화면을 감싸는 컨테이너에 그라데이션 적용
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColorStyles.primary100.withValues(alpha: 0.3), // 1.0에서 0.8로 낮춤
+            AppColorStyles.primary100.withValues(alpha: 0.05), // 중간 색상
+            AppColorStyles.primary100.withValues(alpha: 0.0), // 그대로 유지
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+      ),
+      child: Scaffold(
+        // 스캐폴드 배경 투명하게 설정
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent, // 앱바 배경 투명
+          title: Text(
+            '프로필',
+            style: AppTextStyles.heading6Bold.copyWith(
+              color: AppColorStyles.textPrimary,
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.settings_outlined, color: AppColorStyles.gray80),
+              iconSize: 26,
+              onPressed: () => widget.onAction(const OpenSettings()),
+            ),
+          ],
+        ),
+        // 기존 body 유지
+        body: RefreshIndicator(
+          color: AppColorStyles.primary100,
+          onRefresh: () async {
+            await widget.onAction(const RefreshIntro());
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 프로필 영역 - 페이드인 애니메이션 추가
+                  FadeTransition(
+                    opacity: _fadeInAnimation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.2),
+                        end: Offset.zero,
+                      ).animate(_fadeInAnimation),
+                      child: _buildProfileCard(), // 더 컴팩트한 프로필 카드
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '집중 통계',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        color: AppColorStyles.textPrimary,
-                      ),
+                  ),
+
+                  const SizedBox(height: 20), // 간격 약간 축소
+                  // 통계 섹션 헤더 추가
+                  AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity:
+                            _animationController.value > 0.3
+                                ? ((_animationController.value - 0.3) / 0.7)
+                                : 0,
+                        child: child,
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          color: AppColorStyles.primary100,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '집중 통계',
+                          style: AppTextStyles.subtitle1Bold.copyWith(
+                            color: AppColorStyles.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // 통계 + 차트 영역 - 카드 디자인으로 변경
-                _buildStatsCard(),
+                  // 통계 + 차트 영역
+                  AnimatedBuilder(
+                    animation: _slideAnimation,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, _slideAnimation.value),
+                        child: Opacity(
+                          opacity: _animationController.value > 0.4 ? 1.0 : 0.0,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildStatsCard(),
+                  ),
 
-                // 하단 여백
-                const SizedBox(height: 30),
-              ],
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
           ),
         ),
@@ -94,7 +175,7 @@ class IntroScreen extends StatelessWidget {
     );
   }
 
-  // 프로필 카드 위젯
+  // 프로필 카드 위젯 - 더 컴팩트하게 수정
   Widget _buildProfileCard() {
     return Container(
       width: double.infinity,
@@ -103,27 +184,32 @@ class IntroScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             spreadRadius: 0,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
+        border: Border.all(color: AppColorStyles.gray40, width: 0.5),
       ),
-      child: state.userProfile.when(
+      child: widget.state.userProfile.when(
         data:
             (member) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: ProfileInfo(member: member),
+              // 패딩 값 축소로 더 컴팩트하게
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              child: ProfileInfo(
+                member: member,
+                compact: true, // 컴팩트 모드 활성화 속성 추가
+              ),
             ),
         loading:
             () => const SizedBox(
-              height: 120,
+              height: 100, // 높이 축소
               child: Center(child: CircularProgressIndicator()),
             ),
         error:
             (_, __) => SizedBox(
-              height: 120,
+              height: 100, // 높이 축소
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -131,13 +217,14 @@ class IntroScreen extends StatelessWidget {
                     Icon(
                       Icons.error_outline,
                       color: AppColorStyles.error,
-                      size: 32,
+                      size: 28, // 크기 축소
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4), // 간격 축소
                     Text(
                       '프로필 정보를 불러올 수 없습니다',
                       style: AppTextStyles.body1Regular.copyWith(
                         color: AppColorStyles.gray80,
+                        fontSize: 13, // 폰트 크기 축소
                       ),
                     ),
                   ],
@@ -157,21 +244,22 @@ class IntroScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             spreadRadius: 0,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
+        border: Border.all(color: AppColorStyles.gray40, width: 0.5),
       ),
-      child: state.focusStats.when(
+      child: widget.state.focusStats.when(
         data:
             (stats) => Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 총시간 정보 - 디자인 개선
+                  // 총시간 정보
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
@@ -179,7 +267,14 @@ class IntroScreen extends StatelessWidget {
                       horizontal: 16,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withOpacity(0.1),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorStyles.primary100.withValues(alpha: 0.15),
+                          AppColorStyles.primary80.withValues(alpha: 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
@@ -189,38 +284,62 @@ class IntroScreen extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // 차트 제목 추가
-                  Text(
-                    '일주일간 활동',
-                    style: AppTextStyles.subtitle2Regular.copyWith(
-                      color: AppColorStyles.gray100,
-                      fontWeight: FontWeight.w500,
+                  // 차트 제목 개선
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: AppColorStyles.primary100,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '일주일간 활동',
+                      style: AppTextStyles.subtitle1Bold.copyWith(
+                        color: AppColorStyles.textPrimary,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
                   // 차트 영역
-                  SizedBox(
-                    height: 240, // 고정 높이 지정
-                    child: FocusStatsChart(stats: stats),
+                  Container(
+                    height: 240,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: FocusStatsChart(
+                      stats: stats,
+                      animate: true,
+                      animationDuration: const Duration(milliseconds: 1500),
+                    ),
                   ),
 
-                  // 도움말 텍스트 추가 (선택사항)
+                  // 도움말 텍스트
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColorStyles.gray40.withOpacity(0.3),
+                      color: Colors.blue.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        width: 0.5,
+                      ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.lightbulb_outline,
                           size: 20,
-                          color: AppColorStyles.primary80,
+                          color: Colors.blue[700],
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -239,12 +358,12 @@ class IntroScreen extends StatelessWidget {
             ),
         loading:
             () => const SizedBox(
-              height: 350, // 로딩 시에도 카드 사이즈 유지
+              height: 350,
               child: Center(child: CircularProgressIndicator()),
             ),
         error:
             (_, __) => SizedBox(
-              height: 350, // 에러 시에도 카드 사이즈 유지
+              height: 350,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -263,7 +382,7 @@ class IntroScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
-                      onPressed: () => onAction(const RefreshIntro()),
+                      onPressed: () => widget.onAction(const RefreshIntro()),
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('다시 시도'),
                       style: ElevatedButton.styleFrom(
