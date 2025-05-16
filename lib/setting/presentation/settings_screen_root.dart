@@ -1,3 +1,4 @@
+// lib/setting/presentation/settings_screen_root.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -81,14 +82,18 @@ class SettingsScreenRoot extends ConsumerWidget {
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
-      // 여기서 사용자에게 스낵바 등으로 알림을 줄 수 있습니다
     }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
   void _showLogoutConfirmDialog(
@@ -100,10 +105,10 @@ class SettingsScreenRoot extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
-          title: "Are you sure ?",
+          title: "로그아웃",
           message: "정말 로그아웃 하시겠습니까?",
-          cancelText: "Cancel",
-          confirmText: "Confrim",
+          cancelText: "취소",
+          confirmText: "확인",
           onConfirm: () {
             Navigator.pop(dialogContext);
             notifier.onAction(action);
@@ -122,10 +127,10 @@ class SettingsScreenRoot extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
-          title: "Are you sure ?",
-          message: "정말 회원탈퇴 하시겠습니까?\n 데이터는 직접 삭제하셔야 합니다. \n 회원정보가 사라집니다.",
-          cancelText: "Cancel",
-          confirmText: "Confirm",
+          title: "회원탈퇴",
+          message: "정말 회원탈퇴 하시겠습니까?\n데이터는 직접 삭제하셔야 합니다.\n회원정보가 사라집니다.",
+          cancelText: "취소",
+          confirmText: "확인",
           onConfirm: () {
             Navigator.pop(dialogContext);
             notifier.onAction(action);
