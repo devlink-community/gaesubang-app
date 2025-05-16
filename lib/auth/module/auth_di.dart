@@ -19,6 +19,7 @@ import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../domain/usecase/get_current_user_use_case.dart';
 import '../domain/usecase/get_terms_info_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
 
@@ -102,3 +103,7 @@ GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) =>
 @riverpod
 SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) =>
     SaveTermsAgreementUseCase(repository: ref.watch(authRepositoryProvider));
+
+@riverpod
+GetCurrentUserUseCase getCurrentUserUseCase(Ref ref) =>
+    GetCurrentUserUseCase(repository: ref.watch(authRepositoryProvider));
