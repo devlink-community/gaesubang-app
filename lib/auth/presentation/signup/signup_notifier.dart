@@ -1,7 +1,10 @@
-// lib/auth/presentation/signup/signup_notifier.dart - 수정된 버전
+// lib/auth/presentation/signup/signup_notifier.dart
 
+import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_case.dart';
@@ -276,7 +279,53 @@ class SignupNotifier extends _$SignupNotifier {
       return;
     }
 
-    // 3. 회원가입 실행
+    // 3. 약관 동의 처리
+    // 약관 동의 체크는 했지만 약관 ID가 없는 경우 (약관 페이지 방문 없이 체크한 경우)
+    String? termsId = state.agreedTermsId;
+    if (state.agreeToTerms && termsId == null) {
+      // 약관 ID 생성 및 필수 약관 동의 처리
+      final getTermsInfoUseCase = ref.read(getTermsInfoUseCaseProvider);
+      final saveTermsAgreementUseCase = ref.read(saveTermsAgreementUseCaseProvider);
+
+      // 새 약관 정보 가져오기
+      final termsInfoResult = await getTermsInfoUseCase.execute(null);
+
+      if (termsInfoResult.hasValue && termsInfoResult.value != null) {
+        // 새 약관에 동의 표시
+        final termsAgreement = TermsAgreement(
+          id: termsInfoResult.value!.id,
+          isAllAgreed: true,
+          isServiceTermsAgreed: true,
+          isPrivacyPolicyAgreed: true,
+          isMarketingAgreed: true, // 마케팅 동의도 기본으로 포함
+          agreedAt: DateTime.now(),
+        );
+
+        // 약관 동의 저장
+        final saveResult = await saveTermsAgreementUseCase.execute(termsAgreement);
+
+        if (saveResult.hasValue) {
+          // 저장된 약관 ID 설정
+          termsId = saveResult.value?.id;
+          // 상태 업데이트
+          state = state.copyWith(agreedTermsId: termsId);
+        } else if (saveResult.hasError) {
+          // 약관 저장 실패 시 오류 표시
+          state = state.copyWith(
+            termsError: '약관 동의 정보를 저장할 수 없습니다. 다시 시도해주세요.',
+          );
+          return;
+        }
+      } else if (termsInfoResult.hasError) {
+        // 약관 정보 로드 실패 시 오류 표시
+        state = state.copyWith(
+          termsError: '약관 정보를 불러올 수 없습니다. 다시 시도해주세요.',
+        );
+        return;
+      }
+    }
+
+    // 4. 회원가입 실행
     state = state.copyWith(signupResult: const AsyncValue.loading());
 
     // 회원가입 시 이메일은 그대로 전달
@@ -285,7 +334,7 @@ class SignupNotifier extends _$SignupNotifier {
       email: state.email,
       password: state.password,
       nickname: state.nickname,
-      agreedTermsId: state.agreedTermsId, // 약관 동의 ID 전달
+      agreedTermsId: termsId, // 업데이트된 약관 동의 ID 전달
     );
 
     state = state.copyWith(signupResult: result);
