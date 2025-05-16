@@ -19,13 +19,13 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   // DiceBear API 기반 이미지 URL 생성 함수
   String _generateDiceBearUrl() {
-    // 다양한 스타일: 'adventurer', 'avataaars', 'bottts', 'identicon', 'micah', 'miniavs', 'pixel-art' 등
+    // 개발/코딩/기술 테마에 적합한 스타일 선택
     final styles = [
-      'adventurer',
-      'avataaars',
-      'bottts',
-      'lorelei',
-      'pixel-art',
+      'bottts', // 로봇형 아바타
+      'pixel-art', // 픽셀 아트 스타일
+      'identicon', // GitHub 스타일 아이덴티콘
+      'shapes', // 기하학적 모양
+      'initials', // 이니셜 기반 (그룹 이름의 첫 글자)
     ];
     final style = styles[_random.nextInt(styles.length)];
 
@@ -35,7 +35,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         _random.nextInt(10000).toString();
 
     // DiceBear API URL 생성
-    return 'https://api.dicebear.com/7.x/$style/svg?seed=$seed&size=200';
+    return 'https://api.dicebear.com/7.x/$style/png?seed=$seed&size=200';
   }
 
   // 기본 사용자 목록 (제공된 초기화 데이터와 일치)
@@ -222,7 +222,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
           hashTags: hashTags,
           limitMemberCount: limitMemberCount,
           owner: owner,
-          imageUrl: imageUrl, // DiceBear API 이미지 URL 사용
+          imageUrl: imageUrl,
+          // DiceBear API 이미지 URL 사용
           createdAt: _dateFormat.format(createdDate),
           updatedAt: _dateFormat.format(updatedDate),
         );
@@ -313,11 +314,15 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       id: newId,
       name: groupDto.name,
       description: groupDto.description,
-      members: groupDto.members ?? [], // null 방지
-      hashTags: groupDto.hashTags ?? [], // null 방지
-      limitMemberCount: groupDto.limitMemberCount?.toInt() ?? 10, // 기본값 제공
+      members: groupDto.members ?? [],
+      // null 방지
+      hashTags: groupDto.hashTags ?? [],
+      // null 방지
+      limitMemberCount: groupDto.limitMemberCount?.toInt() ?? 10,
+      // 기본값 제공
       owner: groupDto.owner,
-      imageUrl: imageUrl, // DiceBear API로 생성된 이미지 URL
+      imageUrl: imageUrl,
+      // DiceBear API로 생성된 이미지 URL
       createdAt: _dateFormat.format(now),
       updatedAt: _dateFormat.format(now),
     );
