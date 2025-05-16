@@ -1,4 +1,5 @@
-// lib/auth/presentation/signup/signup_notifier.dart
+// lib/auth/presentation/signup/signup_notifier.dart - 수정된 버전
+
 import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';

@@ -5,7 +5,7 @@ import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.d
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
-import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart'; // 추가
+import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
@@ -26,7 +26,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../auth/data/data_source/user_storage.dart';
 import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
 import '../../setting/presentation/forgot_password_screen_root_2.dart';
-import '../../setting/presentation/open_source_license_screen_root.dart';
 
 part 'app_router.g.dart';
 
@@ -37,12 +36,10 @@ final _pathsWithoutBottomNav = ['/community/write', '/group/create'];
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작 (false이면 로그인 로직대로 동작)
+  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
 
   void toggle() => state = !state;
-
   void enable() => state = true;
-
   void disable() => state = false;
 }
 
@@ -263,38 +260,34 @@ GoRouter appRouter(AppRouterRef ref) {
             path: '/profile',
             builder: (context, state) => const IntroScreenRoot(),
           ),
+
+          // === 프로필 관련 독립 라우트 ===
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreenRoot(),
+          ),
+          GoRoute(
+            path: '/edit-profile',
+            builder: (context, state) => const EditIntroRoot(),
+          ),
+          GoRoute(
+            path: '/forgot-password-2',
+            builder: (context, state) => const ForgotPasswordScreenRoot2(),
+          ),
+          // demo router
+          GoRoute(
+            path: '/profile-edit-demo',
+            builder: (context, state) => const ProfileEditDemoScreen(),
+          ),
+
+          // === 유저 프로필 보기 ===
+          GoRoute(
+            path: '/user/:id/profile',
+            builder:
+                (context, state) =>
+                    MockUserProfileScreen(userId: state.pathParameters['id']!),
+          ),
         ],
-      ),
-
-      // === 프로필 관련 독립 라우트 ===
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreenRoot(),
-      ),
-      GoRoute(
-        path: '/open-source-licenses',
-        builder: (context, state) => const OpenSourceLicenseScreenRoot(),
-      ),
-      GoRoute(
-        path: '/edit-profile',
-        builder: (context, state) => const EditIntroRoot(),
-      ),
-      GoRoute(
-        path: '/forgot-password-2',
-        builder: (context, state) => const ForgotPasswordScreenRoot2(),
-      ),
-      // demo router
-      GoRoute(
-        path: '/profile-edit-demo',
-        builder: (context, state) => const ProfileEditDemoScreen(),
-      ),
-
-      // === 유저 프로필 보기 (그룹에서 사용) ===
-      GoRoute(
-        path: '/user/:id/profile',
-        builder:
-            (context, state) =>
-                MockUserProfileScreen(userId: state.pathParameters['id']!),
       ),
     ],
 
@@ -305,14 +298,4 @@ GoRouter appRouter(AppRouterRef ref) {
           body: Center(child: Text('요청한 경로 "${state.uri.path}"를 찾을 수 없습니다')),
         ),
   );
-}
-
-/// Mock 스크린들
-class _HomeMockScreen extends StatelessWidget {
-  const _HomeMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('🏠 Home Screen (Mock)')));
-  }
 }
