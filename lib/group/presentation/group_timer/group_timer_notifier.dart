@@ -178,13 +178,15 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   // 타이머 초기화 처리
   Future<void> _handleResetTimer() async {
     _timer?.cancel();
-    state = state.copyWith(timerStatus: TimerStatus.initial, elapsedSeconds: 0);
+    state = state.copyWith(
+      timerStatus: TimerStatus.initial,
+      elapsedSeconds: 0,
+      activeSession: const AsyncValue.data(null), // 명시적으로 세션 초기화
+    );
 
     // 세션 정보를 다시 로드하여 타이머를 재시작할 준비
     if (state.groupId.isNotEmpty) {
-      await _loadGroupSessions(state.groupId);
-      await _checkActiveSession();
-      await _updateMemberTimers();
+      await refreshAllData(); // 중복 코드 제거를 위해 refreshAllData 사용
     }
   }
 
@@ -194,39 +196,9 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
     state = state.copyWith(groupId: groupId);
 
-    // 그룹 세부 정보 로드 (이 부분을 강화)
-    try {
-      // 그룹 세부 정보 로드
-      final groupDetailResult = await _getGroupDetailUseCase.execute(groupId);
-
-      // 그룹 세부 정보 로드 성공 여부 체크 및 안전하게 처리
-      switch (groupDetailResult) {
-        case AsyncData(:final value):
-          print('📊 Successfully loaded group detail: ${value.name}');
-
-          // 상태 업데이트
-          state = state.copyWith(
-            groupName: value.name,
-            participantCount: value.memberCount,
-            totalMemberCount: value.limitMemberCount,
-            hashTags: value.hashTags.map((tag) => tag.content).toList(),
-          );
-
-        case AsyncError(:final error):
-          print('❌ Failed to load group detail: $error');
-
-        case AsyncLoading():
-          print('⏳ Loading group detail...');
-      }
-    } catch (e) {
-      print('❌ Error loading group detail: $e');
-    }
-
-    await _loadGroupSessions(groupId);
+    // 중복 코드 제거: refreshAllData 메서드로 모든 데이터 로드
+    await refreshAllData();
     await _checkActiveSession();
-
-    // 멤버 타이머 데이터 업데이트
-    await _updateMemberTimers();
   }
 
   // 그룹 정보 설정
@@ -300,15 +272,22 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
     }
   }
 
-  // 데이터 새로고침 메서드
+  // 데이터 새로고침 메서드 - 모든 그룹 데이터를 한 번에 새로고침
   Future<void> refreshAllData() async {
     if (state.groupId.isEmpty) return;
 
-    // 그룹 세부 정보 다시 로드
+    // 병렬로 모든 데이터 로드하여 성능 개선
+    await Future.wait([
+      _loadGroupDetail(state.groupId),
+      _loadGroupSessions(state.groupId),
+      _updateMemberTimers(),
+    ]);
+  }
+
+  // 그룹 세부 정보 로드 헬퍼 메서드
+  Future<void> _loadGroupDetail(String groupId) async {
     try {
-      final groupDetailResult = await _getGroupDetailUseCase.execute(
-        state.groupId,
-      );
+      final groupDetailResult = await _getGroupDetailUseCase.execute(groupId);
 
       // 그룹 세부 정보 로드 성공 여부 체크 및 안전하게 처리
       switch (groupDetailResult) {
@@ -322,19 +301,13 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
           );
 
         case AsyncError(:final error):
-          print('❌ Failed to refresh group detail: $error');
+          print('❌ Failed to load group detail: $error');
 
         case AsyncLoading():
           print('⏳ Loading group detail...');
       }
     } catch (e) {
-      print('❌ Error refreshing group detail: $e');
+      print('❌ Error loading group detail: $e');
     }
-
-    // 세션 목록 새로고침
-    await _loadGroupSessions(state.groupId);
-
-    // 멤버 타이머 정보 업데이트
-    await _updateMemberTimers();
   }
 }
