@@ -21,6 +21,9 @@ class GroupTimerScreenRoot extends ConsumerStatefulWidget {
 class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     with WidgetsBindingObserver {
   bool _isTimerStopped = false;
+  bool _hasNotificationPermission = false;
+  late TimerStatus _lastKnownTimerStatus;
+  late int _lastKnownElapsedSeconds;
 
   @override
   void initState() {
@@ -31,31 +34,64 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
     // 초기 그룹 ID 설정 및 데이터 로드
     Future.microtask(() {
-      final notifier = ref.read(groupTimerNotifierProvider.notifier);
-      notifier.onAction(GroupTimerAction.setGroupId(widget.groupId));
+      if (mounted) {
+        final notifier = ref.read(groupTimerNotifierProvider.notifier);
+        notifier.onAction(GroupTimerAction.setGroupId(widget.groupId));
 
-      // 알림 권한 요청
-      _checkNotificationPermission();
+        // 알림 권한 요청
+        _requestNotificationPermission();
+      }
     });
   }
 
   // 알림 권한 확인 및 요청
-  Future<void> _checkNotificationPermission() async {
-    final hasPermission = await NotificationService().requestPermission();
+  Future<void> _requestNotificationPermission() async {
+    final notificationService = NotificationService();
+    final hasPermission = await notificationService.requestPermission();
+
+    // 권한 없을 때 안내 메시지 표시
     if (!hasPermission && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('타이머 종료 알림을 받으려면 알림 권한을 허용해주세요.'),
-          duration: Duration(seconds: 5),
+        SnackBar(
+          content: const Text('타이머 종료 알림을 받으려면 알림 권한을 허용해주세요.'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: '설정',
+            onPressed: () {
+              // 앱 설정 화면으로 이동 (앱 설정에서 알림 권한 설정 가능)
+              notificationService.openNotificationSettings();
+            },
+          ),
         ),
       );
+    }
+
+    // 알림 권한 상태 기록 (권한이 없어도 타이머는 동작하도록)
+    _hasNotificationPermission = hasPermission;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // 현재 타이머 상태를 캐시
+    if (mounted) {
+      final state = ref.read(groupTimerNotifierProvider);
+      _lastKnownTimerStatus = state.timerStatus;
+      _lastKnownElapsedSeconds = state.elapsedSeconds;
     }
   }
 
   @override
   void dispose() {
-    // dispose 될 때 타이머 종료
-    _stopTimerIfRunning(isAppTerminating: true);
+    // dispose 될 때 타이머 캐시된 상태 확인하여 필요한 경우 알림만 표시
+    if (_lastKnownTimerStatus == TimerStatus.running && !_isTimerStopped) {
+      _showTimerEndedNotification(
+        _lastKnownElapsedSeconds,
+        isAppTerminating: true,
+      );
+      _isTimerStopped = true;
+    }
 
     // 관찰자 해제
     WidgetsBinding.instance.removeObserver(this);
@@ -73,7 +109,37 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
         state == AppLifecycleState.detached) {
       // detached는 앱 종료 상태를 나타낼 수 있음
       bool isAppTerminating = state == AppLifecycleState.detached;
-      _stopTimerIfRunning(isAppTerminating: isAppTerminating);
+
+      // mounted 확인 후 안전하게 타이머 상태 처리
+      if (mounted) {
+        _stopTimerIfRunning(isAppTerminating: isAppTerminating);
+      }
+    }
+    // 앱이 다시 활성화될 때(백그라운드에서 돌아왔을 때) 타이머 상태 리셋
+    else if (state == AppLifecycleState.resumed) {
+      // 앱이 재개되었을 때 처리
+      if (_isTimerStopped && mounted) {
+        // 타이머가 중지된 상태면 상태를 초기화
+        final notifier = ref.read(groupTimerNotifierProvider.notifier);
+        notifier.onAction(const GroupTimerAction.resetTimer());
+        _isTimerStopped = false;
+
+        // 사용자에게 타이머가 중지되었음을 알림
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('앱이 백그라운드에 있는 동안 타이머가 중지되었습니다.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+
+      // 타이머 상태와 상관없이 데이터 새로고침 (mounted 확인)
+      if (mounted) {
+        final notifier = ref.read(groupTimerNotifierProvider.notifier);
+        notifier.refreshAllData();
+      }
     }
   }
 
@@ -82,11 +148,19 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     // 이미 타이머가 중지된 경우 처리하지 않음
     if (_isTimerStopped) return;
 
+    // mounted 체크 추가
+    if (!mounted) return;
+
     // 현재 타이머 상태 확인
     final timerState = ref.read(groupTimerNotifierProvider);
 
-    // 타이머가 실행 중인 경우만 처리
-    if (timerState.timerStatus == TimerStatus.running) {
+    // 캐시 업데이트
+    _lastKnownTimerStatus = timerState.timerStatus;
+    _lastKnownElapsedSeconds = timerState.elapsedSeconds;
+
+    // 타이머가 실행 중이거나 일시 중지 상태인 경우 처리
+    if (timerState.timerStatus == TimerStatus.running ||
+        timerState.timerStatus == TimerStatus.paused) {
       final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
       // 타이머 종료 액션 실행
@@ -95,17 +169,19 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       // 타이머 종료 플래그 설정
       _isTimerStopped = true;
 
-      // 로컬 알림 표시
-      await _showTimerEndedNotification(
-        timerState,
-        isAppTerminating: isAppTerminating,
-      );
+      // 로컬 알림 표시 (실행 중이었을 때만)
+      if (timerState.timerStatus == TimerStatus.running) {
+        await _showTimerEndedNotification(
+          timerState.elapsedSeconds,
+          isAppTerminating: isAppTerminating,
+        );
+      }
     }
   }
 
-  // 로컬 알림 표시 메서드
+  // 로컬 알림 표시 메서드 - 파라미터 변경
   Future<void> _showTimerEndedNotification(
-    GroupTimerState state, {
+    int elapsedSeconds, {
     bool isAppTerminating = false,
   }) async {
     // 알림 메시지에 앱 종료 표시 추가
@@ -113,8 +189,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
     // NotificationService를 통한 알림 표시
     await NotificationService().showTimerEndedNotification(
-      groupName: state.groupName,
-      elapsedSeconds: state.elapsedSeconds,
+      groupName: ref.read(groupTimerNotifierProvider).groupName,
+      elapsedSeconds: elapsedSeconds,
       titlePrefix: titlePrefix,
     );
   }
@@ -141,6 +217,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
   // 타이머 실행 중 화면 이동시 경고창 표시 후 처리
   Future<void> _handleNavigation(Function() navigationAction) async {
+    if (!mounted) return;
+
     final state = ref.read(groupTimerNotifierProvider);
     final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
@@ -149,7 +227,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       // 경고창 표시 후 사용자 확인
       final shouldNavigate = await _showNavigationWarningDialog(context);
 
-      if (shouldNavigate) {
+      if (shouldNavigate && mounted) {
         // 타이머 종료 후 화면 이동
         await notifier.onAction(const GroupTimerAction.stopTimer());
         _isTimerStopped = true;
@@ -167,17 +245,16 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     final state = ref.watch(groupTimerNotifierProvider);
     final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
-    // 디버깅 로그 추가
-    print(
-      '🔄 GroupTimerScreenRoot building with groupId: ${widget.groupId}, groupName: ${state.groupName}',
-    );
+    // 캐시 업데이트
+    _lastKnownTimerStatus = state.timerStatus;
+    _lastKnownElapsedSeconds = state.elapsedSeconds;
 
     return PopScope(
       canPop: state.timerStatus != TimerStatus.running,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           _showNavigationWarningDialog(context).then((shouldPop) {
-            if (shouldPop) {
+            if (shouldPop && mounted) {
               // 타이머 종료 후 pop 실행
               notifier.onAction(const GroupTimerAction.stopTimer()).then((_) {
                 _isTimerStopped = true;
@@ -192,6 +269,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       child: GroupTimerScreen(
         state: state,
         onAction: (action) async {
+          if (!mounted) return;
+
           switch (action) {
             case NavigateToAttendance():
               // 출석부(캘린더) 화면으로 이동 - 경고창 표시 후 처리
@@ -213,7 +292,9 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
             default:
               // 기타 액션은 Notifier에 위임
-              await notifier.onAction(action);
+              if (mounted) {
+                await notifier.onAction(action);
+              }
           }
         },
       ),

@@ -54,6 +54,8 @@ dependencies:
   upgrader: ^11.3.2
   flutter_oss_licenses: ^3.0.4
   line_icons: ^2.0.3
+  android_intent_plus: ^5.3.0
+  app_settings: ^6.1.1
 
 dev_dependencies:
   flutter_test:
