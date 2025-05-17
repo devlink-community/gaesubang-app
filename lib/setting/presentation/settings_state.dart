@@ -11,8 +11,16 @@ class SettingsState with _$SettingsState {
 
     // 회원탈퇴 처리 상태
     this.deleteAccountResult = const AsyncData(null),
+
+    // 앱 버전 정보
+    this.appVersion,
+
+    // 업데이트 필요 여부
+    this.isUpdateAvailable,
   });
 
   final AsyncValue<void> logoutResult;
   final AsyncValue<void> deleteAccountResult;
+  final String? appVersion;
+  final bool? isUpdateAvailable;
 }

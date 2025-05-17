@@ -1,4 +1,6 @@
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:upgrader/upgrader.dart';
 
 import '../../auth/domain/usecase/delete_account_use_case.dart';
 import '../domain/usecase/logout_usecase.dart';
@@ -17,6 +19,10 @@ class SettingsNotifier extends _$SettingsNotifier {
   SettingsState build() {
     _logoutUseCase = ref.watch(logoutUseCaseProvider);
     _deleteAccountUseCase = ref.watch(deleteAccountUseCaseProvider);
+
+    // 앱 버전 정보 로드 (결과를 기다리지 않음)
+    _loadAppVersion();
+
     return const SettingsState();
   }
 
@@ -34,6 +40,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       // URL 열기 액션들도 Root에서 처리됨
       case OpenUrlPrivacyPolicy():
       case OpenUrlAppInfo():
+      case CheckAppVersion():
         break;
     }
   }
@@ -52,5 +59,31 @@ class SettingsNotifier extends _$SettingsNotifier {
     final email = 'current@example.com'; // 실제 구현 필요
     final asyncResult = await _deleteAccountUseCase.execute(email);
     state = state.copyWith(deleteAccountResult: asyncResult);
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final appVersion = packageInfo.version;
+
+      // Upgrader를 사용하여 최신 버전 확인
+      final upgrader = Upgrader(
+        durationUntilAlertAgain: const Duration(days: 1),
+        debugLogging: true, // 디버그 로깅 활성화
+        messages: UpgraderMessages(code: 'ko'), // 한국어 메시지 설정
+      );
+
+      // 앱스토어 버전과 현재 버전 비교 (clearSavedSettings 호출 제거)
+      await upgrader.initialize();
+      final isUpdateAvailable = upgrader.isUpdateAvailable();
+
+      state = state.copyWith(
+        appVersion: appVersion,
+        isUpdateAvailable: isUpdateAvailable,
+      );
+    } catch (e) {
+      // 실패 시 기본 버전 정보만 표시
+      state = state.copyWith(appVersion: '알 수 없음', isUpdateAvailable: false);
+    }
   }
 }

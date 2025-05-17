@@ -27,4 +27,7 @@ sealed class SettingsAction with _$SettingsAction {
   const factory SettingsAction.openUrlPrivacyPolicy() = OpenUrlPrivacyPolicy;
 
   const factory SettingsAction.openUrlAppInfo() = OpenUrlAppInfo;
+
+  // 앱 버전 확인 액션 추가
+  const factory SettingsAction.checkAppVersion() = CheckAppVersion;
 }

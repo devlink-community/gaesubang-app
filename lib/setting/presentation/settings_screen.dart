@@ -204,6 +204,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                               );
                             },
                             child: _buildSettingsCard([
+                              // 앱 버전 항목 추가 (NEW)
+                              _buildSettingItem(
+                                title: '앱 버전',
+                                subtitle: _buildVersionText(),
+                                icon: Icons.system_update_outlined,
+                                iconColor: AppColorStyles.info,
+                                rightWidget:
+                                    widget.state.isUpdateAvailable == true
+                                        ? _buildUpdateBadge()
+                                        : null,
+                                onTap:
+                                    () => widget.onAction(
+                                      const SettingsAction.openUrlAppInfo(),
+                                    ),
+                              ),
                               _buildSettingItem(
                                 title: '개인정보 처리방침',
                                 subtitle: '앱의 개인정보 수집 및 처리 방침을 확인합니다',
@@ -344,6 +359,39 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  // 버전 텍스트 생성 메서드 (NEW)
+  String _buildVersionText() {
+    final String version = widget.state.appVersion ?? '로드 중...';
+    final bool updateAvailable = widget.state.isUpdateAvailable ?? false;
+
+    if (updateAvailable) {
+      return 'v$version - 업데이트가 필요합니다';
+    } else if (version != '로드 중...') {
+      return 'v$version - 최신 버전입니다';
+    }
+
+    return 'v$version';
+  }
+
+  // 업데이트 필요 뱃지 위젯 (NEW)
+  Widget _buildUpdateBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColorStyles.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColorStyles.error, width: 1),
+      ),
+      child: Text(
+        '업데이트',
+        style: AppTextStyles.captionRegular.copyWith(
+          color: AppColorStyles.error,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   // 설정 카드 위젯
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
@@ -379,13 +427,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // 설정 항목 위젯 - 서브타이틀 추가
+  // 설정 항목 위젯 - 수정: rightWidget 파라미터 추가
   Widget _buildSettingItem({
     required String title,
     required IconData icon,
     required VoidCallback onTap,
     String? subtitle,
     Color? iconColor,
+    Widget? rightWidget, // 오른쪽에 표시할 위젯 (NEW)
   }) {
     return Material(
       color: Colors.transparent,
@@ -439,6 +488,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                 ),
               ),
+
+              // 오른쪽 위젯 (뱃지 등) (NEW)
+              if (rightWidget != null) ...[
+                rightWidget,
+                const SizedBox(width: 8),
+              ],
 
               // 화살표 아이콘
               Icon(
