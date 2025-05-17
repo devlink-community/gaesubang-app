@@ -5,6 +5,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// 로컬 알림을 관리하는 서비스 클래스
 /// 앱 내 모든 알림은 이 서비스를 통해 처리
@@ -79,19 +80,29 @@ class NotificationService {
 
   /// 알림 설정 화면으로 이동
   Future<void> openNotificationSettings() async {
-    if (Platform.isAndroid) {
-      // 안드로이드에서는 앱 설정 화면으로 이동
-      const AndroidIntent intent = AndroidIntent(
-        action: 'android.settings.APP_NOTIFICATION_SETTINGS',
-        arguments: <String, String>{
-          'android.provider.extra.APP_PACKAGE':
-              'com.example.devlink_mobile_app', // 앱 패키지명으로 수정 필요
-        },
-      );
-      await intent.launch();
-    } else if (Platform.isIOS) {
-      // iOS에서는 설정 앱 열기
-      await AppSettings.openAppSettings();
+    try {
+      if (Platform.isAndroid) {
+        // 안드로이드에서는 앱 설정 화면으로 이동
+        // 패키지 이름을 동적으로 가져옴
+        final packageInfo = await PackageInfo.fromPlatform();
+        final AndroidIntent intent = AndroidIntent(
+          action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+          arguments: <String, String>{
+            'android.provider.extra.APP_PACKAGE': packageInfo.packageName,
+          },
+        );
+        await intent.launch();
+      } else if (Platform.isIOS) {
+        // iOS에서는 설정 앱 열기
+        await AppSettings.openAppSettings();
+      }
+    } catch (e) {
+      // 설정 화면 열기 실패 시 사용자에게 안내
+      debugPrint('알림 설정 화면 열기 실패: $e');
+
+      // 필요 시 직접적인 알림(예: SnackBar, Dialog) 표시를 위한 콜백이나
+      // 상태 업데이트를 이곳에 구현 (현재는 로깅만 수행)
+      // 주의: 다른 UI 컴포넌트와의 결합을 피하기 위해 직접 UI 요소는 생성하지 않음
     }
   }
 
