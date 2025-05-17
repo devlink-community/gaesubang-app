@@ -86,6 +86,7 @@ class NotificationService {
   Future<void> showTimerEndedNotification({
     required String groupName,
     required int elapsedSeconds,
+    String titlePrefix = '', // 앱 종료 시 접두사 추가
   }) async {
     // 시간 포맷팅 (HH:MM:SS)
     final hours = elapsedSeconds ~/ 3600;
@@ -122,10 +123,10 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    // 알림 표시
+    // 알림 표시 (타이틀에 접두사 추가)
     await _flutterLocalNotificationsPlugin.show(
       0, // 알림 ID
-      '타이머가 종료되었습니다',
+      '${titlePrefix}타이머가 종료되었습니다',
       '$groupName 그룹의 타이머가 종료되었습니다. (집중 시간: $timeStr)',
       details,
       payload: 'timer_ended', // 알림 탭 시 사용할 페이로드

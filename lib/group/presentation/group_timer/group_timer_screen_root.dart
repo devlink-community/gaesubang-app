@@ -20,6 +20,8 @@ class GroupTimerScreenRoot extends ConsumerStatefulWidget {
 
 class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     with WidgetsBindingObserver {
+  bool _isTimerStopped = false;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +54,9 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
   @override
   void dispose() {
+    // dispose 될 때 타이머 종료
+    _stopTimerIfRunning(isAppTerminating: true);
+
     // 관찰자 해제
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -62,29 +67,55 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
+    // 앱이 백그라운드로 전환되거나 비활성화될 때 타이머가 실행 중이면 종료
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      // detached는 앱 종료 상태를 나타낼 수 있음
+      bool isAppTerminating = state == AppLifecycleState.detached;
+      _stopTimerIfRunning(isAppTerminating: isAppTerminating);
+    }
+  }
+
+  // 타이머가 실행 중인 경우 종료하는 메서드
+  Future<void> _stopTimerIfRunning({bool isAppTerminating = false}) async {
+    // 이미 타이머가 중지된 경우 처리하지 않음
+    if (_isTimerStopped) return;
+
     // 현재 타이머 상태 확인
     final timerState = ref.read(groupTimerNotifierProvider);
-    final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
-    // 앱이 백그라운드로 전환되거나 비활성화될 때 타이머가 실행 중이면 종료
-    if ((state == AppLifecycleState.paused ||
-            state == AppLifecycleState.inactive ||
-            state == AppLifecycleState.detached) &&
-        timerState.timerStatus == TimerStatus.running) {
+    // 타이머가 실행 중인 경우만 처리
+    if (timerState.timerStatus == TimerStatus.running) {
+      final notifier = ref.read(groupTimerNotifierProvider.notifier);
+
       // 타이머 종료 액션 실행
-      notifier.onAction(const GroupTimerAction.stopTimer());
+      await notifier.onAction(const GroupTimerAction.stopTimer());
+
+      // 타이머 종료 플래그 설정
+      _isTimerStopped = true;
 
       // 로컬 알림 표시
-      _showTimerEndedNotification(timerState);
+      await _showTimerEndedNotification(
+        timerState,
+        isAppTerminating: isAppTerminating,
+      );
     }
   }
 
   // 로컬 알림 표시 메서드
-  void _showTimerEndedNotification(GroupTimerState state) {
+  Future<void> _showTimerEndedNotification(
+    GroupTimerState state, {
+    bool isAppTerminating = false,
+  }) async {
+    // 알림 메시지에 앱 종료 표시 추가
+    final String titlePrefix = isAppTerminating ? '앱 종료: ' : '';
+
     // NotificationService를 통한 알림 표시
-    NotificationService().showTimerEndedNotification(
+    await NotificationService().showTimerEndedNotification(
       groupName: state.groupName,
       elapsedSeconds: state.elapsedSeconds,
+      titlePrefix: titlePrefix,
     );
   }
 
@@ -121,6 +152,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       if (shouldNavigate) {
         // 타이머 종료 후 화면 이동
         await notifier.onAction(const GroupTimerAction.stopTimer());
+        _isTimerStopped = true;
         navigationAction();
       }
     } else {
@@ -148,6 +180,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
             if (shouldPop) {
               // 타이머 종료 후 pop 실행
               notifier.onAction(const GroupTimerAction.stopTimer()).then((_) {
+                _isTimerStopped = true;
                 if (mounted) {
                   Navigator.of(context).pop();
                 }
