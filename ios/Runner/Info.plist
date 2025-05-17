@@ -53,5 +53,11 @@
     <string>alert</string>
     <key>NSUserNotificationUsageDescription</key>
     <string>타이머 완료 알림을 보내기 위해 알림 권한이 필요합니다.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>processing</string>
+        <string>remote-notification</string>
+    </array>
 </dict>
 </plist>

@@ -3,7 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- 알림 표시 권한 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
+
 
     <application
         android:label="devlink_mobile_app"
