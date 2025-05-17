@@ -36,7 +36,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(
             emailError: error,
-            formErrorMessage: error != null ? '유효한 이메일을 입력해주세요' : null,
+            // formErrorMessage는 설정하지 않음 (중복 메시지 방지)
           );
         }
 
@@ -50,16 +50,13 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
   }
 
   Future<void> _performResetPassword() async {
-    // 통합 오류 메시지 초기화
-    state = state.copyWith(formErrorMessage: null);
-
     // 이메일 유효성 검증
     final emailError = await _validateEmailUseCase.execute(state.email);
     state = state.copyWith(emailError: emailError);
 
-    // 이메일이 유효하지 않으면 중단 및 통합 오류 메시지 설정
+    // 이메일이 유효하지 않으면 중단
     if (emailError != null) {
-      state = state.copyWith(formErrorMessage: '유효한 이메일을 입력해주세요');
+      // formErrorMessage는 설정하지 않음 (중복 메시지 방지)
       return;
     }
 
@@ -101,7 +98,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
       // 오류 상태 업데이트
       state = state.copyWith(
         resetPasswordResult: result,
-        formErrorMessage: errorMessage,
+        formErrorMessage: errorMessage, // 통합 오류 메시지 설정 (SnackBar 표시용)
       );
     } else {
       // 성공 시 메시지 설정
