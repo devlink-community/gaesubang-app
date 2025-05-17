@@ -13,8 +13,8 @@ void main() async {
   // Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 알림 서비스 초기화
-  await NotificationService().init();
+  // 알림 서비스 초기화 - 권한 요청 없이
+  await NotificationService().init(requestPermissionOnInit: false);
 
   runApp(const ProviderScope(child: MyApp()));
 }

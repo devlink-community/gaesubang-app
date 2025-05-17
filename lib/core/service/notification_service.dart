@@ -1,6 +1,8 @@
 // lib/core/service/notification_service.dart
 import 'dart:io';
 
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -17,17 +19,17 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   /// 초기화 메서드 - 앱 시작 시 main.dart에서 호출
-  Future<void> init() async {
+  Future<void> init({bool requestPermissionOnInit = false}) async {
     // 안드로이드 설정
     const AndroidInitializationSettings androidInitSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS 설정
+    // iOS 설정 - 권한 요청 없이 초기화만 수행
     const DarwinInitializationSettings iosInitSettings =
         DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
+          requestAlertPermission: false, // 변경: 초기화 시 권한 요청 안함
+          requestBadgePermission: false, // 변경: 초기화 시 권한 요청 안함
+          requestSoundPermission: false, // 변경: 초기화 시 권한 요청 안함
         );
 
     // 초기화 설정
@@ -42,8 +44,10 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // 권한 요청
-    await requestPermission();
+    // 선택적으로 권한 요청
+    if (requestPermissionOnInit) {
+      await requestPermission();
+    }
   }
 
   /// 알림 권한 요청
@@ -71,6 +75,24 @@ class NotificationService {
       return true;
     }
     return false;
+  }
+
+  /// 알림 설정 화면으로 이동
+  Future<void> openNotificationSettings() async {
+    if (Platform.isAndroid) {
+      // 안드로이드에서는 앱 설정 화면으로 이동
+      const AndroidIntent intent = AndroidIntent(
+        action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+        arguments: <String, String>{
+          'android.provider.extra.APP_PACKAGE':
+              'com.example.devlink_mobile_app', // 앱 패키지명으로 수정 필요
+        },
+      );
+      await intent.launch();
+    } else if (Platform.isIOS) {
+      // iOS에서는 설정 앱 열기
+      await AppSettings.openAppSettings();
+    }
   }
 
   /// 알림 탭 이벤트 처리
