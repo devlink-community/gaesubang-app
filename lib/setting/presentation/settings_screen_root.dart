@@ -73,13 +73,7 @@ class SettingsScreenRoot extends ConsumerWidget {
               'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
             );
           case OpenUrlAppInfo():
-            // 앱 스토어 URL 열기 (플랫폼에 따라 다른 URL 사용)
-            if (state.isUpdateAvailable == true) {
-              _showAppUpdateDialog(context);
-            } else {
-              notifier.onAction(const SettingsAction.checkAppVersion());
-              _showErrorSnackBar(context, '이미 최신 버전입니다.');
-            }
+            _showAppStoreDialog(context, state.isUpdateAvailable == true);
           case CheckAppVersion():
             notifier.onAction(action);
         }
@@ -155,18 +149,21 @@ class SettingsScreenRoot extends ConsumerWidget {
     );
   }
 
-  void _showAppUpdateDialog(BuildContext context) {
+  void _showAppStoreDialog(BuildContext context, bool needsUpdate) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
-          title: "앱 업데이트",
-          message: "새로운 버전이 출시되었습니다.\n업데이트를 진행하시겠습니까?",
+          title: needsUpdate ? "앱 업데이트" : "앱 스토어",
+          message:
+              needsUpdate
+                  ? "새로운 버전이 출시되었습니다.\n업데이트를 진행하시겠습니까?"
+                  : "최신 버전을 사용 중입니다.\n앱 스토어로 이동하시겠습니까?",
           cancelText: "나중에",
-          confirmText: "지금 업데이트",
+          confirmText: needsUpdate ? "지금 업데이트" : "스토어로 이동",
           onConfirm: () {
             Navigator.pop(dialogContext);
-            // 플랫폼별 스토어 URL 열기 (목업)
+            // 플랫폼별 스토어 URL 열기
             _launchAppStore();
           },
         );
