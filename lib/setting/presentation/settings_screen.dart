@@ -204,6 +204,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                               );
                             },
                             child: _buildSettingsCard([
+                              // 앱 버전 항목 - 업데이트 필요 여부에 따라 다르게 표시
+                              _buildSettingItem(
+                                title: '앱 버전',
+                                subtitle:
+                                    widget.state.isUpdateAvailable == true
+                                        ? 'v${widget.state.appVersion ?? "로드 중..."} - 업데이트가 필요합니다'
+                                        : 'v${widget.state.appVersion ?? "로드 중..."} - 최신 버전입니다',
+                                icon: Icons.system_update_outlined,
+                                iconColor:
+                                    widget.state.isUpdateAvailable == true
+                                        ? AppColorStyles
+                                            .warning // 업데이트 필요 시 주황색으로 변경
+                                        : AppColorStyles
+                                            .success, // 최신 버전일 때 녹색으로 변경
+                                rightWidget: _buildVersionBadge(
+                                  widget.state.isUpdateAvailable == true,
+                                ),
+                                onTap:
+                                    () => widget.onAction(
+                                      const SettingsAction.openUrlAppInfo(),
+                                    ),
+                              ),
+
                               _buildSettingItem(
                                 title: '개인정보 처리방침',
                                 subtitle: '앱의 개인정보 수집 및 처리 방침을 확인합니다',
@@ -344,6 +367,34 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildVersionBadge(bool needsUpdate) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color:
+            needsUpdate
+                ? AppColorStyles.warning.withValues(alpha: 0.1) // 업데이트 필요 시 주황색
+                : AppColorStyles.success.withValues(alpha: 0.1), // 최신 버전일 때 녹색
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              needsUpdate
+                  ? AppColorStyles
+                      .warning // 업데이트 필요 시 주황색
+                  : AppColorStyles.success, // 최신 버전일 때 녹색
+          width: 1,
+        ),
+      ),
+      child: Text(
+        needsUpdate ? '업데이트' : '최신',
+        style: AppTextStyles.captionRegular.copyWith(
+          color: needsUpdate ? AppColorStyles.warning : AppColorStyles.success,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   // 설정 카드 위젯
   Widget _buildSettingsCard(List<Widget> children) {
     return Container(
@@ -379,13 +430,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // 설정 항목 위젯 - 서브타이틀 추가
+  // 설정 항목 위젯
   Widget _buildSettingItem({
     required String title,
     required IconData icon,
     required VoidCallback onTap,
     String? subtitle,
     Color? iconColor,
+    Widget? rightWidget,
   }) {
     return Material(
       color: Colors.transparent,
@@ -431,14 +483,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: AppTextStyles.captionRegular.copyWith(
-                          color: AppColorStyles.gray80,
+                        style: AppTextStyles.body1Regular.copyWith(
+                          color: AppColorStyles.gray100, // 더 어두운 색으로 변경
+                          fontWeight: FontWeight.w500, // 약간 더 굵게
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
+
+              // 오른쪽 위젯 (뱃지 등)
+              if (rightWidget != null) ...[
+                rightWidget,
+                const SizedBox(width: 8),
+              ],
 
               // 화살표 아이콘
               Icon(

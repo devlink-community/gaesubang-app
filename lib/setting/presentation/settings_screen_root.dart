@@ -1,4 +1,6 @@
 // lib/setting/presentation/settings_screen_root.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -16,6 +18,11 @@ class SettingsScreenRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsNotifierProvider);
     final notifier = ref.watch(settingsNotifierProvider.notifier);
+
+    // 화면 진입 시 앱 버전 정보 갱신
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifier.onAction(const SettingsAction.checkAppVersion());
+    });
 
     // 로그아웃 성공 리스너
     ref.listen(settingsNotifierProvider.select((s) => s.logoutResult), (
@@ -66,7 +73,9 @@ class SettingsScreenRoot extends ConsumerWidget {
               'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
             );
           case OpenUrlAppInfo():
-            await _launchUrl('https://pub.dev/');
+            _showAppStoreDialog(context, state.isUpdateAvailable == true);
+          case CheckAppVersion():
+            notifier.onAction(action);
         }
       },
     );
@@ -138,5 +147,43 @@ class SettingsScreenRoot extends ConsumerWidget {
         );
       },
     );
+  }
+
+  void _showAppStoreDialog(BuildContext context, bool needsUpdate) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return CustomAlertDialog(
+          title: needsUpdate ? "앱 업데이트" : "앱 스토어",
+          message:
+              needsUpdate
+                  ? "새로운 버전이 출시되었습니다.\n업데이트를 진행하시겠습니까?"
+                  : "최신 버전을 사용 중입니다.\n앱 스토어로 이동하시겠습니까?",
+          cancelText: "나중에",
+          confirmText: needsUpdate ? "지금 업데이트" : "스토어로 이동",
+          onConfirm: () {
+            Navigator.pop(dialogContext);
+            // 플랫폼별 스토어 URL 열기
+            _launchAppStore();
+          },
+        );
+      },
+    );
+  }
+
+  void _launchAppStore() {
+    // 플랫폼별 스토어 URL (목업)
+    const String androidUrl =
+        'https://play.google.com/store/apps/details?id=com.devlink.app';
+    const String iosUrl = 'https://apps.apple.com/app/devlink/id123456789';
+
+    // 플랫폼에 따라 적절한 스토어 URL 열기
+    if (Platform.isAndroid) {
+      _launchUrl(androidUrl);
+    } else if (Platform.isIOS) {
+      _launchUrl(iosUrl);
+    } else {
+      debugPrint('지원되지 않는 플랫폼입니다.');
+    }
   }
 }
