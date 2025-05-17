@@ -204,21 +204,27 @@ class _SettingsScreenState extends State<SettingsScreen>
                               );
                             },
                             child: _buildSettingsCard([
-                              // 앱 버전 항목 추가 (NEW)
-                              _buildSettingItem(
-                                title: '앱 버전',
-                                subtitle: _buildVersionText(),
-                                icon: Icons.system_update_outlined,
-                                iconColor: AppColorStyles.info,
-                                rightWidget:
-                                    widget.state.isUpdateAvailable == true
-                                        ? _buildUpdateBadge()
-                                        : null,
-                                onTap:
-                                    () => widget.onAction(
-                                      const SettingsAction.openUrlAppInfo(),
-                                    ),
-                              ),
+                              // 앱 버전 항목 - 업데이트 필요 여부에 따라 다르게 표시
+                              widget.state.isUpdateAvailable == true
+                                  ? _buildSettingItem(
+                                    title: '앱 버전',
+                                    subtitle:
+                                        'v${widget.state.appVersion ?? "로드 중..."} - 업데이트가 필요합니다',
+                                    icon: Icons.system_update_outlined,
+                                    iconColor: AppColorStyles.error,
+                                    rightWidget: _buildUpdateBadge(),
+                                    onTap:
+                                        () => widget.onAction(
+                                          const SettingsAction.openUrlAppInfo(),
+                                        ),
+                                  )
+                                  : _buildVersionItem(
+                                    title: '앱 버전',
+                                    version:
+                                        widget.state.appVersion ?? "로드 중...",
+                                    icon: Icons.system_update_outlined,
+                                    iconColor: AppColorStyles.info,
+                                  ),
                               _buildSettingItem(
                                 title: '개인정보 처리방침',
                                 subtitle: '앱의 개인정보 수집 및 처리 방침을 확인합니다',
@@ -359,21 +365,60 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // 버전 텍스트 생성 메서드 (NEW)
-  String _buildVersionText() {
-    final String version = widget.state.appVersion ?? '로드 중...';
-    final bool updateAvailable = widget.state.isUpdateAvailable ?? false;
+  // 버전 전용 아이템 (클릭 불가, 화살표 없음)
+  Widget _buildVersionItem({
+    required String title,
+    required String version,
+    required IconData icon,
+    required Color iconColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          // 아이콘 영역
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
 
-    if (updateAvailable) {
-      return 'v$version - 업데이트가 필요합니다';
-    } else if (version != '로드 중...') {
-      return 'v$version - 최신 버전입니다';
-    }
+          const SizedBox(width: 16),
 
-    return 'v$version';
+          // 제목 영역
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.subtitle1Bold.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 버전 텍스트
+          Text(
+            'v$version',
+            style: AppTextStyles.subtitle1Bold.copyWith(
+              fontSize: 14,
+              color: AppColorStyles.gray100,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  // 업데이트 필요 뱃지 위젯 (NEW)
+  // 업데이트 뱃지 위젯
   Widget _buildUpdateBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -427,14 +472,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  // 설정 항목 위젯 - 수정: rightWidget 파라미터 추가
+  // 설정 항목 위젯
   Widget _buildSettingItem({
     required String title,
     required IconData icon,
     required VoidCallback onTap,
     String? subtitle,
     Color? iconColor,
-    Widget? rightWidget, // 오른쪽에 표시할 위젯 (NEW)
+    Widget? rightWidget,
   }) {
     return Material(
       color: Colors.transparent,
@@ -480,8 +525,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: AppTextStyles.captionRegular.copyWith(
-                          color: AppColorStyles.gray80,
+                        style: AppTextStyles.body1Regular.copyWith(
+                          color: AppColorStyles.gray100, // 더 어두운 색으로 변경
+                          fontWeight: FontWeight.w500, // 약간 더 굵게
                         ),
                       ),
                     ],
@@ -489,7 +535,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ),
 
-              // 오른쪽 위젯 (뱃지 등) (NEW)
+              // 오른쪽 위젯 (뱃지 등)
               if (rightWidget != null) ...[
                 rightWidget,
                 const SizedBox(width: 8),
