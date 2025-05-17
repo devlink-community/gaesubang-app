@@ -199,7 +199,7 @@ class _IntroScreenState extends State<IntroScreen>
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
               child: ProfileInfo(
                 member: member,
-                compact: true, // 컴팩트 모드 활성화 속성 추가
+                compact: false, // 컴팩트 모드 활성화 속성 추가
               ),
             ),
         loading:
