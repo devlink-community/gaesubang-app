@@ -8,6 +8,9 @@ import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_cas
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_confirm_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
@@ -28,6 +31,8 @@ class SignupNotifier extends _$SignupNotifier {
   late final ValidatePasswordUseCase _validatePasswordUseCase;
   late final ValidatePasswordConfirmUseCase _validatePasswordConfirmUseCase;
   late final ValidateTermsAgreementUseCase _validateTermsAgreementUseCase;
+  late final GetTermsInfoUseCase _getTermsInfoUseCase;
+  late final SaveTermsAgreementUseCase _saveTermsAgreementUseCase;
 
   @override
   SignupState build() {
@@ -47,6 +52,8 @@ class SignupNotifier extends _$SignupNotifier {
     _validateTermsAgreementUseCase = ref.watch(
       validateTermsAgreementUseCaseProvider,
     );
+    _getTermsInfoUseCase = ref.watch(getTermsInfoUseCaseProvider);
+    _saveTermsAgreementUseCase = ref.watch(saveTermsAgreementUseCaseProvider);
 
     return const SignupState();
   }
@@ -100,6 +107,17 @@ class SignupNotifier extends _$SignupNotifier {
           formErrorMessage: null, // 통합 오류 메시지도 제거
         );
 
+        // 체크박스가 체크되면 자동으로 약관에 동의 처리
+        if (agree) {
+          await _autoAgreeToTerms();
+        } else {
+          // 체크 해제된 경우 약관 동의 상태 초기화
+          state = state.copyWith(
+            agreedTermsId: null,
+            isTermsAgreed: false,
+          );
+        }
+
     // 포커스 변경 액션 처리 (필드 유효성 검증)
       case NicknameFocusChanged(:final hasFocus):
         if (!hasFocus && state.nickname.isNotEmpty) {
@@ -121,9 +139,15 @@ class SignupNotifier extends _$SignupNotifier {
           final error = await _validateEmailUseCase.execute(state.email);
           state = state.copyWith(emailError: error, formErrorMessage: null);
 
-          // 이메일이 유효하면 중복 확인
+          // 이메일이 유효하면 중복 확인, 형식 오류면 중복 확인 건너뜀
           if (error == null) {
             await _performEmailAvailabilityCheck();
+          } else {
+            // 형식 오류가 있는 경우 중복 확인 결과 초기화 (오류 상태에서도 빨간색 오류 메시지가 표시되도록)
+            state = state.copyWith(
+              emailAvailability: null,
+              emailSuccess: null,
+            );
           }
         }
 
@@ -160,6 +184,61 @@ class SignupNotifier extends _$SignupNotifier {
       case NavigateToTerms():
       // Root에서 처리됨
         break;
+    }
+  }
+
+  // 체크박스를 통한 약관 자동 동의 처리
+  Future<void> _autoAgreeToTerms() async {
+    // 이미 약관에 동의한 상태라면 다시 처리하지 않음
+    if (state.isTermsAgreed) {
+      return;
+    }
+
+    try {
+      // 새 약관 정보 생성
+      final termsResult = await _getTermsInfoUseCase.execute(null);
+
+      if (termsResult.hasValue && termsResult.value != null) {
+        final termsId = termsResult.value!.id;
+
+        // 모든 약관에 동의하는 TermsAgreement 객체 생성
+        final termsAgreement = TermsAgreement(
+          id: termsId,
+          isAllAgreed: true,
+          isServiceTermsAgreed: true,
+          isPrivacyPolicyAgreed: true,
+          isMarketingAgreed: true,
+          agreedAt: DateTime.now(),
+        );
+
+        // 약관 동의 저장
+        final saveResult = await _saveTermsAgreementUseCase.execute(termsAgreement);
+
+        if (saveResult.hasValue) {
+          // 약관 동의 상태 업데이트
+          state = state.copyWith(
+            agreedTermsId: termsId,
+            isTermsAgreed: true,
+            termsError: null,
+          );
+
+          debugPrint('약관 자동 동의 완료: $termsId');
+        } else {
+          debugPrint('약관 저장 실패: ${saveResult.error}');
+          // 실패 시 체크박스 상태를 원래대로 되돌림
+          state = state.copyWith(
+            agreeToTerms: false,
+            formErrorMessage: '약관 동의 처리에 실패했습니다. 직접 약관 화면에서 동의해주세요.',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('약관 자동 동의 오류: $e');
+      // 오류 발생 시 체크박스 상태를 원래대로 되돌림
+      state = state.copyWith(
+        agreeToTerms: false,
+        formErrorMessage: '약관 동의 처리 중 오류가 발생했습니다. 직접 약관 화면에서 동의해주세요.',
+      );
     }
   }
 
@@ -201,6 +280,11 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 이메일 중복 확인
   Future<void> _performEmailAvailabilityCheck() async {
+    // 이미 이메일 형식 검증에서 오류가 있으면 중복 확인 스킵
+    if (state.emailError != null) {
+      return;
+    }
+
     state = state.copyWith(
       emailAvailability: const AsyncValue.loading(),
       emailSuccess: null, // 로딩 시작할 때 성공 메시지 초기화
@@ -219,15 +303,22 @@ class SignupNotifier extends _$SignupNotifier {
         emailSuccess: '사용 가능한 이메일입니다',
         formErrorMessage: null,
       );
-    } else {
-      // 사용 불가능하거나 에러가 발생한 경우
-      final errorMessage = result.hasError
-          ? '이메일 중복 확인 중 오류가 발생했습니다'
-          : '이미 사용 중인 이메일입니다';
-
+    } else if (result.hasValue && result.value == false) {
+      // 사용 불가능한 경우 (중복된 이메일)
       state = state.copyWith(
         emailAvailability: result,
-        emailError: errorMessage,
+        emailError: '이미 사용 중인 이메일입니다',
+        emailSuccess: null,
+        formErrorMessage: null,
+      );
+    } else {
+      // 오류 발생 시 에러 메시지를 표시하지 않고 결과 초기화
+      debugPrint('이메일 중복 확인 중 오류 발생: ${result.error}');
+
+      // 이메일 중복 확인 실패 시 UI에 표시하지 않고 결과만 초기화
+      state = state.copyWith(
+        emailAvailability: null,
+        // emailError는 변경하지 않음 (이미 있는 형식 검증 오류 유지)
         emailSuccess: null,
         formErrorMessage: null,
       );
@@ -252,7 +343,7 @@ class SignupNotifier extends _$SignupNotifier {
       state.passwordConfirm,
     );
     final termsError = await _validateTermsAgreementUseCase.execute(
-      state.agreeToTerms,
+      state.agreeToTerms || state.isTermsAgreed, // 체크박스 체크 또는 이미 약관 동의한 경우
     );
 
     // 검증 결과 업데이트

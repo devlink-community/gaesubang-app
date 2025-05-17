@@ -21,7 +21,7 @@ class ForgotPasswordScreenRoot extends ConsumerWidget {
       forgotPasswordNotifierProvider.select((value) => value.resetPasswordResult),
           (previous, next) {
         if (previous?.isLoading == true && next?.hasValue == true) {
-          // 성공 메시지 표시
+          // 성공 메시지 표시 (성공은 알려야 함)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.successMessage ?? '이메일이 발송되었습니다.'),
@@ -32,7 +32,7 @@ class ForgotPasswordScreenRoot extends ConsumerWidget {
             ),
           );
         } else if (next?.hasError == true) {
-          // 에러 메시지 처리
+          // 에러 메시지 처리 (네트워크 오류 등 전송 실패는 알려야 함)
           final error = next!.error;
           String errorMessage;
 
@@ -58,12 +58,12 @@ class ForgotPasswordScreenRoot extends ConsumerWidget {
       },
     );
 
-    // 통합 오류 메시지 감지
+    // 통합 오류 메시지 감지는 유지하되 이메일 유효성 관련 메시지는 제외
     ref.listen(
       forgotPasswordNotifierProvider.select((value) => value.formErrorMessage),
           (previous, next) {
-        if (next != null) {
-          // 폼 에러 메시지를 SnackBar로 표시
+        if (next != null && !next.contains('유효한 이메일') && !next.contains('이메일을 입력')) {
+          // 이메일 형식 관련 오류가 아닌 경우에만 SnackBar로 표시
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(next),
