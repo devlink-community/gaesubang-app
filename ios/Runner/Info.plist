@@ -49,10 +49,6 @@
 	<string>이미지를 선택하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>이미지를 촬영하기 위해 카메라 접근 권한이 필요합니다.</string>
-    <key>NSUserNotificationAlertStyle</key>
-    <string>alert</string>
-    <key>NSUserNotificationUsageDescription</key>
-    <string>타이머 완료 알림을 보내기 위해 알림 권한이 필요합니다.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>fetch</string>
