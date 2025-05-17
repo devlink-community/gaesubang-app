@@ -9,6 +9,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
+import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_timer_notifier.g.dart';
@@ -276,12 +277,24 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   Future<void> refreshAllData() async {
     if (state.groupId.isEmpty) return;
 
-    // 병렬로 모든 데이터 로드하여 성능 개선
-    await Future.wait([
-      _loadGroupDetail(state.groupId),
-      _loadGroupSessions(state.groupId),
-      _updateMemberTimers(),
-    ]);
+    // 병렬로 모든 데이터 로드하되, 하나의 실패가 전체를 중단시키지 않도록 함
+    try {
+      await Future.wait(
+        [
+          _loadGroupDetail(state.groupId),
+          _loadGroupSessions(state.groupId),
+          _updateMemberTimers(),
+        ],
+        eagerError: false, // 하나 실패해도 나머지 계속
+      );
+    } catch (e, s) {
+      // 오류 로깅 및 디버깅
+      print('❌ refreshAllData 실패: $e');
+      debugPrintStack(stackTrace: s);
+
+      // 필요 시 사용자에게 오류 알림을 표시할 수 있음
+      // state = state.copyWith(errorMessage: '데이터 로드 중 오류가 발생했습니다.');
+    }
   }
 
   // 그룹 세부 정보 로드 헬퍼 메서드
