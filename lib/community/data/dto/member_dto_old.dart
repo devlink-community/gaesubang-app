@@ -1,7 +1,8 @@
-// lib/community/data/dto/member_dto.dart
+// lib/community/data/dto/member_dto_old.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
-part 'member_dto.freezed.dart';
-part 'member_dto.g.dart';
+
+part 'member_dto_old.freezed.dart';
+part 'member_dto_old.g.dart';
 
 /// 실제 Member 모델은 auth 모듈에서 교체 예정!
 @freezed
@@ -12,7 +13,7 @@ abstract class MemberDto with _$MemberDto {
     String? nickname,
     String? uid,
     String? description,
-    bool?   onAir,
+    bool? onAir,
     String? image,
   }) = _MemberDto;
 

@@ -1,8 +1,9 @@
-// lib/community/data/dto/comment_dto.dart
+// lib/community/data/dto/comment_dto_old.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-part 'comment_dto.freezed.dart';
-part 'comment_dto.g.dart';
+
+part 'comment_dto_old.freezed.dart';
+part 'comment_dto_old.g.dart';
 
 @freezed
 abstract class CommentDto with _$CommentDto {
@@ -23,15 +24,15 @@ abstract class CommentDto with _$CommentDto {
 // DateTime JSON 변환 유틸리티 함수
 DateTime? _dateTimeFromJson(dynamic value) {
   if (value == null) return null;
-  
+
   if (value is String) {
     return DateTime.parse(value);
   }
-  
+
   if (value is Timestamp) {
     return value.toDate();
   }
-  
+
   return null;
 }
 
