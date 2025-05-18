@@ -3,7 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/data_source/attendance_data_source.dart';
 import '../data/data_source/mock_attendance_data_source_impl.dart';
-import '../data/repository/attendance_repository_impl.dart';
+import '../data/repository_impl/attendance_repository_impl.dart';
 import '../domain/repository/attendance_repository.dart';
 import '../domain/usecase/get_attendance_by_month_use_case.dart';
 import '../domain/usecase/mock_get_group_detail_use_case.dart';
