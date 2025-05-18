@@ -13,4 +13,5 @@ sealed class CommunityWriteAction with _$CommunityWriteAction {
   const factory CommunityWriteAction.imageAdded(Uint8List bytes) = ImageAdded;
   const factory CommunityWriteAction.imageRemoved(int index) = ImageRemoved;
   const factory CommunityWriteAction.submit() = Submit;
+  const factory CommunityWriteAction.navigateBack(String postId) = NavigateBack;
 }

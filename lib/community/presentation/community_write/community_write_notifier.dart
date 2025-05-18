@@ -60,6 +60,10 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
 
       case Submit():
         await _submit();
+
+      case NavigateBack(:final postId):
+      // Root에서 처리하므로 여기서는 아무 것도 하지 않음
+      break;
     }
   }
 
