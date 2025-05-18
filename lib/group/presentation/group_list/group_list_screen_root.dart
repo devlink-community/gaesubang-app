@@ -1,11 +1,12 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
-import 'package:devlink_mobile_app/group/presentation/group_join_dialog.dart';
+import 'package:devlink_mobile_app/group/presentation/component/group_join_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../../domain/model/group.dart';
 
 class GroupListScreenRoot extends ConsumerWidget {
