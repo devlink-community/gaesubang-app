@@ -1,8 +1,8 @@
 // lib/auth/data/data_source/mock_auth_data_source.dart
 import 'dart:async';
 
-import '../dto/profile_dto.dart';
-import '../dto/user_dto.dart';
+import '../dto/profile_dto_old.dart';
+import '../dto/user_dto_old.dart';
 import 'auth_data_source.dart';
 import 'user_storage.dart';
 
@@ -84,14 +84,15 @@ class MockAuthDataSource implements AuthDataSource {
       agreedTermsId: agreedTermsId,
     );
 
-    final profileDto = ProfileDto(
-      userId: userId,
-      image: '',
-      onAir: false,
-    );
+    final profileDto = ProfileDto(userId: userId, image: '', onAir: false);
 
     // 비밀번호는 별도 저장 (여기서는 간단히 구현)
-    _storage.addUser(userDto, profileDto, password, agreedTermsId: agreedTermsId);
+    _storage.addUser(
+      userDto,
+      profileDto,
+      password,
+      agreedTermsId: agreedTermsId,
+    );
 
     return userDto.toJson();
   }
@@ -185,12 +186,16 @@ class MockAuthDataSource implements AuthDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData) async {
+  Future<Map<String, dynamic>> saveTermsAgreement(
+    Map<String, dynamic> termsData,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
     // 필수 약관 동의 여부 확인
-    final isServiceTermsAgreed = termsData['isServiceTermsAgreed'] as bool? ?? false;
-    final isPrivacyPolicyAgreed = termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
+    final isServiceTermsAgreed =
+        termsData['isServiceTermsAgreed'] as bool? ?? false;
+    final isPrivacyPolicyAgreed =
+        termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
 
     if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
       throw Exception('필수 약관에 동의해야 합니다');

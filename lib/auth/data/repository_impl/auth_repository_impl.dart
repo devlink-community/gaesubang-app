@@ -2,8 +2,8 @@
 import 'package:devlink_mobile_app/auth/core/utils/auth_exception_mapper.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/profile_data_source.dart';
-import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
-import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
+import 'package:devlink_mobile_app/auth/data/dto/profile_dto_old.dart';
+import 'package:devlink_mobile_app/auth/data/dto/user_dto_old.dart';
 import 'package:devlink_mobile_app/auth/data/mapper/member_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
@@ -19,7 +19,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required AuthDataSource authDataSource,
     required profileDataSource,
   }) : _authDataSource = authDataSource,
-        _profileDataSource = profileDataSource;
+       _profileDataSource = profileDataSource;
 
   @override
   Future<Result<Member>> login({
@@ -184,14 +184,14 @@ class AuthRepositoryImpl implements AuthRepository {
         id: response['id'] as String,
         isAllAgreed: response['isAllAgreed'] as bool? ?? false,
         isServiceTermsAgreed:
-        response['isServiceTermsAgreed'] as bool? ?? false,
+            response['isServiceTermsAgreed'] as bool? ?? false,
         isPrivacyPolicyAgreed:
-        response['isPrivacyPolicyAgreed'] as bool? ?? false,
+            response['isPrivacyPolicyAgreed'] as bool? ?? false,
         isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
         agreedAt:
-        response['agreedAt'] != null
-            ? DateTime.parse(response['agreedAt'] as String)
-            : null,
+            response['agreedAt'] != null
+                ? DateTime.parse(response['agreedAt'] as String)
+                : null,
       );
       return Result.success(termsAgreement);
     } catch (e, st) {
@@ -202,8 +202,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Result<TermsAgreement>> saveTermsAgreement(
-      TermsAgreement terms,
-      ) async {
+    TermsAgreement terms,
+  ) async {
     try {
       final Map<String, dynamic> termsData = {
         'id': terms.id,
@@ -212,7 +212,7 @@ class AuthRepositoryImpl implements AuthRepository {
         'isPrivacyPolicyAgreed': terms.isPrivacyPolicyAgreed,
         'isMarketingAgreed': terms.isMarketingAgreed,
         'agreedAt':
-        terms.agreedAt?.toIso8601String() ??
+            terms.agreedAt?.toIso8601String() ??
             DateTime.now().toIso8601String(),
       };
 
@@ -226,9 +226,9 @@ class AuthRepositoryImpl implements AuthRepository {
           isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
           isMarketingAgreed: response['isMarketingAgreed'] as bool,
           agreedAt:
-          response['agreedAt'] != null
-              ? DateTime.parse(response['agreedAt'] as String)
-              : null,
+              response['agreedAt'] != null
+                  ? DateTime.parse(response['agreedAt'] as String)
+                  : null,
         ),
       );
     } catch (e, st) {

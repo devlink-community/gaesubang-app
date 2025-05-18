@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'profile_dto.g.dart';
+part 'profile_dto_old.g.dart';
 
 @JsonSerializable()
 class ProfileDto {
