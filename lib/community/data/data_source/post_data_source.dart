@@ -1,6 +1,6 @@
 // lib/community/data/data_source/post_data_source.dart
-import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
-import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
+import 'package:devlink_mobile_app/community/data/dto/comment_dto_old.dart';
+import 'package:devlink_mobile_app/community/data/dto/post_dto_old.dart';
 
 abstract interface class PostDataSource {
   /* List */

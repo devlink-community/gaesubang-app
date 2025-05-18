@@ -1,10 +1,10 @@
 // lib/community/data/data_source/mock_post_data_source_impl.dart
 import 'dart:math';
 
-import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
-import 'package:devlink_mobile_app/community/data/dto/like_dto.dart';
-import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
-import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
+import 'package:devlink_mobile_app/community/data/dto/comment_dto_old.dart';
+import 'package:devlink_mobile_app/community/data/dto/like_dto_old.dart';
+import 'package:devlink_mobile_app/community/data/dto/member_dto_old.dart';
+import 'package:devlink_mobile_app/community/data/dto/post_dto_old.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 
 import 'post_data_source.dart';
