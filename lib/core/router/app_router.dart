@@ -11,11 +11,11 @@ import 'package:devlink_mobile_app/community/presentation/community_write/commun
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen_root.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
@@ -216,7 +216,7 @@ GoRouter appRouter(Ref ref) {
         path: '/group/:id',
         builder:
             (context, state) =>
-                GroupTimerScreenRoot(groupId: state.pathParameters['id']!),
+                GroupDetailScreenRoot(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/group/:id/attendance',

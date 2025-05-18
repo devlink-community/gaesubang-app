@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 
 class TimerDisplay extends StatelessWidget {

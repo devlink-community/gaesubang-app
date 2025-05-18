@@ -1,24 +1,24 @@
 import 'package:devlink_mobile_app/core/component/custom_alert_dialog.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_action.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_notifier.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_screen.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_notifier.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class GroupTimerScreenRoot extends ConsumerStatefulWidget {
-  const GroupTimerScreenRoot({super.key, required this.groupId});
+class GroupDetailScreenRoot extends ConsumerStatefulWidget {
+  const GroupDetailScreenRoot({super.key, required this.groupId});
 
   final String groupId;
 
   @override
-  ConsumerState<GroupTimerScreenRoot> createState() =>
-      _GroupTimerScreenRootState();
+  ConsumerState<GroupDetailScreenRoot> createState() =>
+      _GroupDetailScreenRootState();
 }
 
-class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
+class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     with WidgetsBindingObserver {
   // 화면 상태 관리
   bool _isInitialized = false;
@@ -51,8 +51,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     print('🚀 화면 초기화 시작 - groupId: ${widget.groupId}');
 
     if (mounted) {
-      final notifier = ref.read(groupTimerNotifierProvider.notifier);
-      await notifier.onAction(GroupTimerAction.setGroupId(widget.groupId));
+      final notifier = ref.read(groupDetailNotifierProvider.notifier);
+      await notifier.onAction(GroupDetailAction.setGroupId(widget.groupId));
       await _requestNotificationPermission();
     }
 
@@ -83,8 +83,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
           // 타이머가 실행 중이면 종료
           if (mounted) {
-            final notifier = ref.read(groupTimerNotifierProvider.notifier);
-            notifier.onAction(const GroupTimerAction.stopTimer());
+            final notifier = ref.read(groupDetailNotifierProvider.notifier);
+            notifier.onAction(const GroupDetailAction.stopTimer());
           }
         }
         break;
@@ -102,7 +102,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           // 데이터 갱신을 다음 프레임으로 지연
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              final notifier = ref.read(groupTimerNotifierProvider.notifier);
+              final notifier = ref.read(groupDetailNotifierProvider.notifier);
               notifier.onScreenReenter();
               _showAppResumedMessage();
             }
@@ -154,7 +154,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     // 잠시 후에 상태를 확인하여 타이머가 초기화되었는지 확인
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        final currentState = ref.read(groupTimerNotifierProvider);
+        final currentState = ref.read(groupDetailNotifierProvider);
         // 타이머가 초기 상태가 되었다면 백그라운드에서 중지되었다는 뜻
         if (currentState.timerStatus == TimerStatus.initial) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -192,8 +192,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
   Future<void> _handleNavigation(Function() navigationAction) async {
     if (!mounted) return;
 
-    final state = ref.read(groupTimerNotifierProvider);
-    final notifier = ref.read(groupTimerNotifierProvider.notifier);
+    final state = ref.read(groupDetailNotifierProvider);
+    final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
     // 타이머가 실행 중인지 확인
     if (state.timerStatus == TimerStatus.running) {
@@ -202,7 +202,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
 
       if (shouldNavigate && mounted) {
         // 타이머 종료 후 화면 이동
-        await notifier.onAction(const GroupTimerAction.stopTimer());
+        await notifier.onAction(const GroupDetailAction.stopTimer());
         navigationAction();
       }
     } else {
@@ -218,7 +218,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       // 데이터 갱신을 다음 프레임으로 지연
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final notifier = ref.read(groupTimerNotifierProvider.notifier);
+          final notifier = ref.read(groupDetailNotifierProvider.notifier);
           notifier.onScreenReenter();
         }
       });
@@ -228,8 +228,8 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
   @override
   Widget build(BuildContext context) {
     // 상태 구독
-    final state = ref.watch(groupTimerNotifierProvider);
-    final notifier = ref.read(groupTimerNotifierProvider.notifier);
+    final state = ref.watch(groupDetailNotifierProvider);
+    final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
     return PopScope(
       canPop: state.timerStatus != TimerStatus.running,
@@ -242,7 +242,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           _showNavigationWarningDialog(context).then((shouldPop) {
             if (shouldPop && mounted) {
               // 타이머 종료 후 pop 실행
-              notifier.onAction(const GroupTimerAction.stopTimer()).then((_) {
+              notifier.onAction(const GroupDetailAction.stopTimer()).then((_) {
                 if (mounted) {
                   Navigator.of(context).pop();
                 }
@@ -251,7 +251,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           });
         }
       },
-      child: GroupTimerScreen(
+      child: GroupDetailScreen(
         state: state,
         onAction: (action) async {
           if (!mounted) return;
