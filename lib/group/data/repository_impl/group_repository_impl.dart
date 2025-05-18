@@ -25,6 +25,19 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
+  Future<Result<List<Group>>> getUserJoinedGroups(String userId) async {
+    try {
+      final groupDtoList = await _dataSource.fetchUserJoinedGroups(userId);
+      final groupList = groupDtoList.toModelList();
+      return Result.success(groupList);
+    } catch (e) {
+      return Result.error(
+        Failure(FailureType.unknown, '사용자 가입 그룹 목록을 불러오는데 실패했습니다.', cause: e),
+      );
+    }
+  }
+
+  @override
   Future<Result<Group>> getGroupDetail(String groupId) async {
     try {
       final groupDto = await _dataSource.fetchGroupDetail(groupId);

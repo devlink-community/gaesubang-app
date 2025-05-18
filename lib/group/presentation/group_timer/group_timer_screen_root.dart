@@ -20,10 +20,13 @@ class GroupTimerScreenRoot extends ConsumerStatefulWidget {
 
 class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     with WidgetsBindingObserver {
-  bool _isTimerStopped = false;
+  // 화면 상태 관리
+  bool _isInitialized = false;
+  bool _wasInBackground = false;
   bool _hasNotificationPermission = false;
-  late TimerStatus _lastKnownTimerStatus;
-  late int _lastKnownElapsedSeconds;
+
+  // 초기화 중 생명주기 이벤트 무시
+  bool _isInitializing = false;
 
   @override
   void initState() {
@@ -32,16 +35,94 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     // 앱 상태 변화 감지를 위한 관찰자 등록
     WidgetsBinding.instance.addObserver(this);
 
-    // 초기 그룹 ID 설정 및 데이터 로드
-    Future.microtask(() {
-      if (mounted) {
-        final notifier = ref.read(groupTimerNotifierProvider.notifier);
-        notifier.onAction(GroupTimerAction.setGroupId(widget.groupId));
+    // 초기화 플래그 설정
+    _isInitializing = true;
 
-        // 알림 권한 요청
-        _requestNotificationPermission();
-      }
+    // 화면 초기화를 위젯 빌드 이후로 지연
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeScreen();
     });
+  }
+
+  // 화면 초기화 (최초 진입 시에만 호출)
+  Future<void> _initializeScreen() async {
+    if (_isInitialized) return;
+
+    print('🚀 화면 초기화 시작 - groupId: ${widget.groupId}');
+
+    if (mounted) {
+      final notifier = ref.read(groupTimerNotifierProvider.notifier);
+      await notifier.onAction(GroupTimerAction.setGroupId(widget.groupId));
+      await _requestNotificationPermission();
+    }
+
+    _isInitialized = true;
+
+    // 초기화 완료 후 생명주기 이벤트 처리 재개
+    _isInitializing = false;
+
+    print('✅ 화면 초기화 완료');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // 초기화 중이면 생명주기 이벤트 무시
+    if (_isInitializing) {
+      print('🔄 초기화 중이므로 생명주기 이벤트 무시: $state');
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.paused:
+        // paused 상태에서만 백그라운드 처리 (중복 방지)
+        if (_isInitialized && !_isInitializing && !_wasInBackground) {
+          print('📱 앱이 백그라운드로 전환됨');
+          _wasInBackground = true;
+
+          // 타이머가 실행 중이면 종료
+          if (mounted) {
+            final notifier = ref.read(groupTimerNotifierProvider.notifier);
+            notifier.onAction(const GroupTimerAction.stopTimer());
+          }
+        }
+        break;
+
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        // inactive와 detached는 로그만 남기고 처리하지 않음
+        print('🔄 생명주기 상태 변경: $state (처리 안함)');
+        break;
+
+      case AppLifecycleState.resumed:
+        // 실제 백그라운드에서 돌아온 경우만 처리
+        if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
+          print('🔄 백그라운드에서 앱 재개 - 데이터 갱신');
+          // 데이터 갱신을 다음 프레임으로 지연
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              final notifier = ref.read(groupTimerNotifierProvider.notifier);
+              notifier.onScreenReenter();
+              _showAppResumedMessage();
+            }
+          });
+        }
+        _wasInBackground = false;
+        break;
+
+      case AppLifecycleState.hidden:
+        // hidden 상태는 특별한 처리 없음
+        print('🔄 생명주기 상태 변경: $state');
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    // 관찰자 해제
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   // 알림 권한 확인 및 요청
@@ -58,7 +139,6 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           action: SnackBarAction(
             label: '설정',
             onPressed: () {
-              // 앱 설정 화면으로 이동 (앱 설정에서 알림 권한 설정 가능)
               notificationService.openNotificationSettings();
             },
           ),
@@ -66,66 +146,17 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       );
     }
 
-    // 알림 권한 상태 기록 (권한이 없어도 타이머는 동작하도록)
     _hasNotificationPermission = hasPermission;
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // 현재 타이머 상태를 캐시
-    if (mounted) {
-      final state = ref.read(groupTimerNotifierProvider);
-      _lastKnownTimerStatus = state.timerStatus;
-      _lastKnownElapsedSeconds = state.elapsedSeconds;
-    }
-  }
-
-  @override
-  void dispose() {
-    // dispose 될 때 타이머 캐시된 상태 확인하여 필요한 경우 알림만 표시
-    if (_lastKnownTimerStatus == TimerStatus.running && !_isTimerStopped) {
-      _showTimerEndedNotification(
-        _lastKnownElapsedSeconds,
-        isAppTerminating: true,
-      );
-      _isTimerStopped = true;
-    }
-
-    // 관찰자 해제
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  // 앱 상태 변화 감지 (백그라운드 전환 등)
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    // 앱이 백그라운드로 전환되거나 비활성화될 때 타이머가 실행 중이면 종료
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
-      // detached는 앱 종료 상태를 나타낼 수 있음
-      bool isAppTerminating = state == AppLifecycleState.detached;
-
-      // mounted 확인 후 안전하게 타이머 상태 처리
+  // 앱 재개 시 사용자에게 메시지 표시
+  void _showAppResumedMessage() {
+    // 잠시 후에 상태를 확인하여 타이머가 초기화되었는지 확인
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        _stopTimerIfRunning(isAppTerminating: isAppTerminating);
-      }
-    }
-    // 앱이 다시 활성화될 때(백그라운드에서 돌아왔을 때) 타이머 상태 리셋
-    else if (state == AppLifecycleState.resumed) {
-      // 앱이 재개되었을 때 처리
-      if (_isTimerStopped && mounted) {
-        // 타이머가 중지된 상태면 상태를 초기화
-        final notifier = ref.read(groupTimerNotifierProvider.notifier);
-        notifier.onAction(const GroupTimerAction.resetTimer());
-        _isTimerStopped = false;
-
-        // 사용자에게 타이머가 중지되었음을 알림
-        if (mounted) {
+        final currentState = ref.read(groupTimerNotifierProvider);
+        // 타이머가 초기 상태가 되었다면 백그라운드에서 중지되었다는 뜻
+        if (currentState.timerStatus == TimerStatus.initial) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('앱이 백그라운드에 있는 동안 타이머가 중지되었습니다.'),
@@ -134,65 +165,7 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           );
         }
       }
-
-      // 타이머 상태와 상관없이 데이터 새로고침 (mounted 확인)
-      if (mounted) {
-        final notifier = ref.read(groupTimerNotifierProvider.notifier);
-        notifier.refreshAllData();
-      }
-    }
-  }
-
-  // 타이머가 실행 중인 경우 종료하는 메서드
-  Future<void> _stopTimerIfRunning({bool isAppTerminating = false}) async {
-    // 이미 타이머가 중지된 경우 처리하지 않음
-    if (_isTimerStopped) return;
-
-    // mounted 체크 추가
-    if (!mounted) return;
-
-    // 현재 타이머 상태 확인
-    final timerState = ref.read(groupTimerNotifierProvider);
-
-    // 캐시 업데이트
-    _lastKnownTimerStatus = timerState.timerStatus;
-    _lastKnownElapsedSeconds = timerState.elapsedSeconds;
-
-    // 타이머가 실행 중이거나 일시 중지 상태인 경우 처리
-    if (timerState.timerStatus == TimerStatus.running ||
-        timerState.timerStatus == TimerStatus.paused) {
-      final notifier = ref.read(groupTimerNotifierProvider.notifier);
-
-      // 타이머 종료 액션 실행
-      await notifier.onAction(const GroupTimerAction.stopTimer());
-
-      // 타이머 종료 플래그 설정
-      _isTimerStopped = true;
-
-      // 로컬 알림 표시 (실행 중이었을 때만)
-      if (timerState.timerStatus == TimerStatus.running) {
-        await _showTimerEndedNotification(
-          timerState.elapsedSeconds,
-          isAppTerminating: isAppTerminating,
-        );
-      }
-    }
-  }
-
-  // 로컬 알림 표시 메서드 - 파라미터 변경
-  Future<void> _showTimerEndedNotification(
-    int elapsedSeconds, {
-    bool isAppTerminating = false,
-  }) async {
-    // 알림 메시지에 앱 종료 표시 추가
-    final String titlePrefix = isAppTerminating ? '앱 종료: ' : '';
-
-    // NotificationService를 통한 알림 표시
-    await NotificationService().showTimerEndedNotification(
-      groupName: ref.read(groupTimerNotifierProvider).groupName,
-      elapsedSeconds: elapsedSeconds,
-      titlePrefix: titlePrefix,
-    );
+    });
   }
 
   // 화면 이동 전 경고창 표시
@@ -230,12 +203,25 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
       if (shouldNavigate && mounted) {
         // 타이머 종료 후 화면 이동
         await notifier.onAction(const GroupTimerAction.stopTimer());
-        _isTimerStopped = true;
         navigationAction();
       }
     } else {
       // 타이머가 실행 중이 아니면 바로 화면 이동
       navigationAction();
+    }
+  }
+
+  // 다른 화면에서 돌아올 때 감지 및 처리
+  void _handleScreenReturn() {
+    if (mounted && _isInitialized && !_isInitializing) {
+      print('🔄 다른 화면에서 돌아옴 - 데이터 갱신');
+      // 데이터 갱신을 다음 프레임으로 지연
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final notifier = ref.read(groupTimerNotifierProvider.notifier);
+          notifier.onScreenReenter();
+        }
+      });
     }
   }
 
@@ -245,19 +231,18 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
     final state = ref.watch(groupTimerNotifierProvider);
     final notifier = ref.read(groupTimerNotifierProvider.notifier);
 
-    // 캐시 업데이트
-    _lastKnownTimerStatus = state.timerStatus;
-    _lastKnownElapsedSeconds = state.elapsedSeconds;
-
     return PopScope(
       canPop: state.timerStatus != TimerStatus.running,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
+        if (didPop) {
+          // 실제로 pop이 발생했을 때 - 이전 화면으로 돌아감
+          // 여기서는 아무것도 하지 않음 (상위 화면으로 나가는 것)
+        } else {
+          // pop이 취소되었을 때 - 타이머 실행 중이어서 경고창 표시
           _showNavigationWarningDialog(context).then((shouldPop) {
             if (shouldPop && mounted) {
               // 타이머 종료 후 pop 실행
               notifier.onAction(const GroupTimerAction.stopTimer()).then((_) {
-                _isTimerStopped = true;
                 if (mounted) {
                   Navigator.of(context).pop();
                 }
@@ -274,20 +259,26 @@ class _GroupTimerScreenRootState extends ConsumerState<GroupTimerScreenRoot>
           switch (action) {
             case NavigateToAttendance():
               // 출석부(캘린더) 화면으로 이동 - 경고창 표시 후 처리
-              await _handleNavigation(() {
-                context.push('/group/${widget.groupId}/attendance');
+              await _handleNavigation(() async {
+                await context.push('/group/${widget.groupId}/attendance');
+                // 화면에서 돌아왔을 때 데이터 갱신
+                _handleScreenReturn();
               });
 
             case NavigateToSettings():
               // 그룹 설정 화면으로 이동 - 경고창 표시 후 처리
-              await _handleNavigation(() {
-                context.push('/group/${widget.groupId}/settings');
+              await _handleNavigation(() async {
+                await context.push('/group/${widget.groupId}/settings');
+                // 화면에서 돌아왔을 때 데이터 갱신
+                _handleScreenReturn();
               });
 
             case NavigateToUserProfile(:final userId):
               // 사용자 프로필 화면으로 이동 - 경고창 표시 후 처리
-              await _handleNavigation(() {
-                context.push('/user/$userId/profile');
+              await _handleNavigation(() async {
+                await context.push('/user/$userId/profile');
+                // 화면에서 돌아왔을 때 데이터 갱신
+                _handleScreenReturn();
               });
 
             default:
