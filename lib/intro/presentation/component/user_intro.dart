@@ -66,7 +66,6 @@ class _ProfileInfoState extends State<ProfileInfo>
   Widget build(BuildContext context) {
     // 컴팩트 모드에 따라 크기 조정
     final double imageSize = widget.compact ? 60.0 : 72.0;
-    // final double iconSize = widget.compact ? 24.0 : 30.0;
 
     // 소개글이 있는지 확인
     final bool hasDescription = widget.member.description.isNotEmpty;
@@ -97,19 +96,20 @@ class _ProfileInfoState extends State<ProfileInfo>
                     end: Alignment.bottomRight,
                     colors: [
                       Colors.white,
-                      AppColorStyles.primary100.withValues(alpha: 0.1),
+                      AppColorStyles.primary100.withOpacity(0.1),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColorStyles.primary100.withValues(alpha: 0.2),
+                      color: AppColorStyles.primary100.withOpacity(0.2),
                       spreadRadius: 2,
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(2), // 테두리 효과를 위한 패딩
+                padding: const EdgeInsets.all(2),
+                // 테두리 효과를 위한 패딩
                 child: _buildProfileImage(),
               ),
             ),
@@ -154,9 +154,7 @@ class _ProfileInfoState extends State<ProfileInfo>
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColorStyles.primary100.withValues(
-                                alpha: 0.3,
-                              ),
+                              color: AppColorStyles.primary100.withOpacity(0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -202,10 +200,10 @@ class _ProfileInfoState extends State<ProfileInfo>
             curve: Curves.easeInOut,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColorStyles.primary100.withValues(alpha: 0.03),
+              color: AppColorStyles.primary100.withOpacity(0.03),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                color: AppColorStyles.primary100.withOpacity(0.1),
                 width: 1,
               ),
             ),
@@ -222,7 +220,7 @@ class _ProfileInfoState extends State<ProfileInfo>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '소개',
+                      '소개글',
                       style: AppTextStyles.subtitle2Regular.copyWith(
                         color: AppColorStyles.primary100,
                         fontWeight: FontWeight.w600,
@@ -245,12 +243,12 @@ class _ProfileInfoState extends State<ProfileInfo>
                           Text(
                             widget.member.description,
                             style: AppTextStyles.body1Regular.copyWith(
-                              color: AppColorStyles.textPrimary.withValues(
-                                alpha: _fadeAnimation.value,
+                              color: AppColorStyles.textPrimary.withOpacity(
+                                _fadeAnimation.value,
                               ),
                               height: 1.4,
                             ),
-                            maxLines: _isExpanded ? null : 2,
+                            maxLines: _isExpanded ? null : 1,
                             overflow:
                                 _isExpanded
                                     ? TextOverflow.visible
@@ -266,8 +264,8 @@ class _ProfileInfoState extends State<ProfileInfo>
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColorStyles.primary100.withValues(
-                                    alpha: 0.05,
+                                  color: AppColorStyles.primary100.withOpacity(
+                                    0.05,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                 ),
