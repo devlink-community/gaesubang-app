@@ -7,15 +7,15 @@ import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.da
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_action.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'group_timer_notifier.g.dart';
+part 'group_detail_notifier.g.dart';
 
 @riverpod
-class GroupTimerNotifier extends _$GroupTimerNotifier {
+class GroupDetailNotifier extends _$GroupDetailNotifier {
   Timer? _timer;
   late final StartTimerUseCase _startTimerUseCase;
   late final StopTimerUseCase _stopTimerUseCase;
@@ -25,8 +25,8 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
 
   @override
-  GroupTimerState build() {
-    print('🏗️ GroupTimerNotifier build() 호출');
+  GroupDetailState build() {
+    print('🏗️ GroupDetailNotifier build() 호출');
 
     // 의존성 주입
     _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
@@ -38,12 +38,12 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
 
     // 화면 이탈 시 타이머 정리
     ref.onDispose(() {
-      print('🗑️ GroupTimerNotifier dispose - 타이머 정리');
+      print('🗑️ GroupDetailNotifier dispose - 타이머 정리');
       _timer?.cancel();
     });
 
     // build()에서는 초기 상태만 반환
-    return const GroupTimerState();
+    return const GroupDetailState();
   }
 
   // 화면 재진입 시 데이터 갱신 (Root에서 호출)
@@ -58,7 +58,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   }
 
   // 액션 처리
-  Future<void> onAction(GroupTimerAction action) async {
+  Future<void> onAction(GroupDetailAction action) async {
     switch (action) {
       case StartTimer():
         await _handleStartTimer();
@@ -275,7 +275,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
     _timer?.cancel();
     _timer = Timer.periodic(
       const Duration(seconds: 1),
-      (_) => onAction(const GroupTimerAction.timerTick()),
+      (_) => onAction(const GroupDetailAction.timerTick()),
     );
   }
 

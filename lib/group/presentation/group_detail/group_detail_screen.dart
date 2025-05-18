@@ -8,25 +8,25 @@ import 'package:devlink_mobile_app/group/presentation/group_detail/components/me
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_section_header.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/timer_display.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_action.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 
-class GroupTimerScreen extends StatefulWidget {
-  const GroupTimerScreen({
+class GroupDetailScreen extends StatefulWidget {
+  const GroupDetailScreen({
     super.key,
     required this.state,
     required this.onAction,
   });
 
-  final GroupTimerState state;
-  final void Function(GroupTimerAction action) onAction;
+  final GroupDetailState state;
+  final void Function(GroupDetailAction action) onAction;
 
   @override
-  State<GroupTimerScreen> createState() => _GroupTimerScreenState();
+  State<GroupDetailScreen> createState() => _GroupDetailScreenState();
 }
 
-class _GroupTimerScreenState extends State<GroupTimerScreen> {
+class _GroupDetailScreenState extends State<GroupDetailScreen> {
   late ScrollController _scrollController;
   bool _isTimerVisible = true;
   bool _isMessageExpanded = false; // 메시지 펼치기/접기 상태
@@ -124,7 +124,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
                             timerStatus: widget.state.timerStatus,
                             onToggle:
                                 () => widget.onAction(
-                                  const GroupTimerAction.toggleTimer(),
+                                  const GroupDetailAction.toggleTimer(),
                                 ),
                           ),
                         ],
@@ -196,7 +196,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
           icon: const Icon(Icons.settings, color: Colors.white),
           onPressed:
               () =>
-                  widget.onAction(const GroupTimerAction.navigateToSettings()),
+                  widget.onAction(const GroupDetailAction.navigateToSettings()),
         ),
       ],
     );
@@ -244,7 +244,8 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
         child: TimerDisplay(
           elapsedSeconds: widget.state.elapsedSeconds,
           timerStatus: widget.state.timerStatus,
-          onToggle: () => widget.onAction(const GroupTimerAction.toggleTimer()),
+          onToggle:
+              () => widget.onAction(const GroupDetailAction.toggleTimer()),
           isCompact: true, // 작은 디스플레이 모드
         ),
       ),
@@ -297,7 +298,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
               members: members,
               onMemberTap:
                   (memberId) => widget.onAction(
-                    GroupTimerAction.navigateToUserProfile(memberId),
+                    GroupDetailAction.navigateToUserProfile(memberId),
                   ),
             ),
           ],
@@ -347,7 +348,7 @@ class _GroupTimerScreenState extends State<GroupTimerScreen> {
           GestureDetector(
             onTap:
                 () => widget.onAction(
-                  const GroupTimerAction.navigateToAttendance(),
+                  const GroupDetailAction.navigateToAttendance(),
                 ),
             child: Container(
               padding: const EdgeInsets.all(6),

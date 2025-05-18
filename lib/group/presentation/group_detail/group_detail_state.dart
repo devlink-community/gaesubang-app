@@ -3,11 +3,11 @@ import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-part 'group_timer_state.freezed.dart';
+part 'group_detail_state.freezed.dart';
 
 @freezed
-class GroupTimerState with _$GroupTimerState {
-  const GroupTimerState({
+class GroupDetailState with _$GroupDetailState {
+  const GroupDetailState({
     // 현재 진행 중인 타이머 세션
     this.activeSession = const AsyncValue.loading(),
 
