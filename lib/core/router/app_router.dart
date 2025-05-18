@@ -1,4 +1,5 @@
 // lib/core/router/app_router.dart
+import 'package:devlink_mobile_app/attendance/presentation/attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
@@ -221,7 +222,7 @@ GoRouter appRouter(Ref ref) {
         path: '/group/:id/attendance',
         builder:
             (context, state) =>
-                MockGroupAttendanceScreen(groupId: state.pathParameters['id']!),
+                AttendanceScreenRoot(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/group/:id/settings',

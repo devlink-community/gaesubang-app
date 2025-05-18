@@ -1,32 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../domain/model/group.dart'; // 수정된 임포트
 import 'attendance_action.dart';
 import 'attendance_notifier.dart';
 import 'attendance_screen.dart';
 
-class AttendanceScreenRoot extends ConsumerWidget {
-  final Group group;
+class AttendanceScreenRoot extends ConsumerStatefulWidget {
+  final String groupId;
 
-  const AttendanceScreenRoot({super.key, required this.group});
+  const AttendanceScreenRoot({super.key, required this.groupId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AttendanceScreenRoot> createState() =>
+      _AttendanceScreenRootState();
+}
+
+class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
+  @override
+  void initState() {
+    super.initState();
+    // 한 번만 실행
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(attendanceNotifierProvider.notifier)
+          .onAction(AttendanceAction.setGroupId(widget.groupId));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(attendanceNotifierProvider);
     final notifier = ref.watch(attendanceNotifierProvider.notifier);
 
-    // 초기 그룹 선택 처리
-    // Root가 첫 번째로 빌드될 때 group 정보 설정
-    ref.listenManual(attendanceNotifierProvider, (_, __) {
-      Future.microtask(() {
-        notifier.onAction(AttendanceAction.selectGroup(group));
-      });
-    }, fireImmediately: true);
-
-    return AttendanceScreen(
-      state: state,
-      onAction: notifier.onAction,
-    );
+    return AttendanceScreen(state: state, onAction: notifier.onAction);
   }
 }

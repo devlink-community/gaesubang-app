@@ -1,11 +1,10 @@
 import 'package:devlink_mobile_app/attendance/module/attendance_di.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter/material.dart';
 
-import '../../domain/model/group.dart';
 import '../../domain/usecase/get_attendance_by_month_use_case.dart';
+import '../../domain/usecase/mock_get_group_detail_use_case.dart';
 import 'attendance_action.dart';
 import 'attendance_state.dart';
 
@@ -14,17 +13,18 @@ part 'attendance_notifier.g.dart';
 @riverpod
 class AttendanceNotifier extends _$AttendanceNotifier {
   late final GetAttendancesByMonthUseCase _getAttendancesByMonthUseCase;
+  late final MockGetGroupDetailUseCase _mockGetGroupDetailUseCase;
 
   @override
   AttendanceState build() {
     _getAttendancesByMonthUseCase = ref.watch(
       getAttendancesByMonthUseCaseProvider,
     );
+    _mockGetGroupDetailUseCase = ref.watch(mockGetGroupDetailUseCaseProvider);
 
-    // 현재 날짜 기준 초기 상태 설정
     final now = DateTime.now();
     return AttendanceState(
-      selectedGroup: null,
+      groupDetail: const AsyncValue.loading(),
       displayedMonth: DateTime(now.year, now.month),
       selectedDate: now,
       attendanceList: const AsyncValue.loading(),
@@ -33,8 +33,8 @@ class AttendanceNotifier extends _$AttendanceNotifier {
 
   Future<void> onAction(AttendanceAction action) async {
     switch (action) {
-      case SelectGroup(:final group):
-        await _handleSelectGroup(group);
+      case SetGroupId(:final groupId):
+        await _handleSetGroupId(groupId);
       case SelectDate(:final date):
         _handleSelectDate(date);
       case ChangeMonth(:final month):
@@ -44,15 +44,32 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     }
   }
 
-  Future<void> _handleSelectGroup(Group group) async {
-    if (group.id == state.selectedGroup?.id) return;
+  Future<void> _handleSetGroupId(String groupId) async {
+    try {
+      // 그룹 정보 로딩 상태 설정
+      state = state.copyWith(
+        groupDetail: const AsyncValue.loading(),
+        attendanceList: const AsyncValue.loading(),
+      );
 
-    state = state.copyWith(
-      selectedGroup: group,
-      attendanceList: const AsyncValue.loading(),
-    );
+      // Mock Group Detail UseCase를 통해 그룹 정보 조회
+      final groupResult = await _mockGetGroupDetailUseCase.execute(groupId);
 
-    await _loadAttendanceData();
+      // UseCase 결과를 바로 상태에 할당
+      state = state.copyWith(groupDetail: groupResult);
+
+      // 그룹 정보 로드가 성공한 경우에만 출석 데이터 로드
+      if (groupResult case AsyncData()) {
+        await _loadAttendanceData();
+      }
+    } catch (e, stackTrace) {
+      // 최상위 예외 처리 - 모든 예외를 상태로 변환
+      print('🚨 Uncaught exception in _handleSetGroupId: $e');
+      state = state.copyWith(
+        groupDetail: AsyncError(e, stackTrace),
+        attendanceList: AsyncError(e, stackTrace),
+      );
+    }
   }
 
   void _handleSelectDate(DateTime date) {
@@ -73,7 +90,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   }
 
   Future<void> _loadAttendanceData() async {
-    final group = state.selectedGroup;
+    final group = state.groupDetail.valueOrNull;
     if (group == null) return;
 
     final memberIds = group.members.map((e) => e.id).toList();
@@ -110,7 +127,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
         // 30분 이상
         colorMap[dateKey] = const Color(0xFFA5A6F6); // primary60
       } else {
-        colorMap[dateKey] = Colors.grey.withOpacity(0.3);
+        colorMap[dateKey] = Colors.grey.withValues(alpha: 0.3);
       }
     }
 
