@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 
-import '../dto/attendance_dto.dart';
+import '../dto/attendance_dto_old.dart';
 
 extension AttendanceDtoMapper on AttendanceDto {
   Attendance toModel() => Attendance(

@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/group/data/dto/timer_session_dto.dart';
+import 'package:devlink_mobile_app/group/data/dto/timer_session_dto_old.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
 
 // DTO → Model 변환

@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'timer_session_dto.g.dart';
+part 'timer_session_dto_old.g.dart';
 
 @JsonSerializable()
 class TimerSessionDto {

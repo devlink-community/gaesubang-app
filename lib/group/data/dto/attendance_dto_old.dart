@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'attendance_dto.g.dart';
+part 'attendance_dto_old.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class AttendanceDto {
@@ -16,6 +16,7 @@ class AttendanceDto {
   final int time;
   final String groupId;
 
-  factory AttendanceDto.fromJson(Map<String, dynamic> json) => _$AttendanceDtoFromJson(json);
+  factory AttendanceDto.fromJson(Map<String, dynamic> json) =>
+      _$AttendanceDtoFromJson(json);
   Map<String, dynamic> toJson() => _$AttendanceDtoToJson(this);
 }

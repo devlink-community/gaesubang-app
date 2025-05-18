@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
-import 'package:devlink_mobile_app/group/data/dto/timer_session_dto.dart';
+import 'package:devlink_mobile_app/group/data/dto/timer_session_dto_old.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
 
