@@ -1,8 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../group/domain/model/attendance.dart';
 import '../../../group/domain/model/group.dart';
-import '../../domain/model/attendance.dart';
 
 part 'attendance_state.freezed.dart';
 
