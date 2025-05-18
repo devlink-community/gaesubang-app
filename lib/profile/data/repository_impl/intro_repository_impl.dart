@@ -1,7 +1,7 @@
 import 'package:devlink_mobile_app/auth/data/data_source/mock_auth_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/mapper/member_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
-import 'package:devlink_mobile_app/intro/data/mapper/focus_time_stats_dto_mapper.dart';
+import 'package:devlink_mobile_app/profile/data/mapper/focus_time_stats_dto_mapper.dart';
 
 import '../../../auth/data/data_source/mock_profile_data_source.dart';
 import '../../../core/result/result.dart';

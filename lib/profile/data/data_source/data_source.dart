@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/edit_intro/data/data_source/user_storage_profile_update.dart';
+import 'package:devlink_mobile_app/profile/data/data_source/user_storage_profile_update.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
