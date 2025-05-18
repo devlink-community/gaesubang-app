@@ -255,6 +255,27 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
+  Future<List<GroupDto>> fetchUserJoinedGroups(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _initializeIfNeeded();
+
+    // 사용자가 멤버로 포함된 그룹만 필터링
+    final userGroups =
+        _groups
+            .where(
+              (group) =>
+                  group.members?.any((member) => member.id == userId) ?? false,
+            )
+            .toList();
+
+    print(
+      '🔍 User $userId joined groups: ${userGroups.length} out of ${_groups.length}',
+    );
+
+    return userGroups;
+  }
+
+  @override
   Future<GroupDto> fetchGroupDetail(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 700));
     await _initializeIfNeeded();

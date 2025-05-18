@@ -1,10 +1,8 @@
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
-import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
-import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/home/data/data_source/home_data_source.dart';
 import 'package:devlink_mobile_app/home/domain/model/notice.dart';
 
@@ -28,124 +26,6 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         content: '게시판 이용 규칙에 관한 공지사항입니다.',
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
         linkUrl: '/notice/2',
-      ),
-    ];
-  }
-
-  @override
-  Future<List<Group>> fetchUserGroups() async {
-    // 데이터 로딩 시간을 시뮬레이션하기 위한 딜레이
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    final mockOwner = Member(
-      id: 'owner1',
-      email: 'owner@example.com',
-      nickname: '그룹장',
-      uid: 'owner-uid',
-    );
-
-    final members = [
-      mockOwner,
-      Member(
-        id: 'member1',
-        email: 'member1@example.com',
-        nickname: '멤버1',
-        uid: 'member1-uid',
-      ),
-      Member(
-        id: 'member2',
-        email: 'member2@example.com',
-        nickname: '멤버2',
-        uid: 'member2-uid',
-      ),
-    ];
-
-    // DiceBear API를 사용하여 그룹 프로필 이미지 생성
-    return [
-      Group(
-        id: 'group1',
-        name: 'YOLO',
-        description: '코딩 스터디 그룹입니다.',
-        members: members,
-        hashTags: [
-          HashTag(id: 'tag1', content: '코딩'),
-          HashTag(id: 'tag2', content: '스터디'),
-        ],
-        limitMemberCount: 10,
-        owner: mockOwner,
-        // DiceBear API 사용 - Avataaars 스타일
-        imageUrl:
-            'https://api.dicebear.com/6.x/avataaars/png?seed=group1&backgroundColor=b6e3f4',
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      Group(
-        id: 'group2',
-        name: '콩콩이',
-        description: '디자인 스터디 그룹입니다.',
-        members: members,
-        hashTags: [
-          HashTag(id: 'tag3', content: '디자인'),
-          HashTag(id: 'tag4', content: 'UI/UX'),
-        ],
-        limitMemberCount: 8,
-        owner: mockOwner,
-        // DiceBear API 사용 - Bottts 스타일 (로봇 아바타)
-        imageUrl:
-            'https://api.dicebear.com/6.x/bottts/png?seed=group2&backgroundColor=ffdfbf',
-        createdAt: DateTime.now().subtract(const Duration(days: 25)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-      Group(
-        id: 'group3',
-        name: '개발몬',
-        description: '프로젝트 협업 그룹입니다.',
-        members: members,
-        hashTags: [
-          HashTag(id: 'tag5', content: '프로젝트'),
-          HashTag(id: 'tag6', content: '협업'),
-        ],
-        limitMemberCount: 12,
-        owner: mockOwner,
-        // DiceBear API 사용 - Micah 스타일
-        imageUrl:
-            'https://api.dicebear.com/6.x/micah/png?seed=group3&backgroundColor=d1d4f9',
-        createdAt: DateTime.now().subtract(const Duration(days: 15)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      Group(
-        id: 'group4',
-        name: '코딩덕후',
-        description: '알고리즘 문제 풀이 그룹입니다.',
-        members: members,
-        hashTags: [
-          HashTag(id: 'tag7', content: '알고리즘'),
-          HashTag(id: 'tag8', content: '코딩테스트'),
-        ],
-        limitMemberCount: 15,
-        owner: mockOwner,
-        // DiceBear API 사용 - Adventurer 스타일
-        imageUrl:
-            'https://api.dicebear.com/6.x/adventurer/png?seed=group4&backgroundColor=c0aede',
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      Group(
-        id: 'group5',
-        name: '알고왕',
-        description: '자료구조 스터디 그룹입니다.',
-        members: members,
-        hashTags: [
-          HashTag(id: 'tag9', content: '자료구조'),
-          HashTag(id: 'tag10', content: '컴퓨터공학'),
-        ],
-        limitMemberCount: 10,
-        owner: mockOwner,
-        // DiceBear API 사용 - Lorelei 스타일
-        imageUrl:
-            'https://api.dicebear.com/6.x/lorelei/png?seed=group5&backgroundColor=ffd5dc',
-        createdAt: DateTime.now().subtract(const Duration(days: 20)),
-        updatedAt: DateTime.now().subtract(const Duration(days: 4)),
       ),
     ];
   }
