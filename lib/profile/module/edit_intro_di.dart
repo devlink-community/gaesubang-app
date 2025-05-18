@@ -3,9 +3,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../auth/module/auth_di.dart';
 import '../data/repository_impl/edit_intro_repository_impl.dart';
 import '../domain/repository/edit_intro_repository.dart';
-import '../domain/usecase/get_current_profile_usecase.dart';
-import '../domain/usecase/update_profile_image_usecase.dart';
-import '../domain/usecase/update_profile_usecase.dart';
+import '../domain/use_case/get_current_profile_usecase.dart';
+import '../domain/use_case/update_profile_image_usecase.dart';
+import '../domain/use_case/update_profile_usecase.dart';
 
 part 'edit_intro_di.g.dart';
 

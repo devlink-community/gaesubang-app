@@ -1,15 +1,14 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/edit_intro/presentation/edit_intro_action.dart';
-import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
+import 'package:devlink_mobile_app/profile/domain/use_case/get_current_profile_usecase.dart';
+import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_image_usecase.dart';
+import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_usecase.dart';
+import 'package:devlink_mobile_app/profile/module/edit_intro_di.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../domain/usecase/get_current_profile_usecase.dart';
-import '../domain/usecase/update_profile_image_usecase.dart';
-import '../domain/usecase/update_profile_usecase.dart';
-import '../module/edit_intro_di.dart';
 
 part 'edit_intro_notifier.g.dart';
 

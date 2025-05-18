@@ -1,14 +1,14 @@
 import 'dart:io';
 
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/styles/app_color_styles.dart';
-import '../../../core/styles/app_text_styles.dart';
-import '../../../group/presentation/component/labeled_text_field.dart';
-import '../edit_intro_action.dart';
-import '../states/edit_intro_state.dart';
+import '../../../../core/styles/app_color_styles.dart';
+import '../../../../core/styles/app_text_styles.dart';
+import '../../../../group/presentation/component/labeled_text_field.dart';
 
 class EditIntroScreen extends StatefulWidget {
   final EditIntroState state;

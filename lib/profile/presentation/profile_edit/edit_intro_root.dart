@@ -1,11 +1,11 @@
-import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_screen.dart';
+import 'package:devlink_mobile_app/profile/presentation/intro_notifier.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_notifier.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../intro/presentation/intro_notifier.dart';
-import '../edit_intro_action.dart';
-import '../edit_intro_notifier.dart';
+import 'edit_intro_action.dart';
 
 class EditIntroRoot extends ConsumerStatefulWidget {
   const EditIntroRoot({super.key});
