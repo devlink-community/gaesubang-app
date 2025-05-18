@@ -40,7 +40,9 @@ class MemberTimerItem extends StatelessWidget {
                     status == MemberTimerStatus.active
                         ? [
                           BoxShadow(
-                            color: AppColorStyles.primary80.withOpacity(0.15),
+                            color: AppColorStyles.primary80.withValues(
+                              alpha: 0.15,
+                            ),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),
@@ -84,7 +86,7 @@ class MemberTimerItem extends StatelessWidget {
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColorStyles.success.withOpacity(0.3),
+                        color: AppColorStyles.success.withValues(alpha: 0.3),
                         blurRadius: 4,
                         spreadRadius: 0,
                       ),
@@ -116,7 +118,7 @@ class MemberTimerItem extends StatelessWidget {
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: AppColorStyles.gray40.withOpacity(0.5),
+                color: AppColorStyles.gray40.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -142,7 +144,7 @@ class MemberTimerItem extends StatelessWidget {
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: AppColorStyles.primary100.withOpacity(0.12),
+                color: AppColorStyles.primary100.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
