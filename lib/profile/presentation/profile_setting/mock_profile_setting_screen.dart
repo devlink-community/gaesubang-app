@@ -10,14 +10,15 @@ import '../../../auth/data/dto/user_dto.dart';
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
 
-class ProfileEditDemoScreen extends StatefulWidget {
-  const ProfileEditDemoScreen({super.key});
+class MockProfileSettingScreen extends StatefulWidget {
+  const MockProfileSettingScreen({super.key});
 
   @override
-  State<ProfileEditDemoScreen> createState() => _ProfileEditDemoScreenState();
+  State<MockProfileSettingScreen> createState() =>
+      _MockProfileSettingScreenState();
 }
 
-class _ProfileEditDemoScreenState extends State<ProfileEditDemoScreen> {
+class _MockProfileSettingScreenState extends State<MockProfileSettingScreen> {
   final _userStorage = UserStorage.instance;
 
   // 현재 프로필 정보

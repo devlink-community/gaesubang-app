@@ -1,20 +1,22 @@
-import 'package:devlink_mobile_app/profile/presentation/intro_notifier.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_notifier.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_screen.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_notifier.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_notifier.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'edit_intro_action.dart';
+import 'profile_setting_action.dart';
 
-class EditIntroRoot extends ConsumerStatefulWidget {
-  const EditIntroRoot({super.key});
+class ProfileSettingScreenRoot extends ConsumerStatefulWidget {
+  const ProfileSettingScreenRoot({super.key});
 
   @override
-  ConsumerState<EditIntroRoot> createState() => _EditIntroRootState();
+  ConsumerState<ProfileSettingScreenRoot> createState() =>
+      _ProfileSettingScreenRootState();
 }
 
-class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
+class _ProfileSettingScreenRootState
+    extends ConsumerState<ProfileSettingScreenRoot> {
   // 저장 버튼 클릭 추적을 위한 변수
   bool _saveButtonPressed = false;
 
@@ -23,17 +25,17 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
     super.initState();
     // 미세한 지연을 두고 프로필 로드 시작
     Future.microtask(() {
-      ref.read(editIntroNotifierProvider.notifier).loadProfile();
+      ref.read(profileSettingNotifierProvider.notifier).loadProfile();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(editIntroNotifierProvider);
-    final notifier = ref.watch(editIntroNotifierProvider.notifier);
+    final state = ref.watch(profileSettingNotifierProvider);
+    final notifier = ref.watch(profileSettingNotifierProvider.notifier);
 
     // 로딩 상태 감시
-    ref.listen(editIntroNotifierProvider.select((s) => s.isLoading), (
+    ref.listen(profileSettingNotifierProvider.select((s) => s.isLoading), (
       previous,
       current,
     ) {
@@ -50,7 +52,7 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
           // 약간의 지연 후 화면 전환
           Future.delayed(const Duration(milliseconds: 600), () {
             // IntroNotifierProvider 무효화 - 프로필 화면이 다시 로드되도록 함
-            ref.invalidate(introNotifierProvider);
+            ref.invalidate(profileNotifierProvider);
 
             // 프로필 화면으로 이동
             context.go('/profile');
@@ -62,7 +64,7 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
       }
     });
 
-    return EditIntroScreen(
+    return ProfileSettingScreen(
       state: state,
       onAction: (action) async {
         switch (action) {

@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/result/result.dart';
-import '../repository/edit_intro_repository.dart';
+import '../repository/profile_setting_repository.dart';
 
 class UpdateProfileImageUseCase {
-  final EditIntroRepository _repository;
+  final ProfileSettingRepository _repository;
 
   UpdateProfileImageUseCase(this._repository);
 

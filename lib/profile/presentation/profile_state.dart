@@ -4,11 +4,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../domain/model/focus_time_stats.dart';
 
-part 'intro_state.freezed.dart';
+part 'profile_state.freezed.dart';
 
 @freezed
-class IntroState with _$IntroState {
-  const IntroState({
+class ProfileState with _$ProfileState {
+  const ProfileState({
     /// 프로필 정보 로딩/성공/실패 상태
     this.userProfile = const AsyncLoading(),
 

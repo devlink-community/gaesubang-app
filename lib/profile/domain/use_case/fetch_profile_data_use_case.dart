@@ -2,12 +2,12 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
-import '../repository/intro_repository.dart';
+import '../repository/profile_repository.dart';
 
-class FetchIntroUserUseCase {
-  final IntroRepository _repo;
+class FetchProfileUserUseCase {
+  final ProfileRepository _repo;
 
-  FetchIntroUserUseCase(this._repo);
+  FetchProfileUserUseCase(this._repo);
 
   Future<AsyncValue<Member>> execute() async {
     final result = await _repo.fetchIntroUser();

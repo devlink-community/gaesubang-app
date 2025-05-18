@@ -6,21 +6,21 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 // ← 임포트 추가
 import 'component/focus_stats_chart.dart';
 import 'component/total_focus.dart';
-import 'component/user_intro.dart';
-import 'intro_action.dart';
-import 'intro_state.dart';
+import 'component/user_info_card.dart';
+import 'profile_action.dart';
+import 'profile_state.dart';
 
-class IntroScreen extends StatefulWidget {
-  final IntroState state;
-  final Future<void> Function(IntroAction) onAction;
+class ProfileScreen extends StatefulWidget {
+  final ProfileState state;
+  final Future<void> Function(ProfileAction) onAction;
 
-  const IntroScreen({super.key, required this.state, required this.onAction});
+  const ProfileScreen({super.key, required this.state, required this.onAction});
 
   @override
-  State<IntroScreen> createState() => _IntroScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _IntroScreenState extends State<IntroScreen>
+class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
@@ -97,7 +97,7 @@ class _IntroScreenState extends State<IntroScreen>
         body: RefreshIndicator(
           color: AppColorStyles.primary100,
           onRefresh: () async {
-            await widget.onAction(const RefreshIntro());
+            await widget.onAction(const RefreshProfile());
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -197,7 +197,7 @@ class _IntroScreenState extends State<IntroScreen>
         data:
             (member) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-              child: ProfileInfo(member: member, compact: false),
+              child: ProfileInfoCard(member: member, compact: false),
             ),
         loading:
             () => const Padding(
@@ -379,7 +379,7 @@ class _IntroScreenState extends State<IntroScreen>
                     ),
                     const SizedBox(height: 8),
                     ElevatedButton.icon(
-                      onPressed: () => widget.onAction(const RefreshIntro()),
+                      onPressed: () => widget.onAction(const RefreshProfile()),
                       icon: const Icon(Icons.refresh, size: 16),
                       label: const Text('다시 시도'),
                       style: ElevatedButton.styleFrom(

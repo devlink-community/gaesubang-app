@@ -19,8 +19,9 @@ import 'package:devlink_mobile_app/group/presentation/group_search/group_search_
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
-import 'package:devlink_mobile_app/profile/presentation/intro_screen_root.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_root.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_screen_root.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/mock_profile_setting_screen.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -28,7 +29,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
 import '../../auth/data/data_source/user_storage.dart';
-import '../../profile/presentation/profile_edit/edit_intro_demo_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -180,7 +180,7 @@ GoRouter appRouter(Ref ref) {
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const IntroScreenRoot(),
+            builder: (context, state) => const ProfileScreenRoot(),
           ),
         ],
       ),
@@ -246,7 +246,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/edit-profile',
-        builder: (context, state) => const EditIntroRoot(),
+        builder: (context, state) => const ProfileSettingScreenRoot(),
       ),
       GoRoute(
         path: '/forgot-password-2',
@@ -254,7 +254,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/profile-edit-demo',
-        builder: (context, state) => const ProfileEditDemoScreen(),
+        builder: (context, state) => const MockProfileSettingScreen(),
       ),
       GoRoute(
         path: '/user/:id/profile',

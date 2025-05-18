@@ -2,10 +2,10 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result/result.dart';
-import '../repository/edit_intro_repository.dart';
+import '../repository/profile_setting_repository.dart';
 
 class UpdateProfileUseCase {
-  final EditIntroRepository _repository;
+  final ProfileSettingRepository _repository;
 
   UpdateProfileUseCase(this._repository);
 

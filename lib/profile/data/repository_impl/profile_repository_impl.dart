@@ -6,15 +6,15 @@ import 'package:devlink_mobile_app/profile/data/mapper/focus_time_stats_dto_mapp
 import '../../../auth/data/data_source/mock_profile_data_source.dart';
 import '../../../core/result/result.dart';
 import '../../domain/model/focus_time_stats.dart';
-import '../../domain/repository/intro_repository.dart';
+import '../../domain/repository/profile_repository.dart';
 import '../data_source/mock_focus_time_data_source_impl.dart';
 
-class IntroRepositoryImpl implements IntroRepository {
+class ProfileRepositoryImpl implements ProfileRepository {
   final MockAuthDataSource _authDs;
   final MockProfileDataSource _profileDs;
   final MockFocusTimeDataSourceImpl _focusDs;
 
-  IntroRepositoryImpl({
+  ProfileRepositoryImpl({
     required MockAuthDataSource authDataSource,
     required MockProfileDataSource profileDataSource,
     required MockFocusTimeDataSourceImpl focusDataSource,

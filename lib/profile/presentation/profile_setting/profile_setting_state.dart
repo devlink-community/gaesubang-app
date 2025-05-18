@@ -1,12 +1,12 @@
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'edit_intro_state.freezed.dart';
+part 'profile_setting_state.freezed.dart';
 
 @freezed
-class EditIntroState with _$EditIntroState {
+class ProfileSettingState with _$ProfileSettingState {
   /// generative constructor
-  const EditIntroState({
+  const ProfileSettingState({
     this.isLoading = false,
     this.isSuccess = false,
     this.isError = false,
