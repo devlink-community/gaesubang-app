@@ -1,9 +1,9 @@
 import 'package:devlink_mobile_app/core/component/custom_alert_dialog.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_notifier.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_screen.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_action.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_notifier.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_screen.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
