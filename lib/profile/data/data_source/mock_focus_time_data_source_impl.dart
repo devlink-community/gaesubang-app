@@ -1,4 +1,4 @@
-import '../dto/focus_time_stats_dto.dart';
+import '../dto/focus_time_stats_dto_old.dart';
 import 'focus_time_data_source.dart';
 
 class MockFocusTimeDataSourceImpl implements FocusTimeDataSource {

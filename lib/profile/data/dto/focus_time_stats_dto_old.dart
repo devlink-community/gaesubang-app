@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
-part 'focus_time_stats_dto.g.dart';
+
+part 'focus_time_stats_dto_old.g.dart';
 
 @JsonSerializable()
 class FocusTimeStatsDto {

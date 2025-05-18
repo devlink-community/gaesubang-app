@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../auth/data/data_source/user_storage.dart';
-import '../../../auth/data/dto/profile_dto.dart';
-import '../../../auth/data/dto/user_dto.dart';
+import '../../../auth/data/dto/profile_dto_old.dart';
+import '../../../auth/data/dto/user_dto_old.dart';
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
 
