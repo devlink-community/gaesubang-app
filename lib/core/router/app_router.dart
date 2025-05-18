@@ -1,4 +1,6 @@
 // lib/core/router/app_router.dart
+import 'package:devlink_mobile_app/app_setting/presentation/open_source_license_screen_root.dart';
+import 'package:devlink_mobile_app/app_setting/presentation/settings_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
@@ -19,16 +21,14 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
-import 'package:devlink_mobile_app/setting/presentation/open_source_license_screen_root.dart';
-import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
 import '../../auth/data/data_source/user_storage.dart';
 import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
-import '../../setting/presentation/forgot_password_screen_root_2.dart';
 
 part 'app_router.g.dart';
 

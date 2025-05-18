@@ -1,4 +1,4 @@
-// lib/setting/presentation/settings_screen_root.dart
+// lib/app_setting/presentation/settings_screen_root.dart
 import 'dart:io';
 
 import 'package:flutter/material.dart';
