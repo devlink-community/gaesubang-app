@@ -19,9 +19,9 @@ import 'package:devlink_mobile_app/group/presentation/group_search/group_search_
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/mock_profile_edit_screen.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_screen_root.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/mock_profile_edit_screen.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_edit_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -246,7 +246,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/edit-profile',
-        builder: (context, state) => const ProfileSettingScreenRoot(),
+        builder: (context, state) => const ProfileEditScreenRoot(),
       ),
       GoRoute(
         path: '/forgot-password-2',
@@ -254,7 +254,7 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/profile-edit-demo',
-        builder: (context, state) => const MockProfileSettingScreen(),
+        builder: (context, state) => const MockProfileEditScreen(),
       ),
       GoRoute(
         path: '/user/:id/profile',
