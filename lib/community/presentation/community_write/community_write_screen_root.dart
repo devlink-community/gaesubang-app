@@ -10,27 +10,34 @@ import 'package:devlink_mobile_app/community/presentation/community_write/commun
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_notifier.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen.dart';
 
-class CommunityWriteScreenRoot extends ConsumerWidget {
+class CommunityWriteScreenRoot extends ConsumerStatefulWidget {
   const CommunityWriteScreenRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(communityWriteNotifierProvider);
-    final notifier = ref.watch(communityWriteNotifierProvider.notifier);
+  ConsumerState<CommunityWriteScreenRoot> createState() =>
+      _CommunityWriteScreenRootState();
+}
 
-    // Community List Notifier 직접 접근
-    final communityListNotifier = ref.read(
-      communityListNotifierProvider.notifier,
-    );
+class _CommunityWriteScreenRootState
+    extends ConsumerState<CommunityWriteScreenRoot> {
+  @override
+  void initState() {
+    super.initState();
 
     ref.listen<CommunityWriteState>(communityWriteNotifierProvider, (
       previous,
       current,
     ) {
+      // 이전 상태에는 ID가 없고, 현재 상태에는 ID가 있는 경우
       if (previous?.createdPostId == null && current.createdPostId != null) {
         print('Post created, directly refreshing list');
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Community List Notifier 직접 접근
+          final communityListNotifier = ref.read(
+            communityListNotifierProvider.notifier,
+          );
+
           // 직접 새로고침 및 탭 변경 호출
           communityListNotifier.onAction(const CommunityListAction.refresh());
           communityListNotifier.onAction(
@@ -46,6 +53,12 @@ class CommunityWriteScreenRoot extends ConsumerWidget {
         });
       }
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(communityWriteNotifierProvider);
+    final notifier = ref.watch(communityWriteNotifierProvider.notifier);
 
     return CommunityWriteScreen(state: state, onAction: notifier.onAction);
   }
