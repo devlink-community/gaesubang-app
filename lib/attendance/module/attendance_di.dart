@@ -6,6 +6,7 @@ import '../data/data_source/mock_attendance_data_source_impl.dart';
 import '../data/repository/attendance_repository_impl.dart';
 import '../domain/repository/attendance_repository.dart';
 import '../domain/usecase/get_attendance_by_month_use_case.dart';
+import '../domain/usecase/mock_get_group_detail_use_case.dart';
 
 part 'attendance_di.g.dart';
 
@@ -27,4 +28,10 @@ AttendanceRepository attendanceRepository(Ref ref) {
 GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) {
   final repository = ref.watch(attendanceRepositoryProvider);
   return GetAttendancesByMonthUseCase(repository);
+}
+
+// 출석부 전용 Mock Group Detail UseCase
+@riverpod
+MockGetGroupDetailUseCase mockGetGroupDetailUseCase(Ref ref) {
+  return MockGetGroupDetailUseCase();
 }
