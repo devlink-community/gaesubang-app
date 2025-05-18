@@ -50,7 +50,12 @@ dependencies:
   firebase_storage: ^12.4.5
   firebase_messaging: ^15.2.5
   flutter_local_notifications: ^19.2.0
-
+  package_info_plus: ^8.3.0
+  upgrader: ^11.3.2
+  flutter_oss_licenses: ^3.0.4
+  line_icons: ^2.0.3
+  android_intent_plus: ^5.3.0
+  app_settings: ^6.1.1
 
 dev_dependencies:
   flutter_test:
@@ -67,7 +72,7 @@ dev_dependencies:
   json_serializable: ^6.9.5
   riverpod_generator: ^2.6.5
   mockito: ^5.4.5
-  
+  #flutter_oss_licenses: ^3.0.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -96,7 +101,19 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
+  fonts:
+      - family: Roboto
+        fonts:
+          - asset: assets/fonts/Roboto-Regular.ttf
+            weight: 400
+          - asset: assets/fonts/Roboto-Medium.ttf
+            weight: 500
+          - asset: assets/fonts/Roboto-Bold.ttf
+            weight: 700
+          - asset: assets/fonts/Roboto-Black.ttf
+            weight: 900
+
+
   #   - family: Schyler
   #     fonts:
   #       - asset: fonts/Schyler-Regular.ttf

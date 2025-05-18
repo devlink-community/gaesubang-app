@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../domain/model/group.dart'; // 수정된 임포트
+import '../../../group/domain/model/group.dart';
 import '../../domain/model/attendance.dart';
 
 part 'attendance_state.freezed.dart';
@@ -9,8 +9,8 @@ part 'attendance_state.freezed.dart';
 @freezed
 class AttendanceState with _$AttendanceState {
   const AttendanceState({
-    // 선택된 그룹 정보
-    this.selectedGroup,
+    // UseCase 응답값은 AsyncValue로 관리
+    this.groupDetail = const AsyncValue.loading(),
 
     // 현재 표시 중인 월 (캘린더 상단에 표시되는 년-월)
     required this.displayedMonth,
@@ -19,10 +19,10 @@ class AttendanceState with _$AttendanceState {
     required this.selectedDate,
 
     // 출석 정보 목록 (AsyncValue로 로딩/에러/데이터 상태 관리)
-    required this.attendanceList,
+    this.attendanceList = const AsyncValue.loading(), // 기본값 제공
   });
 
-  final Group? selectedGroup;
+  final AsyncValue<Group> groupDetail;
   final DateTime displayedMonth;
   final DateTime selectedDate;
   final AsyncValue<List<Attendance>> attendanceList;

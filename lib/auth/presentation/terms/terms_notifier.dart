@@ -5,6 +5,8 @@ import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_state.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'terms_notifier.g.dart';
@@ -33,12 +35,25 @@ class TermsNotifier extends _$TermsNotifier {
       // 약관 정보 로드 성공
       state = state.copyWith(
         errorMessage: null,
+        formErrorMessage: null,
       );
     } else if (result.hasError) {
       // 약관 정보 로드 실패
+      final error = result.error;
+      String errorMessage = '약관 정보를 불러오는데 실패했습니다';
+
+      if (error is Failure) {
+        // 에러 타입에 따른 메시지 설정
+        errorMessage = error.message;
+      }
+
       state = state.copyWith(
-        errorMessage: '약관 정보를 불러오는데 실패했습니다.',
+        errorMessage: errorMessage,
+        formErrorMessage: errorMessage, // 통합 오류 메시지에도 설정
       );
+
+      // 디버깅 로그
+      debugPrint('약관 정보 로드 에러: $error');
     }
   }
 
@@ -81,6 +96,8 @@ class TermsNotifier extends _$TermsNotifier {
       isServiceTermsAgreed: value,
       isPrivacyPolicyAgreed: value,
       isMarketingAgreed: value,
+      errorMessage: null, // 체크 시 에러 메시지 제거
+      formErrorMessage: null, // 통합 오류 메시지도 제거
     );
   }
 
@@ -89,6 +106,8 @@ class TermsNotifier extends _$TermsNotifier {
       isServiceTermsAgreed: value,
       // 전체 동의 상태 업데이트
       isAllAgreed: value && state.isPrivacyPolicyAgreed && state.isMarketingAgreed,
+      errorMessage: null, // 체크 시 에러 메시지 제거
+      formErrorMessage: null, // 통합 오류 메시지도 제거
     );
   }
 
@@ -97,6 +116,8 @@ class TermsNotifier extends _$TermsNotifier {
       isPrivacyPolicyAgreed: value,
       // 전체 동의 상태 업데이트
       isAllAgreed: state.isServiceTermsAgreed && value && state.isMarketingAgreed,
+      errorMessage: null, // 체크 시 에러 메시지 제거
+      formErrorMessage: null, // 통합 오류 메시지도 제거
     );
   }
 
@@ -105,6 +126,8 @@ class TermsNotifier extends _$TermsNotifier {
       isMarketingAgreed: value,
       // 전체 동의 상태 업데이트
       isAllAgreed: state.isServiceTermsAgreed && state.isPrivacyPolicyAgreed && value,
+      errorMessage: null, // 체크 시 에러 메시지 제거
+      formErrorMessage: null, // 통합 오류 메시지도 제거
     );
   }
 
@@ -113,13 +136,15 @@ class TermsNotifier extends _$TermsNotifier {
     if (!state.isServiceTermsAgreed || !state.isPrivacyPolicyAgreed) {
       state = state.copyWith(
         errorMessage: '필수 약관에 동의해주세요.',
+        formErrorMessage: '서비스 이용 약관과 개인정보 수집 및 이용 동의는 필수입니다.', // 더 상세한 메시지로 설정
       );
       return;
     }
 
-    // 에러 메시지 초기화
+    // 에러 메시지 초기화 및 제출 시작 상태 설정
     state = state.copyWith(
       errorMessage: null,
+      formErrorMessage: null, // 통합 오류 메시지도 초기화
       isSubmitting: true,
     );
 
@@ -142,19 +167,39 @@ class TermsNotifier extends _$TermsNotifier {
         isSubmitting: false,
         savedTermsId: savedTermsId,
         errorMessage: null,
+        formErrorMessage: null,
       );
 
       // 여기서는 상태만 업데이트하고, 화면 이동은 Root에서 처리
     } else if (result.hasError) {
       // 약관 동의 저장 실패
+      final error = result.error;
+      String errorMessage = '약관 동의 저장에 실패했습니다.';
+
+      // 에러 타입에 따른 메시지 설정
+      if (error is Failure) {
+        switch (error.type) {
+          case FailureType.network:
+            errorMessage = '네트워크 연결을 확인해주세요.';
+            break;
+          case FailureType.timeout:
+            errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요.';
+            break;
+          default:
+            errorMessage = error.message;
+        }
+      }
+
+      // 디버깅 로그
+      debugPrint('약관 동의 저장 에러: $error');
+
       state = state.copyWith(
         isSubmitting: false,
-        errorMessage: '약관 동의 저장에 실패했습니다.',
+        errorMessage: errorMessage,
+        formErrorMessage: errorMessage, // 통합 오류 메시지에도 설정
       );
     }
   }
-
-
 
   void resetState() {
     state = const TermsState();

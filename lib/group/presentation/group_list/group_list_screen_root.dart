@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/group_join_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
@@ -15,31 +16,56 @@ class GroupListScreenRoot extends ConsumerWidget {
     final state = ref.watch(groupListNotifierProvider);
     final notifier = ref.watch(groupListNotifierProvider.notifier);
 
-    // 선택된 그룹을 관찰하고 변경되면 다이얼로그 표시
     ref.listen(
       groupListNotifierProvider.select((value) => value.selectedGroup),
       (previous, next) {
         if (next is AsyncData && next.value != null) {
-          _showGroupDialog(context, next.value!, notifier);
+          final group = next.value!;
+
+          // 현재 사용자가 이미 가입된 그룹인지 확인
+          final isJoined = notifier.isCurrentMemberInGroup(group);
+
+          if (isJoined) {
+            // 이미 가입된 그룹이면 바로 상세 페이지로 이동
+            context.push('/group/${group.id}');
+
+            // selectedGroup 초기화
+            notifier.onAction(const GroupListAction.resetSelectedGroup());
+          } else {
+            // 가입되지 않은 그룹이면 가입 다이얼로그 표시
+            _showGroupDialog(context, group, notifier);
+          }
         }
       },
     );
 
-    // 그룹 참여 결과를 관찰하고 성공 시 그룹 상세 페이지로 이동
     ref.listen(
       groupListNotifierProvider.select((value) => value.joinGroupResult),
       (previous, next) {
-        if (previous is AsyncLoading && next is AsyncData) {
-          final selectedGroup = state.selectedGroup;
-          if (selectedGroup is AsyncData && selectedGroup.value != null) {
-            Navigator.of(context).pop(); // 다이얼로그 닫기
-            context.push('/group/${selectedGroup.value!.id}'); // 상세 페이지로 이동
+        if (previous is AsyncLoading) {
+          if (next is AsyncData) {
+            final selectedGroup = state.selectedGroup;
+            if (selectedGroup is AsyncData && selectedGroup.value != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    '그룹에 성공적으로 참여했습니다!',
+                    style: TextStyle(color: AppColorStyles.white),
+                  ),
+                  backgroundColor: AppColorStyles.primary100,
+                ),
+              );
+              final groupId = selectedGroup.value!.id;
+              context.push('/group/$groupId');
+            }
+          } else if (next is AsyncError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('참여 실패: ${next.error}'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
-        } else if (next is AsyncError) {
-          // 에러 처리 (스낵바 등)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('참여 실패: ${next.error}')));
         }
       },
     );
@@ -53,8 +79,10 @@ class GroupListScreenRoot extends ConsumerWidget {
           case OnTapCreateGroup():
             context.push('/group/create');
           case OnCloseDialog():
+            // 다이얼로그 닫을 때 selectedGroup 초기화
+            notifier.onAction(const GroupListAction.resetSelectedGroup());
             Navigator.of(context).pop();
-          case OnTapGroup() || OnJoinGroup() || OnLoadGroupList():
+          default:
             notifier.onAction(action);
         }
       },
@@ -68,10 +96,34 @@ class GroupListScreenRoot extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) {
         return GroupJoinDialog(
           group: group,
-          onAction: (action) => notifier.onAction(action),
+          onAction: (action) {
+            switch (action) {
+              case OnCloseDialog():
+                // 다이얼로그 닫을 때 selectedGroup 초기화
+                notifier.onAction(const GroupListAction.resetSelectedGroup());
+                Navigator.of(context).pop();
+
+              case OnJoinGroup():
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      '그룹 참여 중...',
+                      style: TextStyle(color: AppColorStyles.white),
+                    ),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                notifier.onAction(action);
+
+              default:
+                notifier.onAction(action);
+            }
+          },
         );
       },
     );

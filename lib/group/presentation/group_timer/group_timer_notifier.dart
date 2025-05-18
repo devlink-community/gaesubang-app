@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
@@ -8,6 +9,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
+import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_timer_notifier.g.dart';
@@ -19,25 +21,40 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   late final StopTimerUseCase _stopTimerUseCase;
   late final ResumeTimerUseCase _resumeTimerUseCase;
   late final GetTimerSessionsUseCase _getTimerSessionsUseCase;
-  late final GetMemberTimersUseCase _getMemberTimersUseCase; // 새로 추가
+  late final GetMemberTimersUseCase _getMemberTimersUseCase;
+  late final GetGroupDetailUseCase _getGroupDetailUseCase;
 
   @override
   GroupTimerState build() {
+    print('🏗️ GroupTimerNotifier build() 호출');
+
     // 의존성 주입
     _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
     _stopTimerUseCase = ref.watch(stopTimerUseCaseProvider);
     _resumeTimerUseCase = ref.watch(resumeTimerUseCaseProvider);
     _getTimerSessionsUseCase = ref.watch(getTimerSessionsUseCaseProvider);
-    _getMemberTimersUseCase = ref.watch(
-      getMemberTimersUseCaseProvider,
-    ); // 새로 추가
+    _getMemberTimersUseCase = ref.watch(getMemberTimersUseCaseProvider);
+    _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
 
     // 화면 이탈 시 타이머 정리
     ref.onDispose(() {
+      print('🗑️ GroupTimerNotifier dispose - 타이머 정리');
       _timer?.cancel();
     });
 
+    // build()에서는 초기 상태만 반환
     return const GroupTimerState();
+  }
+
+  // 화면 재진입 시 데이터 갱신 (Root에서 호출)
+  Future<void> onScreenReenter() async {
+    if (state.groupId.isEmpty) {
+      print('⚠️ 그룹 ID가 설정되지 않아 데이터 갱신을 건너뜁니다');
+      return;
+    }
+
+    print('🔄 화면 재진입 감지 - 데이터 새로고침 시작');
+    await refreshAllData();
   }
 
   // 액션 처리
@@ -56,7 +73,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
         await _handleStopTimer();
 
       case ResetTimer():
-        _handleResetTimer();
+        await _handleResetTimer();
 
       case SetGroupId(:final groupId):
         await _handleSetGroupId(groupId);
@@ -74,8 +91,10 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
         if (state.timerStatus == TimerStatus.running) {
           _handlePauseTimer();
         } else if (state.timerStatus == TimerStatus.paused ||
-            state.timerStatus == TimerStatus.initial) {
-          if (state.timerStatus == TimerStatus.initial) {
+            state.timerStatus == TimerStatus.initial ||
+            state.timerStatus == TimerStatus.completed) {
+          if (state.timerStatus == TimerStatus.initial ||
+              state.timerStatus == TimerStatus.completed) {
             await _handleStartTimer();
           } else {
             _handleResumeTimer();
@@ -87,7 +106,6 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
       case NavigateToAttendance():
       case NavigateToSettings():
       case NavigateToUserProfile():
-        // 이러한 네비게이션 액션들은 Root에서 처리하므로 여기서는 아무 것도 하지 않음
         break;
     }
   }
@@ -96,15 +114,17 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   Future<void> _handleStartTimer() async {
     if (state.timerStatus == TimerStatus.running) return;
 
+    // 타이머 상태 및 경과 시간 초기화
     state = state.copyWith(
       timerStatus: TimerStatus.running,
       errorMessage: null,
+      elapsedSeconds: 0,
     );
 
     // 새 타이머 세션 시작
     final result = await _startTimerUseCase.execute(
       groupId: state.groupId,
-      userId: 'current_user_id', // 실제 구현에서는 인증된 사용자 ID 사용
+      userId: 'current_user_id',
     );
 
     // 결과 처리
@@ -169,32 +189,49 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   }
 
   // 타이머 초기화 처리
-  void _handleResetTimer() {
+  Future<void> _handleResetTimer() async {
     _timer?.cancel();
     state = state.copyWith(
       timerStatus: TimerStatus.initial,
       elapsedSeconds: 0,
       activeSession: const AsyncValue.data(null),
     );
+
+    // 데이터 새로고침
+    if (state.groupId.isNotEmpty) {
+      await refreshAllData();
+    }
   }
 
-  // 그룹 ID 설정
+  // 그룹 ID 설정 (초기화 시에만 호출)
   Future<void> _handleSetGroupId(String groupId) async {
+    print('📊 Setting group ID in notifier: $groupId');
+
     state = state.copyWith(groupId: groupId);
 
-    // 기본 그룹 정보 설정 (실제 구현에서는 API 호출로 대체)
-    state = state.copyWith(
-      groupName: "문성용 왕팬맨",
-      participantCount: 4,
-      totalMemberCount: 6,
-      hashTags: ["왕팬맨", "#코더", "#코코아"],
-    );
+    // 그룹 ID 설정 후 초기 데이터 로드 (한 번만)
+    await _loadInitialData();
+  }
 
-    await _loadGroupSessions(groupId);
-    await _checkActiveSession();
+  // 초기 데이터 로드 (새로고침과 활성 세션 확인을 한 번에)
+  Future<void> _loadInitialData() async {
+    if (state.groupId.isEmpty) return;
 
-    // 멤버 타이머 데이터 업데이트
-    await _updateMemberTimers();
+    print('🔄 초기 데이터 로드 시작 - groupId: ${state.groupId}');
+
+    try {
+      // 모든 초기 데이터를 병렬로 로드
+      await Future.wait([
+        _loadGroupDetail(state.groupId),
+        _loadGroupSessions(state.groupId),
+        _updateMemberTimers(),
+        _checkActiveSession(),
+      ], eagerError: false);
+      print('✅ 초기 데이터 로드 완료');
+    } catch (e, s) {
+      print('❌ _loadInitialData 실패: $e');
+      debugPrintStack(stackTrace: s);
+    }
   }
 
   // 그룹 정보 설정
@@ -215,9 +252,7 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
   Future<void> _checkActiveSession() async {
     state = state.copyWith(activeSession: const AsyncValue.loading());
 
-    final result = await _resumeTimerUseCase.execute(
-      'current_user_id', // 실제 구현에서는 인증된 사용자 ID 사용
-    );
+    final result = await _resumeTimerUseCase.execute('current_user_id');
 
     state = state.copyWith(activeSession: result);
 
@@ -256,15 +291,61 @@ class GroupTimerNotifier extends _$GroupTimerNotifier {
     }
   }
 
-  // 멤버 타이머 데이터 업데이트 - UseCase 사용
+  // 멤버 타이머 데이터 업데이트
   Future<void> _updateMemberTimers() async {
     if (state.groupId.isEmpty) return;
 
     final result = await _getMemberTimersUseCase.execute(state.groupId);
 
-    // 결과 처리
     if (result case AsyncData(:final value)) {
       state = state.copyWith(memberTimers: value);
+    }
+  }
+
+  // 데이터 새로고침 메서드 - 화면 재진입 시에만 사용
+  Future<void> refreshAllData() async {
+    if (state.groupId.isEmpty) return;
+
+    print('🔄 데이터 새로고침 시작 - groupId: ${state.groupId}');
+
+    // 활성 세션 확인은 제외하고 그룹 데이터만 새로고침
+    try {
+      await Future.wait([
+        _loadGroupDetail(state.groupId),
+        _loadGroupSessions(state.groupId),
+        _updateMemberTimers(),
+      ], eagerError: false);
+      print('✅ 데이터 새로고침 완료');
+    } catch (e, s) {
+      print('❌ refreshAllData 실패: $e');
+      debugPrintStack(stackTrace: s);
+    }
+  }
+
+  // 그룹 세부 정보 로드 헬퍼 메서드
+  Future<void> _loadGroupDetail(String groupId) async {
+    try {
+      print('🔍 그룹 세부 정보 로드 시작: $groupId');
+      final groupDetailResult = await _getGroupDetailUseCase.execute(groupId);
+
+      switch (groupDetailResult) {
+        case AsyncData(:final value):
+          print('✅ 그룹 세부 정보 로드 성공: ${value.name}');
+          state = state.copyWith(
+            groupName: value.name,
+            participantCount: value.memberCount,
+            totalMemberCount: value.limitMemberCount,
+            hashTags: value.hashTags.map((tag) => tag.content).toList(),
+          );
+
+        case AsyncError(:final error):
+          print('❌ Failed to load group detail: $error');
+
+        case AsyncLoading():
+          print('⏳ Loading group detail...');
+      }
+    } catch (e) {
+      print('❌ Error loading group detail: $e');
     }
   }
 }

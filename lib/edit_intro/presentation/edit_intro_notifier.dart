@@ -1,9 +1,11 @@
 import 'dart:io';
+
 import 'package:devlink_mobile_app/edit_intro/presentation/edit_intro_action.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../core/result/result.dart';
+
 import '../domain/usecase/get_current_profile_usecase.dart';
 import '../domain/usecase/update_profile_image_usecase.dart';
 import '../domain/usecase/update_profile_usecase.dart';
@@ -36,6 +38,10 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
       if (result is AsyncData) {
         // 성공적으로 데이터를 받은 경우
+        debugPrint(
+          '프로필 로드 성공: ${result.value?.nickname}, ${result.value?.description}',
+        );
+
         state = state.copyWith(
           isLoading: false,
           isSuccess: true,
@@ -43,6 +49,8 @@ class EditIntroNotifier extends _$EditIntroNotifier {
         );
       } else if (result is AsyncError) {
         // 에러가 발생한 경우
+        debugPrint('프로필 로드 실패: ${result.error}');
+
         state = state.copyWith(
           isLoading: false,
           isError: true,
@@ -51,6 +59,8 @@ class EditIntroNotifier extends _$EditIntroNotifier {
       }
     } catch (e) {
       // 예외 처리
+      debugPrint('프로필 로드 예외: $e');
+
       state = state.copyWith(
         isLoading: false,
         isError: true,
@@ -63,6 +73,7 @@ class EditIntroNotifier extends _$EditIntroNotifier {
     switch (action) {
       case OnChangeNickname(:final nickname):
         if (state.member != null) {
+          debugPrint('닉네임 변경: $nickname');
           final updatedMember = state.member!.copyWith(nickname: nickname);
           state = state.copyWith(member: updatedMember);
         }
@@ -70,7 +81,24 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
       case OnChangeMessage(:final message):
         if (state.member != null) {
+          debugPrint('소개글 변경: $message');
           final updatedMember = state.member!.copyWith(description: message);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
+      case OnChangePosition(:final position):
+        if (state.member != null) {
+          debugPrint('직무 변경: $position');
+          final updatedMember = state.member!.copyWith(position: position);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
+      case OnChangeSkills(:final skills):
+        if (state.member != null) {
+          debugPrint('스킬 변경: $skills');
+          final updatedMember = state.member!.copyWith(skills: skills);
           state = state.copyWith(member: updatedMember);
         }
         break;
@@ -98,23 +126,31 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
     try {
       final xFile = XFile(image.path);
+      debugPrint('이미지 업로드 시작: ${xFile.path}');
+
       final result = await _updateProfileImageUseCase.execute(xFile);
 
-      if (result is AsyncData) {
+      // 이미지 업로드 결과 처리 - AsyncValue에 따라 분기
+      if (result.hasValue) {
+        debugPrint('이미지 업로드 성공: ${result.value!.image}');
+
         state = state.copyWith(
           isImageUploading: false,
           isImageUploadSuccess: true,
           member: result.value,
         );
-      } else if (result is AsyncError) {
-        final error = result.error;
+      } else if (result.hasError) {
+        debugPrint('이미지 업로드 실패: ${result.error}');
+
         state = state.copyWith(
           isImageUploading: false,
           isImageUploadError: true,
-          imageUploadErrorMessage: error.toString(),
+          imageUploadErrorMessage: result.error.toString(),
         );
       }
     } catch (e) {
+      debugPrint('이미지 업로드 예외: $e');
+
       state = state.copyWith(
         isImageUploading: false,
         isImageUploadError: true,
@@ -141,30 +177,48 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
+    // 디버그 로그 추가
+    debugPrint(
+      '프로필 저장 시작: ${state.member!.nickname}, ${state.member!.description}, ${state.member!.position}, ${state.member!.skills}',
+    );
+
     try {
       final result = await _updateProfileUseCase.execute(
         nickname: state.member!.nickname,
         intro: state.member!.description,
+        position: state.member!.position,
+        skills: state.member!.skills,
       );
 
-      if (result is AsyncData) {
+      // 저장 결과 처리 - AsyncValue에 따라 분기
+      if (result.hasValue) {
+        // 성공 시 디버그 로그 추가
+        debugPrint(
+          '프로필 저장 성공: ${result.value!.nickname}, ${result.value!.description}, ${result.value!.position}, ${result.value!.skills}',
+        );
+
         state = state.copyWith(
           isLoading: false,
           isSuccess: true,
           member: result.value,
         );
         return true;
-      } else if (result is AsyncError) {
-        final error = result.error;
+      } else if (result.hasError) {
+        // 실패 시 디버그 로그 추가
+        debugPrint('프로필 저장 실패: ${result.error}');
+
         state = state.copyWith(
           isLoading: false,
           isError: true,
-          errorMessage: error.toString(),
+          errorMessage: result.error.toString(),
         );
         return false;
       }
       return false;
     } catch (e) {
+      // 예외 발생 시 디버그 로그 추가
+      debugPrint('프로필 저장 예외: $e');
+
       state = state.copyWith(
         isLoading: false,
         isError: true,

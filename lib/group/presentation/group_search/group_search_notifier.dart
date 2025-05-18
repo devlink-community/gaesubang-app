@@ -1,5 +1,7 @@
 // lib/group/presentation/group_search/group_search_notifier.dart
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_action.dart';
@@ -11,15 +13,50 @@ part 'group_search_notifier.g.dart';
 @riverpod
 class GroupSearchNotifier extends _$GroupSearchNotifier {
   late final SearchGroupsUseCase _searchGroupsUseCase;
+  late final JoinGroupUseCase _joinGroupUseCase;
+  late final GetCurrentMemberUseCase _getCurrentMemberUseCase;
 
   @override
   GroupSearchState build() {
     _searchGroupsUseCase = ref.watch(searchGroupsUseCaseProvider);
+    _joinGroupUseCase = ref.watch(joinGroupUseCaseProvider);
+    _getCurrentMemberUseCase = ref.watch(getCurrentMemberUseCaseProvider);
 
+    _loadCurrentMember();
     // 최근 검색어는 로컬 저장소에서 가져올 수 있지만, 여기서는 간단히 하드코딩
     final recentSearches = ['정보처리기사', '개발자', '스터디'];
 
     return GroupSearchState(recentSearches: recentSearches);
+  }
+
+  Future<void> _loadCurrentMember() async {
+    final currentMember = await _getCurrentMemberUseCase.execute();
+    // 타입 캐스팅 제거
+    state = state.copyWith(currentMember: currentMember);
+  }
+
+  void _selectGroup(String groupId) {
+    if (state.searchResults is AsyncData) {
+      final groups = (state.searchResults as AsyncData<List<Group>>).value;
+      final selectedGroup = groups.firstWhere(
+        (group) => group.id == groupId,
+        orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
+      );
+      state = state.copyWith(selectedGroup: AsyncData(selectedGroup));
+    }
+  }
+
+  bool isCurrentMemberInGroup(Group group) {
+    final currentMember = state.currentMember;
+    if (currentMember == null) return false;
+
+    return group.members.any((member) => member.id == currentMember.id);
+  }
+
+  Future<void> _joinGroup(String groupId) async {
+    state = state.copyWith(joinGroupResult: const AsyncLoading());
+    final asyncResult = await _joinGroupUseCase.execute(groupId);
+    state = state.copyWith(joinGroupResult: asyncResult);
   }
 
   Future<void> onAction(GroupSearchAction action) async {
@@ -62,7 +99,7 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
         );
 
       case OnTapGroup(:final groupId):
-        // Root에서 처리할 네비게이션 액션
+        _selectGroup(groupId);
         break;
 
       case OnGoBack():
@@ -73,6 +110,17 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
 
       case OnClearAllRecentSearches():
         state = state.copyWith(recentSearches: []);
+
+      case OnJoinGroup(:final groupId):
+        await _joinGroup(groupId);
+
+      case ResetSelectedGroup():
+        // selectedGroup 초기화
+        state = state.copyWith(selectedGroup: const AsyncData(null));
+      case OnCloseDialog():
+        // 다이얼로그 닫을 때 selectedGroup 초기화
+        state = state.copyWith(selectedGroup: const AsyncData(null));
+        break;
     }
   }
 }

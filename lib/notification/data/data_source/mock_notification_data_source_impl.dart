@@ -12,42 +12,122 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
   }
 
   void _initMockData() {
-    print('목 데이터 초기화 시작'); // 디버깅 로그
+    print('목 데이터 초기화 시작');
     try {
       final testUser =
-          'testUser'; // 이 값이 NotificationNotifier의 _currentUserId와 일치해야 함
+          'testUser'; // NotificationNotifier의 _currentUserId와 일치해야 함
+      final now = DateTime.now();
 
-      final notifications = List.generate(
-        10,
-        (index) => NotificationDto(
-          id: 'notification_$index',
-          userId: testUser,
-          type: index % 2 == 0 ? 'like' : 'comment',
-          targetId: 'post_${index % 5}',
-          senderName: '사용자${index + 1}',
-          createdAt: DateTime.now().subtract(Duration(hours: index)),
-          isRead: index > 5,
-          description: '게시글에 ${index % 2 == 0 ? "좋아요를 눌렀습니다" : "댓글을 남겼습니다"}',
-          imageUrl: 'https://example.com/avatar$index.jpg',
+      // 다양한 날짜의 알림 생성
+      final notifications = [
+        // 오늘 알림 (5개)
+        ..._generateNotifications(0, 5, testUser, now),
+
+        // 최근 7일 알림 (10개)
+        ..._generateNotifications(
+          1,
+          3,
+          testUser,
+          now.subtract(const Duration(days: 2)),
         ),
-      );
+        ..._generateNotifications(
+          4,
+          4,
+          testUser,
+          now.subtract(const Duration(days: 4)),
+        ),
+        ..._generateNotifications(
+          8,
+          3,
+          testUser,
+          now.subtract(const Duration(days: 6)),
+        ),
+
+        // 이전 활동 알림 (15개)
+        ..._generateNotifications(
+          11,
+          5,
+          testUser,
+          now.subtract(const Duration(days: 10)),
+        ),
+        ..._generateNotifications(
+          16,
+          5,
+          testUser,
+          now.subtract(const Duration(days: 20)),
+        ),
+        ..._generateNotifications(
+          21,
+          5,
+          testUser,
+          now.subtract(const Duration(days: 30)),
+        ),
+      ];
 
       _userNotifications[testUser] = notifications;
-      print('목 데이터 초기화 완료: ${notifications.length}개 알림'); // 디버깅 로그
+      print('목 데이터 초기화 완료: ${notifications.length}개 알림');
     } catch (e) {
-      print('목 데이터 초기화 중 오류: $e'); // 예외 로깅
+      print('목 데이터 초기화 중 오류: $e');
+    }
+  }
+
+  // 알림 데이터 생성 헬퍼 메서드
+  List<NotificationDto> _generateNotifications(
+    int startIndex,
+    int count,
+    String userId,
+    DateTime baseTime,
+  ) {
+    final types = ['like', 'comment', 'follow', 'mention'];
+
+    return List.generate(count, (index) {
+      final currentIndex = startIndex + index;
+      final isRead = currentIndex > 7; // 8번째 알림부터는 읽음 처리
+      final typeIndex = currentIndex % types.length;
+
+      // 테스트 이미지 URL을 네트워크 요청이 발생하지 않도록 null로 설정
+      final imageUrl = currentIndex % 3 == 0 ? null : null; // 모든 이미지를 null로 설정
+
+      return NotificationDto(
+        id: 'notification_$currentIndex',
+        userId: userId,
+        type: types[typeIndex],
+        targetId: 'post_${currentIndex % 10}',
+        senderName: '사용자${currentIndex + 1}',
+        // 기준 시간에 각각 다른 시간 간격 추가
+        createdAt: baseTime.subtract(Duration(hours: index * 2)),
+        isRead: isRead,
+        description: _getDescription(types[typeIndex], currentIndex),
+        imageUrl: imageUrl,
+      );
+    });
+  }
+
+  // 알림 타입별 설명 생성
+  String _getDescription(String type, int index) {
+    switch (type) {
+      case 'like':
+        return '회원님의 ${index % 2 == 0 ? '게시글' : '댓글'}에 좋아요를 눌렀습니다.';
+      case 'comment':
+        return '회원님의 게시글에 댓글을 남겼습니다. "${index % 3 == 0 ? '정말 좋은 내용이네요!' : '함께 공부해요~'}"';
+      case 'follow':
+        return '회원님을 팔로우하기 시작했습니다.';
+      case 'mention':
+        return '게시글에서 회원님을 언급했습니다: "${index % 2 == 0 ? '@개발자님 도움 필요해요' : '@개발자님 감사합니다'}"';
+      default:
+        return '새로운 알림이 있습니다.';
     }
   }
 
   @override
   Future<List<NotificationDto>> fetchNotifications(String userId) async {
-    print('fetchNotifications 호출됨: userId=$userId'); // 디버깅 로그
+    print('fetchNotifications 호출됨: userId=$userId');
     // 지연 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 500));
 
     // 해당 사용자의 알림이 없으면 빈 목록 반환
     final notifications = _userNotifications[userId] ?? [];
-    print('사용자($userId)의 알림 수: ${notifications.length}'); // 디버깅 로그
+    print('사용자($userId)의 알림 수: ${notifications.length}');
     return notifications;
   }
 

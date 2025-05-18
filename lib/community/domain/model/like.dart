@@ -4,10 +4,13 @@ part 'like.freezed.dart';
 
 @freezed
 class Like with _$Like {
-  const Like({required this.boardId, required this.memberId});
+  const Like({
+    required this.userId, 
+    required this.userName,
+    required this.timestamp,
+  });
 
-  @override
-  final String boardId;
-  @override
-  final String memberId;
+  final String userId;
+  final String userName;
+  final DateTime timestamp;
 }

@@ -26,7 +26,12 @@ class MockAuthDataSource implements AuthDataSource {
       _storage.login(user.id!);
       return user.toJson();
     } else {
-      throw Exception('이메일 또는 비밀번호가 일치하지 않습니다');
+      // 명확한 에러 메시지 사용
+      if (user == null) {
+        throw Exception('등록되지 않은 이메일입니다');
+      } else {
+        throw Exception('이메일 또는 비밀번호가 일치하지 않습니다');
+      }
     }
   }
 
@@ -42,6 +47,11 @@ class MockAuthDataSource implements AuthDataSource {
     // 이메일을 소문자로 변환
     final lowercaseEmail = email.toLowerCase();
 
+    // 약관 동의 확인
+    if (agreedTermsId == null || agreedTermsId.isEmpty) {
+      throw Exception('필수 약관에 동의해야 합니다');
+    }
+
     // 중복 체크
     if (!_storage.isEmailAvailable(lowercaseEmail)) {
       throw Exception('이미 사용 중인 이메일입니다');
@@ -49,6 +59,19 @@ class MockAuthDataSource implements AuthDataSource {
 
     if (!_storage.isNicknameAvailable(nickname)) {
       throw Exception('이미 사용 중인 닉네임입니다');
+    }
+
+    // 닉네임 유효성 검사
+    if (nickname.length < 2) {
+      throw Exception('닉네임은 2자 이상이어야 합니다');
+    }
+
+    if (nickname.length > 10) {
+      throw Exception('닉네임은 10자 이하여야 합니다');
+    }
+
+    if (!RegExp(r'^[a-zA-Z0-9가-힣]+$').hasMatch(nickname)) {
+      throw Exception('닉네임은 한글, 영문, 숫자만 사용 가능합니다');
     }
 
     // 새 사용자 생성
@@ -90,12 +113,32 @@ class MockAuthDataSource implements AuthDataSource {
   @override
   Future<bool> checkNicknameAvailability(String nickname) async {
     await Future.delayed(const Duration(milliseconds: 300));
+
+    // 닉네임 유효성 검사 추가
+    if (nickname.length < 2) {
+      throw Exception('닉네임은 2자 이상이어야 합니다');
+    }
+
+    if (nickname.length > 10) {
+      throw Exception('닉네임은 10자 이하여야 합니다');
+    }
+
+    if (!RegExp(r'^[a-zA-Z0-9가-힣]+$').hasMatch(nickname)) {
+      throw Exception('닉네임은 한글, 영문, 숫자만 사용 가능합니다');
+    }
+
     return _storage.isNicknameAvailable(nickname);
   }
 
   @override
   Future<bool> checkEmailAvailability(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
+
+    // 이메일 형식 유효성 검사
+    if (!email.contains('@') || !email.contains('.')) {
+      throw Exception('유효하지 않은 이메일 형식입니다');
+    }
+
     // 이메일을 소문자로 변환하여 확인
     return _storage.isEmailAvailable(email.toLowerCase());
   }
@@ -105,7 +148,7 @@ class MockAuthDataSource implements AuthDataSource {
     await Future.delayed(const Duration(milliseconds: 300));
 
     // 이메일 형식 확인
-    if (!email.contains('@')) {
+    if (!email.contains('@') || !email.contains('.')) {
       throw Exception('유효하지 않은 이메일 형식입니다');
     }
 
@@ -144,6 +187,15 @@ class MockAuthDataSource implements AuthDataSource {
   @override
   Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData) async {
     await Future.delayed(const Duration(milliseconds: 300));
+
+    // 필수 약관 동의 여부 확인
+    final isServiceTermsAgreed = termsData['isServiceTermsAgreed'] as bool? ?? false;
+    final isPrivacyPolicyAgreed = termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
+
+    if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
+      throw Exception('필수 약관에 동의해야 합니다');
+    }
+
     return _storage.saveTermsAgreement(termsData);
   }
 
@@ -151,21 +203,34 @@ class MockAuthDataSource implements AuthDataSource {
   Future<Map<String, dynamic>> fetchTermsInfo() async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // 기본 약관 정보 반환
-    return {
-      'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
-      'isAllAgreed': false,
-      'isServiceTermsAgreed': false,
-      'isPrivacyPolicyAgreed': false,
-      'isMarketingAgreed': false,
-      'createdAt': DateTime.now().toIso8601String(),
-    };
+    try {
+      // 기본 약관 정보 반환
+      return {
+        'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
+        'isAllAgreed': false,
+        'isServiceTermsAgreed': false,
+        'isPrivacyPolicyAgreed': false,
+        'isMarketingAgreed': false,
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      throw Exception('약관 정보를 불러오는데 실패했습니다');
+    }
   }
 
   @override
   Future<Map<String, dynamic>?> getTermsInfo(String termsId) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return _storage.getTermsInfo(termsId);
+
+    try {
+      final termsInfo = _storage.getTermsInfo(termsId);
+      if (termsInfo == null) {
+        throw Exception('약관 정보를 찾을 수 없습니다');
+      }
+      return termsInfo;
+    } catch (e) {
+      throw Exception('약관 정보를 불러오는데 실패했습니다');
+    }
   }
 
   // 비밀번호 검증 메서드

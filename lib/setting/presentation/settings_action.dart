@@ -13,8 +13,9 @@ sealed class SettingsAction with _$SettingsAction {
   // 개인정보 처리방침 화면으로 이동
   const factory SettingsAction.onTapPrivacyPolicy() = OnTapPrivacyPolicy;
 
-  // 앱 정보 화면으로 이동
-  const factory SettingsAction.onTapAppInfo() = OnTapAppInfo;
+  // 오픈소스 라이센스 화면으로 이동
+  const factory SettingsAction.onTapOpenSourceLicenses() =
+      OnTapOpenSourceLicenses;
 
   // 로그아웃 요청
   const factory SettingsAction.onTapLogout() = OnTapLogout;
@@ -26,4 +27,7 @@ sealed class SettingsAction with _$SettingsAction {
   const factory SettingsAction.openUrlPrivacyPolicy() = OpenUrlPrivacyPolicy;
 
   const factory SettingsAction.openUrlAppInfo() = OpenUrlAppInfo;
+
+  // 앱 버전 확인 액션 추가
+  const factory SettingsAction.checkAppVersion() = CheckAppVersion;
 }

@@ -4,6 +4,8 @@ import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.d
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_state.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'forgot_password_notifier.g.dart';
@@ -26,12 +28,16 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
         state = state.copyWith(
           email: email,
           emailError: null,
+          formErrorMessage: null, // 입력 변경 시 오류 메시지 초기화
         );
 
       case EmailFocusChangedAction(:final hasFocus):
         if (!hasFocus && state.email.isNotEmpty) {
           final error = await _validateEmailUseCase.execute(state.email);
-          state = state.copyWith(emailError: error);
+          state = state.copyWith(
+            emailError: error,
+            // formErrorMessage는 설정하지 않음 (중복 메시지 방지)
+          );
         }
 
       case SendResetEmailAction():
@@ -50,6 +56,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
 
     // 이메일이 유효하지 않으면 중단
     if (emailError != null) {
+      // formErrorMessage는 설정하지 않음 (중복 메시지 방지)
       return;
     }
 
@@ -57,19 +64,49 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
     state = state.copyWith(
       resetPasswordResult: const AsyncLoading(),
       successMessage: null, // 전송 시작할 때 성공 메시지 초기화
+      formErrorMessage: null, // 오류 메시지도 초기화
     );
 
     // 이메일 주소는 그대로 전달하고 소문자 변환은 DataSource에서 처리
     final result = await _resetPasswordUseCase.execute(state.email);
 
-    // 성공 시 메시지 설정
-    if (result is AsyncData) {
+    // 결과 처리
+    if (result.hasError) {
+      final error = result.error;
+      String errorMessage = '비밀번호 재설정 이메일 전송에 실패했습니다';
+
+      // 에러 타입에 따른 사용자 친화적 메시지 처리
+      if (error is Failure) {
+        switch (error.type) {
+          case FailureType.validation:
+            errorMessage = error.message;
+            break;
+          case FailureType.network:
+            errorMessage = '네트워크 연결을 확인해주세요';
+            break;
+          case FailureType.timeout:
+            errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+            break;
+          default:
+            errorMessage = error.message;
+        }
+      }
+
+      // 디버깅 정보 로깅
+      debugPrint('비밀번호 재설정 에러: $error');
+
+      // 오류 상태 업데이트
+      state = state.copyWith(
+        resetPasswordResult: result,
+        formErrorMessage: errorMessage, // 통합 오류 메시지 설정 (SnackBar 표시용)
+      );
+    } else {
+      // 성공 시 메시지 설정
       state = state.copyWith(
         resetPasswordResult: result,
         successMessage: '비밀번호 재설정 이메일이 발송되었습니다. 이메일을 확인해주세요.',
+        formErrorMessage: null,
       );
-    } else {
-      state = state.copyWith(resetPasswordResult: result);
     }
   }
 

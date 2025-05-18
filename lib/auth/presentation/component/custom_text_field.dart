@@ -1,4 +1,4 @@
-// lib/auth/presentation/component/custom_text_field.dart 수정
+// lib/auth/presentation/component/custom_text_field.dart
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -18,6 +18,9 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.onChanged,
     this.focusNode,
+    // 새로 추가된 속성
+    this.onFieldSubmitted,
+    this.textInputAction = TextInputAction.next,
   });
 
   final String label;
@@ -29,6 +32,9 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
   final Function(String)? onChanged;
   final FocusNode? focusNode;
+  // 새로 추가된 속성
+  final Function(String)? onFieldSubmitted;
+  final TextInputAction textInputAction;
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();
@@ -37,6 +43,7 @@ class CustomTextField extends StatefulWidget {
 class _CustomTextFieldState extends State<CustomTextField> {
   late final FocusNode _focusNode;
   bool _hasFocus = false;
+  bool _obscureText = false; // 비밀번호 보기/숨기기 상태 변수 추가
 
   @override
   void initState() {
@@ -48,6 +55,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
         _hasFocus = _focusNode.hasFocus;
       });
     });
+
+    // 초기 obscureText 상태 설정
+    _obscureText = widget.obscureText;
   }
 
   @override
@@ -73,11 +83,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
       borderColor = AppColorStyles.primary100; // 보라색 (포커스)
     }
     // 입력 상태 (텍스트가 있고 포커스가 없는 경우)
-    else if (widget.controller != null &&
-        widget.controller!.text.isNotEmpty) {
+    else if (widget.controller != null && widget.controller!.text.isNotEmpty) {
       borderColor = AppColorStyles.gray80;
     }
-    // 사용 가능 상태일 때도 원래 테두리 색상 유지 (여기서는 별도 처리 제거)
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,10 +94,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         if (widget.label.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              widget.label,
-              style: AppTextStyles.body1Regular,
-            ),
+            child: Text(widget.label, style: AppTextStyles.body1Regular),
           ),
 
         // 텍스트 필드
@@ -101,9 +106,12 @@ class _CustomTextFieldState extends State<CustomTextField> {
           child: TextField(
             controller: widget.controller,
             focusNode: _focusNode,
-            obscureText: widget.obscureText,
+            obscureText: _obscureText, // 동적으로 변경되는 _obscureText 사용
             keyboardType: widget.keyboardType,
             onChanged: widget.onChanged,
+            // 새로 추가된 속성 설정
+            onSubmitted: widget.onFieldSubmitted,
+            textInputAction: widget.textInputAction,
             style: AppTextStyles.body1Regular,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
@@ -116,6 +124,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ),
               border: InputBorder.none,
               isDense: true,
+              // 비밀번호 입력창인 경우만 보기/숨기기 아이콘 추가
+              suffixIcon:
+                  widget.obscureText
+                      ? IconButton(
+                        icon: Icon(
+                          _obscureText
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: AppColorStyles.gray80,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureText = !_obscureText; // 보기/숨기기 상태 토글
+                          });
+                        },
+                      )
+                      : null,
             ),
           ),
         ),
@@ -125,22 +151,23 @@ class _CustomTextFieldState extends State<CustomTextField> {
           height: 24, // 메시지 영역의 고정 높이
           padding: const EdgeInsets.only(top: 4.0, left: 4.0),
           alignment: Alignment.centerLeft,
-          child: widget.errorText != null
-              ? Text(
-            widget.errorText!,
-            style: AppTextStyles.captionRegular.copyWith(
-              color: AppColorStyles.error,
-            ),
-          )
-          // 성공 메시지가 있으면 녹색으로 표시
-              : widget.successText != null
-              ? Text(
-            widget.successText!,
-            style: AppTextStyles.captionRegular.copyWith(
-              color: AppColorStyles.success,
-            ),
-          )
-              : null, // 에러나 성공 메시지가 없을 때는 빈 공간으로 유지
+          child:
+              widget.errorText != null
+                  ? Text(
+                    widget.errorText!,
+                    style: AppTextStyles.captionRegular.copyWith(
+                      color: AppColorStyles.error,
+                    ),
+                  )
+                  // 성공 메시지가 있으면 녹색으로 표시
+                  : widget.successText != null
+                  ? Text(
+                    widget.successText!,
+                    style: AppTextStyles.captionRegular.copyWith(
+                      color: AppColorStyles.success,
+                    ),
+                  )
+                  : null, // 에러나 성공 메시지가 없을 때는 빈 공간으로 유지
         ),
       ],
     );

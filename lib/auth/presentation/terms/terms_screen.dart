@@ -61,11 +61,13 @@ class TermsScreen extends StatelessWidget {
                   ),
                 ),
 
+                // 통합 오류 메시지 UI 제거 (SnackBar로 대체)
+
                 // 체크박스 영역
                 Column(
                   children: [
                     // 위쪽 여백을 줄임
-                    const SizedBox(height: 88),
+                    const SizedBox(height: 48),
 
                     // 전체 동의 체크박스
                     _buildCheckbox(
@@ -119,42 +121,10 @@ class TermsScreen extends StatelessWidget {
                   ],
                 ),
 
-                // 에러 메시지 영역 - 조정
-                if (state.errorMessage != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 16.0),
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
-                      border: Border.all(
-                        color: AppColorStyles.error.withOpacity(0.5),
-                        width: 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: AppColorStyles.error,
-                          size: 16.0,
-                        ),
-                        const SizedBox(width: 8.0),
-                        Expanded(
-                          child: Text(
-                            state.errorMessage!,
-                            style: AppTextStyles.captionRegular.copyWith(
-                              color: AppColorStyles.error,
-                            ),
-                            softWrap: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // 에러 메시지 영역 UI 제거 (SnackBar로 대체)
 
-                // 버튼 영역과 에러 메시지 사이 간격 조정
-                SizedBox(height: state.errorMessage != null ? 16.0 : 30.0),
+                // 여백 조정
+                const SizedBox(height: 30),
 
                 // 버튼 영역
                 Column(
@@ -191,7 +161,6 @@ class TermsScreen extends StatelessWidget {
     );
   }
 
-  // 기존 _buildCheckbox, _buildCheckboxWithButton 메서드 유지
   // 기본 체크박스 위젯
   Widget _buildCheckbox({
     required String title,

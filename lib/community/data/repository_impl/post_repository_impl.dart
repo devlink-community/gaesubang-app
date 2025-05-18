@@ -62,16 +62,30 @@ class PostRepositoryImpl implements PostRepository {
   /* ---------- NEW ---------- */
   @override
   Future<String> createPost({
+    required String postId,
     required String title,
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
   }) => _remote.createPost(
+    postId: postId,
     title: title,
     content: content,
     hashTags: hashTags,
     imageUris: imageUris,
   );
+
+  @override
+Future<Result<List<Post>>> searchPosts(String query) async {
+  try {
+    final posts = await _remote.searchPosts(query);
+    return Result.success(posts.toModelList());
+  } catch (e) {
+    return Result.error(
+      mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
+    );
+  }
+}
 
   /* ---------- Helper ---------- */
   Future<Result<T>> _wrap<T>(Future<T> Function() fn) async {

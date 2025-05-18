@@ -1,10 +1,12 @@
 // lib/core/router/app_router.dart
+import 'package:devlink_mobile_app/attendance/presentation/attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen_root.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
+import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
@@ -14,12 +16,19 @@ import 'package:devlink_mobile_app/group/presentation/group_search/group_search_
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_timer/mock_screen/mock_screen.dart';
+import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
-import 'package:devlink_mobile_app/notification/presentation/notification_screen.root.dart';
+import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/setting/presentation/open_source_license_screen_root.dart';
 import 'package:devlink_mobile_app/setting/presentation/settings_screen_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../auth/data/data_source/user_storage.dart';
+import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
+import '../../setting/presentation/forgot_password_screen_root_2.dart';
 
 part 'app_router.g.dart';
 
@@ -27,7 +36,7 @@ part 'app_router.g.dart';
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작 (false이면 로그인 로직대로 동작)
+  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
 
   void toggle() => state = !state;
   void enable() => state = true;
@@ -36,7 +45,7 @@ class DevLoginState extends _$DevLoginState {
 
 // GoRouter Provider
 @riverpod
-GoRouter appRouter(ref) {
+GoRouter appRouter(Ref ref) {
   // 개발용 강제 로그인 상태 구독
   final devLogin = ref.watch(devLoginStateProvider);
 
@@ -60,13 +69,8 @@ GoRouter appRouter(ref) {
         if (publicPaths.any(currentPath.startsWith)) {
           return '/home';
         }
-
-        // 다른 화면은 정상 이동
-        return null;
       }
 
-      // 일반 모드에서는 임시로 모든 페이지 이동 허용
-      // 추후 실제 로그인 상태에 따른 리다이렉트 로직 구현 예정
       return null;
     },
     routes: [
@@ -91,26 +95,36 @@ GoRouter appRouter(ref) {
         builder: (context, state) => const TermsScreenRoot(),
       ),
 
-      // === 메인 탭 화면 (홈, 커뮤니티, 그룹, 알림, 프로필) ===
+      // === 네비게이션 바 있는 메인 쉘 라우트 (메인 탭 화면들만 포함) ===
       ShellRoute(
         builder: (context, state, child) {
+          // 프로필 이미지
+          final userStorage = UserStorage.instance;
+          final currentUser = userStorage.currentUser;
+          String? profileImageUrl;
+
+          if (currentUser != null) {
+            final profile = userStorage.getProfileById(currentUser.id!);
+            profileImageUrl = profile?.image;
+          } else {
+            final defaultUser = userStorage.getUserByEmail('test1@example.com');
+            if (defaultUser != null) {
+              final profile = userStorage.getProfileById(defaultUser.id!);
+              profileImageUrl = profile?.image;
+            }
+          }
+
           // 현재 활성화된 탭 인덱스 계산
           int currentIndex = 0; // 기본값 홈
           final String path = state.uri.path;
 
-          if (path.startsWith('/community')) {
+          if (path == '/community') {
             currentIndex = 1;
-          } else if (path.startsWith('/group')) {
-            currentIndex = 2;
-          } else if (path.startsWith('/notifications')) {
-            currentIndex = 3;
-          } else if (path.startsWith('/profile')) {
+          } else if (path == '/group') {
+            currentIndex = 3; // 그룹을 인덱스 3으로 변경
+          } else if (path == '/profile') {
             currentIndex = 4;
           }
-
-          // 프로필 이미지는 더 이상 외부 URL을 사용하지 않음
-          // 실제 사용자 프로필 구현 시 사용자 데이터에서 가져오도록 수정
-          const String? profileImageUrl = null;
 
           return Scaffold(
             body: child,
@@ -126,15 +140,23 @@ GoRouter appRouter(ref) {
                     context.go('/community');
                     break;
                   case 2:
-                    context.go('/group');
+                    // 가운데 버튼은 드롭다운 메뉴를 표시
                     break;
                   case 3:
-                    context.go('/notifications');
+                    context.go('/group');
                     break;
                   case 4:
                     context.go('/profile');
                     break;
                 }
+              },
+              onCreatePost: () {
+                // 게시글 작성 화면으로 이동
+                context.push('/community/write');
+              },
+              onCreateGroup: () {
+                // 그룹 생성 화면으로 이동
+                context.push('/group/create');
               },
             ),
           );
@@ -143,79 +165,18 @@ GoRouter appRouter(ref) {
           // === 홈 탭 ===
           GoRoute(
             path: '/home',
-            builder: (context, state) => const _HomeMockScreen(),
-            // 추후 실제 홈 화면으로 대체
+            builder: (context, state) => const HomeScreenRoot(),
           ),
-
-          // === 커뮤니티 탭 ===
+          // === 커뮤니티 목록 탭 ===
           GoRoute(
             path: '/community',
             builder: (context, state) => const CommunityListScreenRoot(),
-            routes: [
-              // 커뮤니티 글 작성
-              GoRoute(
-                path: 'write',
-                builder: (context, state) => const CommunityWriteScreenRoot(),
-              ),
-              // 커뮤니티 상세 페이지
-              GoRoute(
-                path: ':id',
-                builder:
-                    (context, state) => CommunityDetailScreenRoot(
-                      postId: state.pathParameters['id']!,
-                    ),
-              ),
-            ],
           ),
-
-          // === 그룹 탭 ===
+          // === 그룹 목록 탭 ===
           GoRoute(
             path: '/group',
             builder: (context, state) => const GroupListScreenRoot(),
-            routes: [
-              // 그룹 생성
-              GoRoute(
-                path: 'create',
-                builder: (context, state) => const GroupCreateScreenRoot(),
-              ),
-              // 그룹 검색
-              GoRoute(
-                path: 'search',
-                builder: (context, state) => const GroupSearchScreenRoot(),
-              ),
-              // 그룹 상세
-              GoRoute(
-                path: ':id',
-                builder:
-                    (context, state) => GroupTimerScreenRoot(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-              // 그룹 출석
-              GoRoute(
-                path: ':id/attendance',
-                builder:
-                    (context, state) => MockGroupAttendanceScreen(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-              // 그룹 설정
-              GoRoute(
-                path: ':id/settings',
-                builder:
-                    (context, state) => GroupSettingsScreenRoot(
-                      groupId: state.pathParameters['id']!,
-                    ),
-              ),
-            ],
           ),
-
-          // === 알림 탭 ===
-          GoRoute(
-            path: '/notifications',
-            builder: (context, state) => const NotificationScreenRoot(),
-          ),
-
           // === 프로필 탭 ===
           GoRoute(
             path: '/profile',
@@ -224,17 +185,77 @@ GoRouter appRouter(ref) {
         ],
       ),
 
-      // === 프로필 관련 독립 라우트 ===
+      // === 쉘 밖에 있는 페이지들 (바텀 네비게이션 바 없음) ===
+
+      // --- 커뮤니티 관련 디테일/액션 페이지들 ---
+      GoRoute(
+        path: '/community/write',
+        builder: (context, state) => const CommunityWriteScreenRoot(),
+      ),
+      GoRoute(
+        path: '/community/search',
+        builder: (context, state) => const CommunitySearchScreenRoot(),
+      ),
+      GoRoute(
+        path: '/community/:id',
+        builder:
+            (context, state) =>
+                CommunityDetailScreenRoot(postId: state.pathParameters['id']!),
+      ),
+
+      // --- 그룹 관련 디테일/액션 페이지들 ---
+      GoRoute(
+        path: '/group/create',
+        builder: (context, state) => const GroupCreateScreenRoot(),
+      ),
+      GoRoute(
+        path: '/group/search',
+        builder: (context, state) => const GroupSearchScreenRoot(),
+      ),
+      GoRoute(
+        path: '/group/:id',
+        builder:
+            (context, state) =>
+                GroupTimerScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/attendance',
+        builder:
+            (context, state) =>
+                AttendanceScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/settings',
+        builder:
+            (context, state) =>
+                GroupSettingsScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+
+      // --- 기타 페이지들 ---
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationScreenRoot(),
+      ),
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreenRoot(),
       ),
       GoRoute(
+        path: '/open-source-licenses',
+        builder: (context, state) => const OpenSourceLicenseScreenRoot(),
+      ),
+      GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditIntroRoot(),
       ),
-
-      // === 유저 프로필 보기 (그룹에서 사용) ===
+      GoRoute(
+        path: '/forgot-password-2',
+        builder: (context, state) => const ForgotPasswordScreenRoot2(),
+      ),
+      GoRoute(
+        path: '/profile-edit-demo',
+        builder: (context, state) => const ProfileEditDemoScreen(),
+      ),
       GoRoute(
         path: '/user/:id/profile',
         builder:
@@ -250,14 +271,4 @@ GoRouter appRouter(ref) {
           body: Center(child: Text('요청한 경로 "${state.uri.path}"를 찾을 수 없습니다')),
         ),
   );
-}
-
-/// Mock 스크린들
-class _HomeMockScreen extends StatelessWidget {
-  const _HomeMockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('🏠 Home Screen (Mock)')));
-  }
 }

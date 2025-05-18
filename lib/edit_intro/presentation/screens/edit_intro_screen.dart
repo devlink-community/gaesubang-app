@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
-import '../../../group/presentation/group_setting/group_settings_action.dart';
 import '../../../group/presentation/labeled_text_field.dart';
 import '../edit_intro_action.dart';
 import '../states/edit_intro_state.dart';
@@ -32,12 +31,22 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
   // 텍스트 컨트롤러 선언
   final _nicknameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _positionController = TextEditingController(); // 직무 입력 컨트롤러
+  final _skillsController = TextEditingController(); // 스킬 입력 컨트롤러
 
   @override
   void initState() {
     super.initState();
     // 초기 값 설정
     _updateTextControllers();
+
+    // 만약 Member 이미지 경로가 로컬 파일 경로라면 로컬 이미지 파일 초기화
+    final member = widget.state.member;
+    if (member != null &&
+        member.image.isNotEmpty &&
+        member.image.startsWith('/')) {
+      _localImageFile = File(member.image);
+    }
   }
 
   @override
@@ -46,6 +55,18 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     // 상태가 변경되면 컨트롤러 업데이트
     if (oldWidget.state != widget.state) {
       _updateTextControllers();
+
+      // member 이미지가 변경되었을 때 _localImageFile 업데이트
+      final member = widget.state.member;
+      if (member != null &&
+          member.image.isNotEmpty &&
+          member.image.startsWith('/')) {
+        if (_localImageFile?.path != member.image) {
+          setState(() {
+            _localImageFile = File(member.image);
+          });
+        }
+      }
     }
   }
 
@@ -54,6 +75,8 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (member != null) {
       _nicknameController.text = member.nickname;
       _descriptionController.text = member.description;
+      _positionController.text = member.position ?? '';
+      _skillsController.text = member.skills ?? '';
     }
   }
 
@@ -61,6 +84,8 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
   void dispose() {
     _nicknameController.dispose();
     _descriptionController.dispose();
+    _positionController.dispose(); // 컨트롤러 정리
+    _skillsController.dispose(); // 컨트롤러 정리
     super.dispose();
   }
 
@@ -75,7 +100,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (widget.state.hasError) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('프로필 수정'),
+          title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -108,7 +133,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (member == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('프로필 수정'),
+          title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
@@ -120,7 +145,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('프로필 수정', style: AppTextStyles.heading3Bold),
+        title: const Text('프로필 수정', style: AppTextStyles.heading6Bold),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -128,7 +153,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -143,6 +168,30 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
               onChanged:
                   (value) =>
                       widget.onAction(EditIntroAction.onChangeNickname(value)),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 직무 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '직무',
+              hint: '직무를 입력하세요 (예: 백엔드 개발자, 프론트엔드 개발자)',
+              controller: _positionController,
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangePosition(value)),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 스킬 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '스킬',
+              hint: '보유한 스킬을 입력하세요 (예: Flutter, React, Python)',
+              controller: _skillsController,
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangeSkills(value)),
             ),
 
             const SizedBox(height: 16),
@@ -190,20 +239,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     return Center(
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: 50,
-            // 로컬 이미지가 있으면 File 이미지를, 없으면 네트워크 이미지나 기본 아이콘 표시
-            backgroundImage:
-                _localImageFile != null
-                    ? FileImage(_localImageFile!)
-                    : (member.image.isNotEmpty
-                        ? NetworkImage(member.image)
-                        : null),
-            child:
-                (member.image.isEmpty && _localImageFile == null)
-                    ? const Icon(Icons.person, size: 50)
-                    : null,
-          ),
+          _buildProfileImage(member),
           Positioned(
             bottom: 0,
             right: 0,
@@ -220,6 +256,43 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileImage(final member) {
+    // 로컬 이미지 파일이 있는 경우
+    if (_localImageFile != null) {
+      return CircleAvatar(
+        radius: 50,
+        backgroundImage: FileImage(_localImageFile!),
+        backgroundColor: Colors.grey.shade200,
+      );
+    }
+
+    // 이미지 경로가 있는 경우
+    if (member.image.isNotEmpty) {
+      if (member.image.startsWith('/')) {
+        // 로컬 파일 경로
+        return CircleAvatar(
+          radius: 50,
+          backgroundImage: FileImage(File(member.image)),
+          backgroundColor: Colors.grey.shade200,
+        );
+      } else {
+        // 네트워크 이미지 URL
+        return CircleAvatar(
+          radius: 50,
+          backgroundImage: NetworkImage(member.image),
+          backgroundColor: Colors.grey.shade200,
+        );
+      }
+    }
+
+    // 이미지가 없는 경우 기본 아이콘 표시
+    return CircleAvatar(
+      radius: 50,
+      backgroundColor: Colors.grey.shade100,
+      child: const Icon(Icons.person, size: 50, color: Colors.grey),
     );
   }
 

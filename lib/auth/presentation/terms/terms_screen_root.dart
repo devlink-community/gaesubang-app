@@ -3,6 +3,7 @@
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_notifier.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_screen.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,14 +19,16 @@ class TermsScreenRoot extends ConsumerWidget {
     final state = ref.watch(termsNotifierProvider);
     final notifier = ref.watch(termsNotifierProvider.notifier);
 
-    // 약관 동의 저장 완료 감지 - 수정된 부분
+    // 약관 동의 저장 완료 감지
     ref.listen(
       termsNotifierProvider.select((value) => value.savedTermsId),
           (previous, next) {
         // savedTermsId가 null이 아니고 이전과 다른 경우 (새로 저장된 경우)
         if (next != null && previous != next) {
-          // 약관 저장 성공 시 회원가입 화면으로 이동
-          context.pop(); // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
+          // 성공 메시지 제거 (SnackBar 표시하지 않음)
+
+          // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
+          context.pop();
 
           // 다음 프레임에서 signupNotifier 업데이트 (화면 전환 후)
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -34,6 +37,44 @@ class TermsScreenRoot extends ConsumerWidget {
               isAgreed: true,
             );
           });
+        }
+      },
+    );
+
+    // 오류 메시지 감지
+    ref.listen(
+      termsNotifierProvider.select((value) => value.errorMessage),
+          (previous, next) {
+        if (next != null) {
+          // 오류 메시지를 SnackBar로 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next),
+              backgroundColor: Colors.red.shade800,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      },
+    );
+
+    // 통합 오류 메시지 감지
+    ref.listen(
+      termsNotifierProvider.select((value) => value.formErrorMessage),
+          (previous, next) {
+        if (next != null) {
+          // 폼 에러 메시지를 SnackBar로 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next),
+              backgroundColor: Colors.red.shade800,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       },
     );

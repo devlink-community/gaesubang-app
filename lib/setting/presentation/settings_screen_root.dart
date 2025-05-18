@@ -1,3 +1,6 @@
+// lib/setting/presentation/settings_screen_root.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,6 +18,11 @@ class SettingsScreenRoot extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsNotifierProvider);
     final notifier = ref.watch(settingsNotifierProvider.notifier);
+
+    // 화면 진입 시 앱 버전 정보 갱신
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifier.onAction(const SettingsAction.checkAppVersion());
+    });
 
     // 로그아웃 성공 리스너
     ref.listen(settingsNotifierProvider.select((s) => s.logoutResult), (
@@ -48,15 +56,14 @@ class SettingsScreenRoot extends ConsumerWidget {
             context.push('/edit-profile');
           case OnTapChangePassword():
             // 비밀번호 변경을 위해 비밀번호 찾기 화면으로 이동
-            context.push('/forget-password');
+            context.push('/forgot-password-2');
           case OnTapPrivacyPolicy():
             // 웹 URL 열기
             await _launchUrl(
               'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
             );
-          case OnTapAppInfo():
-            // pub.dev로 연결
-            await _launchUrl('https://pub.dev/');
+          case OnTapOpenSourceLicenses():
+            context.push('/open-source-licenses');
           case OnTapLogout():
             _showLogoutConfirmDialog(context, notifier, action);
           case OnTapDeleteAccount():
@@ -66,7 +73,9 @@ class SettingsScreenRoot extends ConsumerWidget {
               'https://www.termsfeed.com/live/11af57de-4ab7-4032-84b8-559e66e7ceb3/',
             );
           case OpenUrlAppInfo():
-            await _launchUrl('https://pub.dev/');
+            _showAppStoreDialog(context, state.isUpdateAvailable == true);
+          case CheckAppVersion():
+            notifier.onAction(action);
         }
       },
     );
@@ -82,14 +91,18 @@ class SettingsScreenRoot extends ConsumerWidget {
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
-      // 여기서 사용자에게 스낵바 등으로 알림을 줄 수 있습니다
     }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 
   void _showLogoutConfirmDialog(
@@ -101,10 +114,10 @@ class SettingsScreenRoot extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
-          title: "Are you sure ?",
+          title: "로그아웃",
           message: "정말 로그아웃 하시겠습니까?",
-          cancelText: "Cancel",
-          confirmText: "Confrim",
+          cancelText: "취소",
+          confirmText: "확인",
           onConfirm: () {
             Navigator.pop(dialogContext);
             notifier.onAction(action);
@@ -123,10 +136,10 @@ class SettingsScreenRoot extends ConsumerWidget {
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomAlertDialog(
-          title: "Are you sure ?",
-          message: "정말 회원탈퇴 하시겠습니까?\n 데이터는 직접 삭제하셔야 합니다. \n 회원정보가 사라집니다.",
-          cancelText: "Cancel",
-          confirmText: "Confirm",
+          title: "회원탈퇴",
+          message: "정말 회원탈퇴 하시겠습니까?\n데이터는 직접 삭제하셔야 합니다.\n회원정보가 사라집니다.",
+          cancelText: "취소",
+          confirmText: "확인",
           onConfirm: () {
             Navigator.pop(dialogContext);
             notifier.onAction(action);
@@ -134,5 +147,43 @@ class SettingsScreenRoot extends ConsumerWidget {
         );
       },
     );
+  }
+
+  void _showAppStoreDialog(BuildContext context, bool needsUpdate) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return CustomAlertDialog(
+          title: needsUpdate ? "앱 업데이트" : "앱 스토어",
+          message:
+              needsUpdate
+                  ? "새로운 버전이 출시되었습니다.\n업데이트를 진행하시겠습니까?"
+                  : "최신 버전을 사용 중입니다.\n앱 스토어로 이동하시겠습니까?",
+          cancelText: "나중에",
+          confirmText: needsUpdate ? "지금 업데이트" : "스토어로 이동",
+          onConfirm: () {
+            Navigator.pop(dialogContext);
+            // 플랫폼별 스토어 URL 열기
+            _launchAppStore();
+          },
+        );
+      },
+    );
+  }
+
+  void _launchAppStore() {
+    // 플랫폼별 스토어 URL (목업)
+    const String androidUrl =
+        'https://play.google.com/store/apps/details?id=com.devlink.app';
+    const String iosUrl = 'https://apps.apple.com/app/devlink/id123456789';
+
+    // 플랫폼에 따라 적절한 스토어 URL 열기
+    if (Platform.isAndroid) {
+      _launchUrl(androidUrl);
+    } else if (Platform.isIOS) {
+      _launchUrl(iosUrl);
+    } else {
+      debugPrint('지원되지 않는 플랫폼입니다.');
+    }
   }
 }

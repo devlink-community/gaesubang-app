@@ -91,6 +91,66 @@ class MockAuthDataSource implements AuthDataSource {
 
 ---
 
+## ✅ Mock DataSource 구현 시 주의사항
+
+### 상태 유지가 필요한 Mock DataSource
+
+Mock DataSource에서 메모리 내 데이터를 관리하는 경우(CRUD 작업 시뮬레이션),  
+반드시 `@Riverpod(keepAlive: true)`를 사용하여 인스턴스를 유지해야 합니다.
+
+**잘못된 예시 - 매번 새 인스턴스 생성으로 데이터 손실**
+```dart
+@riverpod
+GroupDataSource groupDataSource(Ref ref) => MockGroupDataSourceImpl();
+```
+
+**올바른 예시 - 인스턴스 유지로 데이터 보존**
+```dart
+@Riverpod(keepAlive: true)
+GroupDataSource groupDataSource(Ref ref) => MockGroupDataSourceImpl();
+```
+
+### Mock DataSource 내부 상태 관리
+
+메모리 내 데이터를 관리하는 Mock DataSource는 다음 패턴을 따르세요:
+
+```dart
+class MockDataSourceImpl implements DataSource {
+  // 메모리 내 데이터 저장
+  final List<EntityDto> _entities = [];
+  bool _initialized = false;
+
+  // 초기화는 한 번만 수행
+  Future<void> _initializeIfNeeded() async {
+    if (_initialized) return;
+    // 초기 데이터 설정
+    _entities.addAll(_generateMockData());
+    _initialized = true;
+  }
+
+  @override
+  Future<List<EntityDto>> fetchList() async {
+    await _initializeIfNeeded();
+    return List.from(_entities); // 복사본 반환
+  }
+
+  @override
+  Future<EntityDto> create(EntityDto entity) async {
+    await _initializeIfNeeded();
+    final newEntity = entity.copyWith(id: _generateNewId());
+    _entities.add(newEntity);
+    return newEntity;
+  }
+}
+```
+
+### Provider 설정 시 고려사항
+
+- **keepAlive: true 필요한 경우**: CRUD 시뮬레이션, 상태 유지가 필요한 Mock
+- **keepAlive: false (기본값) 사용**: 상태 없는 단순 Mock, 실제 API 호출
+
+---
+
 ## 🧪 테스트 가이드
 
 - 실제 테스트는 `MockDataSource` 또는 Firebase Emulator로 구성

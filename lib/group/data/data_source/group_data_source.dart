@@ -7,4 +7,5 @@ abstract interface class GroupDataSource {
   Future<GroupDto> fetchCreateGroup(GroupDto groupDto);
   Future<void> fetchUpdateGroup(GroupDto groupDto);
   Future<void> fetchLeaveGroup(String groupId);
+  Future<List<GroupDto>> fetchUserJoinedGroups(String userId);
 }

@@ -14,6 +14,8 @@ class Member with _$Member {
     this.agreedTermsId, // 동의한 약관 ID (단일 ID)
     this.description = "",
     this.streakDays = 0,
+    this.position = "",
+    this.skills = "",
   });
 
   final String id;
@@ -25,4 +27,6 @@ class Member with _$Member {
   final String? agreedTermsId; // 약관 동의 ID (하나만 저장)
   final String description;
   final int streakDays;
+  final String? position;
+  final String? skills;
 }

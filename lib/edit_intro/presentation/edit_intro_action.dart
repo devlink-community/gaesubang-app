@@ -9,6 +9,9 @@ sealed class EditIntroAction with _$EditIntroAction {
       OnChangeNickname;
   const factory EditIntroAction.onChangeMessage(String message) =
       OnChangeMessage;
+  const factory EditIntroAction.onChangePosition(String position) =
+      OnChangePosition;
+  const factory EditIntroAction.onChangeSkills(String skills) = OnChangeSkills;
   const factory EditIntroAction.onPickImage(File image) = OnPickImage;
   const factory EditIntroAction.onSave() = OnSave;
 }

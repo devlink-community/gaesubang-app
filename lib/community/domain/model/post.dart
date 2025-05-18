@@ -1,7 +1,6 @@
 // lib/community/domain/model/post.dart
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
-import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -15,31 +14,24 @@ class Post with _$Post {
     required this.title,
     required this.content,
     required this.member,
+    required this.userProfileImageUrl,
     required this.boardType,
     required this.createdAt,
-    this.hashTag = const <HashTag>[],
+    this.hashTags = const <String>[],
+    this.imageUrls = const <String>[],
     this.like = const <Like>[],
     this.comment = const <Comment>[],
-    this.image = 'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
   });
 
-  @override
   final String id;
-  @override
   final String title;
-  @override
   final String content;
-  @override
   final Member member;
-  @override
+  final String userProfileImageUrl;
   final BoardType boardType;
-  @override
   final DateTime createdAt;
-  @override
-  final List<HashTag> hashTag;
-  @override
+  final List<String> hashTags;
+  final List<String> imageUrls;
   final List<Like> like;
-  @override
   final List<Comment> comment;
-  final String image;
 }
