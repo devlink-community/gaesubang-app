@@ -48,7 +48,7 @@ class MemberGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   color:
                       isActive
-                          ? AppColorStyles.primary100.withOpacity(0.03)
+                          ? AppColorStyles.primary100.withValues(alpha: 0.03)
                           : Colors.transparent,
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -69,8 +69,8 @@ class MemberGrid extends StatelessWidget {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColorStyles.primary80.withOpacity(
-                                      0.2,
+                                    color: AppColorStyles.primary80.withValues(
+                                      alpha: 0.2,
                                     ),
                                     blurRadius: 15,
                                     spreadRadius: 2,
