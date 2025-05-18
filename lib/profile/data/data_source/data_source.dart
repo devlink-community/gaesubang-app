@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../auth/data/data_source/user_storage.dart';
-import '../../../auth/data/dto/user_dto.dart';
+import '../../../auth/data/dto/user_dto_old.dart';
 
 class MockProfileUpdater {
   final UserStorage _storage = UserStorage.instance;

@@ -1,4 +1,4 @@
-import '../dto/focus_time_stats_dto.dart';
+import '../dto/focus_time_stats_dto_old.dart';
 
 abstract interface class FocusTimeDataSource {
   /// 집중 시간 통계 정보를 조회

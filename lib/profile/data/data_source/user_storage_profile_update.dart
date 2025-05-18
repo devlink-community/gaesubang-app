@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../auth/data/data_source/user_storage.dart';
-import '../../../auth/data/dto/profile_dto.dart';
-import '../../../auth/data/dto/user_dto.dart';
+import '../../../auth/data/dto/profile_dto_old.dart';
+import '../../../auth/data/dto/user_dto_old.dart';
 
 /// UserStorage에 프로필 업데이트 기능을 추가하는 확장 (목업용)
 // UserStorage에 프로필 업데이트 기능을 추가하는 확장 (목업용)
