@@ -23,11 +23,8 @@ class AttendanceScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('출석부', style: AppTextStyles.heading3Bold),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.transparent,
         elevation: 0,
       ),
-      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
