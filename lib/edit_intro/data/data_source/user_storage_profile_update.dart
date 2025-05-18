@@ -5,13 +5,14 @@ import '../../../auth/data/dto/profile_dto.dart';
 import '../../../auth/data/dto/user_dto.dart';
 
 /// UserStorage에 프로필 업데이트 기능을 추가하는 확장 (목업용)
+// UserStorage에 프로필 업데이트 기능을 추가하는 확장 (목업용)
 extension UserStorageProfileUpdate on UserStorage {
   // 현재 사용자의 닉네임 및 소개글 업데이트
   bool updateCurrentUserProfile({
     required String nickname,
     String? description,
-    String? position,
-    String? skills,
+    String? position, // position 매개변수 추가
+    String? skills, // skills 매개변수 추가
   }) {
     try {
       // UserStorage 초기화
@@ -71,8 +72,9 @@ extension UserStorageProfileUpdate on UserStorage {
     }
   }
 
-  // 현재 사용자의 프로필 이미지 업데이트
+  // 현재 사용자의 프로필 이미지 업데이트 (이 부분은 변경하지 않습니다)
   bool updateCurrentUserImage(String imagePath) {
+    // 코드는 그대로 유지
     try {
       // UserStorage 초기화
       initialize();
@@ -97,15 +99,14 @@ extension UserStorageProfileUpdate on UserStorage {
       // 현재 비밀번호 - 실제로는 보안상 이렇게 하면 안 되지만 목업용으로만 사용
       String password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
 
-      // 비밀번호 검증은 UserStorage의 private 멤버인 _passwords에 직접 접근할 수 없으므로
-      // validatePassword 메서드를 사용하거나 목업 환경에서는 기본 비밀번호 사용
-
-      // 새 ProfileDto 생성 (이미지 경로만 변경)
+      // 새 ProfileDto 생성 (이미지 경로만 변경하고 다른 필드는 유지)
       final updatedProfileDto = ProfileDto(
         userId: profile.userId,
         image: imagePath, // 변경된 이미지 경로
         onAir: profile.onAir,
         description: profile.description,
+        position: profile.position, // position 유지
+        skills: profile.skills, // skills 유지
       );
 
       // 현재 로그인 상태 저장

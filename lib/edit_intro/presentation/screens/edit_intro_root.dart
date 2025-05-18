@@ -48,7 +48,7 @@ class _EditIntroRootState extends ConsumerState<EditIntroRoot> {
           _showSuccessMessage(context);
 
           // 약간의 지연 후 화면 전환
-          Future.delayed(const Duration(milliseconds: 1500), () {
+          Future.delayed(const Duration(milliseconds: 600), () {
             // IntroNotifierProvider 무효화 - 프로필 화면이 다시 로드되도록 함
             ref.invalidate(introNotifierProvider);
 

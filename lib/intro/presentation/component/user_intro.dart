@@ -94,12 +94,12 @@ class _ProfileInfoState extends State<ProfileInfo>
                   end: Alignment.bottomRight,
                   colors: [
                     Colors.white,
-                    AppColorStyles.primary100.withValues(alpha: 0.1),
+                    AppColorStyles.primary100.withOpacity(0.1),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColorStyles.primary100.withValues(alpha: 0.2),
+                    color: AppColorStyles.primary100.withOpacity(0.2),
                     spreadRadius: 2,
                     blurRadius: 8,
                     offset: const Offset(0, 3),
@@ -126,21 +126,24 @@ class _ProfileInfoState extends State<ProfileInfo>
 
         const SizedBox(height: 6),
 
-        // 소개글 (streakDay 대신 소개글 표시)
-        if (hasDescription)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            child: Text(
-              widget.member.description,
-              style: AppTextStyles.body2Regular.copyWith(
-                color: AppColorStyles.textPrimary,
-                fontWeight: FontWeight.w400,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        // 소개글
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Text(
+            hasDescription ? widget.member.description : "아직 소개글이 작성되지 않았어요",
+            style: AppTextStyles.body2Regular.copyWith(
+              color:
+                  hasDescription
+                      ? AppColorStyles.textPrimary
+                      : AppColorStyles.gray80,
+              fontWeight: FontWeight.w400,
+              fontStyle: hasDescription ? FontStyle.normal : FontStyle.italic,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
+        ),
 
         const SizedBox(height: 24),
 
@@ -154,7 +157,7 @@ class _ProfileInfoState extends State<ProfileInfo>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -207,7 +210,7 @@ class _ProfileInfoState extends State<ProfileInfo>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
