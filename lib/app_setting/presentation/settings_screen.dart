@@ -1,8 +1,8 @@
-// lib/setting/presentation/settings_screen.dart
+// lib/app_setting/presentation/settings_screen.dart
+import 'package:devlink_mobile_app/app_setting/presentation/settings_action.dart';
+import 'package:devlink_mobile_app/app_setting/presentation/settings_state.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/setting/presentation/settings_action.dart';
-import 'package:devlink_mobile_app/setting/presentation/settings_state.dart';
 import 'package:flutter/material.dart';
 
 class SettingsScreen extends StatefulWidget {
