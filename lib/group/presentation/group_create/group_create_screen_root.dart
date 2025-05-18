@@ -30,7 +30,7 @@ class GroupCreateScreenRoot extends ConsumerWidget {
           print('🔄 Navigating to group with ID: $next');
 
           // 그룹 상세 페이지로 이동 (확실하게 경로 지정)
-          context.go('/group/$next'); // push 대신 go 사용
+          context.pushReplacement('/group/$next');
         }
       },
     );
