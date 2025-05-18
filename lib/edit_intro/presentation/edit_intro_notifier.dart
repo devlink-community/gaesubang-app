@@ -1,9 +1,11 @@
 import 'dart:io';
+
 import 'package:devlink_mobile_app/edit_intro/presentation/edit_intro_action.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/states/edit_intro_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../domain/usecase/get_current_profile_usecase.dart';
 import '../domain/usecase/update_profile_image_usecase.dart';
 import '../domain/usecase/update_profile_usecase.dart';
@@ -85,6 +87,22 @@ class EditIntroNotifier extends _$EditIntroNotifier {
         }
         break;
 
+      case OnChangePosition(:final position):
+        if (state.member != null) {
+          debugPrint('직무 변경: $position');
+          final updatedMember = state.member!.copyWith(position: position);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
+      case OnChangeSkills(:final skills):
+        if (state.member != null) {
+          debugPrint('스킬 변경: $skills');
+          final updatedMember = state.member!.copyWith(skills: skills);
+          state = state.copyWith(member: updatedMember);
+        }
+        break;
+
       case OnPickImage(:final image):
         await _updateProfileImage(image);
         break;
@@ -161,20 +179,22 @@ class EditIntroNotifier extends _$EditIntroNotifier {
 
     // 디버그 로그 추가
     debugPrint(
-      '프로필 저장 시작: ${state.member!.nickname}, ${state.member!.description}',
+      '프로필 저장 시작: ${state.member!.nickname}, ${state.member!.description}, ${state.member!.position}, ${state.member!.skills}',
     );
 
     try {
       final result = await _updateProfileUseCase.execute(
         nickname: state.member!.nickname,
         intro: state.member!.description,
+        position: state.member!.position,
+        skills: state.member!.skills,
       );
 
       // 저장 결과 처리 - AsyncValue에 따라 분기
       if (result.hasValue) {
         // 성공 시 디버그 로그 추가
         debugPrint(
-          '프로필 저장 성공: ${result.value!.nickname}, ${result.value!.description}',
+          '프로필 저장 성공: ${result.value!.nickname}, ${result.value!.description}, ${result.value!.position}, ${result.value!.skills}',
         );
 
         state = state.copyWith(

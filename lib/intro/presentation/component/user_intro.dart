@@ -22,7 +22,6 @@ class _ProfileInfoState extends State<ProfileInfo>
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
   late Animation<double> _rotateAnimation;
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -39,10 +38,6 @@ class _ProfileInfoState extends State<ProfileInfo>
       begin: 0,
       end: 0.5,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _fadeAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
   }
 
   @override
@@ -66,258 +61,310 @@ class _ProfileInfoState extends State<ProfileInfo>
   Widget build(BuildContext context) {
     // 컴팩트 모드에 따라 크기 조정
     final double imageSize = widget.compact ? 60.0 : 72.0;
-    // final double iconSize = widget.compact ? 24.0 : 30.0;
 
     // 소개글이 있는지 확인
     final bool hasDescription = widget.member.description.isNotEmpty;
-    final bool isLongDescription =
-        widget.member.description.length > 80 ||
-        widget.member.description.split('\n').length > 2;
+
+    // 직무와 스킬이 있는지 확인
+    final bool hasPosition =
+        widget.member.position != null && widget.member.position!.isNotEmpty;
+    final bool hasSkills =
+        widget.member.skills != null && widget.member.skills!.isNotEmpty;
+
+    // 직무 또는 스킬 정보가 있는지 확인
+    final bool hasExtraInfo = hasPosition || hasSkills;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            // 프로필 사진에 애니메이션 효과 추가
-            TweenAnimationBuilder(
-              tween: Tween<double>(begin: 0.0, end: 1.0),
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOutBack,
-              builder: (context, value, child) {
-                return Transform.scale(scale: value, child: child);
-              },
-              child: Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white,
-                      AppColorStyles.primary100.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColorStyles.primary100.withValues(alpha: 0.2),
-                      spreadRadius: 2,
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
+        // 프로필 이미지 (중앙 정렬)
+        Align(
+          alignment: Alignment.center,
+          child: TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutBack,
+            builder: (context, value, child) {
+              return Transform.scale(scale: value, child: child);
+            },
+            child: Container(
+              width: imageSize,
+              height: imageSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    AppColorStyles.primary100.withOpacity(0.1),
                   ],
                 ),
-                padding: const EdgeInsets.all(2), // 테두리 효과를 위한 패딩
-                child: _buildProfileImage(),
-              ),
-            ),
-            SizedBox(width: widget.compact ? 12 : 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          widget.member.nickname,
-                          style:
-                              widget.compact
-                                  ? AppTextStyles.subtitle1Bold
-                                  : AppTextStyles.heading6Bold.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColorStyles.primary100.withOpacity(0.2),
+                    spreadRadius: 2,
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
-                  SizedBox(height: widget.compact ? 2 : 6),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColorStyles.primary100,
-                              AppColorStyles.primary80,
-                            ],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColorStyles.primary100.withValues(
-                                alpha: 0.3,
-                              ),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.local_fire_department,
-                              color: Colors.white,
-                              size: widget.compact ? 14 : 16,
-                            ),
-                            SizedBox(width: widget.compact ? 2 : 4),
-                            Text(
-                              '${widget.member.streakDays} Day',
-                              style: (widget.compact
-                                      ? AppTextStyles.captionRegular
-                                      : AppTextStyles.body2Regular)
-                                  .copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+              padding: const EdgeInsets.all(2),
+              child: _buildProfileImage(),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // 이름
+        Text(
+          widget.member.nickname,
+          style: AppTextStyles.heading6Bold.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
+          ),
+          textAlign: TextAlign.center,
+        ),
+
+        const SizedBox(height: 6),
+
+        // 소개글
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Text(
+            hasDescription ? widget.member.description : "아직 소개글이 작성되지 않았어요",
+            style: AppTextStyles.body2Regular.copyWith(
+              color:
+                  hasDescription
+                      ? AppColorStyles.textPrimary
+                      : AppColorStyles.gray80,
+              fontWeight: FontWeight.w400,
+              fontStyle: hasDescription ? FontStyle.normal : FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // 직무/스킬 섹션 헤더 (접기/펼치기 버튼)
+        if (hasExtraInfo)
+          GestureDetector(
+            onTap: _toggleExpanded,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '개발자 정보',
+                    style: AppTextStyles.subtitle1Bold.copyWith(
+                      color: AppColorStyles.primary100,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  RotationTransition(
+                    turns: _rotateAnimation,
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: AppColorStyles.primary100,
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
 
-        // 소개글 영역 (컴팩트 모드가 아니고 소개글이 있는 경우에만)
-        if (!widget.compact && hasDescription) ...[
-          const SizedBox(height: 16),
-
-          // 소개글 컨테이너
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColorStyles.primary100.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                width: 1,
-              ),
-            ),
+        // 접을 수 있는 정보 영역
+        if (hasExtraInfo)
+          SizeTransition(
+            sizeFactor: _expandAnimation,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 아이콘과 "소개" 텍스트 행
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person,
-                      color: AppColorStyles.primary100,
-                      size: 16,
+                // 직무 정보 - 있을 때만 표시
+                if (hasPosition)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '소개',
-                      style: AppTextStyles.subtitle2Regular.copyWith(
-                        color: AppColorStyles.primary100,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                // 소개글 내용 (애니메이션 적용)
-                GestureDetector(
-                  onTap: isLongDescription ? _toggleExpanded : null,
-                  child: AnimatedBuilder(
-                    animation: _expandAnimation,
-                    builder: (context, child) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.member.description,
-                            style: AppTextStyles.body1Regular.copyWith(
-                              color: AppColorStyles.textPrimary.withValues(
-                                alpha: _fadeAnimation.value,
-                              ),
-                              height: 1.4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 직무 제목
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.work_outline,
+                              size: 18,
+                              color: AppColorStyles.primary100,
                             ),
-                            maxLines: _isExpanded ? null : 2,
-                            overflow:
-                                _isExpanded
-                                    ? TextOverflow.visible
-                                    : TextOverflow.ellipsis,
-                          ),
-                          if (isLongDescription) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColorStyles.primary100.withValues(
-                                    alpha: 0.05,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      _isExpanded ? '접기' : '더보기',
-                                      style: AppTextStyles.captionRegular
-                                          .copyWith(
-                                            color: AppColorStyles.primary100,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    RotationTransition(
-                                      turns: _rotateAnimation,
-                                      child: Icon(
-                                        Icons.keyboard_arrow_down,
-                                        size: 16,
-                                        color: AppColorStyles.primary100,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '직무',
+                              style: AppTextStyles.subtitle1Bold.copyWith(
+                                fontSize: 16,
+                                color: AppColorStyles.textPrimary,
                               ),
                             ),
                           ],
-                        ],
-                      );
-                    },
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // 직무 내용
+                        Text(
+                          widget.member.position!,
+                          style: AppTextStyles.body1Regular.copyWith(
+                            color: AppColorStyles.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+
+                // 스킬 카드 - 있을 때만 표시
+                if (hasSkills)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 스킬 헤더
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.code,
+                              size: 18,
+                              color: AppColorStyles.primary100,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '스킬',
+                              style: AppTextStyles.subtitle1Bold.copyWith(
+                                fontSize: 16,
+                                color: AppColorStyles.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // 스킬 태그 리스트
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _buildSkillTags(widget.member.skills!),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-        ],
       ],
     );
   }
 
+  // 스킬 태그 생성 함수
+  List<Widget> _buildSkillTags(String skills) {
+    // 스킬 문자열을 쉼표로 구분하여 리스트로 변환
+    final skillList =
+        skills
+            .split(',')
+            .map((skill) => skill.trim())
+            .where((skill) => skill.isNotEmpty)
+            .toList();
+
+    // 각 스킬에 대한 태그 위젯 생성
+    return skillList.map((skill) {
+      // 스킬별로 색상 할당 (고정)
+      final colorIndex = skill.hashCode % 5;
+      final colors =
+          [
+            {
+              'bg': const Color(0xFFE3F2FD),
+              'text': const Color(0xFF1976D2),
+            }, // 파란색
+            {
+              'bg': const Color(0xFFF3E5F5),
+              'text': const Color(0xFF9C27B0),
+            }, // 보라색
+            {
+              'bg': const Color(0xFFFFF3E0),
+              'text': const Color(0xFFFF9800),
+            }, // 주황색
+            {
+              'bg': const Color(0xFFE8F5E9),
+              'text': const Color(0xFF43A047),
+            }, // 초록색
+            {
+              'bg': const Color(0xFFFFEBEE),
+              'text': const Color(0xFFE53935),
+            }, // 빨간색
+          ][colorIndex];
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors['bg'] as Color,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: (colors['text'] as Color).withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          skill,
+          style: AppTextStyles.body2Regular.copyWith(
+            color: colors['text'] as Color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   Widget _buildProfileImage() {
-    // 이미지 처리 로직은 기존과 동일하되 UI 개선
     if (widget.member.image.isEmpty) {
       return CircleAvatar(
-        radius: widget.compact ? 30 : 36,
+        radius: widget.compact ? 30 : 40,
         backgroundColor: Colors.grey.shade100,
         child: Icon(
           Icons.person,
-          size: widget.compact ? 30 : 36,
+          size: widget.compact ? 30 : 40,
           color: AppColorStyles.primary60,
         ),
       );
@@ -325,7 +372,7 @@ class _ProfileInfoState extends State<ProfileInfo>
 
     if (widget.member.image.startsWith('/')) {
       return CircleAvatar(
-        radius: widget.compact ? 30 : 36,
+        radius: widget.compact ? 30 : 40,
         backgroundImage: FileImage(File(widget.member.image)),
         backgroundColor: Colors.grey.shade200,
         onBackgroundImageError: (exception, stackTrace) {
@@ -336,7 +383,7 @@ class _ProfileInfoState extends State<ProfileInfo>
     }
 
     return CircleAvatar(
-      radius: widget.compact ? 30 : 36,
+      radius: widget.compact ? 30 : 40,
       backgroundImage: NetworkImage(widget.member.image),
       backgroundColor: Colors.grey.shade200,
       onBackgroundImageError: (exception, stackTrace) {

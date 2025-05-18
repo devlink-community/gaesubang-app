@@ -31,6 +31,8 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
   // 텍스트 컨트롤러 선언
   final _nicknameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _positionController = TextEditingController(); // 직무 입력 컨트롤러
+  final _skillsController = TextEditingController(); // 스킬 입력 컨트롤러
 
   @override
   void initState() {
@@ -73,6 +75,8 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     if (member != null) {
       _nicknameController.text = member.nickname;
       _descriptionController.text = member.description;
+      _positionController.text = member.position ?? '';
+      _skillsController.text = member.skills ?? '';
     }
   }
 
@@ -80,6 +84,8 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
   void dispose() {
     _nicknameController.dispose();
     _descriptionController.dispose();
+    _positionController.dispose(); // 컨트롤러 정리
+    _skillsController.dispose(); // 컨트롤러 정리
     super.dispose();
   }
 
@@ -158,11 +164,34 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
             LabeledTextField(
               label: '닉네임',
               hint: '닉네임을 입력하세요',
-
               controller: _nicknameController,
               onChanged:
                   (value) =>
                       widget.onAction(EditIntroAction.onChangeNickname(value)),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 직무 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '직무',
+              hint: '직무를 입력하세요 (예: 백엔드 개발자, 프론트엔드 개발자)',
+              controller: _positionController,
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangePosition(value)),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 스킬 필드 (LabeledTextField 사용)
+            LabeledTextField(
+              label: '스킬',
+              hint: '보유한 스킬을 입력하세요 (예: Flutter, React, Python)',
+              controller: _skillsController,
+              onChanged:
+                  (value) =>
+                      widget.onAction(EditIntroAction.onChangeSkills(value)),
             ),
 
             const SizedBox(height: 16),
@@ -262,7 +291,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
     // 이미지가 없는 경우 기본 아이콘 표시
     return CircleAvatar(
       radius: 50,
-      backgroundColor: Colors.grey.shade200,
+      backgroundColor: Colors.grey.shade100,
       child: const Icon(Icons.person, size: 50, color: Colors.grey),
     );
   }

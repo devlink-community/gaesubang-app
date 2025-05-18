@@ -77,7 +77,8 @@ class _IntroScreenState extends State<IntroScreen>
         appBar: AppBar(
           centerTitle: true,
           elevation: 0,
-          backgroundColor: Colors.transparent, // 앱바 배경 투명
+          backgroundColor: Colors.transparent,
+          // 앱바 배경 투명
           title: Text(
             '프로필',
             style: AppTextStyles.heading6Bold.copyWith(
@@ -195,21 +196,17 @@ class _IntroScreenState extends State<IntroScreen>
       child: widget.state.userProfile.when(
         data:
             (member) => Padding(
-              // 패딩 값 축소로 더 컴팩트하게
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-              child: ProfileInfo(
-                member: member,
-                compact: false, // 컴팩트 모드 활성화 속성 추가
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+              child: ProfileInfo(member: member, compact: false),
             ),
         loading:
-            () => const SizedBox(
-              height: 100, // 높이 축소
+            () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
               child: Center(child: CircularProgressIndicator()),
             ),
         error:
-            (_, __) => SizedBox(
-              height: 100, // 높이 축소
+            (_, __) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 30),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -217,14 +214,14 @@ class _IntroScreenState extends State<IntroScreen>
                     Icon(
                       Icons.error_outline,
                       color: AppColorStyles.error,
-                      size: 28, // 크기 축소
+                      size: 28,
                     ),
-                    const SizedBox(height: 4), // 간격 축소
+                    const SizedBox(height: 4),
                     Text(
                       '프로필 정보를 불러올 수 없습니다',
                       style: AppTextStyles.body1Regular.copyWith(
                         color: AppColorStyles.gray80,
-                        fontSize: 13, // 폰트 크기 축소
+                        fontSize: 13,
                       ),
                     ),
                   ],
