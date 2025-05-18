@@ -71,6 +71,9 @@ class _ProfileInfoState extends State<ProfileInfo>
     final bool hasSkills =
         widget.member.skills != null && widget.member.skills!.isNotEmpty;
 
+    // 직무 또는 스킬 정보가 있는지 확인
+    final bool hasExtraInfo = hasPosition || hasSkills;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -147,105 +150,147 @@ class _ProfileInfoState extends State<ProfileInfo>
 
         const SizedBox(height: 24),
 
-        // 직무 정보 - 있을 때만 표시
-        if (hasPosition)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 직무 제목
-                Row(
-                  children: [
-                    Icon(
-                      Icons.work_outline,
-                      size: 18,
+        // 직무/스킬 섹션 헤더 (접기/펼치기 버튼)
+        if (hasExtraInfo)
+          GestureDetector(
+            onTap: _toggleExpanded,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '개발자 정보',
+                    style: AppTextStyles.subtitle1Bold.copyWith(
+                      color: AppColorStyles.primary100,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  RotationTransition(
+                    turns: _rotateAnimation,
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
                       color: AppColorStyles.primary100,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '직무',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        fontSize: 16,
-                        color: AppColorStyles.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                // 직무 내용
-                Text(
-                  widget.member.position!,
-                  style: AppTextStyles.body1Regular.copyWith(
-                    color: AppColorStyles.textPrimary,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
-        const SizedBox(height: 16),
-
-        // 스킬 카드 - 있을 때만 표시
-        if (hasSkills)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+        // 접을 수 있는 정보 영역
+        if (hasExtraInfo)
+          SizeTransition(
+            sizeFactor: _expandAnimation,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 스킬 헤더
-                Row(
-                  children: [
-                    Icon(
-                      Icons.code,
-                      size: 18,
-                      color: AppColorStyles.primary100,
+                // 직무 정보 - 있을 때만 표시
+                if (hasPosition)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '스킬',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        fontSize: 16,
-                        color: AppColorStyles.textPrimary,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 직무 제목
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.work_outline,
+                              size: 18,
+                              color: AppColorStyles.primary100,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '직무',
+                              style: AppTextStyles.subtitle1Bold.copyWith(
+                                fontSize: 16,
+                                color: AppColorStyles.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // 직무 내용
+                        Text(
+                          widget.member.position!,
+                          style: AppTextStyles.body1Regular.copyWith(
+                            color: AppColorStyles.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
 
-                const SizedBox(height: 12),
+                // 스킬 카드 - 있을 때만 표시
+                if (hasSkills)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 스킬 헤더
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.code,
+                              size: 18,
+                              color: AppColorStyles.primary100,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '스킬',
+                              style: AppTextStyles.subtitle1Bold.copyWith(
+                                fontSize: 16,
+                                color: AppColorStyles.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
 
-                // 스킬 태그 리스트
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _buildSkillTags(widget.member.skills!),
-                ),
+                        const SizedBox(height: 12),
+
+                        // 스킬 태그 리스트
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _buildSkillTags(widget.member.skills!),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
