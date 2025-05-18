@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../presentation/profile_edit/edit_intro_root.dart';
@@ -14,6 +15,6 @@ final editIntroRoutes = [
 ];
 
 @riverpod
-GoRouter editIntroRouter(EditIntroRouterRef ref) {
+GoRouter editIntroRouter(Ref ref) {
   return GoRouter(initialLocation: '/edit-intro', routes: editIntroRoutes);
 }

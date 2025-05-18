@@ -97,12 +97,12 @@ class _ProfileInfoState extends State<ProfileInfo>
                   end: Alignment.bottomRight,
                   colors: [
                     Colors.white,
-                    AppColorStyles.primary100.withOpacity(0.1),
+                    AppColorStyles.primary100.withValues(alpha: 0.1),
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColorStyles.primary100.withOpacity(0.2),
+                    color: AppColorStyles.primary100.withValues(alpha: 0.2),
                     spreadRadius: 2,
                     blurRadius: 8,
                     offset: const Offset(0, 3),
@@ -158,7 +158,7 @@ class _ProfileInfoState extends State<ProfileInfo>
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: AppColorStyles.primary100.withOpacity(0.05),
+                color: AppColorStyles.primary100.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -201,7 +201,7 @@ class _ProfileInfoState extends State<ProfileInfo>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -252,7 +252,7 @@ class _ProfileInfoState extends State<ProfileInfo>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -342,7 +342,7 @@ class _ProfileInfoState extends State<ProfileInfo>
           color: colors['bg'] as Color,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: (colors['text'] as Color).withOpacity(0.3),
+            color: (colors['text'] as Color).withValues(alpha: 0.3),
             width: 1,
           ),
         ),

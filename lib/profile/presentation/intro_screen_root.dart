@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../core/component/navigation_bar.dart';
 import 'intro_action.dart';
 import 'intro_notifier.dart';
 import 'intro_screen.dart';
