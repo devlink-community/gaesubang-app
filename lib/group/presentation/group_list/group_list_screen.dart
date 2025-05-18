@@ -1,12 +1,12 @@
 import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/component/gradient_app_bar.dart';
+import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
 import 'package:devlink_mobile_app/core/component/search_bar_component.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
+import 'package:devlink_mobile_app/group/presentation/component/group_list_item.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
-import 'package:devlink_mobile_app/group/presentation/group_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 

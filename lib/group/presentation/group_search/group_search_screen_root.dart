@@ -1,9 +1,7 @@
 // lib/group/presentation/group_search/group_search_screen_root.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
-import 'package:devlink_mobile_app/group/presentation/group_join_dialog.dart';
-import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart'
-    as list_action;
+import 'package:devlink_mobile_app/group/presentation/component/group_join_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen.dart';

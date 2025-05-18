@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
-import '../../../group/presentation/labeled_text_field.dart';
+import '../../../group/presentation/component/labeled_text_field.dart';
 import '../edit_intro_action.dart';
 import '../states/edit_intro_state.dart';
 

@@ -1,8 +1,7 @@
 // lib/group/presentation/group_search/group_search_screen.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/group/domain/model/group.dart';
-import 'package:devlink_mobile_app/group/presentation/group_list_item.dart';
+import 'package:devlink_mobile_app/group/presentation/component/group_list_item.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_state.dart';
 import 'package:flutter/material.dart';
