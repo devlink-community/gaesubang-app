@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/result/result.dart';
 
-abstract interface class ProfileSettingRepository {
+abstract interface class ProfileEditRepository {
   Future<Result<Member>> getCurrentProfile();
 
   Future<Result<Member>> updateProfile({
