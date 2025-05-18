@@ -2,10 +2,10 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/result/result.dart';
-import '../repository/profile_setting_repository.dart';
+import '../repository/profile_edit_repository.dart';
 
 class GetCurrentProfileUseCase {
-  final ProfileSettingRepository _repository;
+  final ProfileEditRepository _repository;
 
   GetCurrentProfileUseCase(this._repository);
 

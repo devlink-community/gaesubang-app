@@ -1,22 +1,21 @@
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_notifier.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_notifier.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_notifier.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'profile_setting_action.dart';
+import 'profile_edit_action.dart';
 
-class ProfileSettingScreenRoot extends ConsumerStatefulWidget {
-  const ProfileSettingScreenRoot({super.key});
+class ProfileEditScreenRoot extends ConsumerStatefulWidget {
+  const ProfileEditScreenRoot({super.key});
 
   @override
-  ConsumerState<ProfileSettingScreenRoot> createState() =>
-      _ProfileSettingScreenRootState();
+  ConsumerState<ProfileEditScreenRoot> createState() =>
+      _ProfileEditScreenRootState();
 }
 
-class _ProfileSettingScreenRootState
-    extends ConsumerState<ProfileSettingScreenRoot> {
+class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   // 저장 버튼 클릭 추적을 위한 변수
   bool _saveButtonPressed = false;
 
@@ -25,17 +24,17 @@ class _ProfileSettingScreenRootState
     super.initState();
     // 미세한 지연을 두고 프로필 로드 시작
     Future.microtask(() {
-      ref.read(profileSettingNotifierProvider.notifier).loadProfile();
+      ref.read(profileEditNotifierProvider.notifier).loadProfile();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(profileSettingNotifierProvider);
-    final notifier = ref.watch(profileSettingNotifierProvider.notifier);
+    final state = ref.watch(profileEditNotifierProvider);
+    final notifier = ref.watch(profileEditNotifierProvider.notifier);
 
     // 로딩 상태 감시
-    ref.listen(profileSettingNotifierProvider.select((s) => s.isLoading), (
+    ref.listen(profileEditNotifierProvider.select((s) => s.isLoading), (
       previous,
       current,
     ) {
@@ -64,7 +63,7 @@ class _ProfileSettingScreenRootState
       }
     });
 
-    return ProfileSettingScreen(
+    return ProfileEditScreen(
       state: state,
       onAction: (action) async {
         switch (action) {

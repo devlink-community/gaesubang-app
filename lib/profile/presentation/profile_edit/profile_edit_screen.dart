@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_action.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_state.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,21 +10,21 @@ import '../../../../core/styles/app_color_styles.dart';
 import '../../../../core/styles/app_text_styles.dart';
 import '../../../../group/presentation/component/labeled_text_field.dart';
 
-class ProfileSettingScreen extends StatefulWidget {
-  final ProfileSettingState state;
-  final void Function(ProfileSettingAction action) onAction;
+class ProfileEditScreen extends StatefulWidget {
+  final ProfileEditState state;
+  final void Function(ProfileEditAction action) onAction;
 
-  const ProfileSettingScreen({
+  const ProfileEditScreen({
     super.key,
     required this.state,
     required this.onAction,
   });
 
   @override
-  State<ProfileSettingScreen> createState() => _ProfileSettingScreenState();
+  State<ProfileEditScreen> createState() => _ProfileEditScreenState();
 }
 
-class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
+class _ProfileEditScreenState extends State<ProfileEditScreen> {
   // 로컬 이미지 파일을 저장할 변수 추가
   File? _localImageFile;
 
@@ -50,7 +50,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   }
 
   @override
-  void didUpdateWidget(covariant ProfileSettingScreen oldWidget) {
+  void didUpdateWidget(covariant ProfileEditScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 상태가 변경되면 컨트롤러 업데이트
     if (oldWidget.state != widget.state) {
@@ -167,7 +167,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               controller: _nicknameController,
               onChanged:
                   (value) => widget.onAction(
-                    ProfileSettingAction.onChangeNickname(value),
+                    ProfileEditAction.onChangeNickname(value),
                   ),
             ),
 
@@ -180,7 +180,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               controller: _positionController,
               onChanged:
                   (value) => widget.onAction(
-                    ProfileSettingAction.onChangePosition(value),
+                    ProfileEditAction.onChangePosition(value),
                   ),
             ),
 
@@ -192,9 +192,8 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               hint: '보유한 스킬을 입력하세요 (예: Flutter, React, Python)',
               controller: _skillsController,
               onChanged:
-                  (value) => widget.onAction(
-                    ProfileSettingAction.onChangeSkills(value),
-                  ),
+                  (value) =>
+                      widget.onAction(ProfileEditAction.onChangeSkills(value)),
             ),
 
             const SizedBox(height: 16),
@@ -206,9 +205,8 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
               controller: _descriptionController,
               maxLines: 5,
               onChanged:
-                  (value) => widget.onAction(
-                    ProfileSettingAction.onChangeMessage(value),
-                  ),
+                  (value) =>
+                      widget.onAction(ProfileEditAction.onChangeMessage(value)),
             ),
 
             const SizedBox(height: 24),
@@ -308,7 +306,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () => widget.onAction(const ProfileSettingAction.onSave()),
+      onPressed: () => widget.onAction(const ProfileEditAction.onSave()),
       child: Text(
         '저장하기',
         style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
@@ -327,7 +325,7 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
       });
 
       // 액션을 통해 이미지 업로드 프로세스 시작
-      widget.onAction(ProfileSettingAction.onPickImage(_localImageFile!));
+      widget.onAction(ProfileEditAction.onPickImage(_localImageFile!));
     }
   }
 }

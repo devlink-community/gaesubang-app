@@ -3,29 +3,29 @@ import 'dart:io';
 import 'package:devlink_mobile_app/profile/domain/use_case/get_current_profile_usecase.dart';
 import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_image_usecase.dart';
 import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_usecase.dart';
-import 'package:devlink_mobile_app/profile/module/profile_setting_di.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_action.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_state.dart';
+import 'package:devlink_mobile_app/profile/module/profile_edit_di.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'profile_setting_notifier.g.dart';
+part 'profile_edit_notifier.g.dart';
 
 @riverpod
-class ProfileSettingNotifier extends _$ProfileSettingNotifier {
+class ProfileEditNotifier extends _$ProfileEditNotifier {
   late final GetCurrentProfileUseCase _getCurrentProfileUseCase;
   late final UpdateProfileUseCase _updateProfileUseCase;
   late final UpdateProfileImageUseCase _updateProfileImageUseCase;
 
   @override
-  ProfileSettingState build() {
+  ProfileEditState build() {
     _getCurrentProfileUseCase = ref.watch(getCurrentProfileUseCaseProvider);
     _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
     _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
 
     // 초기 상태만 반환하고, 프로필 로드는 별도 메서드로 분리
-    return const ProfileSettingState();
+    return const ProfileEditState();
   }
 
   // 프로필 로드를 public 메서드로 변경하여 외부에서 호출 가능하게 함
@@ -68,7 +68,7 @@ class ProfileSettingNotifier extends _$ProfileSettingNotifier {
     }
   }
 
-  Future<void> onAction(ProfileSettingAction action) async {
+  Future<void> onAction(ProfileEditAction action) async {
     switch (action) {
       case OnChangeNickname(:final nickname):
         if (state.member != null) {
