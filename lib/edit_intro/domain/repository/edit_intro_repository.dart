@@ -8,6 +8,8 @@ abstract interface class EditIntroRepository {
   Future<Result<Member>> updateProfile({
     required String nickname,
     String? intro,
+    String? position, // position 매개변수 추가
+    String? skills, // skills 매개변수 추가
   });
 
   Future<Result<Member>> updateProfileImage(XFile image);

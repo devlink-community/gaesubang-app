@@ -10,6 +10,8 @@ extension UserStorageProfileUpdate on UserStorage {
   bool updateCurrentUserProfile({
     required String nickname,
     String? description,
+    String? position,
+    String? skills,
   }) {
     try {
       // UserStorage 초기화
@@ -31,23 +33,23 @@ extension UserStorageProfileUpdate on UserStorage {
       // 현재 비밀번호 - 실제로는 보안상 이렇게 하면 안 되지만 목업용으로만 사용
       String password = 'password123'; // 가정: 모든 목업 사용자의 기본 비밀번호
 
-      // 비밀번호 검증은 UserStorage의 private 멤버인 _passwords에 직접 접근할 수 없으므로
-      // validatePassword 메서드를 사용하거나 목업 환경에서는 기본 비밀번호 사용
-
-      // 새 UserDto와 ProfileDto 생성
+      // 새 UserDto (닉네임만 변경)
       final updatedUserDto = UserDto(
         id: user.id,
-        email: user.email, // 기존 이메일 유지
-        nickname: nickname, // 변경된 닉네임
+        email: user.email,
+        nickname: nickname,
         uid: user.uid,
         agreedTermsId: user.agreedTermsId,
       );
 
+      // 새 ProfileDto (description, position, skills 포함)
       final updatedProfileDto = ProfileDto(
         userId: user.id,
         image: profile.image,
         onAir: profile.onAir,
         description: description ?? profile.description ?? '',
+        position: position ?? profile.position, // position 필드 추가
+        skills: skills ?? profile.skills, // skills 필드 추가
       );
 
       // 현재 로그인 상태 저장
@@ -61,7 +63,7 @@ extension UserStorageProfileUpdate on UserStorage {
         login(loggedInUserId);
       }
 
-      debugPrint('프로필 업데이트 성공: $nickname, $description');
+      debugPrint('프로필 업데이트 성공: $nickname, $description, $position, $skills');
       return true;
     } catch (e) {
       debugPrint('프로필 업데이트 실패: $e');

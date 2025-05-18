@@ -29,7 +29,6 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
       // 현재 로그인된 사용자 정보 가져오기
       final userMap = await _authDataSource.fetchCurrentUser();
 
-      // 모의(Mock) 사용자 데이터 생성 (실제 환경에서는 서버 연동 필요)
       // userMap이 null인 경우 (로그인 안됨) 모의 데이터 반환
       if (userMap == null) {
         // 모의 데이터 생성
@@ -40,6 +39,8 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
           uid: 'mock-uid',
           image: 'https://via.placeholder.com/150',
           description: '안녕하세요! 자기소개를 입력해주세요.',
+          position: '개발자', // 기본값 추가
+          skills: 'Flutter, Dart', // 기본값 추가
         );
 
         return Result.success(mockMember);
@@ -56,7 +57,9 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
       final member = userDto.toModelFromProfile(profileDto);
 
       // 디버그 로그 추가
-      debugPrint('현재 프로필 조회: ${member.nickname}, ${member.description}');
+      debugPrint(
+        '현재 프로필 조회: ${member.nickname}, ${member.description}, ${member.position}, ${member.skills}',
+      );
 
       return Result.success(member);
     } catch (e) {
@@ -64,7 +67,6 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
       debugPrint('프로필 조회 실패: $e');
 
       // 에러 발생 시 모의 데이터 반환 (개발/테스트 환경용)
-      // 실제 환경에서는 적절한 에러 처리가 필요합니다
       final mockMember = Member(
         id: 'error-mock-id',
         email: 'error@example.com',
@@ -72,12 +74,11 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
         uid: 'error-mock-uid',
         image: 'https://via.placeholder.com/150',
         description: '프로필 로드 중 오류가 발생했습니다.',
+        position: '직무 없음', // 기본값 추가
+        skills: '스킬 없음', // 기본값 추가
       );
 
       return Result.success(mockMember);
-
-      // 실제 에러 반환 코드 (프로덕션 환경용)
-      // return Result.error(mapExceptionToFailure(e, st));
     }
   }
 
@@ -85,6 +86,8 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
   Future<Result<Member>> updateProfile({
     required String nickname,
     String? intro,
+    String? position, // position 매개변수 추가
+    String? skills, // skills 매개변수 추가
   }) async {
     try {
       // 디버그 로그 추가
@@ -94,6 +97,8 @@ class EditIntroRepositoryImpl implements EditIntroRepository {
       final success = _userStorage.updateCurrentUserProfile(
         nickname: nickname,
         description: intro,
+        position: position, // position 전달
+        skills: skills, // skills 전달
       );
 
       // 결과 로그 추가

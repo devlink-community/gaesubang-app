@@ -12,10 +12,14 @@ class UpdateProfileUseCase {
   Future<AsyncValue<Member>> execute({
     required String nickname,
     String? intro,
+    String? position, // position 매개변수 추가
+    String? skills, // skills 매개변수 추가
   }) async {
     final result = await _repository.updateProfile(
       nickname: nickname,
       intro: intro,
+      position: position, // position 전달
+      skills: skills, // skills 전달
     );
 
     switch (result) {

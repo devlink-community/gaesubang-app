@@ -13,6 +13,8 @@ extension UserDtoToMemberMapper on UserDto {
       image: '',
       uid: '',
       description: '',
+      position: '',
+      skills: '',
     );
   }
 }
@@ -46,7 +48,11 @@ extension UserDtoToMemberFromProfileMapper on UserDto {
       // 병합된 프로필 이미지
       onAir: profileDto.onAir ?? false,
       // 병합된 onAir 상태
-      description: profileDto.description ?? '', // 병합된 description
+      description: profileDto.description ?? '',
+      // 병합된 description
+      position: profileDto.position ?? '',
+      // 병합된 position
+      skills: profileDto.skills ?? '', // 병합된 skills
     );
   }
 }
