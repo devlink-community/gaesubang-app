@@ -1,5 +1,5 @@
-import 'package:devlink_mobile_app/auth/data/dto/profile_dto.dart';
-import 'package:devlink_mobile_app/auth/data/dto/user_dto.dart';
+import 'package:devlink_mobile_app/auth/data/dto/profile_dto_old.dart';
+import 'package:devlink_mobile_app/auth/data/dto/user_dto_old.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 
 // UserDto → Member 변환

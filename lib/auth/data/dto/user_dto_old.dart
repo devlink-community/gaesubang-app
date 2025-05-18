@@ -1,7 +1,7 @@
-// lib/auth/data/dto/user_dto.dart
+// lib/auth/data/dto/user_dto_old.dart
 import 'package:json_annotation/json_annotation.dart';
 
-part 'user_dto.g.dart';
+part 'user_dto_old.g.dart';
 
 @JsonSerializable()
 class UserDto {
