@@ -9,7 +9,7 @@ import 'package:devlink_mobile_app/community/presentation/community_search/commu
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
 import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
-import 'package:devlink_mobile_app/group/presentation/attendance/attendance_screen_root.dart';
+import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';

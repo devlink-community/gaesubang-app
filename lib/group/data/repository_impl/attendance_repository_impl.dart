@@ -1,5 +1,6 @@
+import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
+
 import '../../../core/result/result.dart';
-import '../../domain/model/attendance.dart';
 import '../../domain/repository/attendance_repository.dart';
 import '../data_source/attendance_data_source.dart';
 import '../dto/attendance_dto.dart';

@@ -125,7 +125,7 @@ final List<GoRoute> groupRoutes = [
             GroupDetailScreenRoot(groupId: state.pathParameters['id']!),
   ),
   GoRoute(
-    path: '/group/:id/attendance',
+    path: '/group/:id/group_attendance',
     builder:
         (context, state) =>
             MockGroupAttendanceScreen(groupId: state.pathParameters['id']!),
