@@ -19,12 +19,6 @@ import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.d
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
-import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail//group_detail_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';
-import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
