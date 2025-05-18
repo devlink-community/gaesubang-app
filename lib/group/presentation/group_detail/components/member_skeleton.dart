@@ -1,4 +1,4 @@
-// lib/group/presentation/group_timer/components/member_skeleton.dart
+// lib/group/presentation/group_detail/components/member_skeleton.dart
 import 'package:flutter/material.dart';
 
 /// 멤버 그리드에 사용되는 스켈레톤 UI 컴포넌트

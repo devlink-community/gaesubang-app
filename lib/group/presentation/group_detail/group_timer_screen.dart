@@ -3,13 +3,13 @@ import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/gradient_wave_animation.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_grid.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_section_header.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/member_skeleton.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/components/timer_display.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_action.dart';
-import 'package:devlink_mobile_app/group/presentation/group_timer/group_timer_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/components/gradient_wave_animation.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_grid.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_section_header.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_skeleton.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/components/timer_display.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_action.dart';
+import 'package:devlink_mobile_app/group/presentation/group_detail/group_timer_state.dart';
 import 'package:flutter/material.dart';
 
 class GroupTimerScreen extends StatefulWidget {
