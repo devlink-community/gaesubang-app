@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_action.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_state.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_setting/profile_setting_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,21 +10,21 @@ import '../../../../core/styles/app_color_styles.dart';
 import '../../../../core/styles/app_text_styles.dart';
 import '../../../../group/presentation/component/labeled_text_field.dart';
 
-class EditIntroScreen extends StatefulWidget {
-  final EditIntroState state;
-  final void Function(EditIntroAction action) onAction;
+class ProfileSettingScreen extends StatefulWidget {
+  final ProfileSettingState state;
+  final void Function(ProfileSettingAction action) onAction;
 
-  const EditIntroScreen({
+  const ProfileSettingScreen({
     super.key,
     required this.state,
     required this.onAction,
   });
 
   @override
-  State<EditIntroScreen> createState() => _EditIntroScreenState();
+  State<ProfileSettingScreen> createState() => _ProfileSettingScreenState();
 }
 
-class _EditIntroScreenState extends State<EditIntroScreen> {
+class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   // 로컬 이미지 파일을 저장할 변수 추가
   File? _localImageFile;
 
@@ -50,7 +50,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
   }
 
   @override
-  void didUpdateWidget(covariant EditIntroScreen oldWidget) {
+  void didUpdateWidget(covariant ProfileSettingScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 상태가 변경되면 컨트롤러 업데이트
     if (oldWidget.state != widget.state) {
@@ -166,8 +166,9 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
               hint: '닉네임을 입력하세요',
               controller: _nicknameController,
               onChanged:
-                  (value) =>
-                      widget.onAction(EditIntroAction.onChangeNickname(value)),
+                  (value) => widget.onAction(
+                    ProfileSettingAction.onChangeNickname(value),
+                  ),
             ),
 
             const SizedBox(height: 16),
@@ -178,8 +179,9 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
               hint: '직무를 입력하세요 (예: 백엔드 개발자, 프론트엔드 개발자)',
               controller: _positionController,
               onChanged:
-                  (value) =>
-                      widget.onAction(EditIntroAction.onChangePosition(value)),
+                  (value) => widget.onAction(
+                    ProfileSettingAction.onChangePosition(value),
+                  ),
             ),
 
             const SizedBox(height: 16),
@@ -190,8 +192,9 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
               hint: '보유한 스킬을 입력하세요 (예: Flutter, React, Python)',
               controller: _skillsController,
               onChanged:
-                  (value) =>
-                      widget.onAction(EditIntroAction.onChangeSkills(value)),
+                  (value) => widget.onAction(
+                    ProfileSettingAction.onChangeSkills(value),
+                  ),
             ),
 
             const SizedBox(height: 16),
@@ -203,8 +206,9 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
               controller: _descriptionController,
               maxLines: 5,
               onChanged:
-                  (value) =>
-                      widget.onAction(EditIntroAction.onChangeMessage(value)),
+                  (value) => widget.onAction(
+                    ProfileSettingAction.onChangeMessage(value),
+                  ),
             ),
 
             const SizedBox(height: 24),
@@ -304,7 +308,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () => widget.onAction(const EditIntroAction.onSave()),
+      onPressed: () => widget.onAction(const ProfileSettingAction.onSave()),
       child: Text(
         '저장하기',
         style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
@@ -323,7 +327,7 @@ class _EditIntroScreenState extends State<EditIntroScreen> {
       });
 
       // 액션을 통해 이미지 업로드 프로세스 시작
-      widget.onAction(EditIntroAction.onPickImage(_localImageFile!));
+      widget.onAction(ProfileSettingAction.onPickImage(_localImageFile!));
     }
   }
 }

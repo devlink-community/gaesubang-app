@@ -3,27 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/model/member.dart';
 import '../domain/model/focus_time_stats.dart';
-import '../domain/use_case/fetch_intro_data_use_case.dart';
-import '../domain/use_case/fetch_intro_stats_use_case.dart';
-import '../module/intro_di.dart';
-import 'intro_action.dart';
-import 'intro_state.dart';
+import '../domain/use_case/fetch_profile_data_use_case.dart';
+import '../domain/use_case/fetch_profile_stats_use_case.dart';
+import '../module/profile_di.dart';
+import 'profile_action.dart';
+import 'profile_state.dart';
 
-final introNotifierProvider =
-    StateNotifierProvider<IntroNotifier, AsyncValue<IntroState>>(
-      (ref) => IntroNotifier(
-        fetchUserUseCase: ref.watch(fetchIntroUserUseCaseProvider),
-        fetchStatsUseCase: ref.watch(fetchIntroStatsUseCaseProvider),
+final profileNotifierProvider =
+    StateNotifierProvider<ProfileNotifier, AsyncValue<ProfileState>>(
+      (ref) => ProfileNotifier(
+        fetchUserUseCase: ref.watch(fetchProfileUserUseCaseProvider),
+        fetchStatsUseCase: ref.watch(fetchProfileStatsUseCaseProvider),
       ),
     );
 
 /// 2) 일반 StateNotifier로 구현
-class IntroNotifier extends StateNotifier<AsyncValue<IntroState>> {
+class ProfileNotifier extends StateNotifier<AsyncValue<ProfileState>> {
   // UseCase들을 final로 선언하고 생성자에서 주입받음
-  final FetchIntroUserUseCase fetchUserUseCase;
-  final FetchIntroStatsUseCase fetchStatsUseCase;
+  final FetchProfileUserUseCase fetchUserUseCase;
+  final FetchProfileStatsUseCase fetchStatsUseCase;
 
-  IntroNotifier({
+  ProfileNotifier({
     required this.fetchUserUseCase,
     required this.fetchStatsUseCase,
   }) : super(const AsyncValue.loading()) {
@@ -56,7 +56,7 @@ class IntroNotifier extends StateNotifier<AsyncValue<IntroState>> {
       }
 
       // 2-4) 최종 상태 생성
-      final newState = IntroState(
+      final newState = ProfileState(
         userProfile: userProfileResult,
         focusStats: focusStatsResult,
       );
@@ -71,12 +71,12 @@ class IntroNotifier extends StateNotifier<AsyncValue<IntroState>> {
   }
 
   /// 3) 화면 액션 처리
-  Future<void> onAction(IntroAction action) async {
+  Future<void> onAction(ProfileAction action) async {
     switch (action) {
       case OpenSettings():
         // 네비게이션은 UI 쪽에서 처리
         break;
-      case RefreshIntro():
+      case RefreshProfile():
         // 전체 다시 로드
         await _loadData();
         break;

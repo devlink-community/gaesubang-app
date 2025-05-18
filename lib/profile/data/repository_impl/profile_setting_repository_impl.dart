@@ -10,14 +10,14 @@ import '../../../auth/data/dto/user_dto.dart';
 import '../../../auth/data/mapper/member_mapper.dart';
 import '../../../auth/domain/model/member.dart';
 import '../../../core/result/result.dart';
-import '../../domain/repository/edit_intro_repository.dart';
+import '../../domain/repository/profile_setting_repository.dart';
 
-class EditIntroRepositoryImpl implements EditIntroRepository {
+class ProfileSettingRepositoryImpl implements ProfileSettingRepository {
   final AuthDataSource _authDataSource;
   final ProfileDataSource _profileDataSource;
   final UserStorage _userStorage = UserStorage.instance; // UserStorage 인스턴스 추가
 
-  EditIntroRepositoryImpl({
+  ProfileSettingRepositoryImpl({
     required AuthDataSource authDataSource,
     required ProfileDataSource profileDataSource,
   }) : _authDataSource = authDataSource,

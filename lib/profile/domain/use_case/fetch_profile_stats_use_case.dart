@@ -2,12 +2,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
 import '../model/focus_time_stats.dart';
-import '../repository/intro_repository.dart';
+import '../repository/profile_repository.dart';
 
-class FetchIntroStatsUseCase {
-  final IntroRepository _repo;
+class FetchProfileStatsUseCase {
+  final ProfileRepository _repo;
 
-  FetchIntroStatsUseCase(this._repo);
+  FetchProfileStatsUseCase(this._repo);
 
   Future<AsyncValue<FocusTimeStats>> execute() async {
     final result = await _repo.fetchFocusTimeStats();

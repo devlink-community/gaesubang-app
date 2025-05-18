@@ -3,10 +3,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../auth/data/data_source/mock_auth_data_source.dart';
 import '../../auth/data/data_source/mock_profile_data_source.dart';
 import '../data/data_source/mock_focus_time_data_source_impl.dart';
-import '../data/repository_impl/intro_repository_impl.dart';
-import '../domain/repository/intro_repository.dart';
-import '../domain/use_case/fetch_intro_data_use_case.dart';
-import '../domain/use_case/fetch_intro_stats_use_case.dart';
+import '../data/repository_impl/profile_repository_impl.dart';
+import '../domain/repository/profile_repository.dart';
+import '../domain/use_case/fetch_profile_data_use_case.dart';
+import '../domain/use_case/fetch_profile_stats_use_case.dart';
 
 /// DataSource Providers
 final authDataSourceProvider = Provider<MockAuthDataSource>(
@@ -20,12 +20,12 @@ final focusTimeDataSourceProvider = Provider<MockFocusTimeDataSourceImpl>(
 );
 
 /// Repository Provider
-final introRepositoryProvider = Provider<IntroRepository>((ref) {
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   final authDs = ref.watch(authDataSourceProvider);
   final profileDs = ref.watch(profileDataSourceProvider);
   final focusDs = ref.watch(focusTimeDataSourceProvider);
 
-  return IntroRepositoryImpl(
+  return ProfileRepositoryImpl(
     authDataSource: authDs,
     profileDataSource: profileDs,
     focusDataSource: focusDs,
@@ -33,10 +33,10 @@ final introRepositoryProvider = Provider<IntroRepository>((ref) {
 });
 
 /// UseCase Providers
-final fetchIntroUserUseCaseProvider = Provider<FetchIntroUserUseCase>(
-  (ref) => FetchIntroUserUseCase(ref.watch(introRepositoryProvider)),
+final fetchProfileUserUseCaseProvider = Provider<FetchProfileUserUseCase>(
+  (ref) => FetchProfileUserUseCase(ref.watch(profileRepositoryProvider)),
 );
 
-final fetchIntroStatsUseCaseProvider = Provider<FetchIntroStatsUseCase>(
-  (ref) => FetchIntroStatsUseCase(ref.watch(introRepositoryProvider)),
+final fetchProfileStatsUseCaseProvider = Provider<FetchProfileStatsUseCase>(
+  (ref) => FetchProfileStatsUseCase(ref.watch(profileRepositoryProvider)),
 );

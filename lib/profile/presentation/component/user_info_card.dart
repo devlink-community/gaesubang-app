@@ -6,17 +6,21 @@ import 'package:flutter/material.dart';
 import '../../../auth/domain/model/member.dart';
 import '../../../core/styles/app_text_styles.dart';
 
-class ProfileInfo extends StatefulWidget {
+class ProfileInfoCard extends StatefulWidget {
   final Member member;
   final bool compact;
 
-  const ProfileInfo({super.key, required this.member, this.compact = false});
+  const ProfileInfoCard({
+    super.key,
+    required this.member,
+    this.compact = false,
+  });
 
   @override
-  State<ProfileInfo> createState() => _ProfileInfoState();
+  State<ProfileInfoCard> createState() => _ProfileInfoCardState();
 }
 
-class _ProfileInfoState extends State<ProfileInfo>
+class _ProfileInfoCardState extends State<ProfileInfoCard>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _controller;
