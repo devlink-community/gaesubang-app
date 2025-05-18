@@ -61,13 +61,6 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
       _contentCtrl.text = widget.state.content;
     }
 
-    // 게시글 생성 완료 후 화면 닫기
-    if (widget.state.createdPostId != null &&
-        oldWidget.state.createdPostId == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pop(context, widget.state.createdPostId);
-      });
-    }
   }
 
   @override
