@@ -1,3 +1,4 @@
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../auth/module/auth_di.dart';
@@ -11,7 +12,7 @@ part 'edit_intro_di.g.dart';
 
 // Repository Provider
 @riverpod
-EditIntroRepository editIntroRepository(EditIntroRepositoryRef ref) {
+EditIntroRepository editIntroRepository(Ref ref) {
   return EditIntroRepositoryImpl(
     authDataSource: ref.watch(authDataSourceProvider),
     profileDataSource: ref.watch(profileDataSourceProvider),
@@ -20,20 +21,16 @@ EditIntroRepository editIntroRepository(EditIntroRepositoryRef ref) {
 
 // UseCase Providers
 @riverpod
-GetCurrentProfileUseCase getCurrentProfileUseCase(
-  GetCurrentProfileUseCaseRef ref,
-) {
+GetCurrentProfileUseCase getCurrentProfileUseCase(Ref ref) {
   return GetCurrentProfileUseCase(ref.watch(editIntroRepositoryProvider));
 }
 
 @riverpod
-UpdateProfileUseCase updateProfileUseCase(UpdateProfileUseCaseRef ref) {
+UpdateProfileUseCase updateProfileUseCase(Ref ref) {
   return UpdateProfileUseCase(ref.watch(editIntroRepositoryProvider));
 }
 
 @riverpod
-UpdateProfileImageUseCase updateProfileImageUseCase(
-  UpdateProfileImageUseCaseRef ref,
-) {
+UpdateProfileImageUseCase updateProfileImageUseCase(Ref ref) {
   return UpdateProfileImageUseCase(ref.watch(editIntroRepositoryProvider));
 }
