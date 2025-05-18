@@ -1,10 +1,12 @@
 // lib/community/data/data_source/mock_post_data_source_impl.dart
 import 'dart:math';
+
 import 'package:devlink_mobile_app/community/data/dto/comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/like_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
+
 import 'post_data_source.dart';
 
 class PostDataSourceImpl implements PostDataSource {
@@ -130,6 +132,13 @@ class PostDataSourceImpl implements PostDataSource {
   Future<List<PostDto>> fetchPostList() async {
     // 데이터 로딩 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 500));
+
+    // 디버깅 로그 추가
+    print('Mock DataSource: Fetching ${_mockPosts.length} posts');
+    print(
+      'Mock DataSource: First post title: ${_mockPosts.isNotEmpty ? _mockPosts.first.title : "No posts"}',
+    );
+
     return _mockPosts;
   }
 
@@ -144,6 +153,9 @@ class PostDataSourceImpl implements PostDataSource {
       orElse: () => throw Exception('게시글을 찾을 수 없습니다: $postId'),
     );
 
+    print(
+      'Mock DataSource: Fetched post detail - ID: $postId, Title: ${post.title}',
+    );
     return post;
   }
 
@@ -171,6 +183,7 @@ class PostDataSourceImpl implements PostDataSource {
     if (existingLikeIndex >= 0) {
       // 이미 좋아요를 누른 경우, 좋아요 취소
       likes.removeAt(existingLikeIndex);
+      print('Mock DataSource: Like removed from post $postId');
     } else {
       // 좋아요 추가
       likes.add(
@@ -180,6 +193,7 @@ class PostDataSourceImpl implements PostDataSource {
           timestamp: DateTime.now(),
         ),
       );
+      print('Mock DataSource: Like added to post $postId');
     }
 
     // 수정된 게시글 반환
@@ -193,6 +207,7 @@ class PostDataSourceImpl implements PostDataSource {
   Future<PostDto> toggleBookmark(String postId) async {
     await Future.delayed(const Duration(milliseconds: 200));
 
+    print('Mock DataSource: Bookmark toggled for post $postId');
     // 실제 북마크 기능은 여기서 구현하지 않음
     // 해당 ID의 게시글만 반환
     return fetchPostDetail(postId);
@@ -203,7 +218,12 @@ class PostDataSourceImpl implements PostDataSource {
     await Future.delayed(const Duration(milliseconds: 300));
 
     final post = await fetchPostDetail(postId);
-    return post.comment ?? [];
+    final comments = post.comment ?? [];
+
+    print(
+      'Mock DataSource: Fetched ${comments.length} comments for post $postId',
+    );
+    return comments;
   }
 
   @override
@@ -238,6 +258,9 @@ class PostDataSourceImpl implements PostDataSource {
     // 게시글 업데이트
     _mockPosts[postIndex] = post.copyWith(comment: comments);
 
+    print(
+      'Mock DataSource: Comment created for post $postId. Total comments: ${comments.length}',
+    );
     return comments;
   }
 
@@ -250,6 +273,8 @@ class PostDataSourceImpl implements PostDataSource {
     required List<Uri> imageUris,
   }) async {
     await Future.delayed(const Duration(milliseconds: 400));
+
+    print('Mock DataSource: Creating post with ID: $postId, Title: $title');
 
     // 새 게시글 생성
     final newPost = PostDto(
@@ -272,8 +297,13 @@ class PostDataSourceImpl implements PostDataSource {
       comment: [],
     );
 
-    // 목 데이터에 추가
-    _mockPosts.insert(0, newPost); // 최신 게시글이 맨 앞에 오도록
+    // 목 데이터에 추가 (맨 앞에 추가하여 최신 게시글이 위에 오도록)
+    _mockPosts.insert(0, newPost);
+
+    print(
+      'Mock DataSource: Post created successfully. Total posts: ${_mockPosts.length}',
+    );
+    print('Mock DataSource: First post is now: ${_mockPosts.first.title}');
 
     return postId;
   }
@@ -299,129 +329,9 @@ class PostDataSourceImpl implements PostDataSource {
           return titleMatch || contentMatch || tagMatch;
         }).toList();
 
+    print(
+      'Mock DataSource: Search for "$query" returned ${results.length} results',
+    );
     return results;
   }
-
-  // /* ---------- 목록 ---------- */
-  // @override
-  // Future<List<PostDto>> fetchPostList() async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 500));
-  //   return List.generate(30, _mock);
-  // }
-
-  // /* ---------- 상세 ---------- */
-  // @override
-  // Future<PostDto> fetchPostDetail(String postId) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 400));
-  //   return _mock(int.parse(postId.split('_').last));
-  // }
-
-  // /* ---------- Toggle ---------- */
-  // @override
-  // Future<PostDto> toggleLike(String postId) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 250));
-  //   final dto = await fetchPostDetail(postId);
-  //   dto.like?.add(
-  //     LikeDto(userId: 'user_me', userName: '현재 사용자', timestamp: DateTime.now()),
-  //   );
-  //   return dto;
-  // }
-  //
-  // @override
-  // Future<PostDto> toggleBookmark(String postId) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 250));
-  //   return fetchPostDetail(postId); // 북마크 상태는 별도 DTO 필드가 없으므로 그대로 반환
-  // }
-
-  // /* ---------- 댓글 ---------- */
-  // @override
-  // Future<List<CommentDto>> fetchComments(String postId) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 300));
-  //   return List.generate(7, (i) => _mockComment(postId, i));
-  // }
-  //
-  // @override
-  // Future<List<CommentDto>> createComment({
-  //   required String postId,
-  //   required String memberId,
-  //   required String content,
-  // }) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 200));
-  //   final list = await fetchComments(postId);
-  //   return [
-  //     CommentDto(
-  //       userId: memberId,
-  //       userName: "현재 사용자",
-  //       userProfileImage:
-  //           "https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp",
-  //       text: content,
-  //       createdAt: DateTime.now(),
-  //       likeCount: 0,
-  //     ),
-  //     ...list,
-  //   ];
-  // }
-  //
-  // /* ---------- NEW ---------- */
-  // @override
-  // Future<String> createPost({
-  //   required String title,
-  //   required String content,
-  //   required List<String> hashTags,
-  //   required List<Uri> imageUris,
-  // }) async {
-  //   await Future<void>.delayed(const Duration(milliseconds: 400));
-  //   // 실제 API 호출 자리. 여기서는 새 random id 반환
-  //   final newId = 'post_${_rand.nextInt(100000)}';
-  //   return newId;
-  // }
-  //
-  // /* ---------- Mock Helpers ---------- */
-  // PostDto _mock(int i) {
-  //   final likeCnt = _rand.nextInt(200);
-  //   return PostDto(
-  //     id: 'post_$i',
-  //     title: '목 게시글 $i',
-  //     content: '[Mock] 내용 $i',
-  //     member: MemberDto(
-  //       id: 'u$i',
-  //       email: 'user$i@mail.com',
-  //       nickname: 'user$i',
-  //       uid: 'uid_$i',
-  //       onAir: i.isEven,
-  //       image:
-  //           'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
-  //     ),
-  //     userProfileImage:
-  //         'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
-  //     boardType: BoardType.free,
-  //     createdAt: DateTime.now().subtract(Duration(minutes: i * 5)),
-  //     hashTags: ['#태그${i % 3}', if (i.isEven) '#인기'],
-  //     mediaUrls:
-  //         i % 3 == 0
-  //             ? [
-  //               'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
-  //             ]
-  //             : [],
-  //     like: List.generate(
-  //       likeCnt,
-  //       (idx) => LikeDto(
-  //         userId: 'u$idx',
-  //         userName: 'user$idx',
-  //         timestamp: DateTime.now().subtract(Duration(hours: idx)),
-  //       ),
-  //     ),
-  //     comment: [_mockComment('post_$i', i)],
-  //   );
-  // }
-  //
-  // CommentDto _mockComment(String postId, int i) => CommentDto(
-  //   userId: 'u$i',
-  //   userName: '사용자$i',
-  //   userProfileImage:
-  //       'https://i.namu.wiki/i/R0AhIJhNi8fkU2Al72pglkrT8QenAaCJd1as-d_iY6MC8nub1iI5VzIqzJlLa-1uzZm--TkB-KHFiT-P-t7bEg.webp',
-  //   text: '저도 참여하고 싶습니다!',
-  //   createdAt: DateTime(2025, 4, 28),
-  //   likeCount: _rand.nextInt(50),
-  // );
 }

@@ -1,6 +1,7 @@
 // lib/community/presentation/community_write/community_write_notifier.dart
 import 'dart:io';
 import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_post_use_case.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
@@ -62,8 +63,8 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
         await _submit();
 
       case NavigateBack(:final postId):
-      // Root에서 처리하므로 여기서는 아무 것도 하지 않음
-      break;
+        // Root에서 처리하므로 여기서는 아무 것도 하지 않음
+        break;
     }
   }
 
