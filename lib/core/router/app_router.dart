@@ -10,7 +10,6 @@ import 'package:devlink_mobile_app/community/presentation/community_list/communi
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
-import 'package:devlink_mobile_app/edit_intro/presentation/screens/edit_intro_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen_root.dart';
@@ -19,8 +18,9 @@ import 'package:devlink_mobile_app/group/presentation/group_list/group_list_scre
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
-import 'package:devlink_mobile_app/intro/presentation/intro_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/profile/presentation/intro_screen_root.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_edit/edit_intro_root.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -28,7 +28,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
 import '../../auth/data/data_source/user_storage.dart';
-import '../../edit_intro/presentation/screens/edit_intro_demo_screen.dart';
+import '../../profile/presentation/profile_edit/edit_intro_demo_screen.dart';
 
 part 'app_router.g.dart';
 
