@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/group/presentation/attendance/component/calendar_grid.dart';
-import 'package:devlink_mobile_app/group/presentation/attendance/component/weekday_label.dart';
+import 'package:devlink_mobile_app/group/presentation/group_attendance/component/calendar_grid.dart';
+import 'package:devlink_mobile_app/group/presentation/group_attendance/component/weekday_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

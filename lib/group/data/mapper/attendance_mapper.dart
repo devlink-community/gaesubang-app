@@ -1,4 +1,5 @@
-import '../../domain/model/attendance.dart';
+import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
+
 import '../dto/attendance_dto.dart';
 
 extension AttendanceDtoMapper on AttendanceDto {
