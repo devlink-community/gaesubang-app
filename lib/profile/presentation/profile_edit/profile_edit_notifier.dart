@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart'; // 추가
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -197,12 +198,18 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           profileState: AsyncData(value),
           editingProfile: value,
         );
-        debugPrint('이미지 업데이트 성공: ${value.image}');
+
+        // ✅ 핵심: 이미지 업데이트 성공 시 프로필 갱신 상태 마크
+        ref.read(profileRefreshStateProvider.notifier).markForRefresh();
+
+        debugPrint(
+          '✅ ProfileEditNotifier: 이미지 업데이트 성공 및 갱신 상태 마크: ${value.image}',
+        );
       } else if (result case AsyncError(:final error)) {
-        debugPrint('이미지 업데이트 실패: $error');
+        debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 실패: $error');
       }
     } catch (e) {
-      debugPrint('이미지 업데이트 예외: $e');
+      debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 예외: $e');
     }
   }
 
@@ -220,22 +227,34 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
 
     // 닉네임 중복 확인 여부 검증
-    if (state.nicknameCheckState case AsyncData(:final value)) {
-      if (value == false) {
-        errors['nickname'] = '이미 사용 중인 닉네임입니다';
-      }
-    } else {
-      // 닉네임이 변경되었는데 중복 확인을 하지 않은 경우
-      if (state.profileState case AsyncData(:final value)) {
-        // 여기를 수정
-        if (value.nickname != profile.nickname) {
-          // 여기도 수정
+    if (state.profileState case AsyncData(:final value)) {
+      final originalProfile = value; // ✅ 올바른 문법
+      final isNicknameChanged = originalProfile.nickname != profile.nickname;
+
+      if (isNicknameChanged) {
+        // 닉네임이 변경된 경우에만 중복 확인 필요
+        if (state.nicknameCheckState case AsyncData(:final value)) {
+          final isAvailable = value; // ✅ 올바른 문법
+          if (isAvailable == false) {
+            errors['nickname'] = '이미 사용 중인 닉네임입니다';
+          }
+          // isAvailable == true이면 통과
+        } else {
+          // 중복 확인을 아직 하지 않은 경우
           errors['nickname'] = '닉네임 중복 확인이 필요합니다';
         }
       }
+      // 닉네임이 변경되지 않았으면 중복 확인 생략
     }
 
     state = state.copyWith(validationErrors: errors);
+
+    // 디버깅 로그 추가
+    if (errors.isNotEmpty) {
+      debugPrint('❌ ProfileEditNotifier: 폼 검증 실패 - $errors');
+    } else {
+      debugPrint('✅ ProfileEditNotifier: 폼 검증 통과');
+    }
   }
 
   /// 프로필 저장
@@ -265,14 +284,20 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           profileState: AsyncData(value),
           editingProfile: value,
         );
-        debugPrint('프로필 저장 성공: ${value.nickname}');
+
+        // ✅ 핵심: 프로필 저장 성공 시 프로필 갱신 상태 마크
+        ref.read(profileRefreshStateProvider.notifier).markForRefresh();
+
+        debugPrint(
+          '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크: ${value.nickname}',
+        );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
         state = state.copyWith(saveState: AsyncError(error, stackTrace));
-        debugPrint('프로필 저장 실패: $error');
+        debugPrint('❌ ProfileEditNotifier: 프로필 저장 실패: $error');
       }
     } catch (e, st) {
       state = state.copyWith(saveState: AsyncError(e, st));
-      debugPrint('프로필 저장 예외: $e');
+      debugPrint('❌ ProfileEditNotifier: 프로필 저장 예외: $e');
     }
   }
 
