@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
 import '../styles/app_color_styles.dart';
+import 'profile_tab_button.dart';
 
 class AppBottomNavigationBar extends StatefulWidget {
   final int currentIndex;
@@ -202,7 +201,12 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                   // 중앙 버튼
                   _buildCenterButton(),
                   _buildNavItem(3, LineIcons.userFriends),
-                  _buildProfileItem(4),
+                  // ProfileTabButton 사용
+                  ProfileTabButton(
+                    isSelected: widget.currentIndex == 4,
+                    profileImageUrl: widget.profileImageUrl,
+                    onTap: () => widget.onTap(4),
+                  ),
                 ],
               ),
             ),
@@ -260,53 +264,6 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                   ),
         ),
       ),
-    );
-  }
-
-  Widget _buildProfileItem(int index) {
-    final isSelected = widget.currentIndex == index;
-
-    return InkWell(
-      onTap: () => widget.onTap(index),
-      child: Container(
-        width: 35,
-        height: 35,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? AppColorStyles.primary100 : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: _buildProfileImage(),
-      ),
-    );
-  }
-
-  Widget _buildProfileImage() {
-    // 이미지 URL 없는 경우 기본 아이콘
-    if (widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty) {
-      return CircleAvatar(
-        radius: 11,
-        backgroundColor: Colors.grey.shade200,
-        child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
-      );
-    }
-
-    // 로컬 이미지 경로인 경우
-    if (widget.profileImageUrl!.startsWith('/')) {
-      return CircleAvatar(
-        radius: 11,
-        backgroundImage: FileImage(File(widget.profileImageUrl!)),
-        backgroundColor: Colors.grey.shade200,
-      );
-    }
-
-    // 네트워크 이미지인 경우
-    return CircleAvatar(
-      radius: 11,
-      backgroundImage: NetworkImage(widget.profileImageUrl!),
-      backgroundColor: Colors.grey.shade200,
     );
   }
 
