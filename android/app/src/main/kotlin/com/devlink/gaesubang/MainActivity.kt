@@ -1,4 +1,4 @@
-package com.example.devlink_mobile_app
+package com.devlink.gaesubang
 
 import io.flutter.embedding.android.FlutterActivity
 
