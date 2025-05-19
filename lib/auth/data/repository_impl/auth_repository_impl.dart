@@ -141,15 +141,8 @@ class AuthRepositoryImpl implements AuthRepository {
       // termsId가 없으면 기본 약관 정보 반환
       if (termsId == null) {
         final response = await _authDataSource.fetchTermsInfo();
-        final termsAgreement = TermsAgreement(
-          id: response['id'] as String,
-          isAllAgreed: response['isAllAgreed'] as bool? ?? false,
-          isServiceTermsAgreed:
-              response['isServiceTermsAgreed'] as bool? ?? false,
-          isPrivacyPolicyAgreed:
-              response['isPrivacyPolicyAgreed'] as bool? ?? false,
-          isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
-        );
+        // Mapper 사용하여 변환
+        final termsAgreement = response.toTermsAgreement();
         return Result.success(termsAgreement);
       }
 
@@ -159,19 +152,8 @@ class AuthRepositoryImpl implements AuthRepository {
         return const Result.success(null);
       }
 
-      final termsAgreement = TermsAgreement(
-        id: response['id'] as String,
-        isAllAgreed: response['isAllAgreed'] as bool? ?? false,
-        isServiceTermsAgreed:
-            response['isServiceTermsAgreed'] as bool? ?? false,
-        isPrivacyPolicyAgreed:
-            response['isPrivacyPolicyAgreed'] as bool? ?? false,
-        isMarketingAgreed: response['isMarketingAgreed'] as bool? ?? false,
-        agreedAt:
-            response['agreedAt'] != null
-                ? DateTime.parse(response['agreedAt'] as String)
-                : null,
-      );
+      // Mapper 사용하여 변환
+      final termsAgreement = response.toTermsAgreement();
       return Result.success(termsAgreement);
     } catch (e, st) {
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
@@ -183,33 +165,17 @@ class AuthRepositoryImpl implements AuthRepository {
     TermsAgreement terms,
   ) async {
     try {
-      final Map<String, dynamic> termsData = {
-        'id': terms.id,
-        'isAllAgreed': terms.isAllAgreed,
-        'isServiceTermsAgreed': terms.isServiceTermsAgreed,
-        'isPrivacyPolicyAgreed': terms.isPrivacyPolicyAgreed,
-        'isMarketingAgreed': terms.isMarketingAgreed,
-        'agreedAt':
-            terms.agreedAt?.toIso8601String() ??
-            DateTime.now().toIso8601String(),
-      };
+      // Mapper 사용하여 TermsAgreement → Map 변환
+      final termsData = terms.toUserDtoMap();
 
       final response = await _authDataSource.saveTermsAgreement(termsData);
 
-      return Result.success(
-        TermsAgreement(
-          id: response['id'] as String,
-          isAllAgreed: response['isAllAgreed'] as bool,
-          isServiceTermsAgreed: response['isServiceTermsAgreed'] as bool,
-          isPrivacyPolicyAgreed: response['isPrivacyPolicyAgreed'] as bool,
-          isMarketingAgreed: response['isMarketingAgreed'] as bool,
-          agreedAt:
-              response['agreedAt'] != null
-                  ? DateTime.parse(response['agreedAt'] as String)
-                  : null,
-        ),
-      );
+      // Mapper 사용하여 Map → TermsAgreement 변환
+      final savedTerms = response.toTermsAgreement();
+      return Result.success(savedTerms);
     } catch (e, st) {
+      debugPrint('약관 동의 저장 에러: $e');
+      debugPrint('StackTrace: $st');
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
@@ -223,15 +189,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final activities =
           response
-              .map(
-                (activityMap) => TimerActivityDto(
-                  id: activityMap['id'] as String?,
-                  memberId: activityMap['memberId'] as String?,
-                  type: activityMap['type'] as String?,
-                  timestamp: activityMap['timestamp'] as DateTime?,
-                  metadata: activityMap['metadata'] as Map<String, dynamic>?,
-                ),
-              )
+              .map((activityMap) => TimerActivityDto.fromJson(activityMap))
               .toList();
 
       return Result.success(activities);
@@ -246,13 +204,7 @@ class AuthRepositoryImpl implements AuthRepository {
     TimerActivityDto activity,
   ) async {
     try {
-      final activityData = {
-        'id': activity.id,
-        'memberId': activity.memberId,
-        'type': activity.type,
-        'timestamp': activity.timestamp,
-        'metadata': activity.metadata,
-      };
+      final activityData = activity.toJson();
 
       await _authDataSource.saveTimerActivity(userId, activityData);
       return const Result.success(null);

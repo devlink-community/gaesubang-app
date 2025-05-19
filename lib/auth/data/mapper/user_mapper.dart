@@ -1,5 +1,6 @@
 // lib/auth/data/mapper/user_mapper.dart
 import '../../domain/model/member.dart';
+import '../../domain/model/terms_agreement.dart';
 import '../dto/joined_group_dto.dart';
 
 // Map → Member 직접 변환 (Firebase/Mock 데이터 → Member)
@@ -58,5 +59,61 @@ extension MemberToFirebaseMapMapper on Member {
               )
               .toList(),
     };
+  }
+}
+
+// TermsAgreement → Map 변환 (TermsAgreement → UserDto 필드들)
+extension TermsAgreementToMapMapper on TermsAgreement {
+  Map<String, dynamic> toUserDtoMap() {
+    return {
+      'agreedTermId': id,
+      'isServiceTermsAgreed': isServiceTermsAgreed,
+      'isPrivacyPolicyAgreed': isPrivacyPolicyAgreed,
+      'isMarketingAgreed': isMarketingAgreed,
+      'agreedAt': agreedAt,
+    };
+  }
+}
+
+// Map → TermsAgreement 변환 (UserDto 필드들 → TermsAgreement)
+extension MapToTermsAgreementMapper on Map<String, dynamic> {
+  TermsAgreement toTermsAgreement() {
+    return TermsAgreement(
+      id:
+          this['agreedTermId'] as String? ??
+          'terms_${DateTime.now().millisecondsSinceEpoch}',
+      isAllAgreed:
+          (this['isServiceTermsAgreed'] as bool? ?? false) &&
+          (this['isPrivacyPolicyAgreed'] as bool? ?? false),
+      isServiceTermsAgreed: this['isServiceTermsAgreed'] as bool? ?? false,
+      isPrivacyPolicyAgreed: this['isPrivacyPolicyAgreed'] as bool? ?? false,
+      isMarketingAgreed: this['isMarketingAgreed'] as bool? ?? false,
+      agreedAt: _parseTimestamp(this['agreedAt']),
+    );
+  }
+
+  // 안전한 Timestamp 파싱 헬퍼
+  DateTime? _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return null;
+
+    if (timestamp is String) {
+      try {
+        return DateTime.parse(timestamp);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Firebase Timestamp 처리 (import 필요시)
+    if (timestamp.toString().contains('Timestamp')) {
+      try {
+        // Firebase Timestamp의 toDate() 메서드 호출
+        return (timestamp as dynamic).toDate() as DateTime?;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    return null;
   }
 }
