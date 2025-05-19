@@ -280,6 +280,14 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
                 // 화면에서 돌아왔을 때 데이터 갱신
                 _handleScreenReturn();
               });
+            case NavigateToMap():
+              await _handleNavigation(() async {
+                await context.push('/group/${widget.groupId}/map');
+                print('야 지도가  클릭이 되었냐~');
+
+                // 화면에서 돌아왔을 때 데이터 갱신
+                _handleScreenReturn();
+              });
 
             default:
               // 기타 액션은 Notifier에 위임

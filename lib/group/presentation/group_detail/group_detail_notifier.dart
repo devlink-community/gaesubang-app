@@ -104,6 +104,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
       // 네비게이션 액션들 - 이 파일에서는 처리하지 않음(Root에서 처리)
       case NavigateToAttendance():
+      case NavigateToMap():
       case NavigateToSettings():
       case NavigateToUserProfile():
         break;
