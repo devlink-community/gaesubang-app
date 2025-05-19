@@ -7,6 +7,7 @@ part 'post_comment_dto.g.dart';
 @JsonSerializable(explicitToJson: true)
 class PostCommentDto {
   const PostCommentDto({
+    this.id,
     this.userId,
     this.userName,
     this.userProfileImage,
@@ -15,6 +16,7 @@ class PostCommentDto {
     this.likeCount,
   });
 
+  final String? id;
   final String? userId;
   final String? userName;
   final String? userProfileImage;

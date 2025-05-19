@@ -6,6 +6,7 @@ part 'group_member_dto.g.dart';
 @JsonSerializable(explicitToJson: true)
 class GroupMemberDto {
   const GroupMemberDto({
+    this.id,
     this.userId,
     this.userName,
     this.profileUrl,
@@ -14,6 +15,7 @@ class GroupMemberDto {
     this.isActive,
   });
 
+  final String? id;
   final String? userId;
   final String? userName;
   final String? profileUrl;
