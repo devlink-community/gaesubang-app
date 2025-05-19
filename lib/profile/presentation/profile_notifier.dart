@@ -2,31 +2,25 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/model/member.dart';
+import '../../auth/domain/usecase/get_current_user_use_case.dart';
 import '../../auth/module/auth_di.dart';
 import '../domain/model/focus_time_stats.dart';
-import '../domain/use_case/fetch_profile_data_use_case.dart';
-import '../domain/use_case/fetch_profile_stats_use_case.dart';
 import 'profile_action.dart';
 import 'profile_state.dart';
 
 final profileNotifierProvider =
     StateNotifierProvider<ProfileNotifier, AsyncValue<ProfileState>>(
       (ref) => ProfileNotifier(
-        fetchUserUseCase: ref.watch(fetchProfileUserUseCaseProvider),
-        fetchStatsUseCase: ref.watch(fetchProfileStatsUseCaseProvider),
+        getCurrentUserUseCase: ref.watch(getCurrentUserUseCaseProvider),
       ),
     );
 
-/// 2) 일반 StateNotifier로 구현
+/// ProfileNotifier - auth 모듈의 UseCase를 사용하도록 변경
 class ProfileNotifier extends StateNotifier<AsyncValue<ProfileState>> {
-  // UseCase들을 final로 선언하고 생성자에서 주입받음
-  final FetchProfileUserUseCase fetchUserUseCase;
-  final FetchProfileStatsUseCase fetchStatsUseCase;
+  final GetCurrentUserUseCase getCurrentUserUseCase;
 
-  ProfileNotifier({
-    required this.fetchUserUseCase,
-    required this.fetchStatsUseCase,
-  }) : super(const AsyncValue.loading()) {
+  ProfileNotifier({required this.getCurrentUserUseCase})
+    : super(const AsyncValue.loading()) {
     // 초기화 직후 데이터 로드 시작
     _loadData();
   }
@@ -37,31 +31,49 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileState>> {
       // 로딩 상태로 변경
       state = const AsyncValue.loading();
 
-      // 2-1) AsyncValue 초기화
+      // 프로필 로드 (auth 모듈 사용)
       late AsyncValue<Member> userProfileResult;
-      late AsyncValue<FocusTimeStats> focusStatsResult;
-
-      // 2-2) 프로필 로드
       try {
-        userProfileResult = await fetchUserUseCase.execute();
+        userProfileResult = await getCurrentUserUseCase.execute();
+        // null인 경우 에러로 처리
+        if (userProfileResult.hasValue && userProfileResult.value == null) {
+          userProfileResult = AsyncValue.error(
+            Exception('로그인된 사용자가 없습니다'),
+            StackTrace.current,
+          );
+        }
       } catch (e, st) {
         userProfileResult = AsyncValue.error(e, st);
       }
 
-      // 2-3) 통계 로드
+      // 통계 로드 (임시로 Mock 데이터 생성)
+      late AsyncValue<FocusTimeStats> focusStatsResult;
       try {
-        focusStatsResult = await fetchStatsUseCase.execute();
+        // TODO: 나중에 auth 모듈에 통계 관련 UseCase 추가 시 변경
+        final mockStats = FocusTimeStats(
+          totalMinutes: 1234,
+          weeklyMinutes: {
+            '월': 120,
+            '화': 150,
+            '수': 90,
+            '목': 200,
+            '금': 180,
+            '토': 300,
+            '일': 194,
+          },
+        );
+        focusStatsResult = AsyncValue.data(mockStats);
       } catch (e, st) {
         focusStatsResult = AsyncValue.error(e, st);
       }
 
-      // 2-4) 최종 상태 생성
+      // 최종 상태 생성
       final newState = ProfileState(
         userProfile: userProfileResult,
         focusStats: focusStatsResult,
       );
 
-      // 2-5) 상태 업데이트
+      // 상태 업데이트
       state = AsyncValue.data(newState);
     } catch (e, st) {
       debugPrint('데이터 로드 중 오류 발생: $e');
@@ -70,7 +82,7 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileState>> {
     }
   }
 
-  /// 3) 화면 액션 처리
+  /// 화면 액션 처리
   Future<void> onAction(ProfileAction action) async {
     switch (action) {
       case OpenSettings():

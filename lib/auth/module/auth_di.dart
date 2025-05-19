@@ -1,12 +1,12 @@
 // lib/auth/module/auth_di.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/config/app_config.dart';
-import '../../profile/domain/use_case/fetch_profile_data_use_case.dart';
-import '../../profile/domain/use_case/fetch_profile_stats_use_case.dart';
 import '../data/data_source/auth_data_source.dart';
 import '../data/data_source/auth_firebase_data_source.dart';
 import '../data/data_source/mock_auth_data_source.dart';
@@ -23,11 +23,6 @@ import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
 import '../domain/usecase/signout_use_case.dart';
 import '../domain/usecase/signup_use_case.dart';
-import '../domain/usecase/validate_email_use_case.dart';
-import '../domain/usecase/validate_nickname_use_case.dart';
-import '../domain/usecase/validate_password_confirm_use_case.dart';
-import '../domain/usecase/validate_password_use_case.dart';
-import '../domain/usecase/validate_terms_agreement_use_case.dart';
 
 part 'auth_di.g.dart';
 
@@ -116,41 +111,16 @@ SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) {
   );
 }
 
-// === Validation UseCase Providers ===
-
-@riverpod
-ValidateNicknameUseCase validateNicknameUseCase(Ref ref) {
-  return ValidateNicknameUseCase();
-}
-
-@riverpod
-ValidateEmailUseCase validateEmailUseCase(Ref ref) {
-  return ValidateEmailUseCase();
-}
-
-@riverpod
-ValidatePasswordUseCase validatePasswordUseCase(Ref ref) {
-  return ValidatePasswordUseCase();
-}
-
-@riverpod
-ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) {
-  return ValidatePasswordConfirmUseCase();
-}
-
-@riverpod
-ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) {
-  return ValidateTermsAgreementUseCase();
-}
-
 // === Profile UseCase Providers ===
 
 @riverpod
-FetchProfileUserUseCase fetchProfileUserUseCase(Ref ref) {
-  return FetchProfileUserUseCase(ref.watch(authRepositoryProvider));
+UpdateProfileUseCase updateProfileUseCase(Ref ref) {
+  return UpdateProfileUseCase(repository: ref.watch(authRepositoryProvider));
 }
 
 @riverpod
-FetchProfileStatsUseCase fetchProfileStatsUseCase(Ref ref) {
-  return FetchProfileStatsUseCase();
+UpdateProfileImageUseCase updateProfileImageUseCase(Ref ref) {
+  return UpdateProfileImageUseCase(
+    repository: ref.watch(authRepositoryProvider),
+  );
 }
