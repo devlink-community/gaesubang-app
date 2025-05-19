@@ -37,7 +37,7 @@ part 'app_router.g.dart';
 @riverpod
 class DevLoginState extends _$DevLoginState {
   @override
-  bool build() => true; // true로 설정하여 개발용 강제 로그인 상태로 시작
+  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
 
   void toggle() => state = !state;
   void enable() => state = true;
@@ -221,7 +221,9 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/group/:id/map',
-        builder: (context, state) => const MapScreenRoot(),
+        builder:
+            (context, state) =>
+                MapScreenRoot(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/group/:id/attendance',
