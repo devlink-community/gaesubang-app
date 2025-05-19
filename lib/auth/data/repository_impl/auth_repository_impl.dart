@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
+import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
@@ -202,6 +203,53 @@ class AuthRepositoryImpl implements AuthRepository {
                   : null,
         ),
       );
+    } catch (e, st) {
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+    }
+  }
+
+  @override
+  Future<Result<List<TimerActivityDto>>> getTimerActivities(
+    String userId,
+  ) async {
+    try {
+      final response = await _authDataSource.fetchTimerActivities(userId);
+
+      final activities =
+          response
+              .map(
+                (activityMap) => TimerActivityDto(
+                  id: activityMap['id'] as String?,
+                  memberId: activityMap['memberId'] as String?,
+                  type: activityMap['type'] as String?,
+                  timestamp: activityMap['timestamp'] as DateTime?,
+                  metadata: activityMap['metadata'] as Map<String, dynamic>?,
+                ),
+              )
+              .toList();
+
+      return Result.success(activities);
+    } catch (e, st) {
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+    }
+  }
+
+  @override
+  Future<Result<void>> saveTimerActivity(
+    String userId,
+    TimerActivityDto activity,
+  ) async {
+    try {
+      final activityData = {
+        'id': activity.id,
+        'memberId': activity.memberId,
+        'type': activity.type,
+        'timestamp': activity.timestamp,
+        'metadata': activity.metadata,
+      };
+
+      await _authDataSource.saveTimerActivity(userId, activityData);
+      return const Result.success(null);
     } catch (e, st) {
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }

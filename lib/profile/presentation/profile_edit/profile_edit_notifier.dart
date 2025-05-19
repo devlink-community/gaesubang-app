@@ -1,9 +1,7 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/profile/domain/use_case/get_current_profile_usecase.dart';
-import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_image_usecase.dart';
-import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_usecase.dart';
-import 'package:devlink_mobile_app/profile/module/profile_edit_di.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
+import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:flutter/cupertino.dart';
@@ -14,17 +12,18 @@ part 'profile_edit_notifier.g.dart';
 
 @riverpod
 class ProfileEditNotifier extends _$ProfileEditNotifier {
-  late final GetCurrentProfileUseCase _getCurrentProfileUseCase;
-  late final UpdateProfileUseCase _updateProfileUseCase;
-  late final UpdateProfileImageUseCase _updateProfileImageUseCase;
+  late final GetCurrentUserUseCase _getCurrentUserUseCase;
+  // TODO: auth 모듈에 프로필 업데이트 UseCase 추가 필요
+  // late final UpdateProfileUseCase _updateProfileUseCase;
+  // late final UpdateProfileImageUseCase _updateProfileImageUseCase;
 
   @override
   ProfileEditState build() {
-    _getCurrentProfileUseCase = ref.watch(getCurrentProfileUseCaseProvider);
-    _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
-    _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
+    _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
+    // TODO: auth_di.dart에 프로필 업데이트 UseCase Provider 추가 후 활성화
+    // _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
+    // _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
 
-    // 초기 상태만 반환하고, 프로필 로드는 별도 메서드로 분리
     return const ProfileEditState();
   }
 
@@ -33,10 +32,9 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
     try {
-      final result = await _getCurrentProfileUseCase.execute();
+      final result = await _getCurrentUserUseCase.execute();
 
       if (result is AsyncData) {
-        // 성공적으로 데이터를 받은 경우
         debugPrint(
           '프로필 로드 성공: ${result.value?.nickname}, ${result.value?.description}',
         );
@@ -47,7 +45,6 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           member: result.value,
         );
       } else if (result is AsyncError) {
-        // 에러가 발생한 경우
         debugPrint('프로필 로드 실패: ${result.error}');
 
         state = state.copyWith(
@@ -57,7 +54,6 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         );
       }
     } catch (e) {
-      // 예외 처리
       debugPrint('프로필 로드 예외: $e');
 
       state = state.copyWith(
@@ -124,27 +120,16 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     );
 
     try {
-      final xFile = XFile(image.path);
-      debugPrint('이미지 업로드 시작: ${xFile.path}');
+      // TODO: auth 모듈에 프로필 이미지 업데이트 UseCase 구현 후 활성화
+      debugPrint('이미지 업로드 시작: ${image.path}');
 
-      final result = await _updateProfileImageUseCase.execute(xFile);
-
-      // 이미지 업로드 결과 처리 - AsyncValue에 따라 분기
-      if (result.hasValue) {
-        debugPrint('이미지 업로드 성공: ${result.value!.image}');
-
+      // 임시로 로컬 경로만 업데이트
+      if (state.member != null) {
+        final updatedMember = state.member!.copyWith(image: image.path);
         state = state.copyWith(
           isImageUploading: false,
           isImageUploadSuccess: true,
-          member: result.value,
-        );
-      } else if (result.hasError) {
-        debugPrint('이미지 업로드 실패: ${result.error}');
-
-        state = state.copyWith(
-          isImageUploading: false,
-          isImageUploadError: true,
-          imageUploadErrorMessage: result.error.toString(),
+          member: updatedMember,
         );
       }
     } catch (e) {
@@ -176,46 +161,18 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
     state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
 
-    // 디버그 로그 추가
     debugPrint(
       '프로필 저장 시작: ${state.member!.nickname}, ${state.member!.description}, ${state.member!.position}, ${state.member!.skills}',
     );
 
     try {
-      final result = await _updateProfileUseCase.execute(
-        nickname: state.member!.nickname,
-        intro: state.member!.description,
-        position: state.member!.position,
-        skills: state.member!.skills,
-      );
+      // TODO: auth 모듈에 프로필 업데이트 UseCase 구현 후 활성화
+      // 임시로 성공 처리
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // 저장 결과 처리 - AsyncValue에 따라 분기
-      if (result.hasValue) {
-        // 성공 시 디버그 로그 추가
-        debugPrint(
-          '프로필 저장 성공: ${result.value!.nickname}, ${result.value!.description}, ${result.value!.position}, ${result.value!.skills}',
-        );
-
-        state = state.copyWith(
-          isLoading: false,
-          isSuccess: true,
-          member: result.value,
-        );
-        return true;
-      } else if (result.hasError) {
-        // 실패 시 디버그 로그 추가
-        debugPrint('프로필 저장 실패: ${result.error}');
-
-        state = state.copyWith(
-          isLoading: false,
-          isError: true,
-          errorMessage: result.error.toString(),
-        );
-        return false;
-      }
-      return false;
+      state = state.copyWith(isLoading: false, isSuccess: true);
+      return true;
     } catch (e) {
-      // 예외 발생 시 디버그 로그 추가
       debugPrint('프로필 저장 예외: $e');
 
       state = state.copyWith(

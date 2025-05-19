@@ -1,55 +1,66 @@
-/// 인증 관련 모든 오류 메시지를 중앙에서 관리하는 상수 클래스
+// lib/core/utils/auth_error_messages.dart
 class AuthErrorMessages {
-  AuthErrorMessages._(); // 인스턴스화 방지
+  const AuthErrorMessages._();
 
-  // 로그인 관련 오류 메시지
-  static const String invalidCredentials = '이메일 또는 비밀번호가 일치하지 않습니다';
-  static const String accountNotFound = '등록되지 않은 계정입니다';
-  static const String accountDisabled = '계정이 비활성화되었습니다';
-  static const String tooManyRequests = '너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요';
-  static const String loginFailed = '로그인에 실패했습니다';
-  static const String userDataNotFound = '사용자 정보를 찾을 수 없습니다';
-  static const String noLoggedInUser = '로그인된 사용자가 없습니다';
+  // === 로그인 관련 ===
+  static const String loginFailed = '이메일 또는 비밀번호가 올바르지 않습니다';
+  static const String userNotFound = '등록되지 않은 이메일입니다';
+  static const String wrongPassword = '비밀번호가 올바르지 않습니다';
+  static const String noLoggedInUser = '로그인이 필요합니다';
 
-  // 회원가입 관련 오류 메시지
+  // === 회원가입 관련 ===
   static const String emailAlreadyInUse = '이미 사용 중인 이메일입니다';
   static const String nicknameAlreadyInUse = '이미 사용 중인 닉네임입니다';
+  static const String weakPassword = '비밀번호가 너무 단순합니다';
+  static const String accountCreationFailed = '회원가입에 실패했습니다';
+
+  // === 유효성 검사 관련 ===
   static const String invalidEmail = '유효하지 않은 이메일 형식입니다';
-  static const String weakPassword =
-      '비밀번호는 8자 이상이어야 하며, 문자, 숫자, 특수문자를 포함해야 합니다';
-  static const String passwordsDontMatch = '비밀번호가 일치하지 않습니다';
+  static const String termsNotAgreed = '필수 약관에 동의해야 합니다';
+
+  // 입력 필드 누락 메시지
+  static const String emailRequired = '이메일을 입력해주세요';
+  static const String nicknameRequired = '닉네임을 입력해주세요';
+  static const String passwordRequired = '비밀번호를 입력해주세요';
+  static const String passwordConfirmRequired = '비밀번호 확인을 입력해주세요';
+  static const String termsRequired = '이용약관에 동의해주세요';
+
+  // 길이 및 형식 검증 메시지
   static const String nicknameTooShort = '닉네임은 2자 이상이어야 합니다';
   static const String nicknameTooLong = '닉네임은 10자 이하여야 합니다';
-  static const String nicknameInvalidCharacters =
-      '닉네임은 한글, a-z, A-Z, 0-9만 사용 가능합니다';
-  static const String termsNotAgreed = '필수 약관에 동의해주세요';
-  static const String accountCreationFailed = '계정 생성에 실패했습니다';
+  static const String nicknameInvalidFormat = '닉네임은 한글, 영문, 숫자만 사용 가능합니다';
+  static const String passwordTooShort = '비밀번호는 8자 이상이어야 합니다';
+  static const String passwordComplexity = '비밀번호는 대문자, 소문자, 숫자, 특수문자를 포함해야 합니다';
+  static const String passwordMismatch = '비밀번호가 일치하지 않습니다';
 
-  // 계정 관리 관련 오류 메시지
-  static const String requiresRecentLogin = '보안을 위해 다시 로그인한 후 계정을 삭제해주세요';
-  static const String accountDeletionFailed = '계정 삭제에 실패했습니다';
-  static const String signOutFailed = '로그아웃에 실패했습니다';
-  static const String currentUserNotFound = '현재 사용자 정보를 가져오는데 실패했습니다';
+  // === 중복 확인 관련 ===
+  static const String nicknameCheckFailed = '닉네임 중복 확인 중 오류가 발생했습니다';
+  static const String emailCheckFailed = '이메일 중복 확인 중 오류가 발생했습니다';
+  static const String nicknameSuccess = '사용 가능한 닉네임입니다';
+  static const String emailSuccess = '사용 가능한 이메일입니다';
 
-  // 비밀번호 재설정 관련 오류 메시지
-  static const String passwordResetFailed = '비밀번호 재설정에 실패했습니다';
-  static const String emailNotRegistered = '등록되지 않은 이메일입니다';
-  static const String emailSendFailed = '이메일 전송에 실패했습니다';
+  // === 폼 검증 관련 ===
+  static const String formValidationFailed = '입력 정보를 확인해주세요';
+  static const String duplicateCheckRequired = '닉네임 또는 이메일 중복을 확인해주세요';
 
-  // 약관 관련 오류 메시지
-  static const String termsLoadFailed = '약관 정보를 불러오는데 실패했습니다';
-  static const String termsSaveFailed = '약관 동의 저장에 실패했습니다';
+  // === 약관 관련 ===
+  static const String termsProcessFailed =
+      '약관 동의 처리에 실패했습니다. 직접 약관 화면에서 동의해주세요';
+  static const String termsProcessError =
+      '약관 동의 처리 중 오류가 발생했습니다. 직접 약관 화면에서 동의해주세요';
 
-  // 유효성 검사 관련 오류 메시지
-  static const String nicknameValidationFailed = '닉네임 확인 중 오류가 발생했습니다';
-  static const String emailValidationFailed = '이메일 확인 중 오류가 발생했습니다';
+  // === 비밀번호 재설정 관련 ===
+  static const String passwordResetFailed = '비밀번호 재설정 이메일 전송에 실패했습니다';
+  static const String passwordResetSuccess =
+      '비밀번호 재설정 이메일이 발송되었습니다. 이메일을 확인해주세요';
 
-  // 네트워크 관련 오류 메시지
+  // === 시스템 관련 ===
   static const String networkError = '인터넷 연결을 확인해주세요';
-  static const String serverError = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요';
-  static const String timeout = '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요';
+  static const String timeoutError = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+  static const String serverError = '서버에 문제가 발생했습니다. 잠시 후 다시 시도해주세요';
+  static const String unknownError = '알 수 없는 오류가 발생했습니다';
 
-  // 일반 오류 메시지
-  static const String unknown = '알 수 없는 오류가 발생했습니다';
-  static const String operationFailed = '작업을 완료할 수 없습니다';
+  // === 데이터 관련 ===
+  static const String userDataNotFound = '사용자 정보를 찾을 수 없습니다';
+  static const String dataLoadFailed = '데이터를 불러오는데 실패했습니다';
 }
