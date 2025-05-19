@@ -60,11 +60,12 @@ dependencies:
   flutter_naver_map: ^1.3.1
   firebase_vertexai: ^1.6.0
   cloud_functions: ^5.5.0
-  http: ^1.1.0
+  http: ^1.4.0
   google_sign_in: ^6.1.5
-  googleapis: ^11.4.0
-  googleapis_auth: ^1.4.1
+  googleapis: ^14.0.0
+  googleapis_auth: ^2.0.0
   google_generative_ai: ^0.2.0
+  shared_preferences: ^2.5.3
 
 
 

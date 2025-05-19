@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
+import '../../quiz/presentation/quiz_banner.dart';
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
@@ -11,8 +12,14 @@ import 'home_state.dart';
 class HomeScreen extends StatelessWidget {
   final HomeState state;
   final Function(HomeAction) onAction;
+  final String? userSkills;
 
-  const HomeScreen({super.key, required this.state, required this.onAction});
+  const HomeScreen({
+    super.key,
+    required this.state,
+    required this.onAction,
+    this.userSkills,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +123,8 @@ class HomeScreen extends StatelessWidget {
                         (postId) =>
                             onAction(HomeAction.onTapPopularPost(postId)),
                   ),
+                  const SizedBox(height: 10),
+                  DailyQuizBanner(skills: userSkills),
 
                   // 하단 여백
                   const SizedBox(height: 32),
