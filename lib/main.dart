@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/styles/app_theme.dart';
@@ -13,6 +14,14 @@ void main() async {
 
   // Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Firebase 연결 확인 로그 추가
+  print('=== Firebase 초기화 완료 ===');
+  print('Firebase App Name: ${Firebase.app().name}');
+  print('Firebase Project ID: ${Firebase.app().options.projectId}');
+  AppConfig.printConfig(); // 설정 정보 출력
+
+  runApp(const ProviderScope(child: MyApp()));
 
   // 알림 서비스 초기화 - 권한 요청 없이
   await NotificationService().init(requestPermissionOnInit: false);
