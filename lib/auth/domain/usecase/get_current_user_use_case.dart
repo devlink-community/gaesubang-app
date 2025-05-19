@@ -7,9 +7,9 @@ class GetCurrentUserUseCase {
   final AuthRepository _repository;
 
   GetCurrentUserUseCase({required AuthRepository repository})
-      : _repository = repository;
+    : _repository = repository;
 
-  Future<AsyncValue<Member?>> execute() async {
+  Future<AsyncValue<Member>> execute() async {
     final result = await _repository.getCurrentUser();
 
     switch (result) {

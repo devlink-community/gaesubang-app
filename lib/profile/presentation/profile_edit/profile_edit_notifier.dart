@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
+import 'package:devlink_mobile_app/core/utils/profile_error_messages.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,16 +16,14 @@ part 'profile_edit_notifier.g.dart';
 @riverpod
 class ProfileEditNotifier extends _$ProfileEditNotifier {
   late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  // TODO: auth 모듈에 프로필 업데이트 UseCase 추가 필요
-  // late final UpdateProfileUseCase _updateProfileUseCase;
-  // late final UpdateProfileImageUseCase _updateProfileImageUseCase;
+  late final UpdateProfileUseCase _updateProfileUseCase;
+  late final UpdateProfileImageUseCase _updateProfileImageUseCase;
 
   @override
   ProfileEditState build() {
     _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
-    // TODO: auth_di.dart에 프로필 업데이트 UseCase Provider 추가 후 활성화
-    // _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
-    // _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
+    _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
+    _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
 
     return const ProfileEditState();
   }
@@ -50,7 +51,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         state = state.copyWith(
           isLoading: false,
           isError: true,
-          errorMessage: result.error.toString(),
+          errorMessage: ProfileErrorMessages.profileLoadFailed,
         );
       }
     } catch (e) {
@@ -59,7 +60,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       state = state.copyWith(
         isLoading: false,
         isError: true,
-        errorMessage: '프로필을 불러오는 데 실패했습니다: ${e.toString()}',
+        errorMessage: ProfileErrorMessages.profileLoadFailed,
       );
     }
   }
@@ -120,17 +121,24 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     );
 
     try {
-      // TODO: auth 모듈에 프로필 이미지 업데이트 UseCase 구현 후 활성화
       debugPrint('이미지 업로드 시작: ${image.path}');
 
-      // 임시로 로컬 경로만 업데이트
-      if (state.member != null) {
-        final updatedMember = state.member!.copyWith(image: image.path);
+      final result = await _updateProfileImageUseCase.execute(image.path);
+
+      if (result is AsyncData && result.value != null) {
         state = state.copyWith(
           isImageUploading: false,
           isImageUploadSuccess: true,
-          member: updatedMember,
+          member: result.value,
         );
+        debugPrint('이미지 업로드 성공: ${result.value!.image}');
+      } else {
+        state = state.copyWith(
+          isImageUploading: false,
+          isImageUploadError: true,
+          imageUploadErrorMessage: ProfileErrorMessages.imageUploadFailed,
+        );
+        debugPrint('이미지 업로드 실패: ${result.error}');
       }
     } catch (e) {
       debugPrint('이미지 업로드 예외: $e');
@@ -138,7 +146,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       state = state.copyWith(
         isImageUploading: false,
         isImageUploadError: true,
-        imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다: ${e.toString()}',
+        imageUploadErrorMessage: ProfileErrorMessages.imageUpdateFailed,
       );
     }
   }
@@ -166,19 +174,37 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     );
 
     try {
-      // TODO: auth 모듈에 프로필 업데이트 UseCase 구현 후 활성화
-      // 임시로 성공 처리
-      await Future.delayed(const Duration(milliseconds: 500));
+      final result = await _updateProfileUseCase.execute(
+        nickname: state.member!.nickname,
+        description: state.member!.description,
+        position: state.member!.position,
+        skills: state.member!.skills,
+      );
 
-      state = state.copyWith(isLoading: false, isSuccess: true);
-      return true;
+      if (result is AsyncData && result.value != null) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: true,
+          member: result.value,
+        );
+        debugPrint('프로필 저장 성공: ${result.value!.nickname}');
+        return true;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isError: true,
+          errorMessage: ProfileErrorMessages.profileUpdateFailed,
+        );
+        debugPrint('프로필 저장 실패: ${result.error}');
+        return false;
+      }
     } catch (e) {
       debugPrint('프로필 저장 예외: $e');
 
       state = state.copyWith(
         isLoading: false,
         isError: true,
-        errorMessage: '프로필 정보를 수정할 수 없습니다: ${e.toString()}',
+        errorMessage: ProfileErrorMessages.profileUpdateFailed,
       );
       return false;
     }

@@ -35,13 +35,6 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileState>> {
       late AsyncValue<Member> userProfileResult;
       try {
         userProfileResult = await getCurrentUserUseCase.execute();
-        // null인 경우 에러로 처리
-        if (userProfileResult.hasValue && userProfileResult.value == null) {
-          userProfileResult = AsyncValue.error(
-            Exception('로그인된 사용자가 없습니다'),
-            StackTrace.current,
-          );
-        }
       } catch (e, st) {
         userProfileResult = AsyncValue.error(e, st);
       }
