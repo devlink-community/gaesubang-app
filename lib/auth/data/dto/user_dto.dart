@@ -18,7 +18,7 @@ class UserDto {
     this.isPrivacyPolicyAgreed,
     this.isMarketingAgreed,
     this.agreedAt,
-    this.joingroup,
+    this.joinedGroups,
   });
 
   final String? email;
@@ -35,7 +35,8 @@ class UserDto {
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? agreedAt;
-  final List<JoinedGroupDto>? joingroup;
+  @JsonKey(name: 'joingroup')
+  final List<JoinedGroupDto>? joinedGroups;
 
   factory UserDto.fromJson(Map<String, dynamic> json) =>
       _$UserDtoFromJson(json);

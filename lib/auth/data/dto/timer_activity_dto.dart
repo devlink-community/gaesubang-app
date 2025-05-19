@@ -6,12 +6,14 @@ part 'timer_activity_dto.g.dart';
 @JsonSerializable(explicitToJson: true)
 class TimerActivityDto {
   const TimerActivityDto({
+    this.id,
     this.memberId,
     this.type,
     this.timestamp,
     this.metadata,
   });
 
+  final String? id;
   final String? memberId;
   final String? type; // "start", "pause", "resume", "end"
   @JsonKey(

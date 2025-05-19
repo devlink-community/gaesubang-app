@@ -6,8 +6,9 @@ part 'post_like_dto.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class PostLikeDto {
-  const PostLikeDto({this.userId, this.userName, this.timestamp});
+  const PostLikeDto({this.id, this.userId, this.userName, this.timestamp});
 
+  final String? id;
   final String? userId;
   final String? userName;
   @JsonKey(

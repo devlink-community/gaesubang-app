@@ -6,6 +6,7 @@ part 'group_dto.g.dart';
 @JsonSerializable(explicitToJson: true)
 class GroupDto {
   const GroupDto({
+    this.id,
     this.name,
     this.description,
     this.imageUrl,
@@ -15,6 +16,7 @@ class GroupDto {
     this.hashTags,
   });
 
+  final String? id;
   final String? name;
   final String? description;
   final String? imageUrl;
