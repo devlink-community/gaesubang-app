@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edi
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/styles/app_color_styles.dart';
@@ -51,7 +52,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   void _updateTextControllers() {
-    final member = widget.state.member;
+    final member = widget.state.editingProfile;
     if (member != null) {
       _nicknameController.text = member.nickname;
       _descriptionController.text = member.description;
@@ -61,7 +62,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   void _updateLocalImageFile() {
-    final member = widget.state.member;
+    final member = widget.state.editingProfile;
     if (member != null &&
         member.image.isNotEmpty &&
         member.image.startsWith('/')) {
@@ -104,19 +105,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 에러 상태 처리
-    if (widget.state.hasError) {
-      return _buildErrorView();
-    }
-
-    // 멤버 정보가 없는 경우
-    final member = widget.state.member;
-    if (member == null) {
-      return const Center(child: Text('프로필 정보를 불러올 수 없습니다'));
-    }
-
-    // 정상 상태 - 편집 폼
-    return _buildEditForm(member);
+    // 프로필 상태에 따른 분기
+    return switch (widget.state.profileState) {
+      AsyncError() => _buildErrorView(),
+      AsyncData(:final value) => _buildEditForm(value),
+      AsyncLoading() => const Center(child: CircularProgressIndicator()),
+      _ => _buildErrorView(),
+    };
   }
 
   Widget _buildErrorView() {
@@ -125,7 +120,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            widget.state.errorMessage ?? '오류가 발생했습니다',
+            widget.state.profileState.error.toString(),
             style: AppTextStyles.subtitle1Medium.copyWith(
               color: AppColorStyles.error,
             ),
@@ -186,24 +181,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             controller: _descriptionController,
             maxLines: 5,
             onChanged:
-                (value) =>
-                    widget.onAction(ProfileEditAction.onChangeMessage(value)),
+                (value) => widget.onAction(
+                  ProfileEditAction.onChangeDescription(value),
+                ),
           ),
           const SizedBox(height: 24),
 
           _buildSaveButton(),
 
           // 이미지 업로드 상태 표시
-          if (widget.state.isImageUploading) ...[
+          if (widget.state.isSaving) ...[
             const SizedBox(height: 16),
             const Center(child: CircularProgressIndicator()),
           ],
 
           // 이미지 업로드 오류 표시
-          if (widget.state.hasImageUploadError) ...[
+          if (widget.state.saveError != null) ...[
             const SizedBox(height: 16),
             Text(
-              widget.state.imageUploadErrorMessage ?? '이미지 업로드 오류',
+              widget.state.saveError!,
               style: AppTextStyles.body1Regular.copyWith(
                 color: AppColorStyles.error,
               ),
@@ -284,7 +280,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () => widget.onAction(const ProfileEditAction.onSave()),
+      onPressed: () => widget.onAction(const ProfileEditAction.saveProfile()),
       child: Text(
         '저장하기',
         style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
@@ -303,7 +299,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       });
 
       // 액션을 통해 이미지 업로드 프로세스 시작
-      widget.onAction(ProfileEditAction.onPickImage(_localImageFile!));
+      widget.onAction(ProfileEditAction.onChangeImage(_localImageFile!));
     }
   }
 }

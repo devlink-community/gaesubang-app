@@ -1,6 +1,5 @@
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_notifier.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,8 +16,9 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   @override
   void initState() {
     super.initState();
-    // 프로필 로드 시작
-    ref.read(profileEditNotifierProvider.notifier).loadProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(profileEditNotifierProvider.notifier).loadProfile();
+    });
   }
 
   @override
@@ -26,26 +26,26 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     final state = ref.watch(profileEditNotifierProvider);
     final notifier = ref.watch(profileEditNotifierProvider.notifier);
 
-    // 성공 시 처리
-    ref.listen(profileEditNotifierProvider.select((s) => s.isSuccess), (
+    // 저장 성공 시 단순히 뒤로 가기 (ProfileScreenRoot가 갱신을 처리함)
+    ref.listen(profileEditNotifierProvider.select((s) => s.saveState), (
       previous,
       current,
     ) {
-      if (current && !state.isLoading) {
-        _showSuccessMessage(context);
-        // 프로필 화면 새로고침 후 이동
-        ref.invalidate(profileNotifierProvider);
-        context.go('/profile');
+      if (current case AsyncData(:final value)) {
+        if (value == true) {
+          _showSuccessMessage(context);
+          context.go('/profile'); // ProfileScreenRoot가 갱신 감지
+        }
       }
     });
 
-    // 에러 시 처리
-    ref.listen(profileEditNotifierProvider.select((s) => s.hasError), (
+    // 에러 처리
+    ref.listen(profileEditNotifierProvider.select((s) => s.saveState), (
       previous,
       current,
     ) {
-      if (current) {
-        _showErrorMessage(context, state.errorMessage ?? '프로필 저장 실패');
+      if (current.hasError) {
+        _showErrorMessage(context, current.error.toString());
       }
     });
 
@@ -65,8 +65,8 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   void _showErrorMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('저장에 실패하였습니다.'),
-        duration: const Duration(seconds: 2),
+        content: Text(message.isNotEmpty ? message : '저장에 실패했습니다'),
+        duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.red,
       ),
