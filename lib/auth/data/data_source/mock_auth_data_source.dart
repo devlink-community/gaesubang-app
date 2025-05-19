@@ -1,13 +1,186 @@
 // lib/auth/data/data_source/mock_auth_data_source.dart
 import 'dart:async';
 
-import '../dto/profile_dto_old.dart';
-import '../dto/user_dto_old.dart';
+import '../../../core/utils/auth_error_messages.dart';
 import 'auth_data_source.dart';
-import 'user_storage.dart';
 
 class MockAuthDataSource implements AuthDataSource {
-  final _storage = UserStorage.instance;
+  // 단순한 메모리 저장소 - Firebase 스키마와 일치
+  static final Map<String, Map<String, dynamic>> _users = {};
+  static final Map<String, String> _passwords = {};
+  static final Map<String, List<Map<String, dynamic>>> _timerActivities = {};
+  static final Map<String, Map<String, dynamic>> _termsAgreements = {};
+  static String? _currentUserId;
+
+  // 기본 사용자 7명 초기화
+  static void _initializeDefaultUsers() {
+    if (_users.isNotEmpty) return;
+
+    final defaultUsers = [
+      {
+        'uid': 'user1',
+        'email': 'test1@example.com',
+        'nickname': '사용자1',
+        'image':
+            'https://i.pinimg.com/236x/31/fd/53/31fd53b6dc87e714783b5c52531ba6fb.jpg',
+        'description': '안녕하세요! 열심히 공부하고 있습니다.',
+        'onAir': false,
+        'position': '프론트엔드 개발자',
+        'skills': 'Flutter, React, JavaScript',
+        'streakDays': 7,
+        'agreedTermId': 'terms_001',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': true,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 30)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user2',
+        'email': 'test2@example.com',
+        'nickname': '사용자2',
+        'image': '',
+        'description': '백엔드 개발을 공부하고 있어요!',
+        'onAir': true,
+        'position': '백엔드 개발자',
+        'skills': 'Java, Spring, MySQL',
+        'streakDays': 12,
+        'agreedTermId': 'terms_002',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': false,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 25)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user3',
+        'email': 'test3@example.com',
+        'nickname': '사용자3',
+        'image': 'https://picsum.photos/200?random=3',
+        'description': '데이터 분석가가 되고 싶어요.',
+        'onAir': false,
+        'position': '데이터 분석가',
+        'skills': 'Python, Pandas, SQL',
+        'streakDays': 5,
+        'agreedTermId': 'terms_003',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': true,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 20)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user4',
+        'email': 'test4@example.com',
+        'nickname': '사용자4',
+        'image': 'https://picsum.photos/200?random=4',
+        'description': 'iOS 앱 개발을 배우고 있습니다.',
+        'onAir': true,
+        'position': 'iOS 개발자',
+        'skills': 'Swift, UIKit, SwiftUI',
+        'streakDays': 3,
+        'agreedTermId': 'terms_004',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': false,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 15)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user5',
+        'email': 'test5@example.com',
+        'nickname': '사용자5',
+        'image': 'https://picsum.photos/200?random=5',
+        'description': '풀스택 개발자를 목표로 하고 있어요.',
+        'onAir': false,
+        'position': '풀스택 개발자',
+        'skills': 'Vue.js, Node.js, MongoDB',
+        'streakDays': 15,
+        'agreedTermId': 'terms_005',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': true,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 40)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user6',
+        'email': 'admin@example.com',
+        'nickname': '관리자',
+        'image': 'https://picsum.photos/200?random=6',
+        'description': '서비스 관리자입니다.',
+        'onAir': true,
+        'position': '서비스 관리자',
+        'skills': 'DevOps, AWS, Docker',
+        'streakDays': 25,
+        'agreedTermId': 'terms_006',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': true,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 50)),
+        'joingroup': [],
+      },
+      {
+        'uid': 'user7',
+        'email': 'developer@example.com',
+        'nickname': '개발자',
+        'image': 'https://picsum.photos/200?random=7',
+        'description': '개발이 취미이자 직업입니다.',
+        'onAir': false,
+        'position': '시니어 개발자',
+        'skills': 'Python, Django, PostgreSQL',
+        'streakDays': 30,
+        'agreedTermId': 'terms_007',
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': false,
+        'agreedAt': DateTime.now().subtract(const Duration(days: 60)),
+        'joingroup': [],
+      },
+    ];
+
+    // 사용자 데이터 저장
+    for (final userData in defaultUsers) {
+      final uid = userData['uid'] as String;
+      _users[uid] = Map<String, dynamic>.from(userData);
+      _passwords[uid] = 'password123'; // 모든 사용자 동일한 비밀번호
+
+      // 타이머 활동 로그 초기화 (샘플 데이터 포함)
+      _timerActivities[uid] = _generateSampleTimerActivities(uid);
+    }
+  }
+
+  // 샘플 타이머 활동 데이터 생성
+  static List<Map<String, dynamic>> _generateSampleTimerActivities(
+    String userId,
+  ) {
+    final activities = <Map<String, dynamic>>[];
+    final now = DateTime.now();
+
+    // 최근 7일간의 샘플 활동 생성
+    for (int i = 0; i < 7; i++) {
+      final day = now.subtract(Duration(days: i));
+      final dayActivities = [60, 90, 45, 120, 75, 180, 30][i]; // 다양한 시간
+
+      activities.add({
+        'id': 'activity_${userId}_${day.millisecondsSinceEpoch}',
+        'memberId': userId,
+        'type': 'start',
+        'timestamp': day.subtract(Duration(minutes: dayActivities)),
+        'metadata': {'task': '집중 공부', 'device': 'mobile'},
+      });
+
+      activities.add({
+        'id': 'activity_${userId}_${day.millisecondsSinceEpoch}_end',
+        'memberId': userId,
+        'type': 'end',
+        'timestamp': day,
+        'metadata': {'task': '집중 공부', 'device': 'mobile'},
+      });
+    }
+
+    return activities;
+  }
 
   @override
   Future<Map<String, dynamic>> fetchLogin({
@@ -15,24 +188,28 @@ class MockAuthDataSource implements AuthDataSource {
     required String password,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 이메일을 소문자로 변환
     final lowercaseEmail = email.toLowerCase();
 
-    final user = _storage.getUserByEmail(lowercaseEmail);
+    // 이메일로 사용자 찾기
+    final userEntry = _users.entries.firstWhere(
+      (entry) => entry.value['email'] == lowercaseEmail,
+      orElse: () => throw Exception(AuthErrorMessages.loginFailed),
+    );
 
-    // 사용자 존재 확인 및 비밀번호 검증
-    if (user != null && _validatePassword(lowercaseEmail, password)) {
-      _storage.login(user.id!);
-      return user.toJson();
-    } else {
-      // 명확한 에러 메시지 사용
-      if (user == null) {
-        throw Exception('등록되지 않은 이메일입니다');
-      } else {
-        throw Exception('이메일 또는 비밀번호가 일치하지 않습니다');
-      }
+    final userId = userEntry.key;
+    final userData = userEntry.value;
+
+    // 비밀번호 확인
+    if (_passwords[userId] != password) {
+      throw Exception(AuthErrorMessages.loginFailed);
     }
+
+    // 로그인 상태 설정
+    _currentUserId = userId;
+
+    return Map<String, dynamic>.from(userData);
   }
 
   @override
@@ -43,146 +220,134 @@ class MockAuthDataSource implements AuthDataSource {
     String? agreedTermsId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 이메일을 소문자로 변환
     final lowercaseEmail = email.toLowerCase();
 
     // 약관 동의 확인
     if (agreedTermsId == null || agreedTermsId.isEmpty) {
-      throw Exception('필수 약관에 동의해야 합니다');
+      throw Exception(AuthErrorMessages.termsNotAgreed);
     }
 
-    // 중복 체크
-    if (!_storage.isEmailAvailable(lowercaseEmail)) {
-      throw Exception('이미 사용 중인 이메일입니다');
+    // 이메일 중복 확인
+    final emailExists = _users.values.any(
+      (user) => user['email'] == lowercaseEmail,
+    );
+    if (emailExists) {
+      throw Exception(AuthErrorMessages.emailAlreadyInUse);
     }
 
-    if (!_storage.isNicknameAvailable(nickname)) {
-      throw Exception('이미 사용 중인 닉네임입니다');
-    }
-
-    // 닉네임 유효성 검사
-    if (nickname.length < 2) {
-      throw Exception('닉네임은 2자 이상이어야 합니다');
-    }
-
-    if (nickname.length > 10) {
-      throw Exception('닉네임은 10자 이하여야 합니다');
-    }
-
-    if (!RegExp(r'^[a-zA-Z0-9가-힣]+$').hasMatch(nickname)) {
-      throw Exception('닉네임은 한글, 영문, 숫자만 사용 가능합니다');
+    // 닉네임 중복 확인
+    final nicknameExists = _users.values.any(
+      (user) => user['nickname'] == nickname,
+    );
+    if (nicknameExists) {
+      throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
     }
 
     // 새 사용자 생성
     final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
-    final userDto = UserDto(
-      id: userId,
-      email: lowercaseEmail, // 소문자로 변환된 이메일 저장
-      nickname: nickname,
-      uid: 'uid_$userId',
-      agreedTermsId: agreedTermsId,
-    );
+    final userData = {
+      'uid': userId,
+      'email': lowercaseEmail,
+      'nickname': nickname,
+      'image': '',
+      'description': '',
+      'onAir': false,
+      'position': '',
+      'skills': '',
+      'streakDays': 0,
+      'agreedTermId': agreedTermsId,
+      'isServiceTermsAgreed': true,
+      'isPrivacyPolicyAgreed': true,
+      'isMarketingAgreed': false,
+      'agreedAt': DateTime.now(),
+      'joingroup': <Map<String, dynamic>>[],
+    };
 
-    final profileDto = ProfileDto(userId: userId, image: '', onAir: false);
+    _users[userId] = userData;
+    _passwords[userId] = password;
+    _timerActivities[userId] = [];
 
-    // 비밀번호는 별도 저장 (여기서는 간단히 구현)
-    _storage.addUser(
-      userDto,
-      profileDto,
-      password,
-      agreedTermsId: agreedTermsId,
-    );
-
-    return userDto.toJson();
+    return Map<String, dynamic>.from(userData);
   }
 
   @override
   Future<Map<String, dynamic>?> fetchCurrentUser() async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    final currentUser = _storage.currentUser;
-    return currentUser?.toJson();
+    if (_currentUserId == null) return null;
+
+    final userData = _users[_currentUserId];
+    return userData != null ? Map<String, dynamic>.from(userData) : null;
   }
 
   @override
   Future<void> signOut() async {
     await Future.delayed(const Duration(milliseconds: 300));
-    _storage.logout();
+    _currentUserId = null;
   }
 
   @override
   Future<bool> checkNicknameAvailability(String nickname) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 닉네임 유효성 검사 추가
-    if (nickname.length < 2) {
-      throw Exception('닉네임은 2자 이상이어야 합니다');
-    }
-
-    if (nickname.length > 10) {
-      throw Exception('닉네임은 10자 이하여야 합니다');
-    }
-
-    if (!RegExp(r'^[a-zA-Z0-9가-힣]+$').hasMatch(nickname)) {
-      throw Exception('닉네임은 한글, 영문, 숫자만 사용 가능합니다');
-    }
-
-    return _storage.isNicknameAvailable(nickname);
+    return !_users.values.any((user) => user['nickname'] == nickname);
   }
 
   @override
   Future<bool> checkEmailAvailability(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 이메일 형식 유효성 검사
-    if (!email.contains('@') || !email.contains('.')) {
-      throw Exception('유효하지 않은 이메일 형식입니다');
-    }
-
-    // 이메일을 소문자로 변환하여 확인
-    return _storage.isEmailAvailable(email.toLowerCase());
+    final lowercaseEmail = email.toLowerCase();
+    return !_users.values.any((user) => user['email'] == lowercaseEmail);
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 이메일 형식 확인
-    if (!email.contains('@') || !email.contains('.')) {
-      throw Exception('유효하지 않은 이메일 형식입니다');
-    }
-
-    // 이메일을 소문자로 변환
     final lowercaseEmail = email.toLowerCase();
+    final emailExists = _users.values.any(
+      (user) => user['email'] == lowercaseEmail,
+    );
 
-    // 가입된 이메일인지 확인
-    final user = _storage.getUserByEmail(lowercaseEmail);
-    if (user == null) {
-      throw Exception('등록되지 않은 이메일입니다');
+    if (!emailExists) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
     }
 
-    // 성공 시 void 반환 (실제로는 이메일 전송)
+    // Mock: 실제로는 이메일 전송
   }
 
   @override
   Future<void> deleteAccount(String email) async {
     await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
 
-    // 이메일을 소문자로 변환
     final lowercaseEmail = email.toLowerCase();
 
-    final user = _storage.getUserByEmail(lowercaseEmail);
-    if (user == null) {
-      throw Exception('사용자를 찾을 수 없습니다');
-    }
+    // 사용자 찾기
+    final userEntry = _users.entries.firstWhere(
+      (entry) => entry.value['email'] == lowercaseEmail,
+      orElse: () => throw Exception(AuthErrorMessages.userDataNotFound),
+    );
+
+    final userId = userEntry.key;
 
     // 현재 로그인된 사용자인지 확인
-    if (_storage.currentUserId != user.id) {
-      throw Exception('로그인된 사용자만 계정을 삭제할 수 있습니다');
+    if (_currentUserId != userId) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
     }
 
-    _storage.deleteUser(lowercaseEmail);
+    // 사용자 데이터 삭제
+    _users.remove(userId);
+    _passwords.remove(userId);
+    _timerActivities.remove(userId);
+    _currentUserId = null;
   }
 
   @override
@@ -198,50 +363,60 @@ class MockAuthDataSource implements AuthDataSource {
         termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
 
     if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
-      throw Exception('필수 약관에 동의해야 합니다');
+      throw Exception(AuthErrorMessages.termsNotAgreed);
     }
 
-    return _storage.saveTermsAgreement(termsData);
+    // 타임스탬프 추가
+    termsData['agreedAt'] = DateTime.now();
+    final termsId = termsData['id'] as String;
+    _termsAgreements[termsId] = Map<String, dynamic>.from(termsData);
+
+    return Map<String, dynamic>.from(termsData);
   }
 
   @override
   Future<Map<String, dynamic>> fetchTermsInfo() async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    try {
-      // 기본 약관 정보 반환
-      return {
-        'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
-        'isAllAgreed': false,
-        'isServiceTermsAgreed': false,
-        'isPrivacyPolicyAgreed': false,
-        'isMarketingAgreed': false,
-        'createdAt': DateTime.now().toIso8601String(),
-      };
-    } catch (e) {
-      throw Exception('약관 정보를 불러오는데 실패했습니다');
-    }
+    return {
+      'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
+      'isAllAgreed': false,
+      'isServiceTermsAgreed': false,
+      'isPrivacyPolicyAgreed': false,
+      'isMarketingAgreed': false,
+      'agreedAt': DateTime.now(),
+    };
   }
 
   @override
   Future<Map<String, dynamic>?> getTermsInfo(String termsId) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    try {
-      final termsInfo = _storage.getTermsInfo(termsId);
-      if (termsInfo == null) {
-        throw Exception('약관 정보를 찾을 수 없습니다');
-      }
-      return termsInfo;
-    } catch (e) {
-      throw Exception('약관 정보를 불러오는데 실패했습니다');
-    }
+    final termsInfo = _termsAgreements[termsId];
+    return termsInfo != null ? Map<String, dynamic>.from(termsInfo) : null;
   }
 
-  // 비밀번호 검증 메서드
-  bool _validatePassword(String email, String password) {
-    // UserStorage에서 실제 비밀번호 검증
-    // 이메일을 소문자로 변환하여 검증
-    return _storage.validatePassword(email.toLowerCase(), password);
+  @override
+  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
+
+    final activities = _timerActivities[userId] ?? [];
+    return activities
+        .map((activity) => Map<String, dynamic>.from(activity))
+        .toList();
+  }
+
+  @override
+  Future<void> saveTimerActivity(
+    String userId,
+    Map<String, dynamic> activityData,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
+
+    final activities = _timerActivities[userId] ?? [];
+    activities.add(Map<String, dynamic>.from(activityData));
+    _timerActivities[userId] = activities;
   }
 }
