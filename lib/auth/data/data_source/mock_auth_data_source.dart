@@ -419,4 +419,68 @@ class MockAuthDataSource implements AuthDataSource {
     activities.add(Map<String, dynamic>.from(activityData));
     _timerActivities[userId] = activities;
   }
+  // lib/auth/data/data_source/mock_auth_data_source.dart의 끝부분에 추가
+
+  @override
+  Future<Map<String, dynamic>> updateUser({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
+
+    if (_currentUserId == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+
+    final currentUser = _users[_currentUserId];
+    if (currentUser == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
+
+    // 현재 닉네임과 다른 경우에만 중복 확인
+    final currentNickname = currentUser['nickname'] as String?;
+    if (currentNickname != nickname) {
+      final nicknameAvailable = await checkNicknameAvailability(nickname);
+      if (!nicknameAvailable) {
+        throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
+      }
+    }
+
+    // 사용자 정보 업데이트
+    final updatedUser = Map<String, dynamic>.from(currentUser);
+    updatedUser['nickname'] = nickname;
+    updatedUser['description'] = description ?? '';
+    updatedUser['position'] = position ?? '';
+    updatedUser['skills'] = skills ?? '';
+
+    _users[_currentUserId!] = updatedUser;
+
+    return Map<String, dynamic>.from(updatedUser);
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateUserImage(String imagePath) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _initializeDefaultUsers();
+
+    if (_currentUserId == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+
+    final currentUser = _users[_currentUserId];
+    if (currentUser == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
+
+    // 이미지 경로 업데이트
+    final updatedUser = Map<String, dynamic>.from(currentUser);
+    updatedUser['image'] = imagePath;
+
+    _users[_currentUserId!] = updatedUser;
+
+    return Map<String, dynamic>.from(updatedUser);
+  }
 }

@@ -51,4 +51,15 @@ abstract interface class AuthDataSource {
     String userId,
     Map<String, dynamic> activityData,
   );
+
+  /// 사용자 정보 업데이트
+  Future<Map<String, dynamic>> updateUser({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  });
+
+  /// 사용자 이미지 업데이트
+  Future<Map<String, dynamic>> updateUserImage(String imagePath);
 }
