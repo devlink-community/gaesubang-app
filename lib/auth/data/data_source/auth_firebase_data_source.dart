@@ -2,7 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart'
     show AuthErrorMessages;
-import 'package:devlink_mobile_app/core/utils/auth_exception_mapper.dart';
+import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'auth_data_source.dart';
@@ -72,8 +72,8 @@ class AuthFirebaseDataSource implements AuthDataSource {
     String? agreedTermsId,
   }) async {
     // 유효성 검사
-    AuthExceptionMapper.validateEmail(email);
-    AuthExceptionMapper.validateNickname(nickname);
+    AuthValidator.validateEmailFormat(email);
+    AuthValidator.validateNicknameFormat(nickname);
 
     // 약관 동의 확인
     if (agreedTermsId == null || agreedTermsId.isEmpty) {
@@ -166,7 +166,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
   @override
   Future<bool> checkNicknameAvailability(String nickname) async {
     // 유효성 검사
-    AuthExceptionMapper.validateNickname(nickname);
+    AuthValidator.validateNicknameFormat(nickname);
 
     // Firestore에서 닉네임 중복 확인
     final query =
@@ -181,7 +181,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
   @override
   Future<bool> checkEmailAvailability(String email) async {
     // 유효성 검사
-    AuthExceptionMapper.validateEmail(email);
+    AuthValidator.validateEmailFormat(email);
 
     // Firestore에서 직접 이메일 중복 확인
     final query =
@@ -196,7 +196,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
   @override
   Future<void> sendPasswordResetEmail(String email) async {
     // 유효성 검사
-    AuthExceptionMapper.validateEmail(email);
+    AuthValidator.validateEmailFormat(email);
 
     await _auth.sendPasswordResetEmail(email: email.toLowerCase());
   }
@@ -225,7 +225,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
     final isPrivacyPolicyAgreed =
         termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
 
-    AuthExceptionMapper.validateRequiredTerms(
+    AuthValidator.validateRequiredTerms(
       isServiceTermsAgreed: isServiceTermsAgreed,
       isPrivacyPolicyAgreed: isPrivacyPolicyAgreed,
     );
@@ -308,5 +308,99 @@ class AuthFirebaseDataSource implements AuthDataSource {
                 : activityData['timestamp'],
       });
     }
+  }
+  // lib/auth/data/data_source/auth_firebase_data_source.dart의 끝부분에 추가
+
+  @override
+  Future<Map<String, dynamic>> updateUser({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+
+    // 닉네임 유효성 검사
+    AuthValidator.validateNicknameFormat(nickname);
+
+    // 현재 닉네임과 다른 경우에만 중복 확인
+    final currentUserDoc = await _usersCollection.doc(user.uid).get();
+    final currentNickname = currentUserDoc.data()?['nickname'] as String?;
+
+    if (currentNickname != nickname) {
+      final nicknameAvailable = await checkNicknameAvailability(nickname);
+      if (!nicknameAvailable) {
+        throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
+      }
+    }
+
+    // Firestore에 사용자 정보 업데이트
+    final updateData = {
+      'nickname': nickname,
+      'description': description ?? '',
+      'position': position ?? '',
+      'skills': skills ?? '',
+    };
+
+    await _usersCollection.doc(user.uid).update(updateData);
+
+    // 업데이트된 사용자 정보 반환
+    final updatedDoc = await _usersCollection.doc(user.uid).get();
+    final userData = updatedDoc.data()!;
+
+    return {
+      'uid': user.uid,
+      'email': userData['email'] ?? user.email,
+      'nickname': userData['nickname'] ?? '',
+      'image': userData['image'] ?? '',
+      'description': userData['description'] ?? '',
+      'onAir': userData['onAir'] ?? false,
+      'position': userData['position'] ?? '',
+      'skills': userData['skills'] ?? '',
+      'streakDays': userData['streakDays'] ?? 0,
+      'agreedTermId': userData['agreedTermId'],
+      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
+      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
+      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
+      'agreedAt': userData['agreedAt'],
+      'joingroup': userData['joingroup'] ?? [],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateUserImage(String imagePath) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+
+    // Firebase Storage에 이미지 업로드 로직은 현재 미구현
+    // 임시로 로컬 파일 경로를 저장
+    await _usersCollection.doc(user.uid).update({'image': imagePath});
+
+    // 업데이트된 사용자 정보 반환
+    final updatedDoc = await _usersCollection.doc(user.uid).get();
+    final userData = updatedDoc.data()!;
+
+    return {
+      'uid': user.uid,
+      'email': userData['email'] ?? user.email,
+      'nickname': userData['nickname'] ?? '',
+      'image': userData['image'] ?? '',
+      'description': userData['description'] ?? '',
+      'onAir': userData['onAir'] ?? false,
+      'position': userData['position'] ?? '',
+      'skills': userData['skills'] ?? '',
+      'streakDays': userData['streakDays'] ?? 0,
+      'agreedTermId': userData['agreedTermId'],
+      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
+      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
+      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
+      'agreedAt': userData['agreedAt'],
+      'joingroup': userData['joingroup'] ?? [],
+    };
   }
 }

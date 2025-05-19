@@ -52,4 +52,15 @@ abstract interface class AuthRepository {
     String userId,
     TimerActivityDto activity,
   );
+
+  /// 프로필 정보 업데이트
+  Future<Result<Member>> updateProfile({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  });
+
+  /// 프로필 이미지 업데이트
+  Future<Result<Member>> updateProfileImage(String imagePath);
 }

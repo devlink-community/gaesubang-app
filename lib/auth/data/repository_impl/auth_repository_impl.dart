@@ -254,4 +254,47 @@ class AuthRepositoryImpl implements AuthRepository {
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
+  // lib/auth/data/repository_impl/auth_repository_impl.dart의 끝부분에 추가
+
+  @override
+  Future<Result<Member>> updateProfile({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  }) async {
+    try {
+      final response = await _authDataSource.updateUser(
+        nickname: nickname,
+        description: description,
+        position: position,
+        skills: skills,
+      );
+
+      // Map을 직접 Member로 변환
+      final member = response.toMember();
+
+      return Result.success(member);
+    } catch (e, st) {
+      debugPrint('프로필 업데이트 에러: $e');
+      debugPrint('StackTrace: $st');
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+    }
+  }
+
+  @override
+  Future<Result<Member>> updateProfileImage(String imagePath) async {
+    try {
+      final response = await _authDataSource.updateUserImage(imagePath);
+
+      // Map을 직접 Member로 변환
+      final member = response.toMember();
+
+      return Result.success(member);
+    } catch (e, st) {
+      debugPrint('프로필 이미지 업데이트 에러: $e');
+      debugPrint('StackTrace: $st');
+      return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+    }
+  }
 }

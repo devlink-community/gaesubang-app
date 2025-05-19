@@ -108,4 +108,14 @@ class AuthValidator {
       throw Exception(error);
     }
   }
+
+  /// 필수 약관 동의 검증 (Exception throw 버전) - DataSource에서 사용
+  static void validateRequiredTerms({
+    required bool isServiceTermsAgreed,
+    required bool isPrivacyPolicyAgreed,
+  }) {
+    if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
+      throw Exception(AuthErrorMessages.termsNotAgreed);
+    }
+  }
 }
