@@ -36,111 +36,48 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     return 'https://api.dicebear.com/7.x/$style/png?seed=$seed&size=200';
   }
 
-  // 기본 사용자 목록 (제공된 초기화 데이터와 일치)
-  final List<Map<String, dynamic>> _defaultUsers = [
-    {
-      'user': UserDto(
-        id: 'user1',
-        email: 'test1@example.com'.toLowerCase(),
-        nickname: '사용자1',
-        uid: 'uid1',
-      ),
-      'profile': ProfileDto(
-        userId: 'user1',
-        image: 'https://randomuser.me/api/portraits/men/1.jpg',
-        onAir: false,
-      ),
-      'password': 'password123',
-    },
-    {
-      'user': UserDto(
-        id: 'user2',
-        email: 'test2@example.com'.toLowerCase(),
-        nickname: '사용자2',
-        uid: 'uid2',
-      ),
-      'profile': ProfileDto(
-        userId: 'user2',
-        image: 'https://randomuser.me/api/portraits/women/2.jpg',
-        onAir: true,
-      ),
-      'password': 'password123',
-    },
-    {
-      'user': UserDto(
-        id: 'user3',
-        email: 'test3@example.com'.toLowerCase(),
-        nickname: '사용자3',
-        uid: 'uid3',
-      ),
-      'profile': ProfileDto(
-        userId: 'user3',
-        image: 'https://randomuser.me/api/portraits/men/3.jpg',
-        onAir: false,
-      ),
-      'password': 'password123',
-    },
-    {
-      'user': UserDto(
-        id: 'user4',
-        email: 'test4@example.com'.toLowerCase(),
-        nickname: '사용자4',
-        uid: 'uid4',
-      ),
-      'profile': ProfileDto(
-        userId: 'user4',
-        image: 'https://randomuser.me/api/portraits/women/4.jpg',
-        onAir: true,
-      ),
-      'password': 'password123',
-    },
-    {
-      'user': UserDto(
-        id: 'user5',
-        email: 'test5@example.com'.toLowerCase(),
-        nickname: '사용자5',
-        uid: 'uid5',
-      ),
-      'profile': ProfileDto(
-        userId: 'user5',
-        image: 'https://randomuser.me/api/portraits/men/5.jpg',
-        onAir: false,
-      ),
-      'password': 'password123',
-    },
-    {
-      'user': UserDto(
-        id: 'user6',
-        email: 'admin@example.com'.toLowerCase(),
-        nickname: '관리자',
-        uid: 'uid6',
-      ),
-      'profile': ProfileDto(
-        userId: 'user6',
-        image: 'https://randomuser.me/api/portraits/women/6.jpg',
-        onAir: true,
-      ),
-      'password': 'admin123',
-    },
-    {
-      'user': UserDto(
-        id: 'user7',
-        email: 'developer@example.com'.toLowerCase(),
-        nickname: '개발자',
-        uid: 'uid7',
-      ),
-      'profile': ProfileDto(
-        userId: 'user7',
-        image: 'https://randomuser.me/api/portraits/men/7.jpg',
-        onAir: true,
-      ),
-      'password': 'dev123',
-    },
-  ];
+  // 기본 사용자 데이터 생성 헬퍼
+  MemberDto _createMockMember(
+    String id,
+    String nickname, {
+    bool onAir = false,
+  }) {
+    final profileImages = [
+      'https://randomuser.me/api/portraits/men/1.jpg',
+      'https://randomuser.me/api/portraits/women/2.jpg',
+      'https://randomuser.me/api/portraits/men/3.jpg',
+      'https://randomuser.me/api/portraits/women/4.jpg',
+      'https://randomuser.me/api/portraits/men/5.jpg',
+      'https://randomuser.me/api/portraits/women/6.jpg',
+      'https://randomuser.me/api/portraits/men/7.jpg',
+    ];
+
+    final imageIndex = id.hashCode % profileImages.length;
+
+    return MemberDto(
+      id: id,
+      email: '${id}@example.com',
+      nickname: nickname,
+      uid: 'uid_$id',
+      image: profileImages[imageIndex],
+      onAir: onAir,
+    );
+  }
 
   // Mock 데이터 초기화
   Future<void> _initializeIfNeeded() async {
     if (_initialized) return;
+
+    // 기본 사용자 목록 생성
+    final mockUsers = [
+      _createMockMember('user1', '사용자1', onAir: false),
+      _createMockMember('user2', '사용자2', onAir: true),
+      _createMockMember('user3', '사용자3', onAir: false),
+      _createMockMember('user4', '사용자4', onAir: true),
+      _createMockMember('user5', '사용자5', onAir: false),
+      _createMockMember('user6', '관리자', onAir: true),
+      _createMockMember('user7', '개발자', onAir: true),
+    ];
 
     // 초기 15개 그룹 생성 및 저장
     _groups.addAll(
@@ -159,28 +96,20 @@ class MockGroupDataSourceImpl implements GroupDataSource {
           Duration(days: _random.nextInt(30)),
         ); // 생성일 이후 최대 30일 후
 
-        // 그룹 소유자 - 실제 기본 사용자 중 하나를 선택
-        final ownerData = _defaultUsers[i % _defaultUsers.length]; // 순환하며 선택
-        final ownerUser = ownerData['user'] as UserDto;
-        final ownerProfile = ownerData['profile'] as ProfileDto;
-        final owner = _userToMember(ownerUser, ownerProfile);
+        // 그룹 소유자 - 기본 사용자 중 하나를 선택
+        final owner = mockUsers[i % mockUsers.length]; // 순환하며 선택
 
         // 멤버 목록 생성 (소유자 포함)
         final members = <MemberDto>[owner];
 
-        // 소유자를 제외한 추가 멤버 (기본 사용자 풀에서 선택)
-        final availableUsers = List<Map<String, dynamic>>.from(_defaultUsers);
-        availableUsers.removeWhere(
-          (userData) => userData['user'].id == owner.id,
-        ); // 소유자 제외
+        // 소유자를 제외한 추가 멤버 선택
+        final availableUsers = List<MemberDto>.from(mockUsers);
+        availableUsers.removeWhere((user) => user.id == owner.id); // 소유자 제외
 
         // 랜덤하게 추가 멤버 선택
         availableUsers.shuffle(_random);
         for (int j = 0; j < min(memberCount - 1, availableUsers.length); j++) {
-          final userData = availableUsers[j];
-          final user = userData['user'] as UserDto;
-          final profile = userData['profile'] as ProfileDto;
-          members.add(_userToMember(user, profile));
+          members.add(availableUsers[j]);
         }
 
         // 해시태그 생성
@@ -221,7 +150,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
           limitMemberCount: limitMemberCount,
           owner: owner,
           imageUrl: imageUrl,
-          // DiceBear API 이미지 URL 사용
           createdAt: _dateFormat.format(createdDate),
           updatedAt: _dateFormat.format(updatedDate),
         );
@@ -229,18 +157,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     );
 
     _initialized = true;
-  }
-
-  // UserDto에서 MemberDto로 변환하는 헬퍼 메서드
-  MemberDto _userToMember(UserDto user, ProfileDto profile) {
-    return MemberDto(
-      id: user.id,
-      email: user.email,
-      nickname: user.nickname,
-      uid: user.uid,
-      image: profile.image,
-      onAir: profile.onAir,
-    );
   }
 
   @override
@@ -334,14 +250,10 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       name: groupDto.name,
       description: groupDto.description,
       members: groupDto.members ?? [],
-      // null 방지
       hashTags: groupDto.hashTags ?? [],
-      // null 방지
       limitMemberCount: groupDto.limitMemberCount?.toInt() ?? 10,
-      // 기본값 제공
       owner: groupDto.owner,
       imageUrl: imageUrl,
-      // DiceBear API로 생성된 이미지 URL
       createdAt: _dateFormat.format(now),
       updatedAt: _dateFormat.format(now),
     );
@@ -397,39 +309,5 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 여기서 사용자를 그룹에서 제거하는 로직 구현 가능
     // (현재는 간단한 성공만 시뮬레이션)
     print('🔍 Left group: $groupId');
-  }
-
-  Future<List<GroupDto>> searchGroups(String query) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _initializeIfNeeded();
-
-    // 쿼리 전처리 (소문자로 변환하여 대소문자 구분 없게)
-    final queryLower = query.toLowerCase();
-
-    // 이름, 설명, 해시태그에서 검색어 포함 여부 확인
-    final filtered =
-        _groups.where((group) {
-          // 이름에서 검색
-          if ((group.name ?? '').toLowerCase().contains(queryLower)) {
-            return true;
-          }
-
-          // 설명에서 검색
-          if ((group.description ?? '').toLowerCase().contains(queryLower)) {
-            return true;
-          }
-
-          // 해시태그에서 검색
-          if (group.hashTags?.any(
-                (tag) => (tag.content ?? '').toLowerCase().contains(queryLower),
-              ) ??
-              false) {
-            return true;
-          }
-
-          return false;
-        }).toList();
-
-    return filtered;
   }
 }
