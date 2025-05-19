@@ -81,7 +81,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
               child: Container(
                 width: double.infinity,
                 height: double.infinity,
-                color: Colors.black.withOpacity(0.3), // 반투명 배경 추가
+                color: Colors.black.withValues(alpha: 0.3), // 반투명 배경 추가
                 child: Stack(
                   children: [
                     // 드롭다운 메뉴
@@ -116,7 +116,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 15,
                     spreadRadius: 0,
                     offset: const Offset(0, 4),
@@ -140,7 +140,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                     Divider(
                       height: 1,
                       thickness: 1,
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                     ),
                   if (widget.onCreateGroup != null)
                     _buildMenuItem(
@@ -172,7 +172,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
+            color: Colors.black.withValues(
+              alpha: 0.04,
+            ), // withOpacity → withValues
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, -1),
@@ -186,7 +188,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
           Container(
             height: 1,
             width: double.infinity,
-            color: Colors.grey.withAlpha(20),
+            color: Colors.grey.withValues(
+              alpha: 0.08,
+            ), // withOpacity → withValues
           ),
           // 내비게이션 바
           SafeArea(
@@ -201,7 +205,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                   // 중앙 버튼
                   _buildCenterButton(),
                   _buildNavItem(3, LineIcons.userFriends),
-                  // ProfileTabButton 사용
+                  // ProfileTabButton 사용 (수정된 부분)
                   ProfileTabButton(
                     isSelected: widget.currentIndex == 4,
                     profileImageUrl: widget.profileImageUrl,
@@ -239,7 +243,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: AppColorStyles.primary100.withOpacity(0.3),
+              color: AppColorStyles.primary100.withValues(
+                alpha: 0.3,
+              ), // withOpacity → withValues
               blurRadius: 8,
               spreadRadius: 1,
               offset: const Offset(0, 2),
@@ -284,7 +290,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(
+                  alpha: 0.03,
+                ), // withOpacity → withValues
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: Colors.black, size: 20),
