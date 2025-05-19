@@ -1,5 +1,7 @@
-import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
+
+import '../../../core/utils/firebase_timestamp_converter.dart';
+import 'joined_group_dto.dart';
 
 part 'user_dto.g.dart';
 
@@ -33,7 +35,7 @@ class UserDto {
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? agreedAt;
-  final List<Map<String, dynamic>>? joingroup;
+  final List<JoinedGroupDto>? joingroup;
 
   factory UserDto.fromJson(Map<String, dynamic> json) =>
       _$UserDtoFromJson(json);
