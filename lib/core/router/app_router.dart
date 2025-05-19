@@ -20,7 +20,6 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/map/presentation/map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_edit/mock_profile_edit_screen.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_screen_root.dart';
 import 'package:flutter/material.dart';
@@ -235,10 +234,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/forgot-password-2',
         builder: (context, state) => const ForgotPasswordScreenRoot2(),
-      ),
-      GoRoute(
-        path: '/profile-edit-demo',
-        builder: (context, state) => const MockProfileEditScreen(),
       ),
       GoRoute(
         path: '/user/:id/profile',
