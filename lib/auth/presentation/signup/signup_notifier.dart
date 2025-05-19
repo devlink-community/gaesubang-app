@@ -10,6 +10,7 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -205,7 +206,7 @@ class SignupNotifier extends _$SignupNotifier {
           // 실패 시 체크박스 상태를 원래대로 되돌림
           state = state.copyWith(
             agreeToTerms: false,
-            formErrorMessage: '약관 동의 처리에 실패했습니다. 직접 약관 화면에서 동의해주세요.',
+            formErrorMessage: AuthErrorMessages.termsProcessFailed,
           );
         }
       }
@@ -214,7 +215,7 @@ class SignupNotifier extends _$SignupNotifier {
       // 오류 발생 시 체크박스 상태를 원래대로 되돌림
       state = state.copyWith(
         agreeToTerms: false,
-        formErrorMessage: '약관 동의 처리 중 오류가 발생했습니다. 직접 약관 화면에서 동의해주세요.',
+        formErrorMessage: AuthErrorMessages.termsProcessError,
       );
     }
   }
@@ -237,13 +238,15 @@ class SignupNotifier extends _$SignupNotifier {
       state = state.copyWith(
         nicknameAvailability: result,
         nicknameError: null,
-        nicknameSuccess: '사용 가능한 닉네임입니다',
+        nicknameSuccess: AuthErrorMessages.nicknameSuccess,
         formErrorMessage: null,
       );
     } else {
       // 사용 불가능하거나 에러가 발생한 경우
       final errorMessage =
-          result.hasError ? '닉네임 중복 확인 중 오류가 발생했습니다' : '이미 사용 중인 닉네임입니다';
+          result.hasError
+              ? AuthErrorMessages.nicknameCheckFailed
+              : AuthErrorMessages.nicknameAlreadyInUse;
 
       state = state.copyWith(
         nicknameAvailability: result,
@@ -275,14 +278,14 @@ class SignupNotifier extends _$SignupNotifier {
       state = state.copyWith(
         emailAvailability: result,
         emailError: null,
-        emailSuccess: '사용 가능한 이메일입니다',
+        emailSuccess: AuthErrorMessages.emailSuccess,
         formErrorMessage: null,
       );
     } else if (result.hasValue && result.value == false) {
       // 사용 불가능한 경우 (중복된 이메일)
       state = state.copyWith(
         emailAvailability: result,
-        emailError: '이미 사용 중인 이메일입니다',
+        emailError: AuthErrorMessages.emailAlreadyInUse,
         emailSuccess: null,
         formErrorMessage: null,
       );
@@ -334,7 +337,9 @@ class SignupNotifier extends _$SignupNotifier {
         emailError != null ||
         passwordError != null ||
         passwordConfirmError != null) {
-      state = state.copyWith(formErrorMessage: '입력 정보를 확인해주세요');
+      state = state.copyWith(
+        formErrorMessage: AuthErrorMessages.formValidationFailed,
+      );
       return;
     }
 
@@ -350,7 +355,9 @@ class SignupNotifier extends _$SignupNotifier {
     // 중복 확인 결과가 유효하지 않으면 회원가입 진행 중단
     if (state.nicknameAvailability?.value != true ||
         state.emailAvailability?.value != true) {
-      state = state.copyWith(formErrorMessage: '닉네임 또는 이메일 중복을 확인해주세요');
+      state = state.copyWith(
+        formErrorMessage: AuthErrorMessages.duplicateCheckRequired,
+      );
       return;
     }
 
@@ -370,7 +377,7 @@ class SignupNotifier extends _$SignupNotifier {
     // 회원가입 결과 처리
     if (result.hasError) {
       final error = result.error;
-      String errorMessage = '회원가입에 실패했습니다';
+      String errorMessage = AuthErrorMessages.accountCreationFailed;
 
       // 에러 타입에 따른 사용자 친화적 메시지 처리
       if (error is Failure) {
@@ -379,10 +386,10 @@ class SignupNotifier extends _$SignupNotifier {
             errorMessage = error.message;
             break;
           case FailureType.network:
-            errorMessage = '네트워크 연결을 확인해주세요';
+            errorMessage = AuthErrorMessages.networkError;
             break;
           case FailureType.timeout:
-            errorMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+            errorMessage = AuthErrorMessages.timeoutError;
             break;
           default:
             errorMessage = error.message;
