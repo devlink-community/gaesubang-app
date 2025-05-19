@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'profile_edit_action.dart';
-
 class ProfileEditScreenRoot extends ConsumerStatefulWidget {
   const ProfileEditScreenRoot({super.key});
 
@@ -16,16 +14,11 @@ class ProfileEditScreenRoot extends ConsumerStatefulWidget {
 }
 
 class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
-  // 저장 버튼 클릭 추적을 위한 변수
-  bool _saveButtonPressed = false;
-
   @override
   void initState() {
     super.initState();
-    // 미세한 지연을 두고 프로필 로드 시작
-    Future.microtask(() {
-      ref.read(profileEditNotifierProvider.notifier).loadProfile();
-    });
+    // 프로필 로드 시작
+    ref.read(profileEditNotifierProvider.notifier).loadProfile();
   }
 
   @override
@@ -33,53 +26,32 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     final state = ref.watch(profileEditNotifierProvider);
     final notifier = ref.watch(profileEditNotifierProvider.notifier);
 
-    // 로딩 상태 감시
-    ref.listen(profileEditNotifierProvider.select((s) => s.isLoading), (
+    // 성공 시 처리
+    ref.listen(profileEditNotifierProvider.select((s) => s.isSuccess), (
       previous,
       current,
     ) {
-      // 로딩이 끝났고 (이전에 로딩 중이었고, 현재는 아님) 저장 버튼을 눌렀던 경우
-      if (previous == true && current == false && _saveButtonPressed) {
-        // 저장 버튼 상태 초기화
-        _saveButtonPressed = false;
-
-        // 성공 여부 확인
-        if (state.isSuccess && !state.isError) {
-          // 토스트 메시지 표시
-          _showSuccessMessage(context);
-
-          // 약간의 지연 후 화면 전환
-          Future.delayed(const Duration(milliseconds: 600), () {
-            // IntroNotifierProvider 무효화 - 프로필 화면이 다시 로드되도록 함
-            ref.invalidate(profileNotifierProvider);
-
-            // 프로필 화면으로 이동
-            context.go('/profile');
-          });
-        } else if (state.isError) {
-          // 에러 시 에러 메시지 표시
-          _showErrorMessage(context, state.errorMessage ?? '프로필 저장 실패');
-        }
+      if (current && !state.isLoading) {
+        _showSuccessMessage(context);
+        // 프로필 화면 새로고침 후 이동
+        ref.invalidate(profileNotifierProvider);
+        context.go('/profile');
       }
     });
 
-    return ProfileEditScreen(
-      state: state,
-      onAction: (action) async {
-        switch (action) {
-          case OnSave():
-            // 저장 버튼이 눌렸음을 표시
-            _saveButtonPressed = true;
-            await notifier.onAction(action);
-            break;
-          default:
-            await notifier.onAction(action);
-        }
-      },
-    );
+    // 에러 시 처리
+    ref.listen(profileEditNotifierProvider.select((s) => s.hasError), (
+      previous,
+      current,
+    ) {
+      if (current) {
+        _showErrorMessage(context, state.errorMessage ?? '프로필 저장 실패');
+      }
+    });
+
+    return ProfileEditScreen(state: state, onAction: notifier.onAction);
   }
 
-  // 성공 메시지 표시 메서드
   void _showSuccessMessage(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -90,7 +62,6 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     );
   }
 
-  // 에러 메시지 표시 메서드
   void _showErrorMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

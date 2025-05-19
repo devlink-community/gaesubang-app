@@ -23,17 +23,8 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot> {
 
   // 필요한 경우에만 데이터 새로고침
   void _maybeRefreshData() {
-    // Provider 상태를 먼저 확인
-    final ProfileState = ref.read(profileNotifierProvider);
-
-    // 로딩 중이 아니고 에러가 있거나 데이터가 없는 경우만 새로고침
-    if (!ProfileState.isLoading &&
-        (ProfileState.hasError || !ProfileState.hasValue)) {
-      debugPrint('프로필 화면 데이터 새로고침 필요');
-      _refreshData();
-    } else {
-      debugPrint('프로필 화면 데이터 이미 로드됨');
-    }
+    // 필요에 따라 새로고침 로직 추가
+    // 현재는 build()에서 자동으로 로드되므로 생략
   }
 
   // 프로필 화면 데이터 새로고침
@@ -48,32 +39,22 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot> {
     final notifier = ref.watch(profileNotifierProvider.notifier);
     final state = ref.watch(profileNotifierProvider);
 
-    return state.when(
-      data: (data) {
-        return Scaffold(
-          body: ProfileScreen(
-            state: data,
-            onAction: (action) async {
-              switch (action) {
-                case OpenSettings():
-                  debugPrint('설정 버튼 클릭됨 - 설정 화면으로 이동 시도');
-                  context.push('/settings');
-                  break;
-                case RefreshProfile():
-                  debugPrint('새로고침 버튼 클릭됨');
-                  await notifier.onAction(action);
-                  break;
-              }
-            },
-          ),
-        );
-      },
-      loading:
-          () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error:
-          (error, stackTrace) =>
-              Scaffold(body: Center(child: Text('Error: $error'))),
+    return Scaffold(
+      body: ProfileScreen(
+        state: state,
+        onAction: (action) async {
+          switch (action) {
+            case OpenSettings():
+              debugPrint('설정 버튼 클릭됨 - 설정 화면으로 이동 시도');
+              context.push('/settings');
+              break;
+            case RefreshProfile():
+              debugPrint('새로고침 버튼 클릭됨');
+              await notifier.onAction(action);
+              break;
+          }
+        },
+      ),
     );
   }
 }
