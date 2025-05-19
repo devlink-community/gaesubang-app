@@ -260,4 +260,53 @@ class AuthFirebaseDataSource implements AuthDataSource {
       'agreedAt': Timestamp.now(),
     };
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId) async {
+    // Firebase: users/{userId}/timerActivities 서브컬렉션에서 조회
+    final query =
+        await _usersCollection
+            .doc(userId)
+            .collection('timerActivities')
+            .orderBy('timestamp', descending: true)
+            .get();
+
+    return query.docs.map((doc) {
+      final data = doc.data();
+      // 문서 ID를 포함하여 반환
+      return {'id': doc.id, ...data};
+    }).toList();
+  }
+
+  @override
+  Future<void> saveTimerActivity(
+    String userId,
+    Map<String, dynamic> activityData,
+  ) async {
+    // Firebase: users/{userId}/timerActivities 서브컬렉션에 저장
+    final activityRef = _usersCollection
+        .doc(userId)
+        .collection('timerActivities');
+
+    // ID가 있으면 해당 문서 업데이트, 없으면 자동 생성
+    final activityId = activityData['id'] as String?;
+
+    if (activityId != null) {
+      await activityRef.doc(activityId).set({
+        ...activityData,
+        'timestamp':
+            activityData['timestamp'] is DateTime
+                ? Timestamp.fromDate(activityData['timestamp'] as DateTime)
+                : activityData['timestamp'],
+      });
+    } else {
+      await activityRef.add({
+        ...activityData,
+        'timestamp':
+            activityData['timestamp'] is DateTime
+                ? Timestamp.fromDate(activityData['timestamp'] as DateTime)
+                : activityData['timestamp'],
+      });
+    }
+  }
 }

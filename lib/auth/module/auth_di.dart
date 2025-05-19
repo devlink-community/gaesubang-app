@@ -5,6 +5,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/config/app_config.dart';
+import '../../profile/domain/use_case/fetch_profile_data_use_case.dart';
+import '../../profile/domain/use_case/fetch_profile_stats_use_case.dart';
 import '../data/data_source/auth_data_source.dart';
 import '../data/data_source/auth_firebase_data_source.dart';
 import '../data/data_source/mock_auth_data_source.dart';
@@ -139,4 +141,16 @@ ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) {
 @riverpod
 ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) {
   return ValidateTermsAgreementUseCase();
+}
+
+// === Profile UseCase Providers ===
+
+@riverpod
+FetchProfileUserUseCase fetchProfileUserUseCase(Ref ref) {
+  return FetchProfileUserUseCase(ref.watch(authRepositoryProvider));
+}
+
+@riverpod
+FetchProfileStatsUseCase fetchProfileStatsUseCase(Ref ref) {
+  return FetchProfileStatsUseCase();
 }

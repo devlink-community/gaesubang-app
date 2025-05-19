@@ -1,4 +1,4 @@
-// lib/auth/domain/repository/auth_repository.dart
+import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
@@ -43,4 +43,13 @@ abstract interface class AuthRepository {
 
   /// 약관 정보 조회
   Future<Result<TermsAgreement?>> getTermsInfo(String? termsId);
+
+  /// 사용자의 타이머 활동 로그 조회
+  Future<Result<List<TimerActivityDto>>> getTimerActivities(String userId);
+
+  /// 타이머 활동 로그 추가
+  Future<Result<void>> saveTimerActivity(
+    String userId,
+    TimerActivityDto activity,
+  );
 }

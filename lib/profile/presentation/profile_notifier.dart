@@ -2,10 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/domain/model/member.dart';
+import '../../auth/module/auth_di.dart';
 import '../domain/model/focus_time_stats.dart';
 import '../domain/use_case/fetch_profile_data_use_case.dart';
 import '../domain/use_case/fetch_profile_stats_use_case.dart';
-import '../module/profile_di.dart';
 import 'profile_action.dart';
 import 'profile_state.dart';
 

@@ -33,11 +33,22 @@ abstract interface class AuthDataSource {
   Future<void> deleteAccount(String email);
 
   /// 약관 동의 정보 저장
-  Future<Map<String, dynamic>> saveTermsAgreement(Map<String, dynamic> termsData);
+  Future<Map<String, dynamic>> saveTermsAgreement(
+    Map<String, dynamic> termsData,
+  );
 
   /// 약관 정보 조회
   Future<Map<String, dynamic>> fetchTermsInfo();
 
   /// 특정 약관 정보 조회
   Future<Map<String, dynamic>?> getTermsInfo(String termsId);
+
+  /// 사용자의 타이머 활동 로그 조회
+  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId);
+
+  /// 타이머 활동 로그 저장
+  Future<void> saveTimerActivity(
+    String userId,
+    Map<String, dynamic> activityData,
+  );
 }
