@@ -3,159 +3,166 @@ import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/presentation/components/filter_tabs.dart';
 import 'package:devlink_mobile_app/map/presentation/components/nearby_card_view.dart';
 import 'package:devlink_mobile_app/map/presentation/components/radius_slider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:devlink_mobile_app/map/presentation/map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/map_state.dart';
-import 'package:flutter/material.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   final MapState state;
   final void Function(MapAction action) onAction;
 
   const MapScreen({super.key, required this.state, required this.onAction});
 
   @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  NaverMapController? _mapController;
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('지도'),
-        actions: [
-          // 클러스터링 토글 버튼
-          IconButton(
-            icon: Icon(
-              state.isClusteringEnabled ? Icons.grid_view : Icons.grid_off,
-              color: AppColorStyles.primary100,
-            ),
-            onPressed: () => onAction(const MapAction.toggleClustering()),
-            tooltip: '클러스터링 ${state.isClusteringEnabled ? '끄기' : '켜기'}',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('지도')),
       body: Column(
         children: [
           // 필터 탭 (모두/사용자/그룹)
           FilterTabs(
-            selectedFilter: state.selectedFilter,
+            selectedFilter: widget.state.selectedFilter,
             onFilterChanged:
-                (filterType) => onAction(MapAction.changeFilter(filterType)),
+                (filterType) =>
+                    widget.onAction(MapAction.changeFilter(filterType)),
           ),
 
           // 검색 반경 슬라이더
           RadiusSlider(
-            radius: state.searchRadius,
+            radius: widget.state.searchRadius,
             onRadiusChanged:
-                (radius) => onAction(MapAction.updateSearchRadius(radius)),
+                (radius) =>
+                    widget.onAction(MapAction.updateSearchRadius(radius)),
           ),
 
-          // 지도 영역
+          // 지도 영역 (Expanded로 확장)
           Expanded(
             child: Stack(
               children: [
-                // 지도 위젯
-                _buildMap(),
+                // 네이버 지도
+                NaverMap(
+                  options: NaverMapViewOptions(
+                    initialCameraPosition: NCameraPosition(
+                      target: NLatLng(37.5666102, 126.9783881), // 서울시청 좌표
+                      zoom: widget.state.zoomLevel,
+                    ),
+                    indoorEnable: true,
+                    locationButtonEnable: true,
+                    consumeSymbolTapEvents: false,
+                    rotationGesturesEnable: false, // 회전 안됨
+                    tiltGesturesEnable: false, // 기울기 안됨
+                    zoomGesturesFriction: 1.0, // 줌 마찰계수
+                    minZoom: 10, // default is 0
+                    maxZoom: 16, // default is 21
+                    maxTilt: 30, // default is 63
+                    extent: NLatLngBounds(
+                      // 지도 영역을 한반도 인근으로 제한
+                      southWest: NLatLng(31.43, 122.37),
+                      northEast: NLatLng(44.35, 132.0),
+                    ),
+
+                    mapType: NMapType.basic,
+                  ),
+                  forceGesture: true,
+
+                  /// 지도 재스처 이벤트를 우선순위
+                  onMapReady: (controller) {
+                    _mapController = controller;
+                    print("네이버맵 준비 완료!");
+                  },
+                  onMapTapped: (point, latLng) {
+                    // 지도 탭 이벤트 처리
+                    final location = NLatLng(latLng.latitude, latLng.longitude);
+                    widget.onAction(
+                      MapAction.onMapTap(
+                        Location(
+                          latitude: location.latitude,
+                          longitude: location.longitude,
+                        ),
+                      ),
+                    );
+                  },
+
+                  onSymbolTapped: (symbol) {},
+                  onCameraChange: (position, reason) {},
+                  onCameraIdle: () {},
+                  onSelectedIndoorChanged: (indoor) {},
+                ),
 
                 // 현재 위치 버튼 (우측 하단)
                 Positioned(
                   right: 16,
                   bottom: 100,
-                  child: _buildLocationButton(),
+                  child: FloatingActionButton(
+                    mini: true,
+                    backgroundColor:
+                        widget.state.isTrackingMode
+                            ? AppColorStyles.primary100
+                            : Colors.white,
+                    onPressed:
+                        () => widget.onAction(
+                          const MapAction.toggleTrackingMode(),
+                        ),
+                    child: Icon(
+                      Icons.my_location,
+                      color:
+                          widget.state.isTrackingMode
+                              ? Colors.white
+                              : AppColorStyles.primary100,
+                    ),
+                  ),
                 ),
 
                 // 에러 메시지 (있을 경우)
-                if (state.errorMessage != null)
-                  _buildErrorMessage(state.errorMessage!),
+                if (widget.state.errorMessage != null)
+                  _buildErrorMessage(widget.state.errorMessage!),
               ],
             ),
           ),
 
           // 하단 카드 뷰
           NearbyCardView(
-            state: state,
-            onCardSelected: (index) => onAction(MapAction.selectCard(index)),
+            state: widget.state,
+            onCardSelected:
+                (index) => widget.onAction(MapAction.selectCard(index)),
             onUserProfileTap:
-                (userId) => onAction(MapAction.navigateToUserProfile(userId)),
+                (userId) =>
+                    widget.onAction(MapAction.navigateToUserProfile(userId)),
             onGroupDetailTap:
-                (groupId) => onAction(MapAction.navigateToGroupDetail(groupId)),
-            onToggle: () => onAction(const MapAction.toggleCardView()),
+                (groupId) =>
+                    widget.onAction(MapAction.navigateToGroupDetail(groupId)),
+            onToggle: () => widget.onAction(const MapAction.toggleCardView()),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMap() {
-    // 지도 위젯 구현
-    // 실제로는 네이버 맵 또는 구글 맵 등 사용할 지도 라이브러리에 맞게 구현
-    // 여기서는 기본 상태 기반 UI만 구현
+  // void _updateMapWithState() {
+  //   if (_mapController == null) return;
 
-    return GestureDetector(
-      onTap:
-          () => onAction(
-            MapAction.onMapTap(
-              state.currentLocation.valueOrNull ??
-                  const Location(latitude: 0, longitude: 0),
-            ),
-          ),
-      child: Stack(
-        children: [
-          // 지도 배경 (실제로는 지도 라이브러리로 대체)
-          Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: switch (state.currentLocation) {
-                AsyncData(:final value) => Text(
-                  '현재 위치: ${value.latitude}, ${value.longitude}\n'
-                  '검색 반경: ${state.searchRadius}km',
-                  textAlign: TextAlign.center,
-                ),
-                AsyncError(:final error) => Text('위치 오류: $error'),
-                AsyncLoading() => const CircularProgressIndicator(),
-                // 모든 케이스를 처리하기 위한 기본 케이스 추가
-                _ => const Text('위치 정보가 없습니다.'),
-              },
-            ),
-          ),
+  //   // 여기서 상태에 따라 지도 업데이트 (마커 추가 등)
+  //   // 현재 위치 표시 등의 작업을 수행
 
-          // 주변 항목 마커 (실제로는 지도 라이브러리의 마커로 구현)
-          if (state.nearbyItems is AsyncData) _buildMarkers(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMarkers() {
-    // 실제 구현에서는 지도 라이브러리의 마커로 구현
-    // 여기서는 사용자 이해를 위한 설명만 표시
-    return const Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text(
-          '이 영역에 필터링된 마커가 표시됩니다.\n'
-          '사용자와 그룹을 다른 색상으로 구분하며,\n'
-          '클러스터링 기능이 적용됩니다.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            backgroundColor: Colors.white70,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLocationButton() {
-    return FloatingActionButton(
-      mini: true,
-      backgroundColor:
-          state.isTrackingMode ? AppColorStyles.primary100 : Colors.white,
-      onPressed: () => onAction(const MapAction.toggleTrackingMode()),
-      child: Icon(
-        Icons.my_location,
-        color: state.isTrackingMode ? Colors.white : AppColorStyles.primary100,
-      ),
-    );
-  }
+  //   // 예: 현재 위치가 있으면 그 위치로 이동
+  //   if (widget.state.currentLocation is AsyncData) {
+  //     final location = (widget.state.currentLocation as AsyncData<Location>).value;
+  //     _mapController!.(
+  //       NCameraUpdate.withParams(
+  //         target: NLatLng(location.latitude, location.longitude),
+  //         zoom: widget.state.zoomLevel,
+  //       ),
+  //     );
+  //   }
+  // }
 
   Widget _buildErrorMessage(String message) {
     return Positioned(

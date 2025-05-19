@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
+import 'package:devlink_mobile_app/group/presentation/component/slide_to_map_gesture.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/gradient_wave_animation.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_grid.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_section_header.dart';
@@ -361,6 +362,19 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 size: 14,
                 color: Colors.white,
               ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap:
+                () => widget.onAction(const GroupDetailAction.navigateToMap()),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.map, size: 14, color: Colors.white),
             ),
           ),
         ],

@@ -37,6 +37,6 @@ CheckLocationPermissionUseCase checkLocationPermissionUseCase(ref) =>
 SaveLocationDataUseCase saveLocationDataUseCase(ref) =>
     SaveLocationDataUseCase(repository: ref.watch(mapRepositoryProvider));
 
-final mapRoutes = [
-  GoRoute(path: '/map', builder: (context, state) => const MapScreenRoot()),
-];
+// final mapRoutes = [
+//   GoRoute(path: '/map:', builder: (context, state) => const MapScreenRoot()),
+// ];

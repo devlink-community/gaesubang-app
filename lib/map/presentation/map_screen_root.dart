@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class MapScreenRoot extends ConsumerStatefulWidget {
-  const MapScreenRoot({super.key});
+  final String? groupId;
+  const MapScreenRoot({super.key, this.groupId});
 
   @override
   ConsumerState<MapScreenRoot> createState() => _MapScreenRootState();
