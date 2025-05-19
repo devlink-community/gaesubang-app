@@ -1,3 +1,9 @@
+네, 이제 정확한 개선 방향으로 문서를 개선하겠습니다.
+
+---
+
+# 🧩 Firebase 데이터 모델 설계 가이드
+
 ---
 
 # 🧩 User
@@ -10,15 +16,22 @@
 |--------------------------|----------------|--------------------------------------|
 | `email`                  | `string`       | 로그인용 이메일                       |
 | `nickname`               | `string`       | 닉네임 또는 표시 이름                  |
-| `uid`                    | `string`       | Firebase Auth UID                   |
+| `uid`                    | `string`       | Firebase Auth UID (문서 ID와 동일)    |
 | `image`                  | `string`       | 프로필 이미지 URL                    |
 | `agreedTermId`           | `string`       | 동의한 약관 버전 ID                   |
 | `description`            | `string`       | 자기소개                             |
-| `isServiceTermsAgreed`   | `bool`         | 서비스 이용약관 동의 여부             |
-| `isPrivacyPolicyAgreed`  | `bool`         | 개인정보 수집 이용 동의 여부          |
-| `isMarketingAgreed`      | `bool`         | 마케팅 수신 동의 여부                 |
+| `isServiceTermsAgreed`   | `boolean`      | 서비스 이용약관 동의 여부             |
+| `isPrivacyPolicyAgreed`  | `boolean`      | 개인정보 수집 이용 동의 여부          |
+| `isMarketingAgreed`      | `boolean`      | 마케팅 수신 동의 여부                 |
 | `agreedAt`               | `timestamp`    | 약관 동의 시간                        |
-| `joingroup`              | `List<Map>`    | 가입된 그룹 목록 (이름 + 이미지)      |
+| `joingroup`              | `array`        | 가입된 그룹 목록 (JoinedGroup 객체 배열) |
+
+### ✅ JoinedGroup 객체 구조
+
+| 필드명         | 타입      | 설명                    |
+|----------------|-----------|-------------------------|
+| `group_name`   | `string`  | 그룹 이름               |
+| `group_image`  | `string`  | 그룹 대표 이미지 URL     |
 
 ### ✅ 예시 JSON
 
@@ -63,16 +76,16 @@ db.collection("users").where("isMarketingAgreed", "==", true).get();
 
 | 필드명       | 타입                     | 설명                                   |
 |--------------|--------------------------|----------------------------------------|
-| `userId`   | `string`                 | 활동을 수행한 사용자 ID         |
+| `memberId`   | `string`                 | 활동을 수행한 사용자 ID                |
 | `type`       | `string`                 | `"start"`, `"pause"`, `"resume"`, `"end"` 중 하나 |
-| `timestamp`  | `timestamp`              | 활동 발생 시간 (ISO 8601)              |
-| `metadata`   | `Map<String, dynamic>`   | 부가 데이터 (기기, 설명 등)             |
+| `timestamp`  | `timestamp`              | 활동 발생 시간                         |
+| `metadata`   | `object`                 | 부가 데이터 (기기, 설명 등)             |
 
 ### ✅ 예시 JSON
 
 ```json
 {
-  "userId": "user123",
+  "memberId": "user123",
   "type": "start",
   "timestamp": "2025-05-13T10:00:00Z",
   "metadata": {
@@ -106,39 +119,40 @@ db.collection("users")
 
 ### 1. UserDto
 
-| 필드명                   | 타입                   | nullable | 설명                                  |
-|------------------------|------------------------|----------|---------------------------------------|
-| `email`                | `String`              | ✅        | 사용자 이메일                         |
-| `nickname`             | `String`              | ✅        | 사용자 닉네임                         |
-| `uid`                  | `String`              | ✅        | Firebase UID                          |
-| `image`                | `String`              | ✅        | 프로필 이미지 URL                     |
-| `agreedTermId`         | `String`              | ✅        | 약관 버전 ID                          |
-| `description`          | `String`              | ✅        | 자기소개                              |
-| `isServiceTermsAgreed` | `bool`                | ✅        | 서비스 이용약관 동의 여부              |
-| `isPrivacyPolicyAgreed`| `bool`                | ✅        | 개인정보처리방침 동의 여부             |
-| `isMarketingAgreed`    | `bool`                | ✅        | 마케팅 동의 여부                       |
-| `agreedAt`             | `DateTime`            | ✅        | 동의한 시점                            |
-| `joingroup`            | `List<JoinedGroupDto>`| ✅        | 가입한 그룹 목록                       |
+| 필드명                   | 타입                   | nullable | @JsonKey | 설명                                  |
+|------------------------|------------------------|----------|----------|---------------------------------------|
+| `email`                | `String`              | ✅        | -        | 사용자 이메일                         |
+| `nickname`             | `String`              | ✅        | -        | 사용자 닉네임                         |
+| `uid`                  | `String`              | ✅        | -        | Firebase UID (문서 ID와 동일)          |
+| `image`                | `String`              | ✅        | -        | 프로필 이미지 URL                     |
+| `agreedTermId`         | `String`              | ✅        | -        | 약관 버전 ID                          |
+| `description`          | `String`              | ✅        | -        | 자기소개                              |
+| `isServiceTermsAgreed` | `bool`                | ✅        | -        | 서비스 이용약관 동의 여부              |
+| `isPrivacyPolicyAgreed`| `bool`                | ✅        | -        | 개인정보처리방침 동의 여부             |
+| `isMarketingAgreed`    | `bool`                | ✅        | -        | 마케팅 동의 여부                       |
+| `agreedAt`             | `DateTime`            | ✅        | -        | 동의한 시점                            |
+| `joingroup`            | `List<JoinedGroupDto>`| ✅        | -        | 가입한 그룹 목록                       |
 
 ---
 
-### 2. JoinedGroupDto
+### 2. JoinedGroupDto (내장 객체 - ID 불필요)
 
-| 필드명         | 타입      | nullable | 설명                    |
-|----------------|-----------|----------|-------------------------|
-| `groupName`    | `String` | ✅        | 그룹 이름               |
-| `groupImage`   | `String` | ✅        | 그룹 대표 이미지 URL     |
+| 필드명         | 타입      | nullable | @JsonKey | 설명                    |
+|----------------|-----------|----------|----------|-------------------------|
+| `groupName`    | `String` | ✅        | `group_name` | 그룹 이름               |
+| `groupImage`   | `String` | ✅        | `group_image` | 그룹 대표 이미지 URL     |
 
 ---
 
-### 3. TimerActivityDto
+### 3. TimerActivityDto (독립 문서 - ID 필요)
 
-| 필드명     | 타입                     | nullable | 설명                                            |
-|------------|--------------------------|----------|-------------------------------------------------|
-| `memberId` | `String`                | ✅        | 활동을 수행한 사용자 or 멤버 ID                |
-| `type`     | `String`                | ✅        | `"start"`, `"pause"`, `"resume"`, `"end"` 중 하나 |
-| `timestamp`| `DateTime`              | ✅        | 활동 발생 시간                                   |
-| `metadata` | `Map<String, dynamic>`  | ✅        | 부가 정보 (기기, 설명 등)                         |
+| 필드명     | 타입                     | nullable | @JsonKey | 설명                                            |
+|------------|--------------------------|----------|----------|-------------------------------------------------|
+| `id`       | `String`                | ✅        | -        | 활동 ID (문서 ID와 동일)                        |
+| `memberId` | `String`                | ✅        | -        | 활동을 수행한 사용자 ID                         |
+| `type`     | `String`                | ✅        | -        | `"start"`, `"pause"`, `"resume"`, `"end"` 중 하나 |
+| `timestamp`| `DateTime`              | ✅        | -        | 활동 발생 시간                                   |
+| `metadata` | `Map<String, dynamic>`  | ✅        | -        | 부가 정보 (기기, 설명 등)                         |
 
 ---
 
@@ -157,8 +171,8 @@ db.collection("users")
 | `imageUrl`       | `string`        | 그룹 대표 이미지 URL                   |
 | `createdAt`      | `timestamp`     | 그룹 생성 시간                          |
 | `createdBy`      | `string`        | 생성자 ID                              |
-| `maxMemberCount` | `int`           | 최대 멤버 수                            |
-| `hashTags`       | `List<string>`  | 해시태그 리스트 (예: ["#스터디", "#공부"]) |
+| `maxMemberCount` | `number`        | 최대 멤버 수                            |
+| `hashTags`       | `array`         | 해시태그 리스트 (예: ["#스터디", "#공부"]) |
 
 ### ✅ 예시 JSON
 
@@ -183,8 +197,9 @@ db.collection("users")
 | `userId`     | `string`  | 사용자 ID                                  |
 | `userName`   | `string`  | 사용자 닉네임 또는 이름                        |
 | `profileUrl` | `string`  | 프로필 이미지 URL                           |
-| `role`       | `string`  | 역할 (admin, moderator, member) 중 하나         |
+| `role`       | `string`  | 역할 (`"admin"`, `"moderator"`, `"member"`) |
 | `joinedAt`   | `timestamp` | 그룹 가입 시간                              |
+| `isActive`   | `boolean` | 현재 활동 중인지 여부                        |
 
 ### ✅ 예시 JSON
 
@@ -195,6 +210,7 @@ db.collection("users")
   "profileUrl": "https://cdn.example.com/profile.jpg",
   "role": "member",
   "joinedAt": "2025-05-12T15:00:00Z",
+  "isActive": false
 }
 ```
 
@@ -206,8 +222,8 @@ db.collection("users")
 |-------------|------------------------|--------------------------------------------------|
 | `memberId`  | `string`               | 타이머를 수행한 멤버 ID                             |
 | `type`      | `string`               | `"start"`, `"pause"`, `"resume"`, `"end"` 중 하나 |
-| `timestamp` | `timestamp`            | 발생 시각 (ISO 8601)                               |
-| `metadata`  | `Map<String, dynamic>` | 선택적 메타 정보 (예: 태그, 디바이스 정보 등)        |
+| `timestamp` | `timestamp`            | 발생 시각                                         |
+| `metadata`  | `object`               | 선택적 메타 정보 (예: 태그, 디바이스 정보 등)        |
 
 ### ✅ 예시 JSON
 
@@ -227,41 +243,44 @@ db.collection("users")
 
 ## 📦 DTO 구조 정리
 
-### 1. GroupDto
+### 1. GroupDto (독립 문서 - ID 필요)
 
-| 필드명            | 타입            | nullable | 설명                           |
-|------------------|-----------------|----------|--------------------------------|
-| `name`           | `String`        | ✅        | 그룹 이름                        |
-| `description`    | `String`        | ✅        | 그룹 설명                        |
-| `imageUrl`       | `String`        | ✅        | 이미지 URL                       |
-| `createdAt`      | `DateTime`      | ✅        | 생성 시각                        |
-| `createdBy`      | `String`        | ✅        | 생성자 ID                        |
-| `maxMemberCount` | `int`           | ✅        | 최대 멤버 수                     |
-| `hashTags`       | `List<String>`  | ✅        | 해시태그 목록                     |
-
----
-
-### 2. GroupMemberDto
-
-| 필드명       | 타입      | nullable | 설명                         |
-|--------------|-----------|----------|------------------------------|
-| `userId`     | `String` | ✅        | 사용자 ID                     |
-| `userName`   | `String` | ✅        | 닉네임                         |
-| `profileUrl` | `String` | ✅        | 프로필 이미지 URL              |
-| `role`       | `String` | ✅        | 역할: admin/moderator/member |
-| `joinedAt`   | `DateTime` | ✅        | 가입 시각                      |
-| `isActive`   | `bool`   | ✅        | 현재 활동 여부                 |
+| 필드명            | 타입            | nullable | @JsonKey | 설명                           |
+|------------------|-----------------|----------|----------|--------------------------------|
+| `id`             | `String`        | ✅        | -        | 그룹 ID (문서 ID와 동일)         |
+| `name`           | `String`        | ✅        | -        | 그룹 이름                        |
+| `description`    | `String`        | ✅        | -        | 그룹 설명                        |
+| `imageUrl`       | `String`        | ✅        | -        | 이미지 URL                       |
+| `createdAt`      | `DateTime`      | ✅        | -        | 생성 시각                        |
+| `createdBy`      | `String`        | ✅        | -        | 생성자 ID                        |
+| `maxMemberCount` | `int`           | ✅        | -        | 최대 멤버 수                     |
+| `hashTags`       | `List<String>`  | ✅        | -        | 해시태그 목록                     |
 
 ---
 
-### 3. GroupTimerActivityDto
+### 2. GroupMemberDto (독립 문서 - ID 필요)
 
-| 필드명      | 타입                     | nullable | 설명                                      |
-|-------------|--------------------------|----------|-------------------------------------------|
-| `memberId`  | `String`                | ✅        | 활동한 멤버 ID                             |
-| `type`      | `String`                | ✅        | 활동 타입                                  |
-| `timestamp` | `DateTime`              | ✅        | 활동 발생 시각                              |
-| `metadata`  | `Map<String, dynamic>`  | ✅        | 선택적 메타데이터 (이유, 디바이스 등)         |
+| 필드명       | 타입      | nullable | @JsonKey | 설명                         |
+|--------------|-----------|----------|----------|------------------------------|
+| `id`         | `String` | ✅        | -        | 멤버 ID (문서 ID와 동일)       |
+| `userId`     | `String` | ✅        | -        | 사용자 ID                     |
+| `userName`   | `String` | ✅        | -        | 닉네임                         |
+| `profileUrl` | `String` | ✅        | -        | 프로필 이미지 URL              |
+| `role`       | `String` | ✅        | -        | 역할: `"admin"`, `"moderator"`, `"member"` |
+| `joinedAt`   | `DateTime` | ✅        | -        | 가입 시각                      |
+| `isActive`   | `bool`   | ✅        | -        | 현재 활동 여부                 |
+
+---
+
+### 3. GroupTimerActivityDto (독립 문서 - ID 필요)
+
+| 필드명      | 타입                     | nullable | @JsonKey | 설명                                      |
+|-------------|--------------------------|----------|----------|-------------------------------------------|
+| `id`        | `String`                | ✅        | -        | 활동 ID (문서 ID와 동일)                   |
+| `memberId`  | `String`                | ✅        | -        | 활동한 멤버 ID                             |
+| `type`      | `String`                | ✅        | -        | 활동 타입                                  |
+| `timestamp` | `DateTime`              | ✅        | -        | 활동 발생 시각                              |
+| `metadata`  | `Map<String, dynamic>`  | ✅        | -        | 선택적 메타데이터 (이유, 디바이스 등)         |
 
 ---
 
@@ -275,14 +294,14 @@ db.collection("users")
 
 | 필드명             | 타입             | 설명                                  |
 |-------------------|------------------|---------------------------------------|
-| `id`              | `string`         | 게시글 ID                              |
+| `id`              | `string`         | 게시글 ID (문서 ID와 동일)              |
 | `authorId`        | `string`         | 작성자 UID                             |
 | `userProfileImage`| `string`         | 작성자 프로필 이미지 URL               |
 | `title`           | `string`         | 게시글 제목                             |
 | `content`         | `string`         | 게시글 본문 내용                         |
-| `mediaUrls`       | `List<string>`   | 첨부 이미지, 비디오 등의 URL 목록         |
+| `mediaUrls`       | `array`          | 첨부 이미지, 비디오 등의 URL 목록         |
 | `createdAt`       | `timestamp`      | 게시글 작성 시간                         |
-| `hashTags`        | `List<string>`   | 해시태그 목록 (예: ["#스터디", "#공부"]) |
+| `hashTags`        | `array`          | 해시태그 목록 (예: ["#스터디", "#공부"]) |
 
 ### ✅ 예시 JSON
 
@@ -309,6 +328,16 @@ db.collection("users")
 | `userName`   | `string`   | 사용자 이름                       |
 | `timestamp`  | `timestamp`| 좋아요를 누른 시간                 |
 
+### ✅ 예시 JSON
+
+```json
+{
+  "userId": "user_456",
+  "userName": "김개발",
+  "timestamp": "2025-05-13T12:30:00Z"
+}
+```
+
 ---
 
 ## 📁 3. 하위 컬렉션: `posts/{postId}/comments/{commentId}`
@@ -320,46 +349,61 @@ db.collection("users")
 | `userProfileImage`| `string`   | 댓글 작성자 프로필 이미지 URL         |
 | `text`            | `string`   | 댓글 내용                            |
 | `createdAt`       | `timestamp`| 댓글 작성 시간                        |
-| `likeCount`       | `int`      | 해당 댓글의 좋아요 수                  |
+| `likeCount`       | `number`   | 해당 댓글의 좋아요 수                  |
+
+### ✅ 예시 JSON
+
+```json
+{
+  "userId": "user_789",
+  "userName": "박코딩",
+  "userProfileImage": "https://cdn.example.com/profile2.jpg",
+  "text": "저도 참여하고 싶어요!",
+  "createdAt": "2025-05-13T12:45:00Z",
+  "likeCount": 2
+}
+```
 
 ---
 
 ## 📦 DTO 구조 정리
 
-### 1. PostDto
+### 1. PostDto (독립 문서 - ID 필요)
 
-| 필드명             | 타입             | nullable | 설명                                  |
-|-------------------|------------------|----------|---------------------------------------|
-| `id`              | `String`        | ✅        | 게시글 ID                             |
-| `authorId`        | `String`        | ✅        | 작성자 ID                              |
-| `userProfileImage`| `String`        | ✅        | 프로필 이미지 URL                     |
-| `title`           | `String`        | ✅        | 제목                                  |
-| `content`         | `String`        | ✅        | 내용                                  |
-| `mediaUrls`       | `List<String>`  | ✅        | 첨부 이미지/비디오 URL 목록           |
-| `createdAt`       | `DateTime`      | ✅        | 작성 시각                              |
-| `hashTags`        | `List<String>`  | ✅        | 해시태그 목록                          |
-
----
-
-### 2. PostLikeDto
-
-| 필드명      | 타입       | nullable | 설명                         |
-|-------------|------------|----------|------------------------------|
-| `userId`    | `String`  | ✅        | 좋아요 누른 사용자 ID         |
-| `userName`  | `String`  | ✅        | 사용자 이름                   |
-| `timestamp` | `DateTime`| ✅        | 좋아요 시간                   |
+| 필드명             | 타입             | nullable | @JsonKey | 설명                                  |
+|-------------------|------------------|----------|----------|---------------------------------------|
+| `id`              | `String`        | ✅        | -        | 게시글 ID (문서 ID와 동일)             |
+| `authorId`        | `String`        | ✅        | -        | 작성자 ID                              |
+| `userProfileImage`| `String`        | ✅        | -        | 프로필 이미지 URL                     |
+| `title`           | `String`        | ✅        | -        | 제목                                  |
+| `content`         | `String`        | ✅        | -        | 내용                                  |
+| `mediaUrls`       | `List<String>`  | ✅        | -        | 첨부 이미지/비디오 URL 목록           |
+| `createdAt`       | `DateTime`      | ✅        | -        | 작성 시각                              |
+| `hashTags`        | `List<String>`  | ✅        | -        | 해시태그 목록                          |
 
 ---
 
-### 3. PostCommentDto
+### 2. PostLikeDto (독립 문서 - ID 필요)
 
-| 필드명            | 타입       | nullable | 설명                             |
-|-------------------|------------|----------|----------------------------------|
-| `userId`          | `String`  | ✅        | 댓글 작성자 ID                    |
-| `userName`        | `String`  | ✅        | 댓글 작성자 이름                  |
-| `userProfileImage`| `String`  | ✅        | 댓글 작성자 프로필 이미지 URL      |
-| `text`            | `String`  | ✅        | 댓글 본문 내용                     |
-| `createdAt`       | `DateTime`| ✅        | 댓글 작성 시각                     |
-| `likeCount`       | `int`     | ✅        | 좋아요 수                          |
+| 필드명      | 타입       | nullable | @JsonKey | 설명                         |
+|-------------|------------|----------|----------|------------------------------|
+| `id`        | `String`  | ✅        | -        | 좋아요 ID (문서 ID와 동일)     |
+| `userId`    | `String`  | ✅        | -        | 좋아요 누른 사용자 ID         |
+| `userName`  | `String`  | ✅        | -        | 사용자 이름                   |
+| `timestamp` | `DateTime`| ✅        | -        | 좋아요 시간                   |
+
+---
+
+### 3. PostCommentDto (독립 문서 - ID 필요)
+
+| 필드명            | 타입       | nullable | @JsonKey | 설명                             |
+|-------------------|------------|----------|----------|----------------------------------|
+| `id`              | `String`  | ✅        | -        | 댓글 ID (문서 ID와 동일)          |
+| `userId`          | `String`  | ✅        | -        | 댓글 작성자 ID                    |
+| `userName`        | `String`  | ✅        | -        | 댓글 작성자 이름                  |
+| `userProfileImage`| `String`  | ✅        | -        | 댓글 작성자 프로필 이미지 URL      |
+| `text`            | `String`  | ✅        | -        | 댓글 본문 내용                     |
+| `createdAt`       | `DateTime`| ✅        | -        | 댓글 작성 시각                     |
+| `likeCount`       | `int`     | ✅        | -        | 좋아요 수                          |
 
 ---
