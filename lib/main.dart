@@ -17,13 +17,32 @@ void main() async {
   // 알림 서비스 초기화 - 권한 요청 없이
   await NotificationService().init(requestPermissionOnInit: false);
 
-  await NaverMapSdk.instance.initialize(
-    clientId: 'ye49o0dcu6',
+  // await NaverMapSdk.instance.initialize(
+  //   clientId: 'ye49o0dcu6',
 
-    onAuthFailed: (ex) {
-      print("********* 네이버맵 인증오류 : $ex *********");
-    },
+  //   onAuthFailed: (ex) {
+  //     print("********* 네이버맵 인증오류 : $ex *********");
+  //   },
+  // );
+
+  // 환경에 따라 클라이언트 ID를 가져오는 방식으로 변경
+  final naverMapClientId = const String.fromEnvironment(
+    'NAVER_MAP_CLIENT_ID',
+    defaultValue: 'ye49o0dcu6', // 개발 환경용 기본값
   );
+
+  try {
+    await NaverMapSdk.instance.initialize(
+      clientId: naverMapClientId,
+      onAuthFailed: (ex) {
+        print("********* 네이버맵 인증오류 : $ex *********");
+        // TODO: 사용자에게 오류 메시지 표시 또는 대체 기능 제공
+      },
+    );
+  } catch (e) {
+    print("네이버맵 초기화 실패: $e");
+    // TODO: 초기화 실패 시 대체 처리 로직
+  }
 
   runApp(const ProviderScope(child: MyApp()));
 }
