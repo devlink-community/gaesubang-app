@@ -31,13 +31,13 @@ class AppConfig {
   /// Mock 그룹 데이터 사용 여부
   static const bool useMockGroup = bool.fromEnvironment(
     'USE_MOCK_GROUP',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   /// Mock 커뮤니티 데이터 사용 여부
   static const bool useMockCommunity = bool.fromEnvironment(
     'USE_MOCK_COMMUNITY',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   /// 디버그 모드 여부

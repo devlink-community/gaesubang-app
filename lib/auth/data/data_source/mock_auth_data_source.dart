@@ -182,6 +182,17 @@ class MockAuthDataSource implements AuthDataSource {
     return activities;
   }
 
+  /// Firebase와 동일하게 사용자 정보와 타이머 활동을 함께 반환하는 메서드
+  Future<Map<String, dynamic>?> _fetchUserWithTimerActivities(
+    String userId,
+  ) async {
+    final userData = _users[userId];
+    if (userData == null) return null;
+
+    // 타이머 활동 데이터 포함하여 반환
+    return {...userData, 'timerActivities': _timerActivities[userId] ?? []};
+  }
+
   @override
   Future<Map<String, dynamic>> fetchLogin({
     required String email,
@@ -199,7 +210,6 @@ class MockAuthDataSource implements AuthDataSource {
     );
 
     final userId = userEntry.key;
-    final userData = userEntry.value;
 
     // 비밀번호 확인
     if (_passwords[userId] != password) {
@@ -209,7 +219,12 @@ class MockAuthDataSource implements AuthDataSource {
     // 로그인 상태 설정
     _currentUserId = userId;
 
-    return Map<String, dynamic>.from(userData);
+    // 타이머 활동 포함하여 반환
+    final userWithActivities = await _fetchUserWithTimerActivities(userId);
+    if (userWithActivities == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
+    return userWithActivities;
   }
 
   @override
@@ -247,7 +262,7 @@ class MockAuthDataSource implements AuthDataSource {
 
     // 새 사용자 생성
     final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
-    final userData = {
+    final newUserData = {
       'uid': userId,
       'email': lowercaseEmail,
       'nickname': nickname,
@@ -265,11 +280,12 @@ class MockAuthDataSource implements AuthDataSource {
       'joingroup': <Map<String, dynamic>>[],
     };
 
-    _users[userId] = userData;
+    _users[userId] = newUserData;
     _passwords[userId] = password;
     _timerActivities[userId] = [];
 
-    return Map<String, dynamic>.from(userData);
+    // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
+    return {...newUserData, 'timerActivities': []};
   }
 
   @override
@@ -279,8 +295,8 @@ class MockAuthDataSource implements AuthDataSource {
 
     if (_currentUserId == null) return null;
 
-    final userData = _users[_currentUserId];
-    return userData != null ? Map<String, dynamic>.from(userData) : null;
+    // 타이머 활동 포함하여 현재 사용자 정보 반환
+    return await _fetchUserWithTimerActivities(_currentUserId!);
   }
 
   @override
@@ -419,7 +435,6 @@ class MockAuthDataSource implements AuthDataSource {
     activities.add(Map<String, dynamic>.from(activityData));
     _timerActivities[userId] = activities;
   }
-  // lib/auth/data/data_source/mock_auth_data_source.dart의 끝부분에 추가
 
   @override
   Future<Map<String, dynamic>> updateUser({
@@ -458,7 +473,14 @@ class MockAuthDataSource implements AuthDataSource {
 
     _users[_currentUserId!] = updatedUser;
 
-    return Map<String, dynamic>.from(updatedUser);
+    // 타이머 활동 포함하여 반환
+    final userWithActivities = await _fetchUserWithTimerActivities(
+      _currentUserId!,
+    );
+    if (userWithActivities == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
+    return userWithActivities;
   }
 
   @override
@@ -481,6 +503,13 @@ class MockAuthDataSource implements AuthDataSource {
 
     _users[_currentUserId!] = updatedUser;
 
-    return Map<String, dynamic>.from(updatedUser);
+    // 타이머 활동 포함하여 반환
+    final userWithActivities = await _fetchUserWithTimerActivities(
+      _currentUserId!,
+    );
+    if (userWithActivities == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
+    return userWithActivities;
   }
 }

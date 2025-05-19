@@ -29,8 +29,8 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
 
-      // Map을 직접 Member로 변환
-      final member = response.toMember();
+      // 새로운 매퍼 사용: 타이머 활동까지 포함된 Member + FocusStats 변환
+      final member = response.toMemberWithCalculatedStats();
 
       return Result.success(member);
     } catch (e, st) {
@@ -55,8 +55,8 @@ class AuthRepositoryImpl implements AuthRepository {
         agreedTermsId: agreedTermsId,
       );
 
-      // Map을 직접 Member로 변환
-      final member = response.toMember();
+      // 회원가입 시에도 통계까지 포함된 Member 반환
+      final member = response.toMemberWithCalculatedStats();
 
       return Result.success(member);
     } catch (e, st) {
@@ -74,8 +74,8 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      // Map을 직접 Member로 변환
-      final member = response.toMember();
+      // 현재 사용자 조회 시 타이머 활동까지 포함된 Member + FocusStats 변환
+      final member = response.toMemberWithCalculatedStats();
 
       return Result.success(member);
     } catch (e, st) {
@@ -228,8 +228,8 @@ class AuthRepositoryImpl implements AuthRepository {
         skills: skills,
       );
 
-      // Map을 직접 Member로 변환
-      final member = response.toMember();
+      // 프로필 업데이트 시에도 통계까지 포함된 Member 반환
+      final member = response.toMemberWithCalculatedStats();
 
       return Result.success(member);
     } catch (e, st) {
@@ -244,8 +244,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final response = await _authDataSource.updateUserImage(imagePath);
 
-      // Map을 직접 Member로 변환
-      final member = response.toMember();
+      // 이미지 업데이트 시에도 통계까지 포함된 Member 반환
+      final member = response.toMemberWithCalculatedStats();
 
       return Result.success(member);
     } catch (e, st) {
@@ -280,10 +280,10 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       try {
-        // Firestore에서 완전한 사용자 정보 가져오기
+        // Firestore에서 완전한 사용자 정보 + 통계 가져오기
         final userMap = await _authDataSource.fetchCurrentUser();
         if (userMap != null) {
-          final member = userMap.toMember();
+          final member = userMap.toMemberWithCalculatedStats();
           return AuthState.authenticated(member);
         }
         return const AuthState.unauthenticated();

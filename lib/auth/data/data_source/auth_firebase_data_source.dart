@@ -19,6 +19,73 @@ class AuthFirebaseDataSource implements AuthDataSource {
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
+  /// 사용자 정보와 타이머 활동을 병렬로 가져오는 최적화된 메서드
+  Future<Map<String, dynamic>?> fetchCurrentUserWithTimerActivities() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      // 최근 30일간의 활동만 조회 (성능 최적화)
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
+      // Firebase 병렬 처리: 사용자 정보와 타이머 활동을 동시에 가져오기
+      final results = await Future.wait([
+        // 1. 사용자 문서 조회
+        _usersCollection.doc(user.uid).get(),
+
+        // 2. 타이머 활동 조회 (최근 30일)
+        _usersCollection
+            .doc(user.uid)
+            .collection('timerActivities')
+            .where(
+              'timestamp',
+              isGreaterThan: Timestamp.fromDate(thirtyDaysAgo),
+            )
+            .orderBy('timestamp', descending: true)
+            .get(),
+      ]);
+
+      final userDoc = results[0] as DocumentSnapshot<Map<String, dynamic>>;
+      final activitiesSnapshot =
+          results[1] as QuerySnapshot<Map<String, dynamic>>;
+
+      if (!userDoc.exists) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
+
+      final userData = userDoc.data()!;
+
+      // 완전한 사용자 정보 구성
+      final completeUserData = {
+        'uid': user.uid,
+        'email': userData['email'] ?? user.email,
+        'nickname': userData['nickname'] ?? '',
+        'image': userData['image'] ?? '',
+        'description': userData['description'] ?? '',
+        'onAir': userData['onAir'] ?? false,
+        'position': userData['position'] ?? '',
+        'skills': userData['skills'] ?? '',
+        'streakDays': userData['streakDays'] ?? 0,
+        'agreedTermId': userData['agreedTermId'],
+        'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
+        'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
+        'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
+        'agreedAt': userData['agreedAt'],
+        'joingroup': userData['joingroup'] ?? [],
+
+        // 타이머 활동 데이터 포함
+        'timerActivities':
+            activitiesSnapshot.docs
+                .map((doc) => {'id': doc.id, ...doc.data()})
+                .toList(),
+      };
+
+      return completeUserData;
+    } catch (e) {
+      throw Exception('사용자 정보와 활동 데이터를 불러오는데 실패했습니다: $e');
+    }
+  }
+
   @override
   Future<Map<String, dynamic>> fetchLogin({
     required String email,
@@ -35,33 +102,13 @@ class AuthFirebaseDataSource implements AuthDataSource {
       throw Exception(AuthErrorMessages.loginFailed);
     }
 
-    // Firestore에서 완전한 사용자 정보 가져오기
-    final userDoc = await _usersCollection.doc(user.uid).get();
-
-    if (!userDoc.exists) {
+    // 로그인 성공 시 병렬 처리로 완전한 데이터 반환
+    final userData = await fetchCurrentUserWithTimerActivities();
+    if (userData == null) {
       throw Exception(AuthErrorMessages.userDataNotFound);
     }
 
-    final userData = userDoc.data()!;
-
-    // 완전한 사용자 정보 반환 (Member 모델에 필요한 모든 필드 포함)
-    return {
-      'uid': user.uid,
-      'email': userData['email'] ?? user.email,
-      'nickname': userData['nickname'] ?? '',
-      'image': userData['image'] ?? '',
-      'description': userData['description'] ?? '',
-      'onAir': userData['onAir'] ?? false,
-      'position': userData['position'] ?? '',
-      'skills': userData['skills'] ?? '',
-      'streakDays': userData['streakDays'] ?? 0,
-      'agreedTermId': userData['agreedTermId'],
-      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
-      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
-      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
-      'agreedAt': userData['agreedAt'],
-      'joingroup': userData['joingroup'] ?? [],
-    };
+    return userData;
   }
 
   @override
@@ -119,43 +166,14 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
     await _usersCollection.doc(user.uid).set(userData);
 
-    return userData;
+    // 회원가입 시에도 완전한 데이터 반환 (타이머 활동은 비어있음)
+    return {...userData, 'timerActivities': <Map<String, dynamic>>[]};
   }
 
   @override
   Future<Map<String, dynamic>?> fetchCurrentUser() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      return null;
-    }
-
-    // Firestore에서 완전한 사용자 정보 가져오기
-    final userDoc = await _usersCollection.doc(user.uid).get();
-
-    if (!userDoc.exists) {
-      return null;
-    }
-
-    final userData = userDoc.data()!;
-
-    // 완전한 사용자 정보 반환
-    return {
-      'uid': user.uid,
-      'email': userData['email'] ?? user.email,
-      'nickname': userData['nickname'] ?? '',
-      'image': userData['image'] ?? '',
-      'description': userData['description'] ?? '',
-      'onAir': userData['onAir'] ?? false,
-      'position': userData['position'] ?? '',
-      'skills': userData['skills'] ?? '',
-      'streakDays': userData['streakDays'] ?? 0,
-      'agreedTermId': userData['agreedTermId'],
-      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
-      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
-      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
-      'agreedAt': userData['agreedAt'],
-      'joingroup': userData['joingroup'] ?? [],
-    };
+    // 최적화된 병렬 처리 메서드 사용
+    return await fetchCurrentUserWithTimerActivities();
   }
 
   @override
@@ -263,7 +281,8 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
   @override
   Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId) async {
-    // Firebase: users/{userId}/timerActivities 서브컬렉션에서 조회
+    // 이미 fetchCurrentUserWithTimerActivities에서 포함되므로
+    // 별도 호출 시에만 동작하도록 유지
     final query =
         await _usersCollection
             .doc(userId)
@@ -273,7 +292,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
     return query.docs.map((doc) {
       final data = doc.data();
-      // 문서 ID를 포함하여 반환
       return {'id': doc.id, ...data};
     }).toList();
   }
@@ -309,7 +327,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
       });
     }
   }
-  // lib/auth/data/data_source/auth_firebase_data_source.dart의 끝부분에 추가
 
   @override
   Future<Map<String, dynamic>> updateUser({
@@ -347,27 +364,13 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
     await _usersCollection.doc(user.uid).update(updateData);
 
-    // 업데이트된 사용자 정보 반환
-    final updatedDoc = await _usersCollection.doc(user.uid).get();
-    final userData = updatedDoc.data()!;
+    // 업데이트된 완전한 사용자 정보 반환 (병렬 처리 활용)
+    final updatedUserData = await fetchCurrentUserWithTimerActivities();
+    if (updatedUserData == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
 
-    return {
-      'uid': user.uid,
-      'email': userData['email'] ?? user.email,
-      'nickname': userData['nickname'] ?? '',
-      'image': userData['image'] ?? '',
-      'description': userData['description'] ?? '',
-      'onAir': userData['onAir'] ?? false,
-      'position': userData['position'] ?? '',
-      'skills': userData['skills'] ?? '',
-      'streakDays': userData['streakDays'] ?? 0,
-      'agreedTermId': userData['agreedTermId'],
-      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
-      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
-      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
-      'agreedAt': userData['agreedAt'],
-      'joingroup': userData['joingroup'] ?? [],
-    };
+    return updatedUserData;
   }
 
   @override
@@ -381,26 +384,12 @@ class AuthFirebaseDataSource implements AuthDataSource {
     // 임시로 로컬 파일 경로를 저장
     await _usersCollection.doc(user.uid).update({'image': imagePath});
 
-    // 업데이트된 사용자 정보 반환
-    final updatedDoc = await _usersCollection.doc(user.uid).get();
-    final userData = updatedDoc.data()!;
+    // 업데이트된 완전한 사용자 정보 반환 (병렬 처리 활용)
+    final updatedUserData = await fetchCurrentUserWithTimerActivities();
+    if (updatedUserData == null) {
+      throw Exception(AuthErrorMessages.userDataNotFound);
+    }
 
-    return {
-      'uid': user.uid,
-      'email': userData['email'] ?? user.email,
-      'nickname': userData['nickname'] ?? '',
-      'image': userData['image'] ?? '',
-      'description': userData['description'] ?? '',
-      'onAir': userData['onAir'] ?? false,
-      'position': userData['position'] ?? '',
-      'skills': userData['skills'] ?? '',
-      'streakDays': userData['streakDays'] ?? 0,
-      'agreedTermId': userData['agreedTermId'],
-      'isServiceTermsAgreed': userData['isServiceTermsAgreed'] ?? false,
-      'isPrivacyPolicyAgreed': userData['isPrivacyPolicyAgreed'] ?? false,
-      'isMarketingAgreed': userData['isMarketingAgreed'] ?? false,
-      'agreedAt': userData['agreedAt'],
-      'joingroup': userData['joingroup'] ?? [],
-    };
+    return updatedUserData;
   }
 }

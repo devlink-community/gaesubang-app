@@ -21,14 +21,12 @@ class ProfileNotifier extends _$ProfileNotifier {
     _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
     _getFocusStatsUseCase = ref.watch(getFocusStatsUseCaseProvider);
 
-    // 초기화 직후 데이터 로드 시작
-    _loadData();
-
+    // build()에서는 초기 상태만 반환하고, 데이터 로드는 하지 않음
     return const ProfileState();
   }
 
-  // 데이터 로드 메서드
-  Future<void> _loadData() async {
+  // 데이터 로드 메서드 - 외부에서 호출 가능하도록 public으로 변경
+  Future<void> loadData() async {
     try {
       // 로딩 상태로 변경
       state = state.copyWith(
@@ -49,7 +47,7 @@ class ProfileNotifier extends _$ProfileNotifier {
       try {
         // 현재 사용자의 ID 가져오기
         if (userProfileResult is AsyncData<Member>) {
-          final userId = userProfileResult.value!.id;
+          final userId = userProfileResult.value.id;
           focusStatsResult = await _getFocusStatsUseCase.execute(userId);
         } else {
           // 사용자 정보를 가져올 수 없는 경우 에러 처리
@@ -85,13 +83,13 @@ class ProfileNotifier extends _$ProfileNotifier {
         break;
       case RefreshProfile():
         // 전체 다시 로드
-        await _loadData();
+        await loadData();
         break;
     }
   }
 
   // 명시적 새로고침 메서드 추가 (외부에서 직접 호출 가능)
   Future<void> refresh() async {
-    await _loadData();
+    await loadData();
   }
 }
