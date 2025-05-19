@@ -1,12 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.devlink.gaesubang">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- 알림 표시 권한 -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-     <!-- 위치 권한 -->
+    <!-- 위치 권한 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
@@ -35,9 +36,9 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-                 <meta-data
-            android:name="com.naver.maps.map.CLIENT_ID"
-            android:value="ye49o0dcu6" />
+            <meta-data
+                android:name="com.naver.maps.map.CLIENT_ID"
+                android:value="ye49o0dcu6" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -58,7 +59,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
 
 
     </application>
