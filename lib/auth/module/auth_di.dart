@@ -1,109 +1,142 @@
-import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
-import 'package:devlink_mobile_app/auth/data/data_source/mock_auth_data_source.dart';
-import 'package:devlink_mobile_app/auth/data/data_source/mock_profile_data_source.dart';
-import 'package:devlink_mobile_app/auth/data/data_source/profile_data_source.dart';
-import 'package:devlink_mobile_app/auth/data/repository_impl/auth_repository_impl.dart';
-import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/delete_account_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/mock_login_user_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/reset_password_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/validate_email_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/validate_nickname_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_confirm_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/validate_password_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/validate_terms_agreement_use_case.dart';
+// lib/auth/module/auth_di.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/config/app_config.dart';
+import '../data/data_source/auth_data_source.dart';
+import '../data/data_source/auth_firebase_data_source.dart';
+import '../data/data_source/mock_auth_data_source.dart';
+import '../data/repository_impl/auth_repository_impl.dart';
+import '../domain/repository/auth_repository.dart';
+import '../domain/usecase/check_email_availability_use_case.dart';
+import '../domain/usecase/check_nickname_availability_use_case.dart';
+import '../domain/usecase/delete_account_use_case.dart';
 import '../domain/usecase/get_current_user_use_case.dart';
 import '../domain/usecase/get_terms_info_use_case.dart';
+import '../domain/usecase/login_use_case.dart';
+import '../domain/usecase/mock_login_user_case.dart';
+import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
+import '../domain/usecase/signout_use_case.dart';
+import '../domain/usecase/signup_use_case.dart';
+import '../domain/usecase/validate_email_use_case.dart';
+import '../domain/usecase/validate_nickname_use_case.dart';
+import '../domain/usecase/validate_password_confirm_use_case.dart';
+import '../domain/usecase/validate_password_use_case.dart';
+import '../domain/usecase/validate_terms_agreement_use_case.dart';
 
 part 'auth_di.g.dart';
 
-// ---------------- DI 부분 ----------------
+// === DataSource Providers ===
 
-// AuthDataSource 의존성 주입
+/// AuthDataSource - 플래그에 따라 Mock 또는 Firebase 선택
 @riverpod
-AuthDataSource authDataSource(Ref ref) => MockAuthDataSource();
-
-// ProfileDataSource 의존성 주입
-@riverpod
-ProfileDataSource profileDataSource(Ref ref) => MockProfileDataSource();
-
-@riverpod
-AuthRepository authRepository(Ref ref) => AuthRepositoryImpl(
-  authDataSource: ref.watch(authDataSourceProvider),
-  profileDataSource: ref.watch(profileDataSourceProvider),
-);
-
-// 로그인 관련 UseCase
-@riverpod
-LoginUseCase loginUseCase(Ref ref) =>
-    LoginUseCase(repository: ref.watch(authRepositoryProvider));
-
-@riverpod
-LoginUseCase mockLoginUseCase(Ref ref) {
-  return MockLoginUseCase();
+AuthDataSource authDataSource(Ref ref) {
+  if (AppConfig.useMockAuth) {
+    return MockAuthDataSource();
+  } else {
+    return AuthFirebaseDataSource(
+      auth: FirebaseAuth.instance,
+      firestore: FirebaseFirestore.instance,
+    );
+  }
 }
 
-// 회원가입 관련 UseCase
-@riverpod
-SignupUseCase signupUseCase(Ref ref) =>
-    SignupUseCase(repository: ref.watch(authRepositoryProvider));
+// === Repository Providers ===
 
 @riverpod
-CheckNicknameAvailabilityUseCase checkNicknameAvailabilityUseCase(Ref ref) =>
-    CheckNicknameAvailabilityUseCase(
-      repository: ref.watch(authRepositoryProvider),
-    );
+AuthRepository authRepository(Ref ref) {
+  return AuthRepositoryImpl(authDataSource: ref.watch(authDataSourceProvider));
+}
+
+// === UseCase Providers ===
+
+/// LoginUseCase - 플래그에 따라 실제 또는 Mock 로그인
+@riverpod
+LoginUseCase loginUseCase(Ref ref) {
+  if (AppConfig.useMockAuth) {
+    return MockLoginUseCase();
+  } else {
+    return LoginUseCase(repository: ref.watch(authRepositoryProvider));
+  }
+}
 
 @riverpod
-CheckEmailAvailabilityUseCase checkEmailAvailabilityUseCase(Ref ref) =>
-    CheckEmailAvailabilityUseCase(
-      repository: ref.watch(authRepositoryProvider),
-    );
+SignupUseCase signupUseCase(Ref ref) {
+  return SignupUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-ValidateNicknameUseCase validateNicknameUseCase(Ref ref) =>
-    ValidateNicknameUseCase();
+GetCurrentUserUseCase getCurrentUserUseCase(Ref ref) {
+  return GetCurrentUserUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-ValidateEmailUseCase validateEmailUseCase(Ref ref) => ValidateEmailUseCase();
+SignoutUseCase signoutUseCase(Ref ref) {
+  return SignoutUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-ValidatePasswordUseCase validatePasswordUseCase(Ref ref) =>
-    ValidatePasswordUseCase();
+CheckNicknameAvailabilityUseCase checkNicknameAvailabilityUseCase(Ref ref) {
+  return CheckNicknameAvailabilityUseCase(
+    repository: ref.watch(authRepositoryProvider),
+  );
+}
 
 @riverpod
-ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) =>
-    ValidatePasswordConfirmUseCase();
+CheckEmailAvailabilityUseCase checkEmailAvailabilityUseCase(Ref ref) {
+  return CheckEmailAvailabilityUseCase(
+    repository: ref.watch(authRepositoryProvider),
+  );
+}
 
 @riverpod
-ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) =>
-    ValidateTermsAgreementUseCase();
+ResetPasswordUseCase resetPasswordUseCase(Ref ref) {
+  return ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-ResetPasswordUseCase resetPasswordUseCase(Ref ref) =>
-    ResetPasswordUseCase(repository: ref.watch(authRepositoryProvider));
-
-// 계정삭제 관련 UseCase
-@riverpod
-DeleteAccountUseCase deleteAccountUseCase(Ref ref) =>
-    DeleteAccountUseCase(repository: ref.watch(authRepositoryProvider));
+DeleteAccountUseCase deleteAccountUseCase(Ref ref) {
+  return DeleteAccountUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) =>
-    GetTermsInfoUseCase(repository: ref.watch(authRepositoryProvider));
+GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) {
+  return GetTermsInfoUseCase(repository: ref.watch(authRepositoryProvider));
+}
 
 @riverpod
-SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) =>
-    SaveTermsAgreementUseCase(repository: ref.watch(authRepositoryProvider));
+SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) {
+  return SaveTermsAgreementUseCase(
+    repository: ref.watch(authRepositoryProvider),
+  );
+}
+
+// === Validation UseCase Providers ===
 
 @riverpod
-GetCurrentUserUseCase getCurrentUserUseCase(Ref ref) =>
-    GetCurrentUserUseCase(repository: ref.watch(authRepositoryProvider));
+ValidateNicknameUseCase validateNicknameUseCase(Ref ref) {
+  return ValidateNicknameUseCase();
+}
+
+@riverpod
+ValidateEmailUseCase validateEmailUseCase(Ref ref) {
+  return ValidateEmailUseCase();
+}
+
+@riverpod
+ValidatePasswordUseCase validatePasswordUseCase(Ref ref) {
+  return ValidatePasswordUseCase();
+}
+
+@riverpod
+ValidatePasswordConfirmUseCase validatePasswordConfirmUseCase(Ref ref) {
+  return ValidatePasswordConfirmUseCase();
+}
+
+@riverpod
+ValidateTermsAgreementUseCase validateTermsAgreementUseCase(Ref ref) {
+  return ValidateTermsAgreementUseCase();
+}
