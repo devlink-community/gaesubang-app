@@ -18,8 +18,6 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
   // 화면 상태 관리
   bool _isInitialized = false;
   bool _wasInBackground = false;
-
-  // 초기화 중 생명주기 이벤트 무시
   bool _isInitializing = false;
 
   @override
@@ -42,16 +40,13 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
   Future<void> _initializeScreen() async {
     if (_isInitialized) return;
 
-    debugPrint('🚀 프로필 화면 초기화 시작');
-
     if (mounted) {
-      await ref.read(profileNotifierProvider.notifier).loadData();
+      // 초기 데이터 로드 (ProfileNotifier의 갱신 상태 시스템을 통해)
+      await ref.read(profileNotifierProvider.notifier).refresh();
     }
 
     _isInitialized = true;
     _isInitializing = false;
-
-    debugPrint('✅ 프로필 화면 초기화 완료');
   }
 
   @override
@@ -59,15 +54,11 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
     super.didChangeAppLifecycleState(state);
 
     // 초기화 중이면 생명주기 이벤트 무시
-    if (_isInitializing) {
-      debugPrint('🔄 초기화 중이므로 생명주기 이벤트 무시: $state');
-      return;
-    }
+    if (_isInitializing) return;
 
     switch (state) {
       case AppLifecycleState.paused:
         if (_isInitialized && !_isInitializing && !_wasInBackground) {
-          debugPrint('📱 앱이 백그라운드로 전환됨');
           _wasInBackground = true;
         }
         break;
@@ -75,11 +66,10 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
       case AppLifecycleState.resumed:
         // 실제 백그라운드에서 돌아온 경우만 처리
         if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
-          debugPrint('🔄 백그라운드에서 앱 재개 - 프로필 데이터 갱신');
-          // 데이터 갱신을 다음 프레임으로 지연
+          // 백그라운드에서 돌아왔을 때 자동 갱신
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              ref.read(profileNotifierProvider.notifier).loadData();
+              ref.read(profileNotifierProvider.notifier).refresh();
             }
           });
         }
@@ -87,8 +77,6 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
         break;
 
       default:
-        // 다른 상태들은 로그만 남김
-        debugPrint('🔄 생명주기 상태 변경: $state');
         break;
     }
   }
@@ -98,19 +86,6 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
     // 관찰자 해제
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  // 다른 화면에서 돌아올 때 감지 및 처리
-  void _handleScreenReturn() {
-    if (mounted && _isInitialized && !_isInitializing) {
-      debugPrint('🔄 다른 화면에서 프로필로 돌아옴 - 데이터 갱신');
-      // 데이터 갱신을 다음 프레임으로 지연
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(profileNotifierProvider.notifier).loadData();
-        }
-      });
-    }
   }
 
   @override
@@ -124,13 +99,14 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
         onAction: (action) async {
           switch (action) {
             case OpenSettings():
-              debugPrint('설정 버튼 클릭됨 - 설정 화면으로 이동 시도');
               await context.push('/settings');
-              // 화면에서 돌아왔을 때 데이터 갱신
-              _handleScreenReturn();
+              // 설정에서 돌아왔을 때도 갱신 가능성이 있으므로 처리
+              if (mounted) {
+                ref.read(profileNotifierProvider.notifier).refresh();
+              }
               break;
             case RefreshProfile():
-              debugPrint('새로고침 버튼 클릭됨');
+              // 수동 새로고침 (pull-to-refresh 등)
               await notifier.onAction(action);
               break;
           }
