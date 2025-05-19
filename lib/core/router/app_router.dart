@@ -44,7 +44,7 @@ GoRouter appRouter(Ref ref) {
         return '/login';
       }
 
-      // 인증 상태 확인
+      // 인증 상태 확인 - auth_provider 사용
       final isLoggedIn = ref.read(isAuthenticatedProvider);
       final currentPath = state.uri.path;
 
@@ -88,7 +88,7 @@ GoRouter appRouter(Ref ref) {
       // === 네비게이션 바 있는 메인 쉘 라우트 (메인 탭 화면들만 포함) ===
       ShellRoute(
         builder: (context, state, child) {
-          // 현재 사용자 정보 가져오기
+          // 현재 사용자 정보 가져오기 - auth_provider 사용
           final currentUser = ref.read(currentUserProvider);
           final profileImageUrl = currentUser?.image;
 

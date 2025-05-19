@@ -1,3 +1,4 @@
+// lib/core/component/profile_tab_button.dart
 import 'package:flutter/material.dart';
 
 import '../styles/app_color_styles.dart';
@@ -11,30 +12,32 @@ class ProfileTabButton extends StatelessWidget {
   const ProfileTabButton({
     super.key,
     required this.isSelected,
-    required this.profileImageUrl,
     required this.onTap,
+    this.profileImageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? AppColorStyles.primary100 : Colors.transparent,
-            width: 2,
-          ),
+          border:
+              isSelected
+                  ? Border.all(color: AppColorStyles.primary100, width: 2.5)
+                  : null,
         ),
-        child: AppImage.profile(
-          imagePath: profileImageUrl,
-          size: 36, // 테두리를 고려한 내부 이미지 크기
-          backgroundColor: Colors.grey.shade200,
-          foregroundColor: AppColorStyles.primary60,
+        child: ClipOval(
+          child: AppImage.profile(
+            imagePath: profileImageUrl,
+            size: 32,
+            backgroundColor: Colors.grey.shade200,
+            foregroundColor:
+                isSelected ? AppColorStyles.primary100 : Colors.grey.shade400,
+          ),
         ),
       ),
     );
