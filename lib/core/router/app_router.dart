@@ -11,7 +11,7 @@ import 'package:devlink_mobile_app/community/presentation/community_list/communi
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
-import 'package:devlink_mobile_app/core/component/navigation_bar.dart';
+import 'package:devlink_mobile_app/core/layout/main_shell.dart'; // MainShell 추가
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
@@ -109,54 +109,8 @@ GoRouter appRouter(Ref ref) {
       // === 네비게이션 바 있는 메인 쉘 라우트 ===
       ShellRoute(
         builder: (context, state, child) {
-          // 현재 사용자 정보 가져오기
-          final currentUser = ref.read(currentUserProvider);
-          final profileImageUrl = currentUser?.image;
-
-          // 현재 활성화된 탭 인덱스 계산
-          int currentIndex = 0; // 기본값 홈
-          final String path = state.matchedLocation;
-
-          if (path == '/community') {
-            currentIndex = 1;
-          } else if (path == '/group') {
-            currentIndex = 3;
-          } else if (path == '/profile') {
-            currentIndex = 4;
-          }
-
-          return Scaffold(
-            body: child,
-            bottomNavigationBar: AppBottomNavigationBar(
-              currentIndex: currentIndex,
-              profileImageUrl: profileImageUrl,
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    context.go('/home');
-                    break;
-                  case 1:
-                    context.go('/community');
-                    break;
-                  case 2:
-                    // 가운데 버튼은 드롭다운 메뉴를 표시
-                    break;
-                  case 3:
-                    context.go('/group');
-                    break;
-                  case 4:
-                    context.go('/profile');
-                    break;
-                }
-              },
-              onCreatePost: () {
-                context.push('/community/write');
-              },
-              onCreateGroup: () {
-                context.push('/group/create');
-              },
-            ),
-          );
+          // MainShell 위젯 사용으로 변경
+          return MainShell(child: child);
         },
         routes: [
           GoRoute(
