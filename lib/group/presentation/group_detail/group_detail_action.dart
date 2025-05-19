@@ -40,6 +40,9 @@ sealed class GroupDetailAction with _$GroupDetailAction {
   // 출석부(캘린더) 화면으로 이동
   const factory GroupDetailAction.navigateToAttendance() = NavigateToAttendance;
 
+  // 지도 화면으로 이동
+  const factory GroupDetailAction.navigateToMap() = NavigateToMap;
+
   // 그룹 설정 화면으로 이동
   const factory GroupDetailAction.navigateToSettings() = NavigateToSettings;
 

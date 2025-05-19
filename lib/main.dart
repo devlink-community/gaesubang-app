@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/core/styles/app_theme.dart';
 import 'package:devlink_mobile_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 void main() async {
@@ -15,6 +16,14 @@ void main() async {
 
   // 알림 서비스 초기화 - 권한 요청 없이
   await NotificationService().init(requestPermissionOnInit: false);
+
+  await NaverMapSdk.instance.initialize(
+    clientId: 'ye49o0dcu6',
+
+    onAuthFailed: (ex) {
+      print("********* 네이버맵 인증오류 : $ex *********");
+    },
+  );
 
   runApp(const ProviderScope(child: MyApp()));
 }

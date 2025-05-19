@@ -1,6 +1,5 @@
+import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'location.dart';
 
 part 'map_marker.freezed.dart';
 
