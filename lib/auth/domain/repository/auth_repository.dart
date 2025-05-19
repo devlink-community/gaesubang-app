@@ -19,7 +19,7 @@ abstract interface class AuthRepository {
   });
 
   /// 현재 로그인된 유저 조회
-  Future<Result<Member?>> getCurrentUser();
+  Future<Result<Member>> getCurrentUser();
 
   /// 로그아웃
   Future<Result<void>> signOut();

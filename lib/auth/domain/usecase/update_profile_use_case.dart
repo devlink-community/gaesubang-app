@@ -16,25 +16,16 @@ class UpdateProfileUseCase {
     String? position,
     String? skills,
   }) async {
-    // TODO: AuthRepository에 updateProfile 메서드 추가 필요
-    // 현재는 getCurrentUser로 대체하여 임시 처리
-    final result = await _repository.getCurrentUser();
+    final result = await _repository.updateProfile(
+      nickname: nickname,
+      description: description,
+      position: position,
+      skills: skills,
+    );
 
     switch (result) {
       case Success(:final data):
-        if (data == null) {
-          return AsyncError(Exception('로그인된 사용자가 없습니다'), StackTrace.current);
-        }
-
-        // 임시로 로컬에서 업데이트된 정보로 Member 생성
-        final updatedMember = data.copyWith(
-          nickname: nickname,
-          description: description ?? data.description,
-          position: position ?? data.position,
-          skills: skills ?? data.skills,
-        );
-
-        return AsyncData(updatedMember);
+        return AsyncData(data);
       case Error(:final failure):
         return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
     }

@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/auth_exception_mapper.dart';
 import 'package:flutter/foundation.dart';
 
@@ -61,11 +62,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<Member?>> getCurrentUser() async {
+  Future<Result<Member>> getCurrentUser() async {
     try {
       final response = await _authDataSource.fetchCurrentUser();
       if (response == null) {
-        return const Result.success(null);
+        return Result.error(
+          Failure(FailureType.unauthorized, AuthErrorMessages.noLoggedInUser),
+        );
       }
 
       // Map을 직접 Member로 변환
