@@ -4,9 +4,12 @@ import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+import 'package:devlink_mobile_app/core/auth/auth_state.dart';
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/auth_exception_mapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -257,7 +260,6 @@ class AuthRepositoryImpl implements AuthRepository {
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
     }
   }
-  // lib/auth/data/repository_impl/auth_repository_impl.dart의 끝부분에 추가
 
   @override
   Future<Result<Member>> updateProfile({
@@ -298,6 +300,61 @@ class AuthRepositoryImpl implements AuthRepository {
       debugPrint('프로필 이미지 업데이트 에러: $e');
       debugPrint('StackTrace: $st');
       return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+    }
+  }
+
+  // === 새로 추가된 인증 상태 관련 메서드 구현 ===
+
+  @override
+  Stream<AuthState> get authStateChanges {
+    if (AppConfig.useMockAuth) {
+      // Mock: 현재 로그인된 사용자가 있으면 인증된 상태로 스트림 반환
+      return Stream.fromFuture(getCurrentUser()).asyncMap((result) {
+        switch (result) {
+          case Success(data: final member):
+            return AuthState.authenticated(member);
+          case Error():
+            return const AuthState.unauthenticated();
+        }
+      });
+    }
+
+    // Firebase: 실제 인증 상태 변화 스트림
+    return FirebaseAuth.instance.authStateChanges().asyncMap((
+      firebaseUser,
+    ) async {
+      if (firebaseUser == null) {
+        return const AuthState.unauthenticated();
+      }
+
+      try {
+        // Firestore에서 완전한 사용자 정보 가져오기
+        final userMap = await _authDataSource.fetchCurrentUser();
+        if (userMap != null) {
+          final member = userMap.toMember();
+          return AuthState.authenticated(member);
+        }
+        return const AuthState.unauthenticated();
+      } catch (e) {
+        debugPrint('Auth state stream error: $e');
+        return const AuthState.unauthenticated();
+      }
+    });
+  }
+
+  @override
+  Future<AuthState> getCurrentAuthState() async {
+    try {
+      final result = await getCurrentUser();
+      switch (result) {
+        case Success(data: final member):
+          return AuthState.authenticated(member);
+        case Error():
+          return const AuthState.unauthenticated();
+      }
+    } catch (e) {
+      debugPrint('Get current auth state error: $e');
+      return const AuthState.unauthenticated();
     }
   }
 }

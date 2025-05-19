@@ -29,46 +29,36 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
+import '../auth/auth_provider.dart';
 
 part 'app_router.g.dart';
-
-// 개발용 강제 로그인 상태를 관리하는 Provider
-@riverpod
-class DevLoginState extends _$DevLoginState {
-  @override
-  bool build() => false; // true로 설정하여 개발용 강제 로그인 상태로 시작
-
-  void toggle() => state = !state;
-  void enable() => state = true;
-  void disable() => state = false;
-}
 
 // GoRouter Provider
 @riverpod
 GoRouter appRouter(Ref ref) {
-  // 개발용 강제 로그인 상태 구독
-  final devLogin = ref.watch(devLoginStateProvider);
-
   return GoRouter(
-    initialLocation: devLogin ? '/home' : '/login',
+    initialLocation: '/login',
     redirect: (context, state) {
       // 루트 경로('/')에 대한 처리 추가
       if (state.uri.path == '/') {
-        return devLogin ? '/home' : '/login';
+        return '/login';
       }
 
-      // 현재 경로
+      // 인증 상태 확인
+      final isLoggedIn = ref.read(isAuthenticatedProvider);
       final currentPath = state.uri.path;
 
       // 로그인이 필요하지 않은 경로 목록
       final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
 
-      // 개발용 강제 로그인 모드가 활성화된 경우
-      if (devLogin) {
-        // 로그인 화면으로 가려는 경우 홈으로 리다이렉트
-        if (publicPaths.any(currentPath.startsWith)) {
-          return '/home';
-        }
+      // 인증이 필요한 페이지에 비로그인 상태로 접근
+      if (!isLoggedIn && !publicPaths.any(currentPath.startsWith)) {
+        return '/login';
+      }
+
+      // 이미 로그인된 상태에서 인증 페이지 접근
+      if (isLoggedIn && publicPaths.any(currentPath.startsWith)) {
+        return '/home';
       }
 
       return null;
@@ -98,21 +88,9 @@ GoRouter appRouter(Ref ref) {
       // === 네비게이션 바 있는 메인 쉘 라우트 (메인 탭 화면들만 포함) ===
       ShellRoute(
         builder: (context, state, child) {
-          // 프로필 이미지
-          final userStorage = UserStorage.instance;
-          final currentUser = userStorage.currentUser;
-          String? profileImageUrl;
-
-          if (currentUser != null) {
-            final profile = userStorage.getProfileById(currentUser.id!);
-            profileImageUrl = profile?.image;
-          } else {
-            final defaultUser = userStorage.getUserByEmail('test1@example.com');
-            if (defaultUser != null) {
-              final profile = userStorage.getProfileById(defaultUser.id!);
-              profileImageUrl = profile?.image;
-            }
-          }
+          // 현재 사용자 정보 가져오기
+          final currentUser = ref.read(currentUserProvider);
+          final profileImageUrl = currentUser?.image;
 
           // 현재 활성화된 탭 인덱스 계산
           int currentIndex = 0; // 기본값 홈
