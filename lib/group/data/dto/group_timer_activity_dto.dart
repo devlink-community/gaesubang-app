@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
