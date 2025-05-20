@@ -27,29 +27,15 @@ class CommunityDetailScreen extends StatefulWidget {
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   final _controller = TextEditingController();
-  bool _isLiked = false;
-  bool _isBookmarked = false;
-
-  @override
-  void didUpdateWidget(CommunityDetailScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 좋아요 상태 업데이트 (현재 사용자 ID는 'user1'로 가정)
-    if (widget.state.post != oldWidget.state.post) {
-      final post = widget.state.post.value;
-      if (post != null) {
-        setState(() {
-          _isLiked = post.like.any((like) => like.userId == 'user1');
-          // 북마크 상태는 별도로 관리해야 함 (여기서는 로컬 상태로 관리)
-        });
-      }
-    }
-  }
+  // _isLiked, _isBookmarked 로컬 변수 제거
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
+  // didUpdateWidget 메서드 제거 (더 이상 필요하지 않음)
 
   // 댓글 제출 핸들러
   void _submitComment() {
@@ -79,17 +65,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+              // 북마크 상태를 위젯 상태에서 직접 가져옴
+              _getBookmarkStatus() ? Icons.bookmark : Icons.bookmark_outline,
               color:
-                  _isBookmarked
+                  _getBookmarkStatus()
                       ? AppColorStyles.primary100
                       : AppColorStyles.gray80,
             ),
             onPressed: () {
               widget.onAction(const CommunityDetailAction.toggleBookmark());
-              setState(() {
-                _isBookmarked = !_isBookmarked;
-              });
             },
           ),
         ],
@@ -166,6 +150,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         ),
       ),
     );
+  }
+
+  // 북마크 상태를 가져오는 헬퍼 메서드
+  bool _getBookmarkStatus() {
+    if (widget.state.post case AsyncData(:final value)) {
+      return value.isBookmarkedByCurrentUser ?? false;
+    }
+    return false;
+  }
+
+  // 좋아요 상태를 가져오는 헬퍼 메서드
+  bool _getLikeStatus() {
+    if (widget.state.post case AsyncData(:final value)) {
+      return value.isLikedByCurrentUser ?? false;
+    }
+    return false;
   }
 
   Widget _buildBody() {
@@ -342,8 +342,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: _isLiked ? Colors.red : AppColorStyles.gray80,
+                        // 로컬 상태 대신 게시글의 좋아요 상태 직접 사용
+                        _getLikeStatus()
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color:
+                            _getLikeStatus()
+                                ? Colors.red
+                                : AppColorStyles.gray80,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -533,11 +539,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   int _getCommentsCount() {
-    switch (widget.state.comments) {
-      case AsyncData(:final value):
-        return value.length;
-      default:
-        return 0;
+    if (widget.state.comments case AsyncData(:final value)) {
+      return value.length;
     }
+    return 0;
   }
 }
