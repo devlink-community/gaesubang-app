@@ -13,6 +13,7 @@ import 'package:devlink_mobile_app/community/presentation/community_write/commun
 import 'package:devlink_mobile_app/core/layout/main_shell.dart';
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
+import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';
@@ -191,6 +192,14 @@ GoRouter appRouter(Ref ref) {
             (context, state) =>
                 GroupSettingsScreenRoot(groupId: state.pathParameters['id']!),
       ),
+      GoRoute(
+        path: '/group/:id/chat',
+        builder:
+            (context, state) =>
+                GroupChatScreenRoot(groupId: state.pathParameters['id']!),
+      ),
+
+      // --- 기타 페이지들 ---
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationScreenRoot(),
