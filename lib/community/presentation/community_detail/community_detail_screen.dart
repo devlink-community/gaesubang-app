@@ -194,7 +194,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             children: [
               _buildPostCard(value),
               _buildDivider(),
-              _buildCommentsSection(),
+              _buildCommentsSection(value),
             ],
           ),
         );
@@ -378,7 +378,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '${post.commentCount}',
+                    '${post.commentCount}', // 비정규화된 commentCount 사용
                     style: AppTextStyles.body1Regular.copyWith(
                       color: AppColorStyles.gray100,
                       fontWeight: FontWeight.w500,
@@ -393,7 +393,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  Widget _buildCommentsSection() {
+  Widget _buildCommentsSection(Post post) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -414,7 +414,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${post.commentCount}', // _getCommentsCount() 대신 post.commentCount 사용
+                  '${post.commentCount}', // post는 상위 context에서 가져와야 함
                   style: AppTextStyles.body2Regular.copyWith(
                     color: AppColorStyles.primary100,
                     fontWeight: FontWeight.bold,

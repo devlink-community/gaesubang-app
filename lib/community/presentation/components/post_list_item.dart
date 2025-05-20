@@ -28,7 +28,6 @@ class PostListItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque, // 투명한 부분까지 터치 감지
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
-
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -132,20 +131,26 @@ class PostListItem extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${post.comment.length}',
+                        '${post.commentCount}', // 비정규화된 commentCount 사용
                         style: AppTextStyles.captionRegular.copyWith(
                           color: AppColorStyles.gray100,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Icon(
-                        Icons.favorite_border,
+                        // 사용자의 좋아요 상태에 따라 아이콘 변경
+                        post.isLikedByCurrentUser
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         size: 16,
-                        color: AppColorStyles.gray80,
+                        color:
+                            post.isLikedByCurrentUser
+                                ? Colors.red
+                                : AppColorStyles.gray80,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${post.like.length}',
+                        '${post.likeCount}', // 비정규화된 likeCount 사용
                         style: AppTextStyles.captionRegular.copyWith(
                           color: AppColorStyles.gray100,
                         ),
