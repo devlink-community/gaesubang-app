@@ -22,6 +22,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   int? _selectedAnswerIndex;
+  String? _currentSkills; // 현재 로딩된 스킬 추적
 
   @override
   void initState() {
@@ -43,21 +44,37 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
 
-    // 여기에 다음 코드를 추가:
-    // 스킬 정보 디버깅 로그 추가
-    debugPrint('DailyQuizBanner - 받은 스킬 정보: ${widget.skills}');
+    _currentSkills = widget.skills;
 
-    // 컴포넌트 마운트 시 퀴즈 로드
+    // 컴포넌트 마운트 시 한 번만 퀴즈 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // 스킬 정보 포함하여 디버깅 로그 추가
-      debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: ${widget.skills}');
-
-      // 여기서 skills 정보 전달
-      ref
-          .read(quizNotifierProvider.notifier)
-          .onAction(QuizAction.loadQuiz(skills: widget.skills));
+      _loadQuiz();
       _animController.forward();
     });
+  }
+
+  @override
+  void didUpdateWidget(DailyQuizBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 스킬 정보가 변경되었을 때만 새로운 퀴즈 로드
+    if (oldWidget.skills != widget.skills) {
+      debugPrint(
+        'DailyQuizBanner - 스킬 변경 감지: ${oldWidget.skills} -> ${widget.skills}',
+      );
+      _currentSkills = widget.skills;
+      _loadQuiz();
+    }
+  }
+
+  // 퀴즈 로딩 메서드 분리
+  void _loadQuiz() {
+    // 스킬 정보 디버깅 로그 추가
+    debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: ${_currentSkills}');
+
+    // 퀴즈 로드 액션 실행
+    ref
+        .read(quizNotifierProvider.notifier)
+        .onAction(QuizAction.loadQuiz(skills: _currentSkills));
   }
 
   @override
@@ -125,15 +142,11 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       ),
                     ),
                     const Spacer(),
-                    // 새로고침 버튼 추가
+                    // 새로고침 버튼
                     GestureDetector(
                       onTap: () {
-                        // 퀴즈 다시 로드 (스킬 정보 전달)
-                        ref
-                            .read(quizNotifierProvider.notifier)
-                            .onAction(
-                              QuizAction.loadQuiz(skills: widget.skills),
-                            );
+                        // 퀴즈 다시 로드
+                        _loadQuiz();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('퀴즈를 새로고침했습니다'),
@@ -218,7 +231,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
       backgroundColor: Colors.transparent,
       builder:
           (context) => _QuizBottomSheet(
-            skills: widget.skills,
+            skills: _currentSkills,
             initialSelectedIndex: _selectedAnswerIndex,
             onAnswerSelected: (index) {
               setState(() {
@@ -249,6 +262,7 @@ class _QuizBottomSheet extends ConsumerStatefulWidget {
 
 class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
   int? _selectedAnswerIndex;
+  bool _isSubmitting = false; // 제출 중 상태 추가
 
   @override
   void initState() {
@@ -290,18 +304,35 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
   Widget _buildQuizContent(ScrollController scrollController) {
     final quizAsync = ref.watch(quizNotifierProvider);
 
-    return quizAsync.when(
-      data:
-          (quiz) =>
-              quiz != null
-                  ? _buildQuizDetails(quiz, scrollController)
-                  : _buildErrorContent(),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => _buildErrorContent(),
-    );
+    // 로딩 중이거나 제출 중일 때
+    if (quizAsync.isLoading || _isSubmitting) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('잠시만 기다려주세요...'),
+          ],
+        ),
+      );
+    }
+
+    // 에러 발생 시
+    if (quizAsync.hasError) {
+      return _buildErrorContent(quizAsync.error.toString());
+    }
+
+    // 데이터 없음
+    if (quizAsync.value == null) {
+      return _buildErrorContent('퀴즈 데이터를 불러올 수 없습니다');
+    }
+
+    // 퀴즈 데이터 있음
+    return _buildQuizDetails(quizAsync.value!, scrollController);
   }
 
-  Widget _buildErrorContent() {
+  Widget _buildErrorContent(String errorMessage) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Center(
@@ -317,10 +348,26 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 8),
+            // 에러 메시지 표시
+            if (errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  errorMessage,
+                  style: AppTextStyles.body2Regular.copyWith(
+                    color: AppColorStyles.error.withValues(alpha: 0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                // 새 퀴즈 로드
                 ref
                     .read(quizNotifierProvider.notifier)
                     .onAction(QuizAction.loadQuiz(skills: widget.skills));
@@ -371,25 +418,10 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               onPressed: () {
                 // 현재 팝업 닫기
                 Navigator.of(context).pop();
-                // 새 퀴즈 로드 (스킬 정보 전달)
+                // 새 퀴즈 로드
                 ref
                     .read(quizNotifierProvider.notifier)
                     .onAction(QuizAction.loadQuiz(skills: widget.skills));
-                // 새 퀴즈로 팝업 다시 열기
-                Future.delayed(
-                  const Duration(milliseconds: 100),
-                  () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder:
-                        (context) => _QuizBottomSheet(
-                          skills: widget.skills,
-                          initialSelectedIndex: null,
-                          onAnswerSelected: widget.onAnswerSelected,
-                        ),
-                  ),
-                );
               },
               color: AppColorStyles.primary100,
             ),
@@ -440,12 +472,11 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               color: Colors.transparent,
               child: InkWell(
                 onTap:
-                    isAnswered
+                    isAnswered || _isSubmitting
                         ? null
                         : () {
                           setState(() {
                             _selectedAnswerIndex = index;
-                            debugPrint('선택한 답변: $index');
                           });
                           widget.onAnswerSelected(index);
                         },
@@ -501,13 +532,25 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
             padding: const EdgeInsets.only(top: 16),
             child: ElevatedButton(
               onPressed:
-                  _selectedAnswerIndex == null
+                  _isSubmitting || _selectedAnswerIndex == null
                       ? null
-                      : () {
-                        // 답변 제출
-                        ref
-                            .read(quizNotifierProvider.notifier)
-                            .onAction(SubmitAnswer(_selectedAnswerIndex!));
+                      : () async {
+                        setState(() {
+                          _isSubmitting = true;
+                        });
+
+                        try {
+                          // 답변 제출
+                          await ref
+                              .read(quizNotifierProvider.notifier)
+                              .onAction(SubmitAnswer(_selectedAnswerIndex!));
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isSubmitting = false;
+                            });
+                          }
+                        }
                       },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
@@ -520,7 +563,7 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
                 disabledBackgroundColor: AppColorStyles.gray40,
               ),
               child: Text(
-                '정답 제출하기',
+                _isSubmitting ? '제출 중...' : '정답 제출하기',
                 style: AppTextStyles.button1Medium.copyWith(
                   color: Colors.white,
                 ),

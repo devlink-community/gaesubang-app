@@ -1,7 +1,7 @@
+// lib/quiz/presentation/quiz_notifier.dart
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../profile/presentation/profile_notifier.dart';
 import '../domain/model/quiz.dart';
 import '../domain/use_case/answer_quiz_use_case.dart';
 import '../domain/use_case/get_daily_quiz_usecase.dart';
@@ -10,20 +10,21 @@ import 'quiz_action.dart';
 
 part 'quiz_notifier.g.dart';
 
-// State 파일 생성 없이 Notifier에서 직접 상태 관리
 @riverpod
 class QuizNotifier extends _$QuizNotifier {
   late final GetDailyQuizUseCase _getDailyQuizUseCase;
   late final AnswerQuizUseCase _answerQuizUseCase;
   bool _showBanner = true;
+  // 마지막으로 로드한 스킬 정보 저장
+  String? _lastLoadedSkills;
 
   @override
   AsyncValue<Quiz?> build() {
     _getDailyQuizUseCase = ref.watch(getDailyQuizUseCaseProvider);
     _answerQuizUseCase = ref.watch(answerQuizUseCaseProvider);
 
-    // 초기 상태는 로딩 상태
-    return const AsyncValue.loading();
+    // 초기 상태는 로딩 상태가 아닌 데이터 없음 상태로 변경
+    return const AsyncData(null);
   }
 
   // 배너 표시 여부 상태
@@ -39,88 +40,93 @@ class QuizNotifier extends _$QuizNotifier {
 
       case CloseQuiz():
         _showBanner = false;
-        // 상태 업데이트 트리거를 위해 현재 퀴즈 상태를 다시 설정
-        state = state;
+        // 상태 변경 명시적 알림
+        ref.notifyListeners();
     }
   }
 
   Future<void> _loadQuiz({String? skills}) async {
-    // 직접 전달받은 스킬 정보 사용 (더 자세한 디버깅 정보 추가)
-    debugPrint('QuizNotifier - 로드된 스킬(원본): "$skills"');
+    // 로깅
+    debugPrint('QuizNotifier - 퀴즈 로드 요청, 스킬: "$skills"');
 
-    // 스킬 전처리 - 명시적인 전처리 추가
-    String? processedSkills;
-    if (skills != null && skills.isNotEmpty && skills != "null") {
-      // 스킬 정보가 있을 경우
-      processedSkills = skills.trim();
-      debugPrint('QuizNotifier - 유효한 스킬 정보 발견: "$processedSkills"');
-    } else {
-      // 스킬 정보가 없거나 유효하지 않을 경우
-      debugPrint('QuizNotifier - 스킬 정보 없거나 유효하지 않음, 기본값으로 대체');
-      processedSkills = null;
+    // 동일한 스킬로 이미 로드된 경우 중복 로드 방지 (null 처리 주의)
+    if (_lastLoadedSkills == skills &&
+        state is AsyncData &&
+        state.value != null) {
+      debugPrint('QuizNotifier - 이미 동일한 스킬로 로드됨, 중복 요청 무시');
+      return;
     }
 
-    // 최종 사용할 스킬 정보 로깅
-    debugPrint('QuizNotifier - 최종 사용할 스킬: "$processedSkills"');
+    // 스킬 전처리 - null이나 빈 문자열 등 처리
+    String? processedSkills =
+        (skills?.trim().isEmpty ?? true) ? null : skills?.trim();
 
-    // 퀴즈 로딩 상태로 변경
-    state = const AsyncValue.loading();
+    // 로딩 상태로 변경
+    state = const AsyncLoading();
 
-    // 퀴즈 로드 - 스킬 정보 전달
-    final quizResult = await _getDailyQuizUseCase.execute(
-      skills: processedSkills,
-    );
-
-    // 결과 로깅
-    if (quizResult case AsyncData(:final value)) {
-      debugPrint(
-        'QuizNotifier - 퀴즈 로드 성공: 카테고리 "${value?.category}", 스킬: "$processedSkills"',
+    try {
+      // 퀴즈 로드
+      final quizResult = await _getDailyQuizUseCase.execute(
+        skills: processedSkills,
       );
-    } else if (quizResult case AsyncError(:final error)) {
-      debugPrint('QuizNotifier - 퀴즈 로드 실패: $error');
-    }
 
-    // 상태 업데이트
-    state = quizResult;
+      // 마지막 로드한 스킬 정보 저장
+      _lastLoadedSkills = processedSkills;
+
+      // 상태 업데이트
+      state = quizResult;
+
+      // 디버깅
+      if (quizResult case AsyncData(:final value)) {
+        debugPrint('QuizNotifier - 퀴즈 로드 성공: ${value?.question}');
+      } else {
+        debugPrint('QuizNotifier - 퀴즈 로드 상태: $quizResult');
+      }
+    } catch (e) {
+      debugPrint('QuizNotifier - 퀴즈 로드 예외 발생: $e');
+      state = AsyncError(e, StackTrace.current);
+    }
   }
 
   Future<void> _submitAnswer(int answerIndex) async {
-    if (state is! AsyncData<Quiz?>) return;
-    final quiz = (state as AsyncData<Quiz?>).value;
-    if (quiz == null || quiz.isAnswered) return;
-
-    // 로딩 상태로 변경
-    state = const AsyncValue.loading();
-
-    // 답변 저장
-    final result = await _answerQuizUseCase.execute(
-      quiz: quiz,
-      answerIndex: answerIndex,
-    );
-
-    // 디버그 로그
-    if (result case AsyncData(:final value)) {
-      debugPrint(
-        'QuizNotifier: 답변 제출 완료 - 답변 상태: ${value.isAnswered}, 선택 인덱스: ${value.attemptedAnswerIndex}',
-      );
-    } else if (result case AsyncError(:final error)) {
-      debugPrint('QuizNotifier: 답변 제출 실패 - $error');
+    final currentQuiz = state.valueOrNull;
+    if (currentQuiz == null || currentQuiz.isAnswered) {
+      debugPrint('QuizNotifier - 답변 제출 취소: 퀴즈 없음 또는 이미 답변함');
+      return;
     }
 
-    // 상태 업데이트
-    state = result;
+    // 로딩 상태로 변경
+    state = const AsyncLoading();
+
+    try {
+      // 답변 저장
+      final result = await _answerQuizUseCase.execute(
+        quiz: currentQuiz,
+        answerIndex: answerIndex,
+      );
+
+      // 상태 업데이트
+      state = result;
+
+      // 디버깅
+      if (result case AsyncData(:final value)) {
+        debugPrint(
+          'QuizNotifier - 답변 제출 성공: ${value.isAnswered}, 선택: ${value.attemptedAnswerIndex}',
+        );
+      } else {
+        debugPrint('QuizNotifier - 답변 제출 상태: $result');
+      }
+    } catch (e) {
+      debugPrint('QuizNotifier - 답변 제출 예외 발생: $e');
+      state = AsyncError(e, StackTrace.current);
+    }
   }
 
-  // 사용자 스킬 정보 가져오기 (실제로는 Profile 상태에서 가져와야 함)
-  String? _getUserSkills() {
-    try {
-      // 이 부분은 실제 구현에서 다른 provider를 통해 가져와야 함
-      final profileState = ref.read(profileNotifierProvider);
-      return profileState.userProfile.value?.skills;
-
-      return null;
-    } catch (e) {
-      return null;
+  // 배너 리셋 (다시 표시)
+  void resetBanner() {
+    if (!_showBanner) {
+      _showBanner = true;
+      ref.notifyListeners();
     }
   }
 }
