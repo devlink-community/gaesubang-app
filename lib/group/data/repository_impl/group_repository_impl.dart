@@ -83,7 +83,31 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<Group>> getGroupDetail(String groupId) async {
     try {
-      final groupData = await _dataSource.fetchGroupDetail(groupId);
+      // 현재 사용자 정보 확인
+      final currentUser = _ref.read(currentUserProvider);
+
+      // 사용자의 그룹 가입 여부 확인
+      bool? isJoined;
+      if (currentUser != null) {
+        // 사용자의 가입 그룹 목록에서 현재 그룹 ID 확인
+        // 실제 구현에서는 currentUser의 구조에 따라 이 부분 수정 필요
+
+        // 예시 - 사용자 모델에 joinedGroups 필드가 있는 경우:
+        if (currentUser.joinedGroups != null) {
+          isJoined = currentUser.joinedGroups.any(
+            (group) => group.id == groupId,
+          );
+        }
+
+        // 예시 - 사용자 모델에 joinedGroupIds 필드가 있는 경우:
+        // isJoined = currentUser.joinedGroupIds?.contains(groupId) ?? false;
+      }
+
+      // 데이터소스에 가입 여부 전달
+      final groupData = await _dataSource.fetchGroupDetail(
+        groupId,
+        isJoined: isJoined,
+      );
 
       // Map<String, dynamic> → GroupDto → Group 변환
       final groupDto = GroupDto.fromJson(groupData);

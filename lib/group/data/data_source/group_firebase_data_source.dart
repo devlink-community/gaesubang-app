@@ -68,7 +68,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
   @override
   Future<Map<String, dynamic>> fetchGroupDetail(
     String groupId, {
-    String? currentUserId,
+    bool? isJoined,
   }) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupDetail', () async {
       try {
@@ -83,18 +83,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
         final data = docSnapshot.data()!;
         data['id'] = docSnapshot.id;
 
-        // 현재 사용자 멤버십 상태 확인 (로그인한 경우만)
-        if (currentUserId != null && currentUserId.isNotEmpty) {
-          // 멤버십 확인 방법 1: 멤버 컬렉션 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(currentUserId)
-                  .get();
-
-          // 멤버십 여부 설정
-          data['isJoinedByCurrentUser'] = memberDoc.exists;
+        // 가입 여부가 전달된 경우, 해당 정보 설정
+        if (isJoined != null) {
+          data['isJoinedByCurrentUser'] = isJoined;
         }
 
         return data;
@@ -168,6 +159,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
           transaction.update(_usersCollection.doc(userId), {
             'joingroup': FieldValue.arrayUnion([
               {
+                'group_id': groupId,
                 'group_name': data['name'] ?? '',
                 'group_image': data['imageUrl'] ?? '',
               },
@@ -229,6 +221,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
           transaction.update(_usersCollection.doc(ownerId), {
             'joingroup': FieldValue.arrayUnion([
               {
+                'group_id': groupId,
                 'group_name': groupData['name'] ?? '',
                 'group_image': groupData['imageUrl'] ?? '',
               },
@@ -293,15 +286,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 final joingroups =
                     userDoc.data()!['joingroup'] as List<dynamic>;
 
-                // 그룹 이름으로 항목 찾기
+                // 그룹 ID로 항목 찾기
                 for (int i = 0; i < joingroups.length; i++) {
                   final groupInfo = joingroups[i] as Map<String, dynamic>;
-                  final groupName = await _groupsCollection
-                      .doc(groupId)
-                      .get()
-                      .then((doc) => doc.data()?['name'] as String?);
 
-                  if (groupInfo['group_name'] == groupName) {
+                  if (groupInfo['group_id'] == groupId) {
                     // 그룹 정보 업데이트
                     await _usersCollection.doc(userId).update({
                       'joingroup': FieldValue.arrayRemove([groupInfo]),
@@ -310,7 +299,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
                     await _usersCollection.doc(userId).update({
                       'joingroup': FieldValue.arrayUnion([
                         {
-                          'group_name': updates['name'] ?? groupName,
+                          'group_id': groupId,
+                          'group_name':
+                              updates['name'] ?? groupInfo['group_name'],
                           'group_image':
                               updates['imageUrl'] ?? groupInfo['group_image'],
                         },
@@ -386,9 +377,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
             if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
               final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
 
-              // 그룹 이름으로 항목 찾기
+              // 그룹 ID로 항목 찾기
               for (final joingroup in joingroups) {
-                if (joingroup['group_name'] == groupName) {
+                if (joingroup['group_id'] == groupId) {
                   // 그룹 정보 제거
                   transaction.update(_usersCollection.doc(userId), {
                     'joingroup': FieldValue.arrayRemove([joingroup]),
@@ -612,9 +603,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 final joingroups =
                     userDoc.data()!['joingroup'] as List<dynamic>;
 
-                // 그룹 이름으로 항목 찾기
+                // 그룹 ID로 항목 찾기
                 for (final joingroup in joingroups) {
-                  if (joingroup['group_name'] == groupName) {
+                  if (joingroup['group_id'] == groupId) {
                     // 그룹 이미지 업데이트
                     await _usersCollection.doc(userId).update({
                       'joingroup': FieldValue.arrayRemove([joingroup]),
@@ -622,7 +613,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
                     await _usersCollection.doc(userId).update({
                       'joingroup': FieldValue.arrayUnion([
-                        {'group_name': groupName, 'group_image': imageUrl},
+                        {
+                          'group_id': groupId,
+                          'group_name': joingroup['group_name'],
+                          'group_image': imageUrl,
+                        },
                       ]),
                     });
 
