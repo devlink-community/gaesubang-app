@@ -1,4 +1,4 @@
-# 🧩 Firebase Group 도메인 모델
+# 🧩 Group
 
 ---
 
@@ -127,101 +127,162 @@
 | `timestamp` | `DateTime`              | ✅        | 특수처리   | 활동 발생 시각                              |
 | `groupId`   | `String`                | ✅        | -        | 그룹 ID (역참조)                           |
 | `metadata`  | `Map<String, dynamic>`  | ✅        | -        | 선택적 메타데이터                           |
+
 ---
 
 ## 📝 구현 최적화
 
-### 1. 실시간 그룹 타이머 동기화
+### 1. 그룹 타이머 실시간 상태 관리
 
-타이머 활동 추가 시 트랜잭션을 활용한 원자적 업데이트:
-
-```dart
-return _firestore.runTransaction((transaction) async {
-  // 1. 그룹 멤버 문서 조회
-  final memberDoc = await transaction.get(
-    _groupsCollection.doc(groupId).collection('members').doc(userId)
-  );
-  
-  // 2. 멤버 상태 확인 및 업데이트
-  if (memberDoc.exists) {
-    // 활동 상태 업데이트
-    transaction.update(memberDoc.reference, {'isActive': isStarting});
-    
-    // 타이머 활동 추가
-    final activityRef = _groupsCollection
-        .doc(groupId)
-        .collection('timerActivities')
-        .doc();
-        
-    transaction.set(activityRef, {
-      'memberId': userId,
-      'type': isStarting ? 'start' : 'end',
-      'timestamp': FieldValue.serverTimestamp(),
-      'metadata': metadata,
-    });
-  }
-});
-```
-
-### 2. 출석 정보 일괄 업데이트
-
-출석 정보 추가 시 배열 필드 업데이트 최적화:
+그룹 타이머 화면에서 멤버들의 활동 상태를 효율적으로 표시하기 위한 최적화:
 
 ```dart
-// 배열 필드에 새 요소 추가 (arrayUnion 사용)
-await _groupsCollection
+// 멤버별 마지막 활동 상태를 직접 쿼리
+final List<Future<QuerySnapshot>> memberLastActivities = [];
+
+// 각 멤버별로 가장 최근 활동만 쿼리 (병렬 처리)
+for (final memberId in memberIds) {
+final query = _groupsCollection
     .doc(groupId)
-    .collection('attendance')
-    .doc(dateString)
-    .set({
-      'date': dateString,
-      'members': FieldValue.arrayUnion([{
-        'userId': userId,
-        'userName': userName,
-        'attendedAt': Timestamp.now(),
-        'focusMinutes': focusMinutes
-      }])
-    }, SetOptions(merge: true));
+    .collection('timerActivities')
+    .where('memberId', isEqualTo: memberId)
+    .orderBy('timestamp', descending: true)
+    .limit(1)  // 각 멤버당 가장 최근 활동만 필요
+    .get();
+
+memberLastActivities.add(query);
+}
+
+// 모든 쿼리 실행 결과 수집
+final results = await Future.wait(memberLastActivities);
+
+// 활성 멤버 및 비활성 멤버 분류
+final Map<String, int> activeMembers = {};
+final List<String> inactiveMembers = [];
+final now = DateTime.now();
+
+for (final snapshot in results) {
+if (snapshot.docs.isNotEmpty) {
+final doc = snapshot.docs.first;
+final activity = GroupTimerActivityDto.fromJson(doc.data());
+final memberId = activity.memberId;
+
+if (memberId != null) {
+// 마지막 활동이 'start'인 경우 활성 멤버
+if (activity.type == 'start') {
+final startTime = activity.timestamp;
+if (startTime != null) {
+// 타이머 시작 시간부터 현재까지의 경과 시간 계산
+final elapsedSeconds = now.difference(startTime).inSeconds;
+activeMembers[memberId] = elapsedSeconds;
+}
+} else {
+// 마지막 활동이 'end'인 경우 비활성 멤버
+inactiveMembers.add(memberId);
+}
+}
+}
+}
 ```
 
-### 3. 멤버 관리 최적화
+### 2. 출석부 달력 최적화
 
-그룹 멤버 추가/제거 시 사용자의 joingroup 필드도 함께 업데이트:
+출석부 달력 화면에서 날짜별 타이머 활동 시간을 효율적으로 집계:
 
 ```dart
-return _firestore.runTransaction((transaction) async {
-  // 1. 사용자 문서와 그룹 문서 조회
-  final userDoc = await transaction.get(_usersCollection.doc(userId));
-  final groupDoc = await transaction.get(_groupsCollection.doc(groupId));
-  
-  if (!userDoc.exists || !groupDoc.exists) {
-    throw Exception('사용자 또는 그룹을 찾을 수 없습니다');
-  }
-  
-  // 2. 그룹 멤버 추가
-  transaction.set(
-    _groupsCollection.doc(groupId).collection('members').doc(userId), 
-    memberData
-  );
-  
-  // 3. 사용자의 joingroup 필드 업데이트
-  final joingroup = List<Map<String, dynamic>>.from(
-    userDoc.data()?['joingroup'] ?? []
-  );
-  
-  joingroup.add({
-    'group_name': groupDoc.data()?['name'],
-    'group_image': groupDoc.data()?['imageUrl'],
-  });
-  
-  transaction.update(_usersCollection.doc(userId), {'joingroup': joingroup});
-});
+// 월 단위 타이머 활동 일괄 조회
+final monthActivities = await _groupsCollection
+    .doc(groupId)
+    .collection('timerActivities')
+    .where('timestamp', isGreaterThanOrEqualTo: firstDayOfMonth)
+    .where('timestamp', isLessThanOrEqualTo: lastDayOfMonth)
+    .get();
+
+// 멤버별, 날짜별 활동 시간 집계
+final Map<String, Map<String, int>> memberDailyMinutes = {};
+
+// 멤버별 start/end 페어 매칭
+for (final memberId in memberIds) {
+final memberActivities = monthActivities.docs
+    .map((doc) => GroupTimerActivityDto.fromJson(doc.data()))
+    .where((activity) => activity.memberId == memberId)
+    .toList();
+
+// 활동 시간순 정렬
+memberActivities.sort((a, b) =>
+a.timestamp?.compareTo(b.timestamp ?? DateTime.now()) ?? 0);
+
+// start/end 매칭하여 날짜별 시간 계산
+DateTime? startTime;
+for (final activity in memberActivities) {
+final date = _formatDate(activity.timestamp); // YYYY-MM-DD
+
+if (activity.type == 'start') {
+startTime = activity.timestamp;
+} else if (activity.type == 'end' && startTime != null) {
+final duration = activity.timestamp?.difference(startTime).inMinutes ?? 0;
+
+memberDailyMinutes[memberId] ??= {};
+memberDailyMinutes[memberId]![date] ??= 0;
+memberDailyMinutes[memberId]![date] =
+(memberDailyMinutes[memberId]![date] ?? 0) + duration;
+
+startTime = null; // 페어 처리 완료
+}
+}
+}
 ```
 
----
+### 3. 그룹 멤버십 관리 최적화
 
-## 📚 관련 문서
+그룹 가입/탈퇴 시 트랜잭션을 사용하여 원자적 업데이트 처리:
 
-- [main_firebase_model](firebase_model.md) - Firebase 모델 공통 가이드
-- [firebase_user_model](firebase_user_model.md) - User 도메인 모델
-- [firebase_post_model](firebase_post_model.md) - Post 도메인 모델
+```dart
+// 그룹 가입 처리 - 트랜잭션으로 memberCount 일관성 유지
+return _firestore.runTransaction((transaction) async {
+// 1. 그룹 문서 조회
+final groupDoc = await transaction.get(_groupsCollection.doc(groupId));
+
+if (!groupDoc.exists) {
+throw Exception('그룹을 찾을 수 없습니다');
+}
+
+// 2. 현재 memberCount 확인
+final data = groupDoc.data()!;
+final currentMemberCount = data['memberCount'] as int? ?? 0;
+final maxMemberCount = data['maxMemberCount'] as int? ?? 10;
+
+// 3. 멤버 수 제한 확인
+if (currentMemberCount >= maxMemberCount) {
+throw Exception('그룹 최대 인원에 도달했습니다');
+}
+
+// 4. 멤버 추가 및 카운터 증가
+transaction.set(
+_groupsCollection.doc(groupId).collection('members').doc(userId),
+{
+'userId': userId,
+'userName': userName,
+'profileUrl': profileUrl,
+'role': 'member',
+'joinedAt': FieldValue.serverTimestamp(),
+}
+);
+
+transaction.update(
+_groupsCollection.doc(groupId),
+{'memberCount': currentMemberCount + 1}
+);
+
+// 5. 사용자 문서에도 가입 그룹 정보 추가
+transaction.update(
+_usersCollection.doc(userId),
+{
+'joingroup': FieldValue.arrayUnion([{
+'group_name': data['name'] ?? '',
+'group_image': data['imageUrl'] ?? '',
+}])
+}
+);
+});
+```
