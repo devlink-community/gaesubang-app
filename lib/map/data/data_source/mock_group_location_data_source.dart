@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:devlink_mobile_app/map/data/data_source/group_loscation_data_source.dart';
+import 'package:devlink_mobile_app/map/data/data_source/mock_current_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
 import 'package:flutter/foundation.dart';
 
@@ -42,8 +43,8 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
     // 위치 정보 업데이트 또는 생성
     final updatedLocation = GroupMemberLocationDto(
       memberId: memberId,
-      nickname: '사용자 $memberId', // 실제로는 사용자 정보를 가져와야 함
-      imageUrl: '', // 실제로는 사용자 프로필 이미지 URL
+      nickname: '그룹 멤버 $memberId',
+      imageUrl: 'https://randomuser.me/api/portraits/men/0.jpg',
       latitude: latitude,
       longitude: longitude,
       lastUpdated: DateTime.now(),
@@ -73,7 +74,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
     // 해당 그룹의 위치 정보가 없으면 초기 데이터 생성
     if (!_groupLocations.containsKey(groupId)) {
-      _createInitialMockData(groupId);
+      _createInitialMockDataJeju(groupId);
     }
 
     // 지연 시간 시뮬레이션 (500ms)
@@ -113,7 +114,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
     // 해당 그룹의 위치 정보가 없으면 초기 데이터 생성
     if (!_groupLocations.containsKey(groupId)) {
-      _createInitialMockData(groupId);
+      _createInitialMockDataJeju(groupId);
     }
 
     // 초기 데이터 전송
@@ -125,43 +126,95 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
     return controller.stream;
   }
 
-  // 모의 데이터 초기 생성
-  void _createInitialMockData(String groupId) {
+  // 모의 데이터 초기 생성 (제주도 성산일출봉 근처에 자연스럽게 7명 배치)
+  void _createInitialMockDataJeju(String groupId) {
     if (kDebugMode) {
-      print('MockDataSource: 초기 모의 데이터 생성 - $groupId');
+      print('MockDataSource: 제주도 성산일출봉 근처 모의 데이터 생성 - $groupId (그룹원 7명)');
     }
 
-    // 기준 위치 (서울 시청)
-    const baseLatitude = 37.5666;
-    const baseLongitude = 126.9784;
+    // 성산일출봉 좌표 (MockCurrentLocationDataSource의 상수 사용)
+    final baseLatitude = MockCurrentLocationDataSource.latitude;
+    final baseLongitude = MockCurrentLocationDataSource.longitude;
 
-    // 5~10명의 멤버 생성
-    final memberCount = _random.nextInt(6) + 5;
+    // 그룹 멤버 생성 (성산일출봉 주변에 자연스럽게 배치)
     final locations = <GroupMemberLocationDto>[];
 
-    for (int i = 1; i <= memberCount; i++) {
-      // 약 5km 반경 내의 랜덤 위치 생성 (위도 1도 = 약 111km)
-      final latOffset = (_random.nextDouble() - 0.5) * 0.09; // 약 ±5km
-      final lngOffset =
-          (_random.nextDouble() - 0.5) * 0.12; // 약 ±5km (경도는 위도보다 거리가 좁음)
+    // 멤버 정보 리스트 (지정한 7명)
+    final memberInfo = [
+      {
+        'nickname': '성용',
+        'imageUrl': 'https://randomuser.me/api/portraits/men/1.jpg',
+        'isOnline': true,
+        'latOffset': 0.00128, // 자연스러운 위치 오프셋
+        'lngOffset': -0.00067,
+      },
+      {
+        'nickname': '지원',
+        'imageUrl': 'https://randomuser.me/api/portraits/women/2.jpg',
+        'isOnline': true,
+        'latOffset': 0.00072,
+        'lngOffset': 0.00105,
+      },
+      {
+        'nickname': '동성',
+        'imageUrl': 'https://randomuser.me/api/portraits/men/3.jpg',
+        'isOnline': false,
+        'latOffset': -0.00053,
+        'lngOffset': 0.00192,
+      },
+      {
+        'nickname': '지영',
+        'imageUrl': 'https://randomuser.me/api/portraits/women/4.jpg',
+        'isOnline': false,
+        'latOffset': -0.00132,
+        'lngOffset': 0.00021,
+      },
+      {
+        'nickname': '유준',
+        'imageUrl': 'https://randomuser.me/api/portraits/men/5.jpg',
+        'isOnline': false,
+        'latOffset': -0.00085,
+        'lngOffset': -0.00078,
+      },
+      {
+        'nickname': '화목',
+        'imageUrl': 'https://randomuser.me/api/portraits/women/6.jpg',
+        'isOnline': true,
+        'latOffset': 0.00043,
+        'lngOffset': -0.00133,
+      },
+      {
+        'nickname': '선호',
+        'imageUrl': 'https://randomuser.me/api/portraits/men/7.jpg',
+        'isOnline': false,
+        'latOffset': 0.00062,
+        'lngOffset': 0.00133,
+      },
+    ];
 
-      final isOnline = _random.nextBool();
-      final lastUpdated =
-          isOnline
-              ? DateTime.now().subtract(Duration(minutes: _random.nextInt(60)))
-              : DateTime.now().subtract(
-                Duration(hours: _random.nextInt(24) + 1),
-              );
+    // 멤버들을 추가합니다 (자연스러운 위치에)
+    for (int i = 0; i < memberInfo.length; i++) {
+      final info = memberInfo[i];
 
+      // 약간의 랜덤성 추가 (더 자연스럽게 보이도록)
+      final smallRandomLat =
+          (_random.nextDouble() - 0.5) * 0.0002; // 약간의 랜덤 오프셋
+      final smallRandomLng = (_random.nextDouble() - 0.5) * 0.0002;
+
+      // 멤버 추가
       locations.add(
         GroupMemberLocationDto(
-          memberId: 'member_$i',
-          nickname: '멤버 $i',
-          imageUrl: '', // 실제로는 프로필 이미지 URL
-          latitude: baseLatitude + latOffset,
-          longitude: baseLongitude + lngOffset,
-          lastUpdated: lastUpdated,
-          isOnline: isOnline,
+          memberId: 'member_${i + 1}',
+          nickname: info['nickname']! as String,
+          imageUrl: info['imageUrl']! as String,
+          latitude:
+              baseLatitude + (info['latOffset']! as double) + smallRandomLat,
+          longitude:
+              baseLongitude + (info['lngOffset']! as double) + smallRandomLng,
+          lastUpdated: DateTime.now().subtract(
+            Duration(minutes: _random.nextInt(60) + 5),
+          ),
+          isOnline: info['isOnline']! as bool,
         ),
       );
     }
@@ -171,8 +224,8 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
   // 멤버 위치 랜덤 업데이트 시뮬레이션
   void _simulateRandomUpdates(String groupId) {
-    // 3~5초마다 랜덤 업데이트
-    Future.delayed(Duration(seconds: _random.nextInt(3) + 3), () {
+    // 10~15초마다 랜덤 업데이트
+    Future.delayed(Duration(seconds: _random.nextInt(6) + 10), () {
       // 그룹이 아직 존재하는지 확인
       if (_groupLocations.containsKey(groupId) &&
           _controllers.containsKey(groupId)) {
@@ -183,8 +236,8 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
           final location = locations[index];
 
           // 약간의 위치 변화 추가 (최대 100m)
-          final latOffset = (_random.nextDouble() - 0.5) * 0.002; // 약 ±100m
-          final lngOffset = (_random.nextDouble() - 0.5) * 0.003; // 약 ±100m
+          final latOffset = (_random.nextDouble() - 0.5) * 0.001; // 약 ±50m
+          final lngOffset = (_random.nextDouble() - 0.5) * 0.001; // 약 ±50m
 
           // 위치 업데이트
           final updatedLocation = GroupMemberLocationDto(
