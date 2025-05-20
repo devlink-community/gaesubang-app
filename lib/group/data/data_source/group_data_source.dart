@@ -2,7 +2,9 @@
 
 abstract interface class GroupDataSource {
   /// 전체 그룹 목록 조회
-  Future<List<Map<String, dynamic>>> fetchGroupList({String? currentUserId});
+  Future<List<Map<String, dynamic>>> fetchGroupList({
+    Set<String>? joinedGroupIds,
+  });
 
   /// 특정 그룹 상세 정보 조회
   Future<Map<String, dynamic>> fetchGroupDetail(
