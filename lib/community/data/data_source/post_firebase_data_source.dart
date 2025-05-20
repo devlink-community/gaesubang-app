@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'post_data_source.dart';
 
@@ -26,17 +27,55 @@ class PostFirebaseDataSource implements PostDataSource {
         final querySnapshot =
             await _postsCollection.orderBy('createdAt', descending: true).get();
 
+        // 현재 로그인한 사용자 ID (없으면 빈 문자열)
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
         // 병렬 처리로 성능 최적화
         final futures = querySnapshot.docs.map((doc) async {
           final data = doc.data();
           data['id'] = doc.id; // 문서 ID 추가
 
-          return data.toPostDto();
+          // 좋아요 수 계산
+          final likesSnapshot = await doc.reference.collection('likes').get();
+          final likeCount = likesSnapshot.size;
+
+          // 현재 사용자의 좋아요 상태 확인
+          bool isLikedByCurrentUser = false;
+          bool isBookmarkedByCurrentUser = false;
+
+          if (currentUserId.isNotEmpty) {
+            // 좋아요 상태 확인
+            final userLikeDoc =
+                await doc.reference
+                    .collection('likes')
+                    .doc(currentUserId)
+                    .get();
+            isLikedByCurrentUser = userLikeDoc.exists;
+
+            // 북마크 상태 확인
+            final userBookmarkDoc =
+                await _firestore
+                    .collection('users')
+                    .doc(currentUserId)
+                    .collection('bookmarks')
+                    .doc(doc.id)
+                    .get();
+            isBookmarkedByCurrentUser = userBookmarkDoc.exists;
+          }
+
+          // DTO 생성 및 추가 정보 설정
+          final postDto = data.toPostDto();
+          return postDto.copyWith(
+            likeCount: likeCount,
+            isLikedByCurrentUser: isLikedByCurrentUser,
+            isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+          );
         });
 
         final posts = await Future.wait(futures);
         return posts;
       } catch (e) {
+        print('게시글 목록 로드 오류: $e');
         throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     });
@@ -55,11 +94,50 @@ class PostFirebaseDataSource implements PostDataSource {
         final data = docSnapshot.data()!;
         data['id'] = docSnapshot.id;
 
-        return data.toPostDto();
+        // 현재 로그인한 사용자 ID (없으면 빈 문자열)
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+        // 좋아요 수 계산
+        final likesSnapshot =
+            await docSnapshot.reference.collection('likes').get();
+        final likeCount = likesSnapshot.size;
+
+        // 현재 사용자의 좋아요/북마크 상태 확인
+        bool isLikedByCurrentUser = false;
+        bool isBookmarkedByCurrentUser = false;
+
+        if (currentUserId.isNotEmpty) {
+          // 좋아요 상태 확인
+          final userLikeDoc =
+              await docSnapshot.reference
+                  .collection('likes')
+                  .doc(currentUserId)
+                  .get();
+          isLikedByCurrentUser = userLikeDoc.exists;
+
+          // 북마크 상태 확인
+          final userBookmarkDoc =
+              await _firestore
+                  .collection('users')
+                  .doc(currentUserId)
+                  .collection('bookmarks')
+                  .doc(postId)
+                  .get();
+          isBookmarkedByCurrentUser = userBookmarkDoc.exists;
+        }
+
+        // DTO 생성 및 추가 정보 설정
+        final postDto = data.toPostDto();
+        return postDto.copyWith(
+          likeCount: likeCount,
+          isLikedByCurrentUser: isLikedByCurrentUser,
+          isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+        );
       } catch (e) {
         if (e.toString().contains(CommunityErrorMessages.postNotFound)) {
           rethrow;
         }
+        print('게시글 상세 로드 오류: $e');
         throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     }, params: {'postId': postId});
@@ -97,6 +175,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 업데이트된 게시글 정보 반환
         return await fetchPostDetail(postId);
       } catch (e) {
+        print('좋아요 토글 오류: $e');
         throw Exception(CommunityErrorMessages.likeFailed);
       }
     }, params: {'postId': postId, 'userId': userId});
@@ -130,6 +209,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 업데이트된 게시글 정보 반환
         return await fetchPostDetail(postId);
       } catch (e) {
+        print('북마크 토글 오류: $e');
         throw Exception(CommunityErrorMessages.bookmarkFailed);
       }
     }, params: {'postId': postId, 'userId': userId});
@@ -146,15 +226,51 @@ class PostFirebaseDataSource implements PostDataSource {
                 .orderBy('createdAt', descending: true)
                 .get();
 
-        final comments =
-            querySnapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data.toPostCommentDto();
-            }).toList();
+        if (querySnapshot.docs.isEmpty) {
+          return [];
+        }
+
+        // 현재 Firebase Auth 사용자 ID (없으면 빈 문자열)
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+        // 댓글 ID 목록 추출
+        final commentIds = querySnapshot.docs.map((doc) => doc.id).toList();
+
+        // 사용자 좋아요 상태 확인 (빈 ID면 모두 false 반환)
+        Map<String, bool> likeStatuses = {};
+        if (currentUserId.isNotEmpty) {
+          likeStatuses = await checkCommentsLikeStatus(
+            postId,
+            commentIds,
+            currentUserId,
+          );
+        }
+
+        // 댓글 목록 처리 (좋아요 수와 사용자 좋아요 상태 포함)
+        final comments = await Future.wait(
+          querySnapshot.docs.map((doc) async {
+            final data = doc.data();
+            data['id'] = doc.id;
+
+            // 좋아요 수 가져오기
+            final likesSnapshot = await doc.reference.collection('likes').get();
+            final likeCount = likesSnapshot.size;
+
+            // 현재 사용자의 좋아요 상태
+            final isLikedByCurrentUser = likeStatuses[doc.id] ?? false;
+
+            // DTO로 변환 후 좋아요 정보 추가
+            final commentDto = data.toPostCommentDto();
+            return commentDto.copyWith(
+              likeCount: likeCount,
+              isLikedByCurrentUser: isLikedByCurrentUser,
+            );
+          }),
+        );
 
         return comments;
       } catch (e) {
+        print('댓글 목록 로드 오류: $e');
         throw Exception(CommunityErrorMessages.commentLoadFailed);
       }
     }, params: {'postId': postId});
@@ -180,7 +296,6 @@ class PostFirebaseDataSource implements PostDataSource {
           'userProfileImage': userProfileImage,
           'text': content,
           'createdAt': FieldValue.serverTimestamp(),
-          'likeCount': 0,
         };
 
         // 댓글 추가
@@ -189,9 +304,203 @@ class PostFirebaseDataSource implements PostDataSource {
         // 업데이트된 댓글 목록 반환
         return await fetchComments(postId);
       } catch (e) {
+        print('댓글 작성 오류: $e');
         throw Exception(CommunityErrorMessages.commentCreateFailed);
       }
     }, params: {'postId': postId, 'userId': userId});
+  }
+
+  @override
+  Future<PostCommentDto> toggleCommentLike(
+    String postId,
+    String commentId,
+    String userId,
+    String userName,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostFirebase.toggleCommentLike',
+      () async {
+        try {
+          // 댓글 좋아요 컬렉션 참조
+          final likeRef = _postsCollection
+              .doc(postId)
+              .collection('comments')
+              .doc(commentId)
+              .collection('likes')
+              .doc(userId);
+
+          // 좋아요 존재 여부 확인
+          final likeDoc = await likeRef.get();
+
+          if (likeDoc.exists) {
+            // 이미 좋아요가 있으면 삭제 (취소)
+            await likeRef.delete();
+          } else {
+            // 좋아요가 없으면 추가
+            await likeRef.set({
+              'userId': userId,
+              'userName': userName,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+          }
+
+          // 댓글 정보 가져오기
+          final commentDoc =
+              await _postsCollection
+                  .doc(postId)
+                  .collection('comments')
+                  .doc(commentId)
+                  .get();
+
+          if (!commentDoc.exists) {
+            throw Exception(CommunityErrorMessages.commentLoadFailed);
+          }
+
+          final commentData = commentDoc.data()!;
+          commentData['id'] = commentDoc.id;
+
+          // 좋아요 수 계산
+          final likesSnapshot =
+              await _postsCollection
+                  .doc(postId)
+                  .collection('comments')
+                  .doc(commentId)
+                  .collection('likes')
+                  .get();
+
+          final likeCount = likesSnapshot.size;
+
+          // 변환 및 좋아요 상태 설정
+          final dto = commentData.toPostCommentDto();
+          return dto.copyWith(
+            likeCount: likeCount,
+            isLikedByCurrentUser: !likeDoc.exists, // 토글 후 상태 반환
+          );
+        } catch (e) {
+          print('댓글 좋아요 토글 오류: $e');
+          throw Exception(CommunityErrorMessages.likeFailed);
+        }
+      },
+      params: {'postId': postId, 'commentId': commentId, 'userId': userId},
+    );
+  }
+
+  @override
+  Future<Map<String, bool>> checkCommentsLikeStatus(
+    String postId,
+    List<String> commentIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostFirebase.checkCommentsLikeStatus',
+      () async {
+        try {
+          // 각 댓글의 좋아요 상태 확인 (병렬 처리)
+          final futures = commentIds.map((commentId) async {
+            final likeDoc =
+                await _postsCollection
+                    .doc(postId)
+                    .collection('comments')
+                    .doc(commentId)
+                    .collection('likes')
+                    .doc(userId)
+                    .get();
+
+            return MapEntry(commentId, likeDoc.exists);
+          });
+
+          final entries = await Future.wait(futures);
+          return Map.fromEntries(entries);
+        } catch (e) {
+          print('댓글 좋아요 상태 확인 오류: $e');
+          throw Exception(CommunityErrorMessages.dataLoadFailed);
+        }
+      },
+      params: {
+        'postId': postId,
+        'commentCount': commentIds.length,
+        'userId': userId,
+      },
+    );
+  }
+
+  @override
+  Future<List<PostDto>> searchPosts(String query) async {
+    return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
+      try {
+        final lowercaseQuery = query.toLowerCase();
+
+        // Firestore는 full-text search가 제한적이므로 클라이언트 측 필터링
+        final querySnapshot = await _postsCollection.get();
+
+        // 현재 로그인한 사용자 ID (없으면 빈 문자열)
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+        final List<PostDto> searchResults = [];
+
+        // 각 게시글을 검사하여 검색 조건에 맞는지 확인
+        for (final doc in querySnapshot.docs) {
+          final data = doc.data();
+          data['id'] = doc.id;
+
+          // 검색 조건 확인 (제목, 내용, 해시태그)
+          final title = (data['title'] as String? ?? '').toLowerCase();
+          final content = (data['content'] as String? ?? '').toLowerCase();
+          final hashTags =
+              (data['hashTags'] as List<dynamic>? ?? [])
+                  .map((tag) => (tag as String).toLowerCase())
+                  .toList();
+
+          // 검색어가 포함되어 있는지 확인
+          if (title.contains(lowercaseQuery) ||
+              content.contains(lowercaseQuery) ||
+              hashTags.any((tag) => tag.contains(lowercaseQuery))) {
+            // 좋아요 수 계산
+            final likesSnapshot = await doc.reference.collection('likes').get();
+            final likeCount = likesSnapshot.size;
+
+            // 현재 사용자의 좋아요 상태 확인
+            bool isLikedByCurrentUser = false;
+            bool isBookmarkedByCurrentUser = false;
+
+            if (currentUserId.isNotEmpty) {
+              // 좋아요 상태 확인
+              final userLikeDoc =
+                  await doc.reference
+                      .collection('likes')
+                      .doc(currentUserId)
+                      .get();
+              isLikedByCurrentUser = userLikeDoc.exists;
+
+              // 북마크 상태 확인
+              final userBookmarkDoc =
+                  await _firestore
+                      .collection('users')
+                      .doc(currentUserId)
+                      .collection('bookmarks')
+                      .doc(doc.id)
+                      .get();
+              isBookmarkedByCurrentUser = userBookmarkDoc.exists;
+            }
+
+            // DTO 생성 및 추가 정보 설정
+            final postDto = data.toPostDto();
+            searchResults.add(
+              postDto.copyWith(
+                likeCount: likeCount,
+                isLikedByCurrentUser: isLikedByCurrentUser,
+                isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+              ),
+            );
+          }
+        }
+
+        return searchResults;
+      } catch (e) {
+        print('게시글 검색 오류: $e');
+        throw Exception(CommunityErrorMessages.searchFailed);
+      }
+    }, params: {'query': query});
   }
 
   @override
@@ -230,47 +539,9 @@ class PostFirebaseDataSource implements PostDataSource {
         // 생성된 게시글 ID 반환
         return postId;
       } catch (e) {
+        print('게시글 생성 오류: $e');
         throw Exception(CommunityErrorMessages.postCreateFailed);
       }
     }, params: {'postId': postId, 'authorId': authorId});
-  }
-
-  @override
-  Future<List<PostDto>> searchPosts(String query) async {
-    return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
-      try {
-        final lowercaseQuery = query.toLowerCase();
-
-        // Firestore는 full-text search가 제한적이므로 클라이언트 측 필터링
-        final querySnapshot = await _postsCollection.get();
-
-        final List<PostDto> searchResults = [];
-
-        // 각 게시글을 검사하여 검색 조건에 맞는지 확인
-        for (final doc in querySnapshot.docs) {
-          final data = doc.data();
-          data['id'] = doc.id;
-
-          // 검색 조건 확인 (제목, 내용, 해시태그)
-          final title = (data['title'] as String? ?? '').toLowerCase();
-          final content = (data['content'] as String? ?? '').toLowerCase();
-          final hashTags =
-              (data['hashTags'] as List<dynamic>? ?? [])
-                  .map((tag) => (tag as String).toLowerCase())
-                  .toList();
-
-          // 검색어가 포함되어 있는지 확인
-          if (title.contains(lowercaseQuery) ||
-              content.contains(lowercaseQuery) ||
-              hashTags.any((tag) => tag.contains(lowercaseQuery))) {
-            searchResults.add(data.toPostDto());
-          }
-        }
-
-        return searchResults;
-      } catch (e) {
-        throw Exception(CommunityErrorMessages.searchFailed);
-      }
-    }, params: {'query': query});
   }
 }
