@@ -94,14 +94,36 @@ class MockPostDataSourceImpl implements PostDataSource {
     'user2': {'post1'},
   };
 
+  // 댓글 좋아요 상태 저장 (commentId -> Set<userId>)
+  static final Map<String, Set<String>> _likedComments = {
+    'comment1': {'user2', 'user3', 'user4'},
+    'comment2': {'user1'},
+  };
+
   @override
   Future<List<PostDto>> fetchPostList() async {
     return ApiCallDecorator.wrap('MockPost.fetchPostList', () async {
       // 데이터 로딩 시뮬레이션
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 복사본 반환 (불변성 유지)
-      return List.from(_mockPosts);
+      // 좋아요 수와 사용자 상태 포함하여 반환 (임의의 사용자 ID 'user1' 사용)
+      const currentUserId = 'user1';
+
+      // 복사본 생성 및 추가 정보 설정
+      return _mockPosts.map((post) {
+        final postId = post.id ?? '';
+        final likeCount = _likedPosts[postId]?.length ?? 0;
+        final isLikedByCurrentUser =
+            _likedPosts[postId]?.contains(currentUserId) ?? false;
+        final isBookmarkedByCurrentUser =
+            _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+
+        return post.copyWith(
+          likeCount: likeCount,
+          isLikedByCurrentUser: isLikedByCurrentUser,
+          isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+        );
+      }).toList();
     });
   }
 
@@ -117,7 +139,22 @@ class MockPostDataSourceImpl implements PostDataSource {
         orElse: () => throw Exception(CommunityErrorMessages.postNotFound),
       );
 
-      return post;
+      // 임의의 현재 사용자 ID
+      const currentUserId = 'user1';
+
+      // 좋아요 수 및 사용자 상태 설정
+      final likeCount = _likedPosts[postId]?.length ?? 0;
+      final isLikedByCurrentUser =
+          _likedPosts[postId]?.contains(currentUserId) ?? false;
+      final isBookmarkedByCurrentUser =
+          _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+
+      // 정보 추가하여 반환
+      return post.copyWith(
+        likeCount: likeCount,
+        isLikedByCurrentUser: isLikedByCurrentUser,
+        isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+      );
     }, params: {'postId': postId});
   }
 
@@ -173,8 +210,15 @@ class MockPostDataSourceImpl implements PostDataSource {
       await Future.delayed(const Duration(milliseconds: 300));
 
       final comments = _mockComments[postId] ?? [];
-      // 복사본 반환 (불변성 유지)
-      return List.from(comments);
+      const currentUserId = 'user1'; // 임의의 사용자 ID
+
+      // 좋아요 정보 추가하여 복사본 반환
+      return comments.map((comment) {
+        final commentId = comment.id ?? '';
+        final isLikedByCurrentUser =
+            _likedComments[commentId]?.contains(currentUserId) ?? false;
+        return comment.copyWith(isLikedByCurrentUser: isLikedByCurrentUser);
+      }).toList();
     }, params: {'postId': postId});
   }
 
@@ -198,6 +242,7 @@ class MockPostDataSourceImpl implements PostDataSource {
         text: content,
         createdAt: DateTime.now(),
         likeCount: 0,
+        isLikedByCurrentUser: false, // 생성 시 좋아요 상태는 false
       );
 
       // 댓글 목록에 추가
@@ -208,6 +253,88 @@ class MockPostDataSourceImpl implements PostDataSource {
       // 업데이트된 댓글 목록 반환
       return List.from(comments);
     }, params: {'postId': postId, 'userId': userId});
+  }
+
+  @override
+  Future<PostCommentDto> toggleCommentLike(
+    String postId,
+    String commentId,
+    String userId,
+    String userName,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'MockPost.toggleCommentLike',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        // 좋아요 상태 토글
+        final likedUsers = _likedComments[commentId] ?? <String>{};
+
+        bool newLikeStatus = false;
+        if (likedUsers.contains(userId)) {
+          likedUsers.remove(userId);
+          newLikeStatus = false;
+        } else {
+          likedUsers.add(userId);
+          newLikeStatus = true;
+        }
+
+        _likedComments[commentId] = likedUsers;
+
+        // 해당 댓글 찾기
+        PostCommentDto? targetComment;
+
+        for (final comments in _mockComments.values) {
+          for (final comment in comments) {
+            if (comment.id == commentId) {
+              targetComment = comment;
+              break;
+            }
+          }
+          if (targetComment != null) break;
+        }
+
+        if (targetComment == null) {
+          throw Exception(CommunityErrorMessages.commentLoadFailed);
+        }
+
+        // 좋아요 수와 상태 업데이트하여 반환
+        return targetComment.copyWith(
+          likeCount: likedUsers.length,
+          isLikedByCurrentUser: newLikeStatus,
+        );
+      },
+      params: {'postId': postId, 'commentId': commentId, 'userId': userId},
+    );
+  }
+
+  @override
+  Future<Map<String, bool>> checkCommentsLikeStatus(
+    String postId,
+    List<String> commentIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'MockPost.checkCommentsLikeStatus',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        final Map<String, bool> result = {};
+
+        // 각 댓글의 좋아요 상태 확인
+        for (final commentId in commentIds) {
+          final likedUsers = _likedComments[commentId] ?? <String>{};
+          result[commentId] = likedUsers.contains(userId);
+        }
+
+        return result;
+      },
+      params: {
+        'postId': postId,
+        'commentCount': commentIds.length,
+        'userId': userId,
+      },
+    );
   }
 
   @override
@@ -237,6 +364,9 @@ class MockPostDataSourceImpl implements PostDataSource {
         mediaUrls: imageUris.map((uri) => uri.toString()).toList(),
         createdAt: DateTime.now(),
         hashTags: hashTags,
+        likeCount: 0,
+        isLikedByCurrentUser: false,
+        isBookmarkedByCurrentUser: false,
       );
 
       // 목 데이터에 추가 (맨 앞에 추가하여 최신 게시글이 위에 오도록)
@@ -258,23 +388,44 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 검색어가 제목, 내용, 태그 중 하나에 포함된 게시글 필터링
       final lowercaseQuery = query.toLowerCase();
-      final results =
-          _mockPosts.where((post) {
-            final titleMatch = (post.title ?? '').toLowerCase().contains(
-              lowercaseQuery,
-            );
-            final contentMatch = (post.content ?? '').toLowerCase().contains(
-              lowercaseQuery,
-            );
-            final tagMatch = (post.hashTags ?? []).any(
-              (tag) => tag.toLowerCase().contains(lowercaseQuery),
-            );
 
-            return titleMatch || contentMatch || tagMatch;
-          }).toList();
+      // 임의의 사용자 ID
+      const currentUserId = 'user1';
+
+      final results =
+          _mockPosts
+              .where((post) {
+                final titleMatch = (post.title ?? '').toLowerCase().contains(
+                  lowercaseQuery,
+                );
+                final contentMatch = (post.content ?? '')
+                    .toLowerCase()
+                    .contains(lowercaseQuery);
+                final tagMatch = (post.hashTags ?? []).any(
+                  (tag) => tag.toLowerCase().contains(lowercaseQuery),
+                );
+
+                return titleMatch || contentMatch || tagMatch;
+              })
+              .map((post) {
+                // 좋아요 수 및 사용자 상태 포함
+                final postId = post.id ?? '';
+                final likeCount = _likedPosts[postId]?.length ?? 0;
+                final isLikedByCurrentUser =
+                    _likedPosts[postId]?.contains(currentUserId) ?? false;
+                final isBookmarkedByCurrentUser =
+                    _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+
+                return post.copyWith(
+                  likeCount: likeCount,
+                  isLikedByCurrentUser: isLikedByCurrentUser,
+                  isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+                );
+              })
+              .toList();
 
       // 복사본 반환
-      return List.from(results);
+      return results;
     }, params: {'query': query});
   }
 }

@@ -23,6 +23,19 @@ abstract interface class PostDataSource {
     required String content,
   });
 
+  /* Comment Like - 새로 추가된 메서드 */
+  Future<PostCommentDto> toggleCommentLike(
+    String postId,
+    String commentId,
+    String userId,
+    String userName,
+  );
+  Future<Map<String, bool>> checkCommentsLikeStatus(
+    String postId,
+    List<String> commentIds,
+    String userId,
+  );
+
   /* Search */
   Future<List<PostDto>> searchPosts(String query);
 
