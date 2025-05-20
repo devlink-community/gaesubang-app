@@ -13,6 +13,7 @@ import 'package:devlink_mobile_app/map/presentation/group_map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_map_notifier.g.dart';
@@ -90,13 +91,23 @@ class GroupMapNotifier extends _$GroupMapNotifier {
       case UpdateSearchRadius(:final radius):
         _updateSearchRadius(radius);
 
+      // 새로 추가된 액션 처리
+      case ShowLocationSharingDialog():
+        _showLocationSharingDialog();
+
+      case HideLocationSharingDialog():
+        _hideLocationSharingDialog();
+
+      case UpdateLocationSharingAgreement(:final agreed, :final radius):
+        _updateLocationSharingAgreement(agreed, radius);
+
       // 네비게이션 액션은 Root에서 처리
       case NavigateToMemberProfile():
         break;
     }
   }
 
-  // 초기화 로직
+  // 초기화 로직 수정
   Future<void> _initialize(String groupId, String groupName) async {
     if (kDebugMode) {
       print('📱 GroupMapNotifier initializing - groupId: $groupId');
@@ -111,27 +122,117 @@ class GroupMapNotifier extends _$GroupMapNotifier {
     // 위치 권한 확인
     await _requestLocationPermission();
 
-    // 그룹 멤버 위치 정보 로드
-    await _loadGroupLocations(groupId);
-
-    // 주기적인 위치 업데이트 시작
-    _startLocationUpdates();
+    // 위치 권한이 있으면 위치 공유 동의 대화상자 표시
+    if (state.hasLocationPermission && state.isLocationServiceEnabled) {
+      state = state.copyWith(showLocationSharingDialog: true);
+    } else {
+      // 위치 권한이 없으면 메시지 표시
+      state = state.copyWith(
+        errorMessage: '위치 서비스를 사용할 수 없습니다. 설정에서 위치 권한을 허용해주세요.',
+      );
+    }
 
     state = state.copyWith(isLoading: false);
   }
 
-  // 위치 권한 요청
-  Future<void> _requestLocationPermission() async {
-    // 실제 구현에서는 위치 권한 요청 로직 추가
-    // 예: Geolocator 라이브러리 사용
+  // 위치 공유 동의 대화상자 표시
+  void _showLocationSharingDialog() {
+    state = state.copyWith(showLocationSharingDialog: true);
+  }
+
+  // 위치 공유 동의 대화상자 숨기기
+  void _hideLocationSharingDialog() {
+    state = state.copyWith(showLocationSharingDialog: false);
+  }
+
+  // 위치 공유 동의 상태 업데이트
+  Future<void> _updateLocationSharingAgreement(
+    bool agreed,
+    double radius,
+  ) async {
     state = state.copyWith(
-      hasLocationPermission: true, // 실제로는 권한 요청 결과에 따라 설정
-      isLocationServiceEnabled: true, // 실제로는 위치 서비스 활성화 여부 확인
+      isLocationSharingAgreed: agreed,
+      searchRadius: radius,
+      showLocationSharingDialog: false,
     );
 
-    // 권한이 있으면 현재 위치 가져오기
-    if (state.hasLocationPermission && state.isLocationServiceEnabled) {
+    if (agreed) {
+      // 동의한 경우 그룹 멤버 위치 정보 로드
+      await _loadGroupLocations(state.groupId);
+
+      // 주기적인 위치 업데이트 시작
+      _startLocationUpdates();
+
+      // 현재 위치 가져오기
       await _getCurrentLocation();
+    } else {
+      // 동의하지 않은 경우 메시지 표시
+      state = state.copyWith(
+        errorMessage: '위치 공유에 동의하지 않으셨습니다. 그룹 멤버의 위치를 확인할 수 없습니다.',
+      );
+    }
+  }
+
+  // 위치 권한 요청
+  Future<void> _requestLocationPermission() async {
+    try {
+      // 위치 서비스가 활성화되어 있는지 확인
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // 위치 서비스가 비활성화된 경우
+        state = state.copyWith(
+          hasLocationPermission: false,
+          isLocationServiceEnabled: false,
+          errorMessage: '위치 서비스가 비활성화되어 있습니다. 설정에서 위치 서비스를 활성화해주세요.',
+        );
+        return;
+      }
+
+      // 위치 권한 확인
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      // 권한이 거부된 경우 요청
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          // 사용자가 권한 요청을 거부한 경우
+          state = state.copyWith(
+            hasLocationPermission: false,
+            isLocationServiceEnabled: true,
+            errorMessage: '위치 접근 권한이 거부되었습니다. 설정에서 위치 권한을 허용해주세요.',
+          );
+          return;
+        }
+      }
+
+      // 권한이 영구적으로 거부된 경우
+      if (permission == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          hasLocationPermission: false,
+          isLocationServiceEnabled: true,
+          errorMessage: '위치 접근 권한이 영구적으로 거부되었습니다. 설정에서 위치 권한을 허용해주세요.',
+        );
+        return;
+      }
+
+      // 권한이 허용된 경우
+      state = state.copyWith(
+        hasLocationPermission: true,
+        isLocationServiceEnabled: true,
+        errorMessage: null,
+      );
+
+      // 권한이 있으면 현재 위치 가져오기
+      await _getCurrentLocation();
+    } catch (e) {
+      if (kDebugMode) {
+        print('위치 권한 요청 중 오류 발생: $e');
+      }
+      state = state.copyWith(
+        hasLocationPermission: false,
+        isLocationServiceEnabled: false,
+        errorMessage: '위치 권한 확인 중 오류가 발생했습니다: $e',
+      );
     }
   }
 

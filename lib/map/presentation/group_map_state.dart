@@ -1,4 +1,4 @@
-// lib/map/presentation/group_map_state.dart
+// lib/map/presentation/group_map_state.dart 수정
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -48,6 +48,12 @@ class GroupMapState with _$GroupMapState {
 
     // 그룹명
     this.groupName = '',
+
+    // 위치 공유 동의 여부
+    this.isLocationSharingAgreed = false,
+
+    // 위치 공유 동의 대화상자 표시 여부
+    this.showLocationSharingDialog = false,
   });
 
   final AsyncValue<Location> currentLocation;
@@ -63,4 +69,6 @@ class GroupMapState with _$GroupMapState {
   final bool isLoading;
   final String groupId;
   final String groupName;
+  final bool isLocationSharingAgreed;
+  final bool showLocationSharingDialog;
 }
