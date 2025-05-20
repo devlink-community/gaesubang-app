@@ -2,7 +2,7 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/storage_exception_mapper.dart';
-import 'package:devlink_mobile_app/storage/data/data_source/storage_data_source.dart';
+import 'package:devlink_mobile_app/storage/data_source/storage_data_source.dart';
 import 'package:devlink_mobile_app/storage/domain/repository/storage_repository.dart';
 import 'package:flutter/foundation.dart';
 

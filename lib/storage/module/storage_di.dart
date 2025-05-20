@@ -1,8 +1,8 @@
 // lib/storage/module/storage_di.dart
-import 'package:devlink_mobile_app/storage/data/data_source/storage_data_source.dart';
-import 'package:devlink_mobile_app/storage/data/data_source/storage_firebase_data_source.dart';
-import 'package:devlink_mobile_app/storage/data/repository_impl/storage_repository_impl.dart';
+import 'package:devlink_mobile_app/storage/data_source/storage_data_source.dart';
+import 'package:devlink_mobile_app/storage/data_source/storage_firebase_data_source.dart';
 import 'package:devlink_mobile_app/storage/domain/repository/storage_repository.dart';
+import 'package:devlink_mobile_app/storage/domain/repository/storage_repository_impl.dart';
 import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
 import 'package:devlink_mobile_app/storage/domain/usecase/upload_images_use_case.dart';
 import 'package:firebase_storage/firebase_storage.dart';
