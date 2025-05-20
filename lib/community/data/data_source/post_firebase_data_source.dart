@@ -359,24 +359,44 @@ class PostFirebaseDataSource implements PostDataSource {
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.createComment', () async {
       try {
-        // 댓글 컬렉션 참조
-        final commentRef = _postsCollection.doc(postId).collection('comments');
+        // 게시글 및 댓글 컬렉션 참조
+        final postRef = _postsCollection.doc(postId);
+        final commentRef = postRef.collection('comments');
 
-        // 댓글 데이터 생성
-        final commentData = {
-          'userId': userId,
-          'userName': userName,
-          'userProfileImage': userProfileImage,
-          'text': content,
-          'createdAt': FieldValue.serverTimestamp(),
-          'likeCount': 0, // 초기 좋아요 수
-        };
+        // 새 댓글 ID 미리 생성
+        final newCommentId = commentRef.doc().id;
 
-        // 댓글 추가
-        await commentRef.add(commentData);
+        // 트랜잭션 사용하여 댓글 추가와 commentCount 증가를 원자적으로 처리
+        await _firestore.runTransaction((transaction) async {
+          // 1. 현재 게시글 상태 확인
+          final postDoc = await transaction.get(postRef);
+          if (!postDoc.exists) {
+            throw Exception(CommunityErrorMessages.postNotFound);
+          }
 
-        // 업데이트된 댓글 목록 반환
-        return await fetchComments(postId);
+          // 2. 현재 댓글 수 가져오기 (null이면 0으로 초기화)
+          final data = postDoc.data()!;
+          final currentCommentCount = data['commentCount'] as int? ?? 0;
+
+          // 3. 댓글 데이터 생성
+          final commentData = {
+            'userId': userId,
+            'userName': userName,
+            'userProfileImage': userProfileImage,
+            'text': content,
+            'createdAt': FieldValue.serverTimestamp(),
+            'likeCount': 0,
+          };
+
+          // 4. 트랜잭션에 댓글 추가 및 카운터 증가 작업 포함
+          transaction.set(commentRef.doc(newCommentId), commentData);
+          transaction.update(postRef, {
+            'commentCount': currentCommentCount + 1,
+          });
+        });
+
+        // 5. 업데이트된 댓글 목록 반환
+        return await fetchComments(postId, currentUserId: userId);
       } catch (e) {
         print('댓글 작성 오류: $e');
         throw Exception(CommunityErrorMessages.commentCreateFailed);
@@ -578,34 +598,32 @@ class PostFirebaseDataSource implements PostDataSource {
           bookmarkStatuses = await checkUserBookmarkStatus(postIds, userId);
         }
 
+        // searchPosts 메서드 내의 카운터 처리 부분 수정
+
         // 4. 좋아요 수 및 댓글 수 일괄 가져오기 (병렬 처리)
         final countFutures = mergedDocs.map((doc) async {
           final docId = doc.id;
           final data = doc.data() ?? {}; // null 방지
           data['id'] = docId;
 
-          // 최적화: 비정규화된 카운터 필드가 있으면 직접 사용
-          // null 체크 추가
+          // 최적화: 비정규화된 카운터 필드 값이 null인 경우에만 실제 계산
           int likeCount = 0;
           int commentCount = 0;
 
-          // 안전하게 값 가져오기
+          // 필드가 존재하고 null이 아닌 경우에는 해당 값 사용
           if (data.containsKey('likeCount') && data['likeCount'] != null) {
             likeCount = (data['likeCount'] as int);
+          } else {
+            // 값이 없거나 null인 경우에만 실제 계산 (성능 최적화)
+            final likesSnapshot = await doc.reference.collection('likes').get();
+            likeCount = likesSnapshot.size;
           }
 
           if (data.containsKey('commentCount') &&
               data['commentCount'] != null) {
             commentCount = (data['commentCount'] as int);
-          }
-
-          // 비정규화된 카운터가 없는 경우에만 실제 계산 (성능 최적화)
-          if (likeCount == 0) {
-            final likesSnapshot = await doc.reference.collection('likes').get();
-            likeCount = likesSnapshot.size;
-          }
-
-          if (commentCount == 0) {
+          } else {
+            // 값이 없거나 null인 경우에만 실제 계산 (성능 최적화)
             final commentsSnapshot =
                 await doc.reference.collection('comments').get();
             commentCount = commentsSnapshot.size;
