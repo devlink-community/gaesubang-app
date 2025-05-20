@@ -54,4 +54,18 @@ sealed class GroupMapAction with _$GroupMapAction {
   // 그룹 멤버 프로필로 이동
   const factory GroupMapAction.navigateToMemberProfile(String memberId) =
       NavigateToMemberProfile;
+
+  // 위치 공유 동의 액션
+  const factory GroupMapAction.updateLocationSharingAgreement(
+    bool agreed,
+    double radius,
+  ) = UpdateLocationSharingAgreement;
+
+  // 위치 공유 동의 대화상자 표시 액션
+  const factory GroupMapAction.showLocationSharingDialog() =
+      ShowLocationSharingDialog;
+
+  // 위치 공유 동의 대화상자 숨기기 액션
+  const factory GroupMapAction.hideLocationSharingDialog() =
+      HideLocationSharingDialog;
 }
