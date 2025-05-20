@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:devlink_mobile_app/map/data/data_source/group_loscation_data_source.dart';
+import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/data_source/mock_current_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
 import 'package:flutter/foundation.dart';
