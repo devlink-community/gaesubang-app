@@ -1,11 +1,11 @@
 // lib/community/data/repository_impl/post_repository_impl.dart
-import 'package:devlink_mobile_app/community/data/mapper/comment_mapper.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_data_source.dart';
-import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
-import 'package:devlink_mobile_app/community/domain/model/post.dart';
+import 'package:devlink_mobile_app/community/data/mapper/comment_mapper_old.dart';
+import 'package:devlink_mobile_app/community/data/mapper/post_mapper_old.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
+import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/domain/repository/post_repository.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
 
 class PostRepositoryImpl implements PostRepository {
   const PostRepositoryImpl({required PostDataSource dataSource})
@@ -76,16 +76,16 @@ class PostRepositoryImpl implements PostRepository {
   );
 
   @override
-Future<Result<List<Post>>> searchPosts(String query) async {
-  try {
-    final posts = await _remote.searchPosts(query);
-    return Result.success(posts.toModelList());
-  } catch (e) {
-    return Result.error(
-      mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
-    );
+  Future<Result<List<Post>>> searchPosts(String query) async {
+    try {
+      final posts = await _remote.searchPosts(query);
+      return Result.success(posts.toModelList());
+    } catch (e) {
+      return Result.error(
+        mapExceptionToFailure(e, StackTrace.fromString(e.toString())),
+      );
+    }
   }
-}
 
   /* ---------- Helper ---------- */
   Future<Result<T>> _wrap<T>(Future<T> Function() fn) async {
