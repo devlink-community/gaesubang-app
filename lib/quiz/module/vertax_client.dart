@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:math';
+
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:googleapis/aiplatform/v1.dart' as vertex_ai;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
@@ -9,7 +10,9 @@ import 'package:http/http.dart' as http;
 class VertexAIClient {
   // 싱글톤 패턴 수정
   static final VertexAIClient _instance = VertexAIClient._internal();
+
   factory VertexAIClient() => _instance;
+
   VertexAIClient._internal();
 
   // GCP 프로젝트 설정
@@ -30,22 +33,58 @@ class VertexAIClient {
   Future<void> initialize() async {
     if (_initialized) return;
     try {
-      // 서비스 계정 키 파일 로드
-      final String jsonString = await rootBundle.loadString(
-        'assets/service_account.json',
+      // Remote Config 초기화
+      final remoteConfig = FirebaseRemoteConfig.instance;
+      await remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(minutes: 1),
+          minimumFetchInterval: const Duration(hours: 1),
+        ),
       );
+
+      // 설정 가져오기
+      await remoteConfig.fetchAndActivate();
+
+      // Base64로 인코딩된 키 가져오기
+      final String base64Key = remoteConfig.getString('vertex_ai_key');
+
+      if (base64Key.isEmpty) {
+        debugPrint('VertexAI 키를 Remote Config에서 찾을 수 없습니다. 기본 로직 사용');
+        throw Exception('VertexAI 키를 Remote Config에서 찾을 수 없습니다');
+      }
+
+      // Base64 디코딩
+      final String jsonString = utf8.decode(base64.decode(base64Key));
       final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
+
+      // 디코딩된 JSON으로 인증 클라이언트 생성
       final credentials = ServiceAccountCredentials.fromJson(jsonMap);
       _httpClient = http.Client();
       _authClient = await clientViaServiceAccount(credentials, [
         vertex_ai.AiplatformApi.cloudPlatformScope,
       ]);
+
       _initialized = true;
       debugPrint('Vertex AI 클라이언트 초기화 완료');
     } catch (e) {
       debugPrint('Vertex AI 클라이언트 초기화 실패: $e');
       _initialized = false;
-      rethrow;
+
+      // 실패 시 대체 로직 (개발 모드에서만 작동하도록)
+      if (kDebugMode) {
+        debugPrint('개발 모드에서 제한된 기능으로 계속합니다.');
+        try {
+          // 간단한 HTTP 클라이언트만 초기화 (제한된 기능)
+          _httpClient = http.Client();
+          // 인증 없이 진행 (실제 API 호출은 실패함)
+          _initialized = true;
+        } catch (fallbackError) {
+          debugPrint('대체 로직도 실패: $fallbackError');
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
     }
   }
 
@@ -119,16 +158,14 @@ class VertexAIClient {
       debugPrint('스킬 목록 길이: ${skills.length}');
 
       // 스킬 목록이 비어있는 경우 처리
-      if (skills.isEmpty) {
-        debugPrint('스킬 목록이 비어 있습니다. 기본 스킬 목록 사용');
-        skills = ['Flutter', 'Dart', '프로그래밍 기초']; // 기본 스킬 설정
-      }
+      final List<String> effectiveSkills =
+          skills.isEmpty ? ['프로그래밍 기초'] : skills;
 
       // 배너용에 맞게 프롬프트 구성 수정
       final prompt = """
       당신은 프로그래밍 퀴즈 생성 전문가입니다. 다음 조건에 맞는 퀴즈를 정확히 JSON 형식으로 생성해주세요:
       
-      기술 분야: ${skills.join(', ')}
+      기술 분야: ${effectiveSkills.join(', ')}
       문제 개수: $questionCount
       난이도: $difficultyLevel
       
@@ -139,14 +176,14 @@ class VertexAIClient {
           "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
           "correctOptionIndex": 0,
           "explanation": "정답에 대한 간결한 설명 (50단어 내외)",
-          "relatedSkill": "${skills.first}"
+          "relatedSkill": "${effectiveSkills.first}"
         }
       ]
       
       - 응답은 반드시 올바른 JSON 배열 형식이어야 합니다.
       - 배열의 각 요소는 위에 제시된 모든 키를 포함해야 합니다.
       - 질문들은 $questionCount개 정확히 생성해주세요.
-      - 주어진 기술 분야(${skills.join(', ')})에 관련된 문제만 출제해주세요.
+      - 주어진 기술 분야(${effectiveSkills.join(', ')})에 관련된 문제만 출제해주세요.
       - 출제 문제는 실무에서 도움이 될 수 있는 실질적인 내용으로 구성해주세요.
       - 문제와 선택지는 모바일 화면에 표시될 것이므로 간결하게 작성해주세요.
       - 설명은 50단어 내외로 간결하게 작성해주세요.
