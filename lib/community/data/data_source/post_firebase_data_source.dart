@@ -475,69 +475,136 @@ class PostFirebaseDataSource implements PostDataSource {
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
       try {
+        if (query.trim().isEmpty) {
+          return [];
+        }
+
         final lowercaseQuery = query.toLowerCase();
-
-        // Firestore는 full-text search가 제한적이므로 클라이언트 측 필터링
-        final querySnapshot = await _postsCollection.get();
-
-        // 현재 로그인한 사용자 ID (없으면 빈 문자열)
-        final userId = currentUserId ?? '';
-
         final List<PostDto> searchResults = [];
 
-        // 각 게시글을 검사하여 검색 조건에 맞는지 확인
-        for (final doc in querySnapshot.docs) {
-          final data = doc.data();
-          data['id'] = doc.id;
+        // 1. 서버 측 필터링 최대한 활용 (부분 일치 검색은 제한적)
+        // 제목 기반 검색 (접두사 검색만 가능)
+        final titleResults =
+            await _postsCollection
+                .orderBy('title')
+                .startAt([lowercaseQuery])
+                .endAt([lowercaseQuery + '\uf8ff'])
+                .limit(20)
+                .get();
 
-          // 검색 조건 확인 (제목, 내용, 해시태그)
-          final title = (data['title'] as String? ?? '').toLowerCase();
-          final content = (data['content'] as String? ?? '').toLowerCase();
-          final hashTags =
-              (data['hashTags'] as List<dynamic>? ?? [])
-                  .map((tag) => (tag as String).toLowerCase())
-                  .toList();
+        // 내용 기반 검색 (별도 쿼리)
+        final contentResults =
+            await _postsCollection
+                .orderBy('content')
+                .startAt([lowercaseQuery])
+                .endAt([lowercaseQuery + '\uf8ff'])
+                .limit(20)
+                .get();
 
-          // 검색어가 포함되어 있는지 확인
-          if (title.contains(lowercaseQuery) ||
-              content.contains(lowercaseQuery) ||
-              hashTags.any((tag) => tag.contains(lowercaseQuery))) {
-            // 좋아요 수 계산
-            final likesSnapshot = await doc.reference.collection('likes').get();
-            final likeCount = likesSnapshot.size;
+        // 해시태그 검색은 배열 필드에 대한 부분 일치가 불가능하므로 클라이언트 필터링 필요
+        // 검색 결과 합치기 (Set으로 변환하여 중복 제거)
+        final Set<DocumentSnapshot<Map<String, dynamic>>> mergedDocs = {};
+        mergedDocs.addAll(titleResults.docs);
+        mergedDocs.addAll(contentResults.docs);
 
-            // 현재 사용자의 좋아요 상태 확인
-            bool isLikedByCurrentUser = false;
-            bool isBookmarkedByCurrentUser = false;
+        // 검색 결과가 충분하지 않으면 추가로 모든 게시글 검색 (해시태그 검색용)
+        if (mergedDocs.length < 10) {
+          final allPosts =
+              await _postsCollection
+                  .orderBy('createdAt', descending: true)
+                  .limit(50)
+                  .get();
 
-            if (userId.isNotEmpty) {
-              // 좋아요 상태 확인
-              final userLikeDoc =
-                  await doc.reference.collection('likes').doc(userId).get();
-              isLikedByCurrentUser = userLikeDoc.exists;
+          // 해시태그 검색
+          for (final doc in allPosts.docs) {
+            if (mergedDocs.contains(doc)) continue;
 
-              // 북마크 상태 확인
-              final userBookmarkDoc =
-                  await _firestore
-                      .collection('users')
-                      .doc(userId)
-                      .collection('bookmarks')
-                      .doc(doc.id)
-                      .get();
-              isBookmarkedByCurrentUser = userBookmarkDoc.exists;
+            final data = doc.data();
+            final hashTags =
+                (data['hashTags'] as List<dynamic>? ?? [])
+                    .map((tag) => (tag as String).toLowerCase())
+                    .toList();
+
+            if (hashTags.any((tag) => tag.contains(lowercaseQuery))) {
+              mergedDocs.add(doc);
             }
-
-            // DTO 생성 및 추가 정보 설정
-            final postDto = data.toPostDto();
-            searchResults.add(
-              postDto.copyWith(
-                likeCount: likeCount,
-                isLikedByCurrentUser: isLikedByCurrentUser,
-                isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
-              ),
-            );
           }
         }
+
+        // 검색 결과가 없으면 빈 리스트 반환
+        if (mergedDocs.isEmpty) {
+          return [];
+        }
+
+        // 2. 검색 결과에 대한 문서 ID 추출
+        final postIds = mergedDocs.map((doc) => doc.id).toList();
+
+        // 3. 좋아요 상태 및 북마크 상태 일괄 조회 (N+1 문제 해결)
+        Map<String, bool> likeStatuses = {};
+        Map<String, bool> bookmarkStatuses = {};
+
+        // 로그인한 사용자인 경우에만 상태 확인
+        final userId = currentUserId ?? '';
+        if (userId.isNotEmpty) {
+          // 좋아요 상태 일괄 조회
+          likeStatuses = await checkUserLikeStatus(postIds, userId);
+
+          // 북마크 상태 일괄 조회
+          bookmarkStatuses = await checkUserBookmarkStatus(postIds, userId);
+        }
+
+        // 4. 좋아요 수 및 댓글 수 일괄 가져오기 (병렬 처리)
+        final countFutures = mergedDocs.map((doc) async {
+          final docId = doc.id;
+          final data = doc.data() ?? {}; // null 방지
+          data['id'] = docId;
+
+          // 최적화: 비정규화된 카운터 필드가 있으면 직접 사용
+          // null 체크 추가
+          int likeCount = 0;
+          int commentCount = 0;
+
+          // 안전하게 값 가져오기
+          if (data.containsKey('likeCount') && data['likeCount'] != null) {
+            likeCount = (data['likeCount'] as int);
+          }
+
+          if (data.containsKey('commentCount') &&
+              data['commentCount'] != null) {
+            commentCount = (data['commentCount'] as int);
+          }
+
+          // 비정규화된 카운터가 없는 경우에만 실제 계산 (성능 최적화)
+          if (likeCount == 0) {
+            final likesSnapshot = await doc.reference.collection('likes').get();
+            likeCount = likesSnapshot.size;
+          }
+
+          if (commentCount == 0) {
+            final commentsSnapshot =
+                await doc.reference.collection('comments').get();
+            commentCount = commentsSnapshot.size;
+          }
+
+          // DTO 생성 및 추가 정보 설정
+          final postDto = data.toPostDto();
+          return postDto.copyWith(
+            likeCount: likeCount,
+            commentCount: commentCount,
+            isLikedByCurrentUser: likeStatuses[docId] ?? false,
+            isBookmarkedByCurrentUser: bookmarkStatuses[docId] ?? false,
+          );
+        });
+
+        // 모든 게시글 정보 병렬 로드 완료 대기
+        searchResults.addAll(await Future.wait(countFutures));
+
+        // 5. 최신순으로 정렬하여 결과 반환
+        searchResults.sort(
+          (a, b) => (b.createdAt ?? DateTime.now()).compareTo(
+            a.createdAt ?? DateTime.now(),
+          ),
+        );
 
         return searchResults;
       } catch (e) {
