@@ -135,6 +135,7 @@ _tools/*.md
 
 # Firebase config files
 android/app/google-services.json
+assets/service_account.json
 ios/Runner/GoogleService-Info.plist
 
 # Firebase CLI files
