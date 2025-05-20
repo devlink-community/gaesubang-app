@@ -30,36 +30,29 @@ class QuizNotifier extends _$QuizNotifier {
 
   Future<void> onAction(QuizAction action) async {
     switch (action) {
-      case LoadQuiz():
-        await _loadQuiz();
-        break;
+      case LoadQuiz(:final skills):
+        await _loadQuiz(skills: skills);
 
       case SubmitAnswer(:final answerIndex):
         await _submitAnswer(answerIndex);
-        break;
 
       case CloseQuiz():
         _showBanner = false;
         // 상태 업데이트 트리거를 위해 현재 퀴즈 상태를 다시 설정
         state = state;
-        break;
     }
   }
 
-  Future<void> _loadQuiz() async {
-    // 사용자 스킬 정보 가져오기 (현재 Notifier에서는 간단하게 구현)
-    final skills = _getUserSkills();
+  Future<void> _loadQuiz({String? skills}) async {
+    // 직접 전달받은 스킬 정보 사용
+    debugPrint('QuizNotifier - 로드된 스킬: $skills');
+    final userSkills = skills ?? _getUserSkills();
 
     // 퀴즈 로딩 상태로 변경
     state = const AsyncValue.loading();
 
-    // 퀴즈 로드
-    final quizResult = await _getDailyQuizUseCase.execute(skills: skills);
-
-    // 디버그 로그
-    if (quizResult case AsyncData(:final value)) {
-      debugPrint('QuizNotifier: 퀴즈 로드 완료 - 답변 상태: ${value?.isAnswered}');
-    }
+    // 퀴즈 로드 - 스킬 정보 전달
+    final quizResult = await _getDailyQuizUseCase.execute(skills: userSkills);
 
     // 상태 업데이트
     state = quizResult;

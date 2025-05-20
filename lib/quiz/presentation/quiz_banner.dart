@@ -45,7 +45,10 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
 
     // 컴포넌트 마운트 시 퀴즈 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(quizNotifierProvider.notifier).onAction(const LoadQuiz());
+      // 여기서 skills 정보 전달
+      ref
+          .read(quizNotifierProvider.notifier)
+          .onAction(QuizAction.loadQuiz(skills: widget.skills));
       _animController.forward();
     });
   }
@@ -66,11 +69,8 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
       return const SizedBox.shrink();
     }
 
-    // 퀴즈 참여 여부 확인 (퀴즈가 로드되었고 이미 참여한 경우 버튼 텍스트 변경)
-    bool hasCompletedQuiz = false;
-    if (quizAsync case AsyncData(:final value)) {
-      hasCompletedQuiz = value?.isAnswered ?? false;
-    }
+    // 퀴즈가 완료되었는지 확인 (answered 상태)
+    final bool hasCompletedQuiz = quizAsync.value?.isAnswered ?? false;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -118,6 +118,36 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       ),
                     ),
                     const Spacer(),
+                    // 새로고침 버튼 추가
+                    GestureDetector(
+                      onTap: () {
+                        // 퀴즈 다시 로드 (스킬 정보 전달)
+                        ref
+                            .read(quizNotifierProvider.notifier)
+                            .onAction(
+                              QuizAction.loadQuiz(skills: widget.skills),
+                            );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('퀴즈를 새로고침했습니다'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.refresh,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -286,7 +316,7 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
                 Navigator.of(context).pop();
                 ref
                     .read(quizNotifierProvider.notifier)
-                    .onAction(const LoadQuiz());
+                    .onAction(QuizAction.loadQuiz(skills: widget.skills));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
@@ -328,6 +358,34 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               ),
             ),
             const Spacer(),
+            // 새로고침 버튼 추가
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 24),
+              onPressed: () {
+                // 현재 팝업 닫기
+                Navigator.of(context).pop();
+                // 새 퀴즈 로드 (스킬 정보 전달)
+                ref
+                    .read(quizNotifierProvider.notifier)
+                    .onAction(QuizAction.loadQuiz(skills: widget.skills));
+                // 새 퀴즈로 팝업 다시 열기
+                Future.delayed(
+                  const Duration(milliseconds: 100),
+                  () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder:
+                        (context) => _QuizBottomSheet(
+                          skills: widget.skills,
+                          initialSelectedIndex: null,
+                          onAnswerSelected: widget.onAnswerSelected,
+                        ),
+                  ),
+                );
+              },
+              color: AppColorStyles.primary100,
+            ),
             IconButton(
               icon: const Icon(Icons.close, size: 24),
               onPressed: () => Navigator.of(context).pop(),
@@ -521,6 +579,29 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
           ),
           const SizedBox(height: 16),
           Text('설명: ${quiz.explanation}', style: AppTextStyles.body1Regular),
+          // 디버깅 정보 표시
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '카테고리: ${quiz.category}',
+                  style: AppTextStyles.body2Regular,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '사용자 스킬: ${widget.skills ?? "없음"}',
+                  style: AppTextStyles.body2Regular,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
