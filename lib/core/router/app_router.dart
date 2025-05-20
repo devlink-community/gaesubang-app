@@ -67,7 +67,13 @@ GoRouter appRouter(Ref ref) {
       }
 
       // 인증이 필요하지 않은 경로 목록
-      final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
+      final publicPaths = [
+        '/login',
+        '/sign-up',
+        '/terms',
+        '/forget-password',
+        'forgot-password-2',
+      ];
 
       final isPublicPath = publicPaths.any(currentPath.startsWith);
 
