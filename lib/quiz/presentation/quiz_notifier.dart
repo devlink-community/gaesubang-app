@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../domain/model/quiz.dart';
@@ -31,14 +32,17 @@ class QuizNotifier extends _$QuizNotifier {
     switch (action) {
       case LoadQuiz():
         await _loadQuiz();
+        break;
 
       case SubmitAnswer(:final answerIndex):
         await _submitAnswer(answerIndex);
+        break;
 
       case CloseQuiz():
         _showBanner = false;
         // 상태 업데이트 트리거를 위해 현재 퀴즈 상태를 다시 설정
         state = state;
+        break;
     }
   }
 
@@ -51,6 +55,11 @@ class QuizNotifier extends _$QuizNotifier {
 
     // 퀴즈 로드
     final quizResult = await _getDailyQuizUseCase.execute(skills: skills);
+
+    // 디버그 로그
+    if (quizResult case AsyncData(:final value)) {
+      debugPrint('QuizNotifier: 퀴즈 로드 완료 - 답변 상태: ${value?.isAnswered}');
+    }
 
     // 상태 업데이트
     state = quizResult;
@@ -69,6 +78,15 @@ class QuizNotifier extends _$QuizNotifier {
       quiz: quiz,
       answerIndex: answerIndex,
     );
+
+    // 디버그 로그
+    if (result case AsyncData(:final value)) {
+      debugPrint(
+        'QuizNotifier: 답변 제출 완료 - 답변 상태: ${value.isAnswered}, 선택 인덱스: ${value.attemptedAnswerIndex}',
+      );
+    } else if (result case AsyncError(:final error)) {
+      debugPrint('QuizNotifier: 답변 제출 실패 - $error');
+    }
 
     // 상태 업데이트
     state = result;
