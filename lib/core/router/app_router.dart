@@ -20,6 +20,7 @@ import 'package:devlink_mobile_app/group/presentation/group_list/group_list_scre
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
+import 'package:devlink_mobile_app/map/presentation/group_map_screen_root.dart';
 import 'package:devlink_mobile_app/map/presentation/map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
 import 'package:devlink_mobile_app/onboarding/module.dart/onboarding_completion_status.dart';
@@ -176,7 +177,7 @@ GoRouter appRouter(Ref ref) {
         path: '/group/:id/map',
         builder:
             (context, state) =>
-                MapScreenRoot(groupId: state.pathParameters['id']!),
+                GroupMapScreenRoot(groupId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/group/:id/attendance',
