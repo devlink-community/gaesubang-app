@@ -174,7 +174,6 @@ class PostRepositoryImpl implements PostRepository {
   @override
   Future<Result<List<Comment>>> createComment({
     required String postId,
-    required String memberId,
     required String content,
   }) async {
     return ApiCallDecorator.wrap('PostRepository.createComment', () async {

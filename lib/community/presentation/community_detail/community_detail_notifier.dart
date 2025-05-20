@@ -65,7 +65,6 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
         state = state.copyWith(comments: const AsyncLoading());
         final result = await _createComment.execute(
           postId: _postId,
-          memberId: 'user1', // 현재 로그인한 사용자 ID
           content: content,
         );
         state = state.copyWith(comments: result);
