@@ -23,62 +23,57 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<List<PostDto>> fetchPostList({String? currentUserId}) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostList', () async {
       try {
-        // 게시글 목록 조회 (최신순 정렬)
+        // 1. 게시글 목록 조회 (최신순 정렬)
         final querySnapshot =
             await _postsCollection.orderBy('createdAt', descending: true).get();
 
-        // 현재 로그인한 사용자 ID (없으면 빈 문자열)
-        final userId = currentUserId ?? '';
+        if (querySnapshot.docs.isEmpty) {
+          return [];
+        }
 
-        // 병렬 처리로 성능 최적화
-        final futures = querySnapshot.docs.map((doc) async {
-          final data = doc.data();
-          data['id'] = doc.id; // 문서 ID 추가
+        // 2. 게시글 ID 목록 추출
+        final postIds = querySnapshot.docs.map((doc) => doc.id).toList();
 
-          // 좋아요 수 계산
-          final likesSnapshot = await doc.reference.collection('likes').get();
-          final likeCount = likesSnapshot.size;
+        // 3. 현재 사용자가 로그인한 경우 좋아요/북마크 상태 일괄 조회
+        Map<String, bool> likeStatuses = {};
+        Map<String, bool> bookmarkStatuses = {};
 
-          // 댓글 수 계산 (추가)
-          final commentsSnapshot =
-              await doc.reference.collection('comments').get();
-          final commentCount = commentsSnapshot.size;
+        if (currentUserId != null && currentUserId.isNotEmpty) {
+          // 좋아요 상태 일괄 조회
+          likeStatuses = await checkUserLikeStatus(postIds, currentUserId);
 
-          // 현재 사용자의 좋아요 상태 확인
-          bool isLikedByCurrentUser = false;
-          bool isBookmarkedByCurrentUser = false;
-
-          if (userId.isNotEmpty) {
-            // 좋아요 상태 확인
-            final userLikeDoc =
-                await doc.reference
-                    .collection('likes')
-                    .doc(currentUserId)
-                    .get();
-            isLikedByCurrentUser = userLikeDoc.exists;
-
-            // 북마크 상태 확인
-            final userBookmarkDoc =
-                await _firestore
-                    .collection('users')
-                    .doc(currentUserId)
-                    .collection('bookmarks')
-                    .doc(doc.id)
-                    .get();
-            isBookmarkedByCurrentUser = userBookmarkDoc.exists;
-          }
-
-          // DTO 생성 및 추가 정보 설정
-          final postDto = data.toPostDto();
-          return postDto.copyWith(
-            likeCount: likeCount,
-            commentCount: commentCount, // 댓글 수 추가
-            isLikedByCurrentUser: isLikedByCurrentUser,
-            isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+          // 북마크 상태 일괄 조회
+          bookmarkStatuses = await checkUserBookmarkStatus(
+            postIds,
+            currentUserId,
           );
-        });
+        }
 
-        final posts = await Future.wait(futures);
+        // 4. 각 게시글 정보로 DTO 생성
+        final posts =
+            querySnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+
+              // 비정규화된 카운터 필드 사용 (없으면 0으로 초기화)
+              final likeCount = data['likeCount'] as int? ?? 0;
+              final commentCount = data['commentCount'] as int? ?? 0;
+
+              // 현재 사용자의 좋아요/북마크 상태
+              final isLikedByCurrentUser = likeStatuses[doc.id] ?? false;
+              final isBookmarkedByCurrentUser =
+                  bookmarkStatuses[doc.id] ?? false;
+
+              // DTO 생성 및 필드 설정
+              final postDto = data.toPostDto();
+              return postDto.copyWith(
+                likeCount: likeCount,
+                commentCount: commentCount,
+                isLikedByCurrentUser: isLikedByCurrentUser,
+                isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
+              );
+            }).toList();
+
         return posts;
       } catch (e) {
         print('게시글 목록 로드 오류: $e');
