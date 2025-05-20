@@ -1,5 +1,8 @@
+// lib/quiz/presentation/quiz_banner.dart
+
 import 'package:devlink_mobile_app/quiz/presentation/quiz_action.dart';
 import 'package:devlink_mobile_app/quiz/presentation/quiz_notifier.dart';
+import 'package:devlink_mobile_app/quiz/presentation/quiz_state.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -21,8 +24,8 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  int? _selectedAnswerIndex;
-  String? _currentSkills; // 현재 로딩된 스킬 추적
+
+  String? _currentSkills;
 
   @override
   void initState() {
@@ -46,7 +49,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
 
     _currentSkills = widget.skills;
 
-    // 컴포넌트 마운트 시 한 번만 퀴즈 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadQuiz();
       _animController.forward();
@@ -56,7 +58,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   @override
   void didUpdateWidget(DailyQuizBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 스킬 정보가 변경되었을 때만 새로운 퀴즈 로드
     if (oldWidget.skills != widget.skills) {
       debugPrint(
         'DailyQuizBanner - 스킬 변경 감지: ${oldWidget.skills} -> ${widget.skills}',
@@ -66,12 +67,8 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
     }
   }
 
-  // 퀴즈 로딩 메서드 분리
   void _loadQuiz() {
-    // 스킬 정보 디버깅 로그 추가
-    debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: ${_currentSkills}');
-
-    // 퀴즈 로드 액션 실행
+    debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: $_currentSkills');
     ref
         .read(quizNotifierProvider.notifier)
         .onAction(QuizAction.loadQuiz(skills: _currentSkills));
@@ -85,16 +82,14 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
 
   @override
   Widget build(BuildContext context) {
-    final quizAsync = ref.watch(quizNotifierProvider);
-    final notifier = ref.watch(quizNotifierProvider.notifier);
+    final quizState = ref.watch(quizNotifierProvider);
+    // final notifier = ref.watch(quizNotifierProvider.notifier); // notifier는 필요시 사용
 
-    // 배너를 표시하지 않는 경우
-    if (!notifier.showBanner) {
+    if (!quizState.showBanner) {
       return const SizedBox.shrink();
     }
 
-    // 퀴즈가 완료되었는지 확인 (answered 상태)
-    final bool hasCompletedQuiz = quizAsync.value?.isAnswered ?? false;
+    final bool hasCompletedQuiz = quizState.isAnswered;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -103,7 +98,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
         child: GestureDetector(
           onTap: () => _showQuizPopup(context),
           child: Container(
-            width: 280, // 고정 너비 설정
+            width: 280,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -114,7 +109,9 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
+                  color: Colors.black.withOpacity(
+                    0.15,
+                  ), // withValues 대신 withOpacity 사용
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -131,7 +128,9 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: Colors.white.withOpacity(
+                          0.3,
+                        ), // withValues 대신 withOpacity 사용
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -142,10 +141,8 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       ),
                     ),
                     const Spacer(),
-                    // 새로고침 버튼
                     GestureDetector(
                       onTap: () {
-                        // 퀴즈 다시 로드
                         _loadQuiz();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -157,7 +154,9 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(
+                            0.2,
+                          ), // withValues 대신 withOpacity 사용
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -168,10 +167,13 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       ),
                     ),
                     const SizedBox(width: 8),
+                    // Quiz icon (기존 코드 유지)
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(
+                          0.2,
+                        ), // withValues 대신 withOpacity 사용
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -183,7 +185,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                   ],
                 ),
                 const Spacer(),
-                Icon(Icons.psychology, color: Colors.white, size: 32),
+                const Icon(Icons.psychology, color: Colors.white, size: 32),
                 const SizedBox(height: 12),
                 Text(
                   '개발 지식을 테스트해보세요',
@@ -204,7 +206,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                     ),
                   ),
                   child: Text(
-                    // 이미 완료한 경우 "참여 완료"로 표시, 그렇지 않으면 "퀴즈 풀기"
                     hasCompletedQuiz ? '참여 완료' : '퀴즈 풀기',
                     style: AppTextStyles.button2Regular.copyWith(
                       fontWeight: FontWeight.w600,
@@ -220,58 +221,27 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   }
 
   void _showQuizPopup(BuildContext context) {
-    // 퀴즈 팝업 표시하기 전에 선택된 인덱스 초기화
-    setState(() {
-      _selectedAnswerIndex = null;
-    });
+    // QuizNotifier의 updateSelectedAnswer가 int?를 받도록 수정되었다고 가정합니다.
+    ref.read(quizNotifierProvider.notifier).updateSelectedAnswer(null);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => _QuizBottomSheet(
-            skills: _currentSkills,
-            initialSelectedIndex: _selectedAnswerIndex,
-            onAnswerSelected: (index) {
-              setState(() {
-                _selectedAnswerIndex = index;
-              });
-            },
-          ),
+      builder: (context) => _QuizBottomSheet(skills: _currentSkills),
     );
   }
 }
 
-// 퀴즈 바텀 시트를 별도 위젯으로 분리
-class _QuizBottomSheet extends ConsumerStatefulWidget {
+class _QuizBottomSheet extends ConsumerWidget {
+  // ConsumerWidget으로 변경
   final String? skills;
-  final int? initialSelectedIndex;
-  final Function(int) onAnswerSelected;
 
-  const _QuizBottomSheet({
-    Key? key,
-    this.skills,
-    this.initialSelectedIndex,
-    required this.onAnswerSelected,
-  }) : super(key: key);
+  const _QuizBottomSheet({Key? key, this.skills}) : super(key: key);
 
   @override
-  ConsumerState<_QuizBottomSheet> createState() => _QuizBottomSheetState();
-}
-
-class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
-  int? _selectedAnswerIndex;
-  bool _isSubmitting = false; // 제출 중 상태 추가
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedAnswerIndex = widget.initialSelectedIndex;
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // WidgetRef ref 추가
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
       maxChildSize: 0.95,
@@ -293,19 +263,35 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Expanded(child: _buildQuizContent(scrollController)),
+              Expanded(
+                child: _QuizContent(
+                  // ref를 명시적으로 전달할 필요 없음, _QuizContent가 ConsumerWidget이므로 내부에서 ref 사용 가능
+                  scrollController: scrollController,
+                  skills: skills,
+                ),
+              ),
             ],
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildQuizContent(ScrollController scrollController) {
-    final quizAsync = ref.watch(quizNotifierProvider);
+class _QuizContent extends ConsumerWidget {
+  // ConsumerWidget으로 변경
+  final ScrollController scrollController;
+  final String? skills;
 
-    // 로딩 중이거나 제출 중일 때
-    if (quizAsync.isLoading || _isSubmitting) {
+  const _QuizContent({Key? key, required this.scrollController, this.skills})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // WidgetRef ref 추가
+    final quizState = ref.watch(quizNotifierProvider);
+
+    if (quizState.isLoading) {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -318,21 +304,29 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
       );
     }
 
-    // 에러 발생 시
-    if (quizAsync.hasError) {
-      return _buildErrorContent(quizAsync.error.toString());
+    if (quizState.hasError) {
+      // ref를 _buildErrorContent로 전달
+      return _buildErrorContent(
+        context,
+        quizState.quizData.error?.toString() ?? '알 수 없는 오류',
+        ref,
+      );
     }
 
-    // 데이터 없음
-    if (quizAsync.value == null) {
-      return _buildErrorContent('퀴즈 데이터를 불러올 수 없습니다');
+    if (quizState.quiz == null) {
+      // ref를 _buildErrorContent로 전달 (퀴즈 데이터 없는 경우도 에러로 간주)
+      return _buildErrorContent(context, '퀴즈 데이터를 불러올 수 없습니다', ref);
     }
 
-    // 퀴즈 데이터 있음
-    return _buildQuizDetails(quizAsync.value!, scrollController);
+    return _buildQuizDetails(context, quizState, ref); // ref 전달
   }
 
-  Widget _buildErrorContent(String errorMessage) {
+  // _buildErrorContent 메서드 시그니처 수정 (WidgetRef ref 파라미터 추가)
+  Widget _buildErrorContent(
+    BuildContext context,
+    String errorMessage,
+    WidgetRef ref,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Center(
@@ -349,14 +343,15 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            // 에러 메시지 표시
             if (errorMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
                   errorMessage,
                   style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.error.withValues(alpha: 0.8),
+                    color: AppColorStyles.error.withOpacity(
+                      0.8,
+                    ), // withValues 대신 withOpacity
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
@@ -366,11 +361,14 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                // 현재 팝업이 있다면 닫기 (선택적)
+                // if (Navigator.canPop(context)) {
+                // Navigator.of(context).pop();
+                // }
                 // 새 퀴즈 로드
-                ref
+                ref // 이제 ref 사용 가능
                     .read(quizNotifierProvider.notifier)
-                    .onAction(QuizAction.loadQuiz(skills: widget.skills));
+                    .onAction(QuizAction.loadQuiz(skills: skills));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
@@ -384,23 +382,36 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
     );
   }
 
-  Widget _buildQuizDetails(Quiz quiz, ScrollController scrollController) {
-    final isAnswered = quiz.isAnswered;
+  // _buildQuizDetails 메서드 시그니처 수정 (WidgetRef ref 파라미터 추가)
+  Widget _buildQuizDetails(
+    BuildContext context,
+    QuizState state,
+    WidgetRef ref,
+  ) {
+    final Quiz quiz = state.quiz!;
+    final isAnswered = state.isAnswered;
+    final selectedIndex = state.selectedAnswerIndex;
+    final notifier = ref.read(
+      quizNotifierProvider.notifier,
+    ); // 여기서 notifier 가져오기
 
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(20),
       children: [
-        // 헤더
         Row(
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                color: AppColorStyles.primary100.withOpacity(
+                  0.1,
+                ), // withValues 대신 withOpacity
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColorStyles.primary100.withValues(alpha: 0.3),
+                  color: AppColorStyles.primary100.withOpacity(
+                    0.3,
+                  ), // withValues 대신 withOpacity
                   width: 1,
                 ),
               ),
@@ -412,16 +423,16 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               ),
             ),
             const Spacer(),
-            // 새로고침 버튼 추가
             IconButton(
               icon: const Icon(Icons.refresh, size: 24),
               onPressed: () {
-                // 현재 팝업 닫기
-                Navigator.of(context).pop();
-                // 새 퀴즈 로드
+                // 현재 팝업이 있다면 닫기 (선택적)
+                // if (Navigator.canPop(context)) {
+                //   Navigator.of(context).pop();
+                // }
                 ref
                     .read(quizNotifierProvider.notifier)
-                    .onAction(QuizAction.loadQuiz(skills: widget.skills));
+                    .onAction(QuizAction.loadQuiz(skills: skills));
               },
               color: AppColorStyles.primary100,
             ),
@@ -433,36 +444,43 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
           ],
         ),
         const SizedBox(height: 24),
-
-        // 퀴즈 질문
         Text(quiz.question, style: AppTextStyles.heading6Bold),
         const SizedBox(height: 24),
-
-        // 퀴즈 옵션들
         ...List.generate(quiz.options.length, (index) {
           final option = quiz.options[index];
-          final isSelected = _selectedAnswerIndex == index;
+          final isSelected = selectedIndex == index;
           final isCorrect = quiz.correctAnswerIndex == index;
           final userAnswered = quiz.attemptedAnswerIndex == index;
 
-          // 색상 결정
           Color backgroundColor = Colors.grey.shade100;
           Color borderColor = Colors.grey.shade300;
           Color textColor = AppColorStyles.textPrimary;
 
           if (isAnswered) {
             if (isCorrect) {
-              backgroundColor = Colors.green.withValues(alpha: 0.15);
-              borderColor = Colors.green.withValues(alpha: 0.5);
+              backgroundColor = Colors.green.withOpacity(
+                0.15,
+              ); // withValues 대신 withOpacity
+              borderColor = Colors.green.withOpacity(
+                0.5,
+              ); // withValues 대신 withOpacity
               textColor = Colors.green.shade800;
             } else if (userAnswered) {
-              backgroundColor = Colors.red.withValues(alpha: 0.15);
-              borderColor = Colors.red.withValues(alpha: 0.5);
+              backgroundColor = Colors.red.withOpacity(
+                0.15,
+              ); // withValues 대신 withOpacity
+              borderColor = Colors.red.withOpacity(
+                0.5,
+              ); // withValues 대신 withOpacity
               textColor = Colors.red.shade800;
             }
           } else if (isSelected) {
-            backgroundColor = AppColorStyles.primary100.withValues(alpha: 0.15);
-            borderColor = AppColorStyles.primary100.withValues(alpha: 0.5);
+            backgroundColor = AppColorStyles.primary100.withOpacity(
+              0.15,
+            ); // withValues 대신 withOpacity
+            borderColor = AppColorStyles.primary100.withOpacity(
+              0.5,
+            ); // withValues 대신 withOpacity
             textColor = AppColorStyles.primary100;
           }
 
@@ -472,13 +490,10 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
               color: Colors.transparent,
               child: InkWell(
                 onTap:
-                    isAnswered || _isSubmitting
+                    isAnswered || state.isSubmitting
                         ? null
                         : () {
-                          setState(() {
-                            _selectedAnswerIndex = index;
-                          });
-                          widget.onAnswerSelected(index);
+                          notifier.updateSelectedAnswer(index);
                         },
                 borderRadius: BorderRadius.circular(12),
                 child: Ink(
@@ -525,32 +540,16 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
             ),
           );
         }),
-
-        // 제출 버튼 또는 결과 설명
         if (!isAnswered)
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: ElevatedButton(
               onPressed:
-                  _isSubmitting || _selectedAnswerIndex == null
+                  state.isSubmitting || selectedIndex == null
                       ? null
                       : () async {
-                        setState(() {
-                          _isSubmitting = true;
-                        });
-
-                        try {
-                          // 답변 제출
-                          await ref
-                              .read(quizNotifierProvider.notifier)
-                              .onAction(SubmitAnswer(_selectedAnswerIndex!));
-                        } finally {
-                          if (mounted) {
-                            setState(() {
-                              _isSubmitting = false;
-                            });
-                          }
-                        }
+                        // selectedIndex가 null이 아님을 확신할 수 있으므로 ! 사용 가능 (위 조건문에서 확인)
+                        await notifier.onAction(SubmitAnswer(selectedIndex!));
                       },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
@@ -563,40 +562,38 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
                 disabledBackgroundColor: AppColorStyles.gray40,
               ),
               child: Text(
-                _isSubmitting ? '제출 중...' : '정답 제출하기',
+                state.isSubmitting ? '제출 중...' : '정답 제출하기',
                 style: AppTextStyles.button1Medium.copyWith(
                   color: Colors.white,
                 ),
               ),
             ),
           ),
-
-        // 설명 (정답 제출 후)
         if (isAnswered)
           Padding(
             padding: const EdgeInsets.only(top: 24),
-            child: _buildExplanation(quiz),
+            child: _buildExplanation(quiz, state),
           ),
       ],
     );
   }
 
-  Widget _buildExplanation(Quiz quiz) {
-    final isCorrect = quiz.attemptedAnswerIndex == quiz.correctAnswerIndex;
+  Widget _buildExplanation(Quiz quiz, QuizState state) {
+    final isCorrect = state.isCorrectAnswer;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:
             isCorrect
-                ? Colors.green.withValues(alpha: 0.1)
-                : Colors.red.withValues(alpha: 0.1),
+                ? Colors.green.withOpacity(0.1) // withValues 대신 withOpacity
+                : Colors.red.withOpacity(0.1), // withValues 대신 withOpacity
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
               isCorrect
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : Colors.red.withValues(alpha: 0.3),
+                  ? Colors.green.withOpacity(0.3) // withValues 대신 withOpacity
+                  : Colors.red.withOpacity(0.3), // withValues 대신 withOpacity
         ),
       ),
       child: Column(
@@ -629,12 +626,11 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
           ),
           const SizedBox(height: 16),
           Text('설명: ${quiz.explanation}', style: AppTextStyles.body1Regular),
-          // 디버깅 정보 표시
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.grey.withOpacity(0.1), // withValues 대신 withOpacity
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -646,7 +642,7 @@ class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '사용자 스킬: ${widget.skills ?? "없음"}',
+                  '사용자 스킬: ${skills ?? "없음"}', // skills 변수 사용
                   style: AppTextStyles.body2Regular,
                 ),
               ],
