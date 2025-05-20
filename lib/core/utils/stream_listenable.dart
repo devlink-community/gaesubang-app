@@ -3,6 +3,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../auth/auth_state.dart'; // AuthState import 추가
+
 /// Stream을 Listenable로 변환하는 유틸리티 클래스
 /// GoRouter의 refreshListenable에서 사용하여 상태 변화를 감지
 ///
@@ -128,50 +130,35 @@ class StreamListenable<T> extends ChangeNotifier {
 
 /// 인증 상태 전용 StreamListenable 확장
 /// 더 구체적인 타입 안전성과 편의 메서드 제공
-class AuthStateListenable extends StreamListenable<dynamic> {
-  AuthStateListenable(Stream<dynamic> authStateStream) : super(authStateStream);
+class AuthStateListenable extends StreamListenable<AuthState> {
+  AuthStateListenable(Stream<AuthState> authStateStream)
+    : super(authStateStream);
 
-  /// 현재 인증되어 있는지 확인
+  /// 현재 인증되어 있는지 확인 (수정된 버전)
   bool get isAuthenticated {
-    if (_lastValue == null) return false;
+    final currentState = _lastValue;
+    if (currentState == null) return false;
 
-    // AuthState의 isAuthenticated getter 사용
-    try {
-      return (_lastValue as dynamic).isAuthenticated ?? false;
-    } catch (e) {
-      if (kDebugMode) {
-        print('AuthStateListenable: isAuthenticated 확인 중 에러 - $e');
-      }
-      return false;
-    }
+    // ✅ AuthState의 확장 메서드 직접 사용
+    return currentState.isAuthenticated;
   }
 
-  /// 현재 사용자 정보 (있는 경우)
+  /// 현재 사용자 정보 (있는 경우) (수정된 버전)
   dynamic get currentUser {
-    if (_lastValue == null) return null;
+    final currentState = _lastValue;
+    if (currentState == null) return null;
 
-    try {
-      return (_lastValue as dynamic).user;
-    } catch (e) {
-      if (kDebugMode) {
-        print('AuthStateListenable: currentUser 가져오기 중 에러 - $e');
-      }
-      return null;
-    }
+    // ✅ AuthState의 확장 메서드 직접 사용
+    return currentState.user;
   }
 
-  /// 로딩 중인지 확인
+  /// 로딩 중인지 확인 (수정된 버전)
   bool get isLoading {
-    if (_lastValue == null) return true; // 아직 첫 값을 받지 못함
+    final currentState = _lastValue;
+    if (currentState == null) return true; // 아직 첫 값을 받지 못함
 
-    try {
-      return (_lastValue as dynamic).isLoading ?? false;
-    } catch (e) {
-      if (kDebugMode) {
-        print('AuthStateListenable: isLoading 확인 중 에러 - $e');
-      }
-      return false;
-    }
+    // ✅ AuthState의 확장 메서드 직접 사용
+    return currentState.isLoading;
   }
 
   @override
