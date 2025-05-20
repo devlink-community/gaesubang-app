@@ -189,7 +189,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<List<Map<String, dynamic>>> fetchGroupList({
-    String? currentUserId,
+    Set<String>? joinedGroupIds,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     await _initializeIfNeeded();
@@ -198,11 +198,10 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     final groupsCopy =
         _groups.map((group) => Map<String, dynamic>.from(group)).toList();
 
-    // 현재 사용자가 지정된 경우, 가입 여부 정보 추가
-    if (currentUserId != null) {
-      final userGroupIds = _userGroups[currentUserId] ?? [];
+    // 가입 그룹 ID가 전달된 경우, 해당 정보로 멤버십 상태 설정
+    if (joinedGroupIds != null) {
       for (final group in groupsCopy) {
-        group['isJoinedByCurrentUser'] = userGroupIds.contains(group['id']);
+        group['isJoinedByCurrentUser'] = joinedGroupIds.contains(group['id']);
       }
     }
 
