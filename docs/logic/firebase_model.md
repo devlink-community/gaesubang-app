@@ -290,18 +290,22 @@ db.collection("users")
 
 ---
 
-## 📁 1. 컬렉션: `posts/{postId}`
+## 📁 1. 컬렉션 구조: `posts/{postId}`
 
-| 필드명             | 타입             | 설명                                  |
-|-------------------|------------------|---------------------------------------|
-| `id`              | `string`         | 게시글 ID (문서 ID와 동일)              |
-| `authorId`        | `string`         | 작성자 UID                             |
-| `userProfileImage`| `string`         | 작성자 프로필 이미지 URL               |
-| `title`           | `string`         | 게시글 제목                             |
+| 필드명             | 타입             | 설명                                    |
+|-------------------|------------------|-----------------------------------------|
+| `id`              | `string`         | 게시글 ID (문서 ID와 동일)               |
+| `authorId`        | `string`         | 작성자 UID                              |
+| `authorNickname`  | `string`         | 작성자 닉네임 (비정규화)                 |
+| `authorPosition`  | `string`         | 작성자 직책/포지션 (비정규화)            |
+| `userProfileImage`| `string`         | 작성자 프로필 이미지 URL                |
+| `title`           | `string`         | 게시글 제목                              |
 | `content`         | `string`         | 게시글 본문 내용                         |
-| `mediaUrls`       | `array`          | 첨부 이미지, 비디오 등의 URL 목록         |
+| `mediaUrls`       | `array`          | 첨부 이미지, 비디오 등의 URL 목록        |
 | `createdAt`       | `timestamp`      | 게시글 작성 시간                         |
-| `hashTags`        | `array`          | 해시태그 목록 (예: ["#스터디", "#공부"]) |
+| `hashTags`        | `array`          | 해시태그 목록 (예: ["스터디", "정처기"]) |
+| `likeCount`       | `number`         | 좋아요 수 (비정규화)                     |
+| `commentCount`    | `number`         | 댓글 수 (비정규화)                       |
 
 ### ✅ 예시 JSON
 
@@ -309,12 +313,16 @@ db.collection("users")
 {
   "id": "post_001",
   "authorId": "user_abc",
+  "authorNickname": "개발자123",
+  "authorPosition": "프론트엔드 개발자",
   "userProfileImage": "https://cdn.example.com/profile.jpg",
   "title": "함께 공부해요",
   "content": "오늘도 열심히 타이머 돌려봅시다.",
   "mediaUrls": ["https://cdn.example.com/img1.png"],
   "createdAt": "2025-05-13T12:00:00Z",
-  "hashTags": ["#스터디", "#정처기"]
+  "hashTags": ["스터디", "정처기"],
+  "likeCount": 5,
+  "commentCount": 3
 }
 ```
 
@@ -324,9 +332,9 @@ db.collection("users")
 
 | 필드명       | 타입       | 설명                            |
 |--------------|------------|---------------------------------|
-| `userId`     | `string`   | 좋아요를 누른 사용자 ID           |
-| `userName`   | `string`   | 사용자 이름                       |
-| `timestamp`  | `timestamp`| 좋아요를 누른 시간                 |
+| `userId`     | `string`   | 좋아요를 누른 사용자 ID         |
+| `userName`   | `string`   | 사용자 이름                     |
+| `timestamp`  | `timestamp`| 좋아요를 누른 시간              |
 
 ### ✅ 예시 JSON
 
@@ -344,17 +352,19 @@ db.collection("users")
 
 | 필드명            | 타입       | 설명                                |
 |-------------------|------------|-------------------------------------|
-| `userId`          | `string`   | 댓글 작성자 ID                       |
-| `userName`        | `string`   | 댓글 작성자 이름                     |
-| `userProfileImage`| `string`   | 댓글 작성자 프로필 이미지 URL         |
-| `text`            | `string`   | 댓글 내용                            |
-| `createdAt`       | `timestamp`| 댓글 작성 시간                        |
-| `likeCount`       | `number`   | 해당 댓글의 좋아요 수                  |
+| `id`              | `string`   | 댓글 ID (문서 ID와 동일)            |
+| `userId`          | `string`   | 댓글 작성자 ID                      |
+| `userName`        | `string`   | 댓글 작성자 이름                    |
+| `userProfileImage`| `string`   | 댓글 작성자 프로필 이미지 URL       |
+| `text`            | `string`   | 댓글 내용                           |
+| `createdAt`       | `timestamp`| 댓글 작성 시간                      |
+| `likeCount`       | `number`   | 해당 댓글의 좋아요 수 (비정규화)    |
 
 ### ✅ 예시 JSON
 
 ```json
 {
+  "id": "comment_123",
   "userId": "user_789",
   "userName": "박코딩",
   "userProfileImage": "https://cdn.example.com/profile2.jpg",
@@ -368,33 +378,38 @@ db.collection("users")
 
 ## 📦 DTO 구조 정리
 
-### 1. PostDto (독립 문서 - ID 필요)
+### 1. PostDto (최적화 버전)
 
 | 필드명             | 타입             | nullable | @JsonKey | 설명                                  |
 |-------------------|------------------|----------|----------|---------------------------------------|
 | `id`              | `String`        | ✅        | -        | 게시글 ID (문서 ID와 동일)             |
 | `authorId`        | `String`        | ✅        | -        | 작성자 ID                              |
+| `authorNickname`  | `String`        | ✅        | -        | 작성자 닉네임 (비정규화)               |
+| `authorPosition`  | `String`        | ✅        | -        | 작성자 직책/포지션 (비정규화)          |
 | `userProfileImage`| `String`        | ✅        | -        | 프로필 이미지 URL                     |
 | `title`           | `String`        | ✅        | -        | 제목                                  |
 | `content`         | `String`        | ✅        | -        | 내용                                  |
 | `mediaUrls`       | `List<String>`  | ✅        | -        | 첨부 이미지/비디오 URL 목록           |
-| `createdAt`       | `DateTime`      | ✅        | -        | 작성 시각                              |
-| `hashTags`        | `List<String>`  | ✅        | -        | 해시태그 목록                          |
+| `createdAt`       | `DateTime`      | ✅        | 특수처리   | 작성 시각                             |
+| `hashTags`        | `List<String>`  | ✅        | -        | 해시태그 목록                         |
+| `likeCount`       | `int`           | ✅        | Firebase에 저장 | 좋아요 수 (비정규화)              |
+| `commentCount`    | `int`           | ✅        | Firebase에 저장 | 댓글 수 (비정규화)                |
+| `isLikedByCurrentUser`    | `bool`  | ✅        | 저장 안함 | 현재 사용자의 좋아요 상태 (UI용)     |
 
 ---
 
-### 2. PostLikeDto (독립 문서 - ID 필요)
+### 2. PostLikeDto
 
 | 필드명      | 타입       | nullable | @JsonKey | 설명                         |
 |-------------|------------|----------|----------|------------------------------|
 | `id`        | `String`  | ✅        | -        | 좋아요 ID (문서 ID와 동일)     |
 | `userId`    | `String`  | ✅        | -        | 좋아요 누른 사용자 ID         |
 | `userName`  | `String`  | ✅        | -        | 사용자 이름                   |
-| `timestamp` | `DateTime`| ✅        | -        | 좋아요 시간                   |
+| `timestamp` | `DateTime`| ✅        | 특수처리   | 좋아요 시간                   |
 
 ---
 
-### 3. PostCommentDto (독립 문서 - ID 필요)
+### 3. PostCommentDto (최적화 버전)
 
 | 필드명            | 타입       | nullable | @JsonKey | 설명                             |
 |-------------------|------------|----------|----------|----------------------------------|
@@ -403,7 +418,76 @@ db.collection("users")
 | `userName`        | `String`  | ✅        | -        | 댓글 작성자 이름                  |
 | `userProfileImage`| `String`  | ✅        | -        | 댓글 작성자 프로필 이미지 URL      |
 | `text`            | `String`  | ✅        | -        | 댓글 본문 내용                     |
-| `createdAt`       | `DateTime`| ✅        | -        | 댓글 작성 시각                     |
-| `likeCount`       | `int`     | ✅        | -        | 좋아요 수                          |
+| `createdAt`       | `DateTime`| ✅        | 특수처리   | 댓글 작성 시각                     |
+| `likeCount`       | `int`     | ✅        | Firebase에 저장 | 좋아요 수 (비정규화)          |
+| `isLikedByCurrentUser` | `bool` | ✅      | 저장 안함 | 현재 사용자의 좋아요 상태 (UI용)    |
 
 ---
+
+## 📝 좋아요 상태 처리 최적화
+
+### N+1 문제 해결을 위한 일괄 상태 조회
+
+게시글 목록을 조회할 때 N개의 게시글마다 각각 좋아요 상태를 확인하면 총 N+1번의 쿼리가 발생합니다. 이를 개선하기 위해 일괄 처리 방식을 적용할 수 있습니다:
+
+```dart
+// DataSource 레벨에서 일괄 조회 메소드 제공
+Future<Map<String, bool>> checkUserLikeStatus(List<String> postIds, String userId) async {
+  final result = <String, bool>{};
+  
+  // 병렬 처리로 효율화
+  final futures = postIds.map((postId) async {
+    final doc = await firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('likes')
+        .doc(userId)
+        .get();
+        
+    result[postId] = doc.exists;
+  });
+  
+  await Future.wait(futures);
+  return result;
+}
+```
+
+### 적용 방법
+
+1. 게시글 목록 조회 후 즉시 좋아요 상태 일괄 조회
+   ```dart
+   // Repository 레벨에서 구현
+   Future<List<Post>> getPostListWithLikeStatus(String userId) async {
+     // 1. 게시글 목록 조회
+     final postDtos = await _dataSource.fetchPostList();
+     
+     // 2. 좋아요 상태 일괄 조회 (N+1 문제 해결)
+     final postIds = postDtos.map((dto) => dto.id!).toList();
+     final likeStatuses = await _dataSource.checkUserLikeStatus(postIds, userId);
+     
+     // 3. 결과 병합
+     return postDtos.map((dto) {
+       final isLiked = likeStatuses[dto.id] ?? false;
+       return dto.copyWith(isLikedByCurrentUser: isLiked).toModel();
+     }).toList();
+   }
+   ```
+
+2. 비정규화된 likeCount와 함께 사용하여 UI 렌더링 최적화
+   ```dart
+   // 모든 게시글에 좋아요 상태 정보 적용
+   void _applyLikeStatus(List<PostDto> posts, Map<String, bool> likeStatuses) {
+     return posts.map((post) {
+       // isLikedByCurrentUser 필드 업데이트
+       return post.copyWith(
+         isLikedByCurrentUser: likeStatuses[post.id] ?? false,
+       );
+     }).toList();
+   }
+   ```
+
+### 장점
+
+1. 게시글 수에 관계없이 좋아요 상태 조회는 항상 단 한 번의 일괄 요청
+2. 비정규화된 `likeCount` 필드로 좋아요 수를 바로 표시할 수 있음
+3. 각 게시글의 좋아요 상태(`isLikedByCurrentUser`)는 UI 전용 필드로 활용

@@ -84,11 +84,12 @@ class PopularPostSection extends StatelessWidget {
     final formattedDate = dateFormat.format(post.createdAt);
 
     // 작성자
-    final authorName = post.member.nickname;
+    final authorName = post.authorNickname;
 
     return InkWell(
       onTap: () {
-        if (post.id.isNotEmpty) {  // ID가 비어있지 않은지 확인
+        if (post.id.isNotEmpty) {
+          // ID가 비어있지 않은지 확인
           print('게시글 클릭: ${post.id}');
           onTapPost(post.id);
         } else {
@@ -155,18 +156,21 @@ class PopularPostSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${post.comment.length}',
+                    '${post.commentCount}',
                     style: AppTextStyles.captionRegular,
                   ),
                   const SizedBox(width: 12),
                   Icon(
-                    Icons.favorite_outline,
+                    post
+                            .isLikedByCurrentUser // 사용자의 좋아요 상태에 따라 아이콘 변경
+                        ? Icons.favorite
+                        : Icons.favorite_outline,
                     size: 16,
                     color: Colors.grey.shade600,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${post.like.length}',
+                    '${post.likeCount}',
                     style: AppTextStyles.captionRegular,
                   ),
                 ],

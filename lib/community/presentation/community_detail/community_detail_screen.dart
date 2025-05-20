@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_state.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/components/comment_item.dart';
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -26,29 +27,15 @@ class CommunityDetailScreen extends StatefulWidget {
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   final _controller = TextEditingController();
-  bool _isLiked = false;
-  bool _isBookmarked = false;
-
-  @override
-  void didUpdateWidget(CommunityDetailScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 좋아요 상태 업데이트 (현재 사용자 ID는 'user1'로 가정)
-    if (widget.state.post != oldWidget.state.post) {
-      final post = widget.state.post.value;
-      if (post != null) {
-        setState(() {
-          _isLiked = post.like.any((like) => like.userId == 'user1');
-          // 북마크 상태는 별도로 관리해야 함 (여기서는 로컬 상태로 관리)
-        });
-      }
-    }
-  }
+  // _isLiked, _isBookmarked 로컬 변수 제거
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
+  // didUpdateWidget 메서드 제거 (더 이상 필요하지 않음)
 
   // 댓글 제출 핸들러
   void _submitComment() {
@@ -78,17 +65,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+              // 북마크 상태를 위젯 상태에서 직접 가져옴
+              _getBookmarkStatus() ? Icons.bookmark : Icons.bookmark_outline,
               color:
-                  _isBookmarked
+                  _getBookmarkStatus()
                       ? AppColorStyles.primary100
                       : AppColorStyles.gray80,
             ),
             onPressed: () {
               widget.onAction(const CommunityDetailAction.toggleBookmark());
-              setState(() {
-                _isBookmarked = !_isBookmarked;
-              });
             },
           ),
         ],
@@ -101,7 +86,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, -2),
               ),
@@ -123,7 +108,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: AppColorStyles.gray40.withOpacity(0.3),
+                    fillColor: AppColorStyles.gray40.withValues(alpha: 0.3),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -147,7 +132,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColorStyles.primary100.withOpacity(0.3),
+                        color: AppColorStyles.primary100.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -165,6 +150,22 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         ),
       ),
     );
+  }
+
+  // 북마크 상태를 가져오는 헬퍼 메서드
+  bool _getBookmarkStatus() {
+    if (widget.state.post case AsyncData(:final value)) {
+      return value.isBookmarkedByCurrentUser;
+    }
+    return false;
+  }
+
+  // 좋아요 상태를 가져오는 헬퍼 메서드
+  bool _getLikeStatus() {
+    if (widget.state.post case AsyncData(:final value)) {
+      return value.isLikedByCurrentUser;
+    }
+    return false;
   }
 
   Widget _buildBody() {
@@ -193,7 +194,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             children: [
               _buildPostCard(value),
               _buildDivider(),
-              _buildCommentsSection(),
+              _buildCommentsSection(value),
             ],
           ),
         );
@@ -202,7 +203,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Widget _buildDivider() {
-    return Container(height: 8, color: AppColorStyles.gray40.withOpacity(0.2));
+    return Container(
+      height: 8,
+      color: AppColorStyles.gray40.withValues(alpha: 0.2),
+    );
   }
 
   Widget _buildPostCard(Post post) {
@@ -218,25 +222,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           // 작성자 정보 및 날짜
           Row(
             children: [
-              // 프로필 이미지
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: Image.network(
-                  post.member.image,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stackTrace) => Container(
-                        width: 50,
-                        height: 50,
-                        color: AppColorStyles.gray60,
-                        child: Icon(
-                          Icons.person,
-                          color: AppColorStyles.gray100,
-                        ),
-                      ),
-                ),
+              // 프로필 이미지 - AppImage 컴포넌트 사용
+              AppImage.profile(
+                imagePath: post.userProfileImageUrl,
+                size: 50,
+                backgroundColor: AppColorStyles.gray60,
+                foregroundColor: AppColorStyles.gray100,
               ),
               const SizedBox(width: 16),
 
@@ -246,7 +237,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post.member.nickname,
+                      post.authorNickname,
                       style: AppTextStyles.subtitle1Bold,
                     ),
                     const SizedBox(height: 4),
@@ -280,7 +271,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           const SizedBox(height: 24),
 
           // 이미지 (있는 경우)
-          if (post.imageUrls.isNotEmpty)
+          if (post.imageUrls.isNotEmpty && post.imageUrls.first.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.network(
@@ -318,7 +309,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColorStyles.primary60.withOpacity(0.1),
+                        color: AppColorStyles.primary60.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -351,13 +342,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _isLiked ? Icons.favorite : Icons.favorite_border,
-                        color: _isLiked ? Colors.red : AppColorStyles.gray80,
+                        // 로컬 상태 대신 게시글의 좋아요 상태 직접 사용
+                        _getLikeStatus()
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color:
+                            _getLikeStatus()
+                                ? Colors.red
+                                : AppColorStyles.gray80,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
+                      // 좋아요 카운트 표시 부분
                       Text(
-                        '${post.like.length}',
+                        '${post.likeCount}', // post.like.length 대신 post.likeCount 사용
                         style: AppTextStyles.body1Regular.copyWith(
                           color: AppColorStyles.gray100,
                           fontWeight: FontWeight.w500,
@@ -380,7 +378,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _getCommentsCount().toString(),
+                    '${post.commentCount}', // 비정규화된 commentCount 사용
                     style: AppTextStyles.body1Regular.copyWith(
                       color: AppColorStyles.gray100,
                       fontWeight: FontWeight.w500,
@@ -395,7 +393,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  Widget _buildCommentsSection() {
+  Widget _buildCommentsSection(Post post) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -412,11 +410,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColorStyles.primary100.withOpacity(0.1),
+                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  _getCommentsCount().toString(),
+                  '${post.commentCount}', // post는 상위 context에서 가져와야 함
                   style: AppTextStyles.body2Regular.copyWith(
                     color: AppColorStyles.primary100,
                     fontWeight: FontWeight.bold,
@@ -533,18 +531,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: value.length,
           separatorBuilder: (_, __) => const Divider(height: 32),
-          itemBuilder: (_, i) => CommentItem(comment: value[i]),
+          itemBuilder:
+              (_, i) =>
+                  CommentItem(comment: value[i], onAction: widget.onAction),
         );
     }
     return const SizedBox.shrink();
-  }
-
-  int _getCommentsCount() {
-    switch (widget.state.comments) {
-      case AsyncData(:final value):
-        return value.length;
-      default:
-        return 0;
-    }
   }
 }

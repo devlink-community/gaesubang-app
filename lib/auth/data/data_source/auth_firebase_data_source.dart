@@ -1,9 +1,8 @@
 // lib/auth/data/data_source/auth_firebase_data_source.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
-import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart'
-    show AuthErrorMessages;
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'auth_data_source.dart';
