@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/community/domain/usecase/fetch_comments_use_c
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_post_detail_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/search_posts_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_bookmark_use_case.dart';
+import 'package:devlink_mobile_app/community/domain/usecase/toggle_comment_like_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_like_use_case.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -89,4 +90,9 @@ CreatePostUseCase createPostUseCase(Ref ref) {
 @riverpod
 SearchPostsUseCase searchPostsUseCase(Ref ref) {
   return SearchPostsUseCase(repo: ref.watch(postRepositoryProvider));
+}
+
+@riverpod
+ToggleCommentLikeUseCase toggleCommentLikeUseCase(Ref ref) {
+  return ToggleCommentLikeUseCase(repo: ref.watch(postRepositoryProvider));
 }
