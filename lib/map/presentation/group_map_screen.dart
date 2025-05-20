@@ -1,6 +1,7 @@
 // lib/map/presentation/group_map_screen.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
+import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/presentation/components/group_map_member_card.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_state.dart';
@@ -41,6 +42,12 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
     // state가 변경되었을 때 마커 업데이트
     if (oldWidget.state.memberLocations != widget.state.memberLocations &&
         widget.state.memberLocations is AsyncData) {
+      _addMarkers();
+    }
+
+    // 현재 위치가 변경되었을 때도 마커 업데이트
+    if (oldWidget.state.currentLocation != widget.state.currentLocation &&
+        widget.state.currentLocation is AsyncData) {
       _addMarkers();
     }
   }
@@ -175,9 +182,12 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
       options: const NaverMapViewOptions(
         indoorEnable: true,
         locationButtonEnable: false, // 기본 위치 버튼 비활성화 (커스텀 버튼 사용)
+        minZoom: 10,
+        maxZoom: 18,
       ),
       onMapReady: (controller) {
         _mapController = controller; // 컨트롤러 저장
+        print('네이버 맵 준비 완료: 컨트롤러 저장됨');
         widget.onAction(GroupMapAction.onMapInitialized(controller));
       },
       onMapTapped: (point, latLng) {
@@ -299,46 +309,142 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
     );
   }
 
-  // 마커 추가 메서드
+  // lib/map/presentation/group_map_screen.dart의 _addMarkers 메서드 수정
+
   void _addMarkers() {
-    if (_mapController == null || widget.state.memberLocations is! AsyncData)
+    if (_mapController == null) {
+      print('마커 추가 실패: 맵 컨트롤러가 null입니다.');
       return;
-
-    // 기존 마커 모두 제거 - 실제 API에 맞게 수정 필요
-    // TODO: 네이버 맵 마커 제거 로직 구현
-
-    final locations =
-        (widget.state.memberLocations as AsyncData<List<GroupMemberLocation>>)
-            .value;
-
-    // 마커 추가 - 실제 API에 맞게 수정 필요
-    for (final member in locations) {
-      // TODO: 네이버 맵 마커 추가 로직 구현
-      // 예시:
-      // final marker = NMarker(
-      //   id: member.memberId,
-      //   position: NLatLng(member.latitude, member.longitude),
-      // );
-      // marker.setOnTapListener((_) {
-      //   _onMarkerTapped(member.memberId);
-      // });
-      // _mapController!.addOverlay(marker);
     }
+
+    // 디버깅을 위한 로그 추가
+    print('마커 추가 시작: 기존 오버레이 삭제');
+
+    // 현재 모든 오버레이 삭제
+    _mapController!.clearOverlays();
+
+    // 멤버 위치 마커 추가
+    if (widget.state.memberLocations is AsyncData) {
+      final locations =
+          (widget.state.memberLocations as AsyncData<List<GroupMemberLocation>>)
+              .value;
+
+      print('그룹 멤버 위치 데이터 개수: ${locations.length}');
+
+      // 마커 추가
+      for (final member in locations) {
+        print(
+          '그룹 멤버 마커 추가: ${member.nickname} (${member.latitude}, ${member.longitude})',
+        );
+
+        try {
+          // 그룹 멤버 마커는 기본 마커로 추가
+          final marker = NMarker(
+            id: member.memberId,
+            position: NLatLng(member.latitude, member.longitude),
+          );
+
+          // 마커 탭 이벤트 설정
+          marker.setOnTapListener((_) {
+            print('그룹 멤버 마커 탭됨: ${member.nickname}');
+            widget.onAction(GroupMapAction.onMemberMarkerTap(member));
+          });
+
+          // 마커 추가
+          _mapController!.addOverlay(marker);
+        } catch (e) {
+          print('그룹 멤버 마커 추가 중 오류: $e');
+        }
+      }
+    } else {
+      print('그룹 멤버 위치 데이터가 없습니다: ${widget.state.memberLocations}');
+    }
+
+    // 현재 사용자 위치에 마커 추가 (사용자 위치가 있는 경우)
+    if (widget.state.currentLocation is AsyncData<Location>) {
+      final location =
+          (widget.state.currentLocation as AsyncData<Location>).value;
+
+      print('현재 사용자 위치 마커 추가: (${location.latitude}, ${location.longitude})');
+
+      try {
+        // 현재 사용자 마커 - 다른 아이콘 형태로 추가
+        final userMarker = NMarker(
+          id: 'current_user',
+          position: NLatLng(location.latitude, location.longitude),
+        );
+
+        // 마커 추가
+        _mapController!.addOverlay(userMarker);
+      } catch (e) {
+        print('현재 사용자 위치 마커 추가 중 오류: $e');
+      }
+    } else {
+      print('현재 사용자 위치 데이터가 없습니다: ${widget.state.currentLocation}');
+    }
+
+    // 모든 마커를 보이게 지도 영역 조정
+    _adjustCameraToFitAllMarkers();
   }
 
-  // 마커 탭 이벤트 처리
-  void _onMarkerTapped(String memberId) {
-    if (widget.state.memberLocations is! AsyncData) return;
+  // 모든 마커가 보이도록 지도 영역 조정
+  void _adjustCameraToFitAllMarkers() {
+    if (_mapController == null) return;
 
-    final locations =
-        (widget.state.memberLocations as AsyncData<List<GroupMemberLocation>>)
-            .value;
-    final tappedMember = locations.firstWhere(
-      (member) => member.memberId == memberId,
-      orElse: () => throw StateError('멤버를 찾을 수 없습니다: $memberId'),
-    );
+    try {
+      List<NLatLng> points = [];
 
-    widget.onAction(GroupMapAction.onMemberMarkerTap(tappedMember));
+      // 그룹 멤버 위치 추가
+      if (widget.state.memberLocations
+          is AsyncData<List<GroupMemberLocation>>) {
+        final members =
+            (widget.state.memberLocations
+                    as AsyncData<List<GroupMemberLocation>>)
+                .value;
+        for (final member in members) {
+          points.add(NLatLng(member.latitude, member.longitude));
+        }
+      }
+
+      // 현재 사용자 위치 추가
+      if (widget.state.currentLocation is AsyncData<Location>) {
+        final location =
+            (widget.state.currentLocation as AsyncData<Location>).value;
+        points.add(NLatLng(location.latitude, location.longitude));
+      }
+
+      if (points.isEmpty) return;
+
+      // 모든 점이 보이도록 영역 계산
+      double minLat = points
+          .map((p) => p.latitude)
+          .reduce((a, b) => a < b ? a : b);
+      double maxLat = points
+          .map((p) => p.latitude)
+          .reduce((a, b) => a > b ? a : b);
+      double minLng = points
+          .map((p) => p.longitude)
+          .reduce((a, b) => a < b ? a : b);
+      double maxLng = points
+          .map((p) => p.longitude)
+          .reduce((a, b) => a > b ? a : b);
+
+      // 여백 추가
+      final latPadding = (maxLat - minLat) * 0.1;
+      final lngPadding = (maxLng - minLng) * 0.1;
+
+      final bounds = NLatLngBounds(
+        southWest: NLatLng(minLat - latPadding, minLng - lngPadding),
+        northEast: NLatLng(maxLat + latPadding, maxLng + lngPadding),
+      );
+
+      final update = NCameraUpdate.fitBounds(bounds);
+      _mapController!.updateCamera(update);
+
+      print('카메라 영역을 모든 마커가 보이도록 조정');
+    } catch (e) {
+      print('카메라 영역 조정 중 오류: $e');
+    }
   }
 
   // 에러 메시지 위젯
