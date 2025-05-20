@@ -1,6 +1,5 @@
 // lib/auth/module/auth_di.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_focus_stats_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -124,9 +123,4 @@ UpdateProfileImageUseCase updateProfileImageUseCase(Ref ref) {
   return UpdateProfileImageUseCase(
     repository: ref.watch(authRepositoryProvider),
   );
-}
-
-@riverpod
-GetFocusStatsUseCase getFocusStatsUseCase(Ref ref) {
-  return GetFocusStatsUseCase(repository: ref.watch(authRepositoryProvider));
 }

@@ -1,9 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../auth/domain/model/member.dart';
 import '../../auth/domain/usecase/get_current_user_use_case.dart';
-import '../../auth/domain/usecase/get_focus_stats_use_case.dart';
 import '../../auth/module/auth_di.dart';
 import '../domain/model/focus_time_stats.dart';
 import 'profile_action.dart';
@@ -15,15 +13,13 @@ part 'profile_notifier.g.dart';
 @riverpod
 class ProfileNotifier extends _$ProfileNotifier {
   late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  late final GetFocusStatsUseCase _getFocusStatsUseCase;
 
   @override
   ProfileState build() {
-    // ✅ late 필드 초기화는 한 번만 (build에서)
+    // ✅ 단일 UseCase만 초기화
     _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
-    _getFocusStatsUseCase = ref.watch(getFocusStatsUseCaseProvider);
 
-    // ✅ 갱신 상태는 listen으로 처리 (watch가 아닌!)
+    // ✅ 갱신 상태는 listen으로 처리
     ref.listen(profileRefreshStateProvider, (previous, next) {
       if (next == true) {
         debugPrint('🔄 ProfileNotifier: 갱신 필요 감지, 데이터 로드 시작');
@@ -40,10 +36,10 @@ class ProfileNotifier extends _$ProfileNotifier {
     return const ProfileState();
   }
 
-  // 데이터 로드 메서드 - 외부에서 호출 가능하도록 public으로 변경
+  /// 최적화된 데이터 로드 메서드 - 단일 API 호출로 프로필 + 통계 동시 로드
   Future<void> loadData() async {
     try {
-      debugPrint('🚀 ProfileNotifier: 데이터 로드 시작');
+      debugPrint('🚀 ProfileNotifier: 최적화된 데이터 로드 시작 (단일 호출)');
 
       // 로딩 상태로 변경
       state = state.copyWith(
@@ -51,52 +47,53 @@ class ProfileNotifier extends _$ProfileNotifier {
         focusStats: const AsyncLoading(),
       );
 
-      // 프로필 로드
-      late AsyncValue<Member> userProfileResult;
-      try {
-        userProfileResult = await _getCurrentUserUseCase.execute();
-        debugPrint('✅ ProfileNotifier: 사용자 프로필 로드 완료');
-      } catch (e, st) {
-        userProfileResult = AsyncValue.error(e, st);
-        debugPrint('❌ ProfileNotifier: 사용자 프로필 로드 실패 - $e');
-      }
+      // ✅ 단일 호출로 사용자 정보 + 통계 모두 로드
+      final userProfileResult = await _getCurrentUserUseCase.execute();
 
-      // 통계 로드 (실제 UseCase 사용)
-      late AsyncValue<FocusTimeStats> focusStatsResult;
-      try {
-        // 현재 사용자의 ID 가져오기
-        if (userProfileResult is AsyncData<Member>) {
-          final userId = userProfileResult.value.id;
-          focusStatsResult = await _getFocusStatsUseCase.execute(userId);
-          debugPrint('✅ ProfileNotifier: 집중 통계 로드 완료');
-        } else {
-          // 사용자 정보를 가져올 수 없는 경우 에러 처리
-          focusStatsResult = const AsyncValue.error(
-            'Failed to load user profile for stats',
-            StackTrace.empty,
+      switch (userProfileResult) {
+        case AsyncData(:final value):
+          debugPrint('✅ ProfileNotifier: 사용자 프로필 로드 완료');
+
+          // Member에 이미 포함된 focusStats 활용
+          final focusStats = value.focusStats ?? _getDefaultStats();
+
+          // 최종 상태 업데이트 - 단일 호출로 두 상태 모두 업데이트
+          state = state.copyWith(
+            userProfile: userProfileResult,
+            focusStats: AsyncData(focusStats),
           );
-          debugPrint('❌ ProfileNotifier: 사용자 정보 없어 통계 로드 실패');
-        }
-      } catch (e, st) {
-        focusStatsResult = AsyncValue.error(e, st);
-        debugPrint('❌ ProfileNotifier: 집중 통계 로드 실패 - $e');
+
+          debugPrint('✅ ProfileNotifier: 모든 데이터 로드 완료 (최적화됨)');
+
+        case AsyncError(:final error, :final stackTrace):
+          debugPrint('❌ ProfileNotifier: 사용자 프로필 로드 실패 - $error');
+
+          // 에러 시 두 상태 모두 에러로 설정
+          state = state.copyWith(
+            userProfile: userProfileResult,
+            focusStats: AsyncError(error, stackTrace),
+          );
+
+        case AsyncLoading():
+          // 이미 로딩 상태로 설정했으므로 별도 처리 불필요
+          break;
       }
-
-      // 최종 상태 생성
-      state = state.copyWith(
-        userProfile: userProfileResult,
-        focusStats: focusStatsResult,
-      );
-
-      debugPrint('✅ ProfileNotifier: 모든 데이터 로드 완료');
     } catch (e, st) {
-      debugPrint('❌ ProfileNotifier: 데이터 로드 중 오류 발생: $e');
-      // 오류 발생 시 에러 상태로 변경
+      debugPrint('❌ ProfileNotifier: 데이터 로드 중 예외 발생: $e');
+      // 예외 발생 시 두 상태 모두 에러로 설정
       state = state.copyWith(
         userProfile: AsyncValue.error(e, st),
         focusStats: AsyncValue.error(e, st),
       );
     }
+  }
+
+  /// 기본 통계 반환 (데이터가 없을 때 사용)
+  FocusTimeStats _getDefaultStats() {
+    return const FocusTimeStats(
+      totalMinutes: 0,
+      weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
+    );
   }
 
   /// 화면 액션 처리
@@ -113,7 +110,7 @@ class ProfileNotifier extends _$ProfileNotifier {
     }
   }
 
-  // 명시적 새로고침 메서드 추가 (외부에서 직접 호출 가능)
+  /// 명시적 새로고침 메서드 (외부에서 직접 호출 가능)
   Future<void> refresh() async {
     debugPrint('🔄 ProfileNotifier: 명시적 새로고침 호출');
     await loadData();
