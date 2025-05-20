@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../profile/presentation/profile_notifier.dart';
 import '../domain/model/quiz.dart';
 import '../domain/use_case/answer_quiz_use_case.dart';
 import '../domain/use_case/get_daily_quiz_usecase.dart';
@@ -44,15 +45,40 @@ class QuizNotifier extends _$QuizNotifier {
   }
 
   Future<void> _loadQuiz({String? skills}) async {
-    // 직접 전달받은 스킬 정보 사용
-    debugPrint('QuizNotifier - 로드된 스킬: $skills');
-    final userSkills = skills ?? _getUserSkills();
+    // 직접 전달받은 스킬 정보 사용 (더 자세한 디버깅 정보 추가)
+    debugPrint('QuizNotifier - 로드된 스킬(원본): "$skills"');
+
+    // 스킬 전처리 - 명시적인 전처리 추가
+    String? processedSkills;
+    if (skills != null && skills.isNotEmpty && skills != "null") {
+      // 스킬 정보가 있을 경우
+      processedSkills = skills.trim();
+      debugPrint('QuizNotifier - 유효한 스킬 정보 발견: "$processedSkills"');
+    } else {
+      // 스킬 정보가 없거나 유효하지 않을 경우
+      debugPrint('QuizNotifier - 스킬 정보 없거나 유효하지 않음, 기본값으로 대체');
+      processedSkills = null;
+    }
+
+    // 최종 사용할 스킬 정보 로깅
+    debugPrint('QuizNotifier - 최종 사용할 스킬: "$processedSkills"');
 
     // 퀴즈 로딩 상태로 변경
     state = const AsyncValue.loading();
 
     // 퀴즈 로드 - 스킬 정보 전달
-    final quizResult = await _getDailyQuizUseCase.execute(skills: userSkills);
+    final quizResult = await _getDailyQuizUseCase.execute(
+      skills: processedSkills,
+    );
+
+    // 결과 로깅
+    if (quizResult case AsyncData(:final value)) {
+      debugPrint(
+        'QuizNotifier - 퀴즈 로드 성공: 카테고리 "${value?.category}", 스킬: "$processedSkills"',
+      );
+    } else if (quizResult case AsyncError(:final error)) {
+      debugPrint('QuizNotifier - 퀴즈 로드 실패: $error');
+    }
 
     // 상태 업데이트
     state = quizResult;
@@ -89,10 +115,9 @@ class QuizNotifier extends _$QuizNotifier {
   String? _getUserSkills() {
     try {
       // 이 부분은 실제 구현에서 다른 provider를 통해 가져와야 함
-      // 예: final profileState = ref.read(profileNotifierProvider);
-      // return profileState.userProfile.value?.skills;
+      final profileState = ref.read(profileNotifierProvider);
+      return profileState.userProfile.value?.skills;
 
-      // 임시 구현
       return null;
     } catch (e) {
       return null;

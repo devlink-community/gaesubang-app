@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(context),
-      body: _buildBody(),
+      body: _buildBody(userSkills),
     );
   }
 
@@ -84,7 +84,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(String? skills) {
     return RefreshIndicator(
       color: AppColorStyles.primary80,
       strokeWidth: 2.5,
@@ -112,7 +112,10 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(width: 12),
 
                     // 퀴즈 배너
-                    DailyQuizBanner(skills: userSkills),
+                    DailyQuizBanner(
+                      skills: userSkills,
+                      key: ObjectKey(userSkills), // 스킬 변경시 새로고침을 위한 키 추가
+                    ),
                   ],
                 ),
               ),

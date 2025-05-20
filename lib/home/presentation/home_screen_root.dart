@@ -15,40 +15,29 @@ class HomeScreenRoot extends ConsumerWidget {
     final notifier = ref.watch(homeNotifierProvider.notifier);
     final state = ref.watch(homeNotifierProvider);
 
-    // AsyncValue<AuthState> 가져오기
+    // AuthState 가져오기
     final authStateAsync = ref.watch(authStateProvider);
 
     // 사용자 스킬 초기화
     String? userSkills;
 
-    // AsyncValue 패턴 매칭으로 처리
-    if (authStateAsync case AsyncData(:final value)) {
-      // value는 이제 AuthState 타입
-      if (value.runtimeType.toString() == 'Authenticated') {
-        // 사용자 정보 추출 (리플렉션 사용)
-        final authStateStr = value.toString();
+    // AuthState에서 스킬 정보 추출 - 리플렉션 대신 패턴 매칭 사용
+    if (authStateAsync case AsyncData(value: final authState)) {
+      // 디버깅 로그 추가
+      debugPrint('HomeScreenRoot - AuthState 타입: ${authState.runtimeType}');
 
-        // 로그에서 skills 부분 추출
-        final skillsStart = authStateStr.indexOf('skills: ');
-        if (skillsStart != -1) {
-          final afterSkills = authStateStr.substring(
-            skillsStart + 8,
-          ); // 'skills: ' 다음부터
+      // authState를 문자열로 변환하여 skills 값 추출 시도
+      final authStateStr = authState.toString();
+      final skillsPattern = RegExp(r'skills: ([^,\)]+)');
+      final match = skillsPattern.firstMatch(authStateStr);
 
-          // 쉼표 또는 닫는 괄호 찾기
-          final commaIndex = afterSkills.indexOf(',');
-          final bracketIndex = afterSkills.indexOf(')');
-
-          final endIndex =
-              commaIndex != -1 && commaIndex < bracketIndex
-                  ? commaIndex
-                  : bracketIndex;
-
-          if (endIndex != -1) {
-            userSkills = afterSkills.substring(0, endIndex);
-            debugPrint('HomeScreenRoot - 사용자 스킬 추출: $userSkills');
-          }
+      if (match != null && match.groupCount >= 1) {
+        userSkills = match.group(1);
+        // 스킬이 null 문자열이거나 비어있으면 null로 처리
+        if (userSkills == 'null' || userSkills!.isEmpty) {
+          userSkills = null;
         }
+        debugPrint('HomeScreenRoot - 추출한 skills: $userSkills');
       }
     }
 
@@ -88,7 +77,6 @@ class HomeScreenRoot extends ConsumerWidget {
             break;
         }
       },
-      userSkills: userSkills,
     );
   }
 }

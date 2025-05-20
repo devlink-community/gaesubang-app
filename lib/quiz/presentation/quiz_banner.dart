@@ -43,8 +43,15 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
 
+    // 여기에 다음 코드를 추가:
+    // 스킬 정보 디버깅 로그 추가
+    debugPrint('DailyQuizBanner - 받은 스킬 정보: ${widget.skills}');
+
     // 컴포넌트 마운트 시 퀴즈 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 스킬 정보 포함하여 디버깅 로그 추가
+      debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: ${widget.skills}');
+
       // 여기서 skills 정보 전달
       ref
           .read(quizNotifierProvider.notifier)
