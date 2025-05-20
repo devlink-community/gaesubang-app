@@ -119,15 +119,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 2. 멤버십 상태 확인
-          final memberDoc = await transaction.get(
-            _groupsCollection.doc(groupId).collection('members').doc(userId),
-          );
-
-          if (memberDoc.exists) {
-            throw Exception(GroupErrorMessages.alreadyJoined);
-          }
-
           // 3. 현재 멤버 수 확인
           final data = groupDoc.data()!;
           final currentMemberCount = data['memberCount'] as int? ?? 0;
@@ -168,7 +159,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
         });
       } catch (e) {
         if (e.toString().contains(GroupErrorMessages.notFound) ||
-            e.toString().contains(GroupErrorMessages.alreadyJoined) ||
             e.toString().contains(GroupErrorMessages.memberLimitReached)) {
           rethrow;
         }

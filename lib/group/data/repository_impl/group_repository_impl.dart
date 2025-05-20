@@ -124,17 +124,73 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> joinGroup(String groupId) async {
     try {
-      // 실제 구현에서는, 현재 사용자 정보를 가져와서 전달해야 함
-      // 임시로 하드코딩된 값 사용
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 이미 가입된 그룹인지 확인 (클라이언트 측에서 확인, API 호출 없음)
+      final isAlreadyJoined = currentUser.joinedGroups.any(
+        (group) => group.groupId == groupId,
+      );
+
+      if (isAlreadyJoined) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '이미 가입한 그룹입니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 그룹 가입 처리
       await _dataSource.fetchJoinGroup(
         groupId,
-        userId: 'currentUser',
-        userName: '현재 사용자',
-        profileUrl: '',
+        userId: currentUser.id,
+        userName: currentUser.nickname,
+        profileUrl: currentUser.image,
       );
 
       return const Result.success(null);
     } catch (e, st) {
+      // 특정 에러 타입 구분
+      if (e.toString().contains('이미 가입한 그룹입니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '이미 가입한 그룹입니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      } else if (e.toString().contains('그룹 최대 인원에 도달했습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '그룹 최대 인원에 도달했습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      } else if (e.toString().contains('그룹을 찾을 수 없습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '그룹을 찾을 수 없습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
       return Result.error(
         Failure(
           FailureType.unknown,
