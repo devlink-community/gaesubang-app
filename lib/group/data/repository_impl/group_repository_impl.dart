@@ -2,8 +2,12 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
+import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
+import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
+import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
@@ -220,6 +224,34 @@ class GroupRepositoryImpl implements GroupRepository {
           stackTrace: st,
         ),
       );
+    }
+  }
+
+  @override
+  Future<Result<List<GroupMember>>> getGroupMembersWithTimerStatus(
+    String groupId,
+  ) async {
+    try {
+      // 1. 그룹 멤버 정보 조회
+      final membersData = await _dataSource.fetchGroupMembers(groupId);
+      final memberDtos =
+          membersData.map((data) => GroupMemberDto.fromJson(data)).toList();
+
+      // 2. 타이머 활동 정보 조회
+      final timerActivitiesData = await _dataSource.fetchGroupTimerActivities(
+        groupId,
+      );
+      final timerActivityDtos =
+          timerActivitiesData
+              .map((data) => GroupTimerActivityDto.fromJson(data))
+              .toList();
+
+      // 3. 멤버와 타이머 활동 정보 결합
+      final groupMembers = memberDtos.toModelList(timerActivityDtos);
+
+      return Result.success(groupMembers);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
     }
   }
 }
