@@ -59,13 +59,15 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         comment: List.generate(
           7,
           (index) => Comment(
+            id: 'comment_post1_$index', // 추가된 ID 필드
             userId: 'user$index',
             userName: '사용자$index',
-            // DiceBear API를 사용한 이미지 URL
             userProfileImage:
                 'https://api.dicebear.com/6.x/micah/png?seed=user$index',
             text: '댓글 내용 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index)),
+            likeCount: index, // 명시적으로 likeCount 추가
+            isLikedByCurrentUser: index % 2 == 0, // 임의의 좋아요 상태 설정 (짝수 인덱스만 좋아요)
           ),
         ),
       ),
@@ -93,13 +95,16 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         comment: List.generate(
           3,
           (index) => Comment(
+            id: 'comment_post2_$index', // 추가된 ID 필드
             userId: 'user${index + 10}',
             userName: '사용자${index + 10}',
-            // DiceBear API를 사용한 이미지 URL
             userProfileImage:
                 'https://api.dicebear.com/6.x/micah/png?seed=user${index + 10}',
             text: '댓글 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index + 2)),
+            likeCount: index, // 명시적으로 likeCount 추가
+            isLikedByCurrentUser:
+                index % 3 == 0, // 임의의 좋아요 상태 설정 (3의 배수 인덱스만 좋아요)
           ),
         ),
       ),
@@ -127,14 +132,15 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         comment: List.generate(
           7,
           (index) => Comment(
+            id: 'comment_post3_$index', // 추가된 ID 필드
             userId: 'user${index + 20}',
             userName: '사용자${index + 20}',
-            // DiceBear API를 사용한 이미지 URL
             userProfileImage:
                 'https://api.dicebear.com/6.x/micah/png?seed=user${index + 20}',
             text: '댓글입니다 $index',
             createdAt: DateTime.now().subtract(Duration(hours: index + 5)),
             likeCount: index,
+            isLikedByCurrentUser: index % 2 == 1, // 임의의 좋아요 상태 설정 (홀수 인덱스만 좋아요)
           ),
         ),
       ),
