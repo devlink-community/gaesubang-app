@@ -33,7 +33,7 @@ void main() async {
   // 환경에 따라 클라이언트 ID를 가져오는 방식으로 변경
   final naverMapClientId = const String.fromEnvironment(
     'NAVER_MAP_CLIENT_ID',
-    defaultValue: 'ye49o0dcu6', // 개발 환경용 기본값
+    defaultValue: 'uubpy6izp6', // 개발 환경용 기본값
   );
 
   try {
