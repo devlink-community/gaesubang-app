@@ -1,7 +1,7 @@
 // lib/core/utils/auth_exception_mapper.dart
 
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 
 class AuthExceptionMapper {
   const AuthExceptionMapper._();

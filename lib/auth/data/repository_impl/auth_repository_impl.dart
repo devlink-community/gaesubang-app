@@ -10,8 +10,8 @@ import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
-import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
-import 'package:devlink_mobile_app/core/utils/auth_exception_mapper.dart';
+import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_mapper.dart';
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 

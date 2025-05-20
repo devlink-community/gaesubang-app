@@ -1,4 +1,4 @@
-import '../dto/group_dto_old.dart.txt';
+import '../dto/group_dto_old.dart';
 
 abstract interface class GroupDataSource {
   Future<List<GroupDto>> fetchGroupList();
