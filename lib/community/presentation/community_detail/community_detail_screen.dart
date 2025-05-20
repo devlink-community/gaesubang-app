@@ -101,7 +101,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 8,
                 offset: const Offset(0, -2),
               ),
@@ -123,7 +123,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: AppColorStyles.gray40.withOpacity(0.3),
+                    fillColor: AppColorStyles.gray40.withValues(alpha: 0.3),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -147,7 +147,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColorStyles.primary100.withOpacity(0.3),
+                        color: AppColorStyles.primary100.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -202,7 +202,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   }
 
   Widget _buildDivider() {
-    return Container(height: 8, color: AppColorStyles.gray40.withOpacity(0.2));
+    return Container(
+      height: 8,
+      color: AppColorStyles.gray40.withValues(alpha: 0.2),
+    );
   }
 
   Widget _buildPostCard(Post post) {
@@ -318,7 +321,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColorStyles.primary60.withOpacity(0.1),
+                        color: AppColorStyles.primary60.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -412,7 +415,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColorStyles.primary100.withOpacity(0.1),
+                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -533,7 +536,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: value.length,
           separatorBuilder: (_, __) => const Divider(height: 32),
-          itemBuilder: (_, i) => CommentItem(comment: value[i]),
+          itemBuilder:
+              (_, i) =>
+                  CommentItem(comment: value[i], onAction: widget.onAction),
         );
     }
     return const SizedBox.shrink();

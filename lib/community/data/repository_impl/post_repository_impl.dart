@@ -186,4 +186,67 @@ class PostRepositoryImpl implements PostRepository {
       }
     }, params: {'postId': postId});
   }
+
+  @override
+  Future<Result<Comment>> toggleCommentLike(
+    String postId,
+    String commentId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostRepository.toggleCommentLike',
+      () async {
+        try {
+          // Auth에서 현재 사용자 정보 가져오기
+          final currentUser = _ref.read(currentUserProvider);
+          if (currentUser == null) {
+            throw Exception(CommunityErrorMessages.loginRequired);
+          }
+
+          final commentDto = await _dataSource.toggleCommentLike(
+            postId,
+            commentId,
+            currentUser.uid,
+            currentUser.nickname,
+          );
+          final comment = commentDto.toModel();
+          return Result.success(comment);
+        } catch (e, st) {
+          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        }
+      },
+      params: {'postId': postId, 'commentId': commentId},
+    );
+  }
+
+  @override
+  Future<Result<Map<String, bool>>> checkCommentsLikeStatus(
+    String postId,
+    List<String> commentIds,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostRepository.checkCommentsLikeStatus',
+      () async {
+        try {
+          // Auth에서 현재 사용자 정보 가져오기
+          final currentUser = _ref.read(currentUserProvider);
+          if (currentUser == null) {
+            // 로그인하지 않은 경우 모든 댓글의 좋아요 상태를 false로 반환
+            return Result.success({
+              for (final commentId in commentIds) commentId: false,
+            });
+          }
+
+          final result = await _dataSource.checkCommentsLikeStatus(
+            postId,
+            commentIds,
+            currentUser.uid,
+          );
+          return Result.success(result);
+        } catch (e, st) {
+          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        }
+      },
+      params: {'postId': postId, 'commentCount': commentIds.length},
+    );
+  }
 }
