@@ -29,9 +29,12 @@ class GroupRepositoryImpl implements GroupRepository {
       // 사용자가 가입한 그룹 ID 목록 확인
       Set<String> joinedGroupIds = {};
       if (currentUser != null) {
-        // 현재 사용자의 가입 그룹 ID 추출
-        // 예시 코드: 실제 구현에서는 currentUser에서 가입 그룹 ID를 추출하는 로직이 필요
-        // 임시로 빈 Set 사용
+        // currentUser.joinedGroups에서 그룹 ID 추출
+        for (final joinedGroup in currentUser.joinedGroups) {
+          if (joinedGroup.groupId != null) {
+            joinedGroupIds.add(joinedGroup.groupId!);
+          }
+        }
       }
 
       // 데이터소스에 가입 그룹 ID 전달
@@ -87,20 +90,12 @@ class GroupRepositoryImpl implements GroupRepository {
       final currentUser = _ref.read(currentUserProvider);
 
       // 사용자의 그룹 가입 여부 확인
-      bool? isJoined;
+      bool? isJoined = false;
       if (currentUser != null) {
-        // 사용자의 가입 그룹 목록에서 현재 그룹 ID 확인
-        // 실제 구현에서는 currentUser의 구조에 따라 이 부분 수정 필요
-
-        // 예시 - 사용자 모델에 joinedGroups 필드가 있는 경우:
-        if (currentUser.joinedGroups != null) {
-          isJoined = currentUser.joinedGroups.any(
-            (group) => group.id == groupId,
-          );
-        }
-
-        // 예시 - 사용자 모델에 joinedGroupIds 필드가 있는 경우:
-        // isJoined = currentUser.joinedGroupIds?.contains(groupId) ?? false;
+        // currentUser.joinedGroups에서 현재 그룹 ID 확인
+        isJoined = currentUser.joinedGroups.any(
+          (group) => group.groupId == groupId,
+        );
       }
 
       // 데이터소스에 가입 여부 전달
