@@ -60,4 +60,44 @@ abstract interface class GroupDataSource {
     String keyword, {
     String? currentUserId,
   });
+
+  /// 그룹 멤버와 타이머 상태 함께 조회
+  Future<List<Map<String, dynamic>>> fetchGroupMembersWithTimerState(
+    String groupId,
+  );
+
+  /// 로그인한 사용자의 타이머 상태 조회
+  Future<Map<String, dynamic>?> fetchCurrentUserTimerState(
+    String groupId,
+    String userId,
+  );
+
+  /// 멤버 타이머 시작
+  Future<Map<String, dynamic>> startMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  );
+
+  /// 멤버 타이머 정지 (완료)
+  Future<Map<String, dynamic>> stopMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+    int durationInSeconds,
+  );
+
+  /// 멤버 타이머 일시정지
+  Future<Map<String, dynamic>> pauseMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  );
+
+  /// 월별 출석 데이터 조회
+  Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
+    String groupId,
+    int year,
+    int month,
+  );
 }
