@@ -29,4 +29,8 @@ class GroupErrorMessages {
   static const String imageFailed = '이미지 업로드에 실패했습니다';
   static const String invalidImage = '유효하지 않은 이미지 파일입니다';
   static const String imageTooLarge = '이미지 크기가 너무 큽니다 (최대 5MB)';
+
+  // 타이머 관련
+  static const String operationFailed = '작업을 완료할 수 없습니다';
+  static const String timerNotActive = '활성화된 타이머가 없습니다';
 }
