@@ -18,7 +18,6 @@ abstract interface class PostRepository {
   Future<Result<List<Comment>>> getComments(String postId);
   Future<Result<List<Comment>>> createComment({
     required String postId,
-    required String memberId,
     required String content,
   });
 
