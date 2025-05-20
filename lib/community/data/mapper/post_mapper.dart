@@ -13,7 +13,6 @@ extension PostDtoMapper on PostDto {
       id: id ?? '',
       title: title ?? '',
       content: content ?? '',
-      // 작성자 정보 (개별 필드로 매핑)
       authorId: authorId ?? '',
       authorNickname: authorNickname ?? 'Unknown User',
       authorPosition: authorPosition ?? '',
@@ -22,11 +21,10 @@ extension PostDtoMapper on PostDto {
       createdAt: createdAt ?? DateTime.now(),
       hashTags: hashTags ?? [],
       imageUrls: mediaUrls ?? [],
-      like: [], // 별도로 조회된 데이터로 채움
-      comment: [], // 별도로 조회된 데이터로 채움
-      isLikedByCurrentUser: isLikedByCurrentUser ?? false, // 추가된 필드 매핑
-      isBookmarkedByCurrentUser:
-          isBookmarkedByCurrentUser ?? false, // 추가된 필드 매핑
+      likeCount: likeCount ?? 0,
+      commentCount: 0, // DTO에 필드가 없으면 기본값 0 사용
+      isLikedByCurrentUser: isLikedByCurrentUser ?? false,
+      isBookmarkedByCurrentUser: isBookmarkedByCurrentUser ?? false,
     );
   }
 }

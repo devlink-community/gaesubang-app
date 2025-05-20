@@ -353,8 +353,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                         size: 20,
                       ),
                       const SizedBox(width: 8),
+                      // 좋아요 카운트 표시 부분
                       Text(
-                        '${post.like.length}',
+                        '${post.likeCount}', // post.like.length 대신 post.likeCount 사용
                         style: AppTextStyles.body1Regular.copyWith(
                           color: AppColorStyles.gray100,
                           fontWeight: FontWeight.w500,
@@ -377,7 +378,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _getCommentsCount().toString(),
+                    '${post.commentCount}',
                     style: AppTextStyles.body1Regular.copyWith(
                       color: AppColorStyles.gray100,
                       fontWeight: FontWeight.w500,
@@ -413,7 +414,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  _getCommentsCount().toString(),
+                  '${post.commentCount}', // _getCommentsCount() 대신 post.commentCount 사용
                   style: AppTextStyles.body2Regular.copyWith(
                     color: AppColorStyles.primary100,
                     fontWeight: FontWeight.bold,
@@ -536,12 +537,5 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
         );
     }
     return const SizedBox.shrink();
-  }
-
-  int _getCommentsCount() {
-    if (widget.state.comments case AsyncData(:final value)) {
-      return value.length;
-    }
-    return 0;
   }
 }
