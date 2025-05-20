@@ -155,7 +155,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   // 북마크 상태를 가져오는 헬퍼 메서드
   bool _getBookmarkStatus() {
     if (widget.state.post case AsyncData(:final value)) {
-      return value.isBookmarkedByCurrentUser ?? false;
+      return value.isBookmarkedByCurrentUser;
     }
     return false;
   }
@@ -163,7 +163,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   // 좋아요 상태를 가져오는 헬퍼 메서드
   bool _getLikeStatus() {
     if (widget.state.post case AsyncData(:final value)) {
-      return value.isLikedByCurrentUser ?? false;
+      return value.isLikedByCurrentUser;
     }
     return false;
   }
