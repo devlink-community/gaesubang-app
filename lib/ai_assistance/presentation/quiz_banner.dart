@@ -1,8 +1,8 @@
 // lib/quiz/presentation/quiz_banner.dart
 
-import 'package:devlink_mobile_app/quiz/presentation/quiz_action.dart';
-import 'package:devlink_mobile_app/quiz/presentation/quiz_notifier.dart';
-import 'package:devlink_mobile_app/quiz/presentation/quiz_state.dart';
+import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
+import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_notifier.dart';
+import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_state.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -83,7 +83,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   @override
   Widget build(BuildContext context) {
     final quizState = ref.watch(quizNotifierProvider);
-    // final notifier = ref.watch(quizNotifierProvider.notifier); // notifier는 필요시 사용
 
     if (!quizState.showBanner) {
       return const SizedBox.shrink();
@@ -109,9 +108,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(
-                    0.15,
-                  ), // withValues 대신 withOpacity 사용
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -128,9 +125,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(
-                          0.3,
-                        ), // withValues 대신 withOpacity 사용
+                        color: Colors.white.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -154,9 +149,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(
-                            0.2,
-                          ), // withValues 대신 withOpacity 사용
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -167,13 +160,11 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Quiz icon (기존 코드 유지)
+                    // Quiz icon
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(
-                          0.2,
-                        ), // withValues 대신 withOpacity 사용
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -221,7 +212,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   }
 
   void _showQuizPopup(BuildContext context) {
-    // QuizNotifier의 updateSelectedAnswer가 int?를 받도록 수정되었다고 가정합니다.
+    // 선택한 답변 초기화
     ref.read(quizNotifierProvider.notifier).updateSelectedAnswer(null);
 
     showModalBottomSheet(
@@ -234,14 +225,12 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
 }
 
 class _QuizBottomSheet extends ConsumerWidget {
-  // ConsumerWidget으로 변경
   final String? skills;
 
   const _QuizBottomSheet({Key? key, this.skills}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // WidgetRef ref 추가
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
       maxChildSize: 0.95,
@@ -265,7 +254,6 @@ class _QuizBottomSheet extends ConsumerWidget {
               ),
               Expanded(
                 child: _QuizContent(
-                  // ref를 명시적으로 전달할 필요 없음, _QuizContent가 ConsumerWidget이므로 내부에서 ref 사용 가능
                   scrollController: scrollController,
                   skills: skills,
                 ),
@@ -279,7 +267,6 @@ class _QuizBottomSheet extends ConsumerWidget {
 }
 
 class _QuizContent extends ConsumerWidget {
-  // ConsumerWidget으로 변경
   final ScrollController scrollController;
   final String? skills;
 
@@ -288,7 +275,6 @@ class _QuizContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // WidgetRef ref 추가
     final quizState = ref.watch(quizNotifierProvider);
 
     if (quizState.isLoading) {
@@ -305,7 +291,6 @@ class _QuizContent extends ConsumerWidget {
     }
 
     if (quizState.hasError) {
-      // ref를 _buildErrorContent로 전달
       return _buildErrorContent(
         context,
         quizState.quizData.error?.toString() ?? '알 수 없는 오류',
@@ -314,14 +299,12 @@ class _QuizContent extends ConsumerWidget {
     }
 
     if (quizState.quiz == null) {
-      // ref를 _buildErrorContent로 전달 (퀴즈 데이터 없는 경우도 에러로 간주)
       return _buildErrorContent(context, '퀴즈 데이터를 불러올 수 없습니다', ref);
     }
 
-    return _buildQuizDetails(context, quizState, ref); // ref 전달
+    return _buildQuizDetails(context, quizState, ref);
   }
 
-  // _buildErrorContent 메서드 시그니처 수정 (WidgetRef ref 파라미터 추가)
   Widget _buildErrorContent(
     BuildContext context,
     String errorMessage,
@@ -349,9 +332,7 @@ class _QuizContent extends ConsumerWidget {
                 child: Text(
                   errorMessage,
                   style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.error.withOpacity(
-                      0.8,
-                    ), // withValues 대신 withOpacity
+                    color: AppColorStyles.error.withValues(alpha: 0.8),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
@@ -361,12 +342,7 @@ class _QuizContent extends ConsumerWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                // 현재 팝업이 있다면 닫기 (선택적)
-                // if (Navigator.canPop(context)) {
-                // Navigator.of(context).pop();
-                // }
-                // 새 퀴즈 로드
-                ref // 이제 ref 사용 가능
+                ref
                     .read(quizNotifierProvider.notifier)
                     .onAction(QuizAction.loadQuiz(skills: skills));
               },
@@ -382,7 +358,6 @@ class _QuizContent extends ConsumerWidget {
     );
   }
 
-  // _buildQuizDetails 메서드 시그니처 수정 (WidgetRef ref 파라미터 추가)
   Widget _buildQuizDetails(
     BuildContext context,
     QuizState state,
@@ -391,9 +366,7 @@ class _QuizContent extends ConsumerWidget {
     final Quiz quiz = state.quiz!;
     final isAnswered = state.isAnswered;
     final selectedIndex = state.selectedAnswerIndex;
-    final notifier = ref.read(
-      quizNotifierProvider.notifier,
-    ); // 여기서 notifier 가져오기
+    final notifier = ref.read(quizNotifierProvider.notifier);
 
     return ListView(
       controller: scrollController,
@@ -404,14 +377,10 @@ class _QuizContent extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColorStyles.primary100.withOpacity(
-                  0.1,
-                ), // withValues 대신 withOpacity
+                color: AppColorStyles.primary100.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: AppColorStyles.primary100.withOpacity(
-                    0.3,
-                  ), // withValues 대신 withOpacity
+                  color: AppColorStyles.primary100.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -426,10 +395,6 @@ class _QuizContent extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.refresh, size: 24),
               onPressed: () {
-                // 현재 팝업이 있다면 닫기 (선택적)
-                // if (Navigator.canPop(context)) {
-                //   Navigator.of(context).pop();
-                // }
                 ref
                     .read(quizNotifierProvider.notifier)
                     .onAction(QuizAction.loadQuiz(skills: skills));
@@ -458,29 +423,17 @@ class _QuizContent extends ConsumerWidget {
 
           if (isAnswered) {
             if (isCorrect) {
-              backgroundColor = Colors.green.withOpacity(
-                0.15,
-              ); // withValues 대신 withOpacity
-              borderColor = Colors.green.withOpacity(
-                0.5,
-              ); // withValues 대신 withOpacity
+              backgroundColor = Colors.green.withValues(alpha: 0.15);
+              borderColor = Colors.green.withValues(alpha: 0.5);
               textColor = Colors.green.shade800;
             } else if (userAnswered) {
-              backgroundColor = Colors.red.withOpacity(
-                0.15,
-              ); // withValues 대신 withOpacity
-              borderColor = Colors.red.withOpacity(
-                0.5,
-              ); // withValues 대신 withOpacity
+              backgroundColor = Colors.red.withValues(alpha: 0.15);
+              borderColor = Colors.red.withValues(alpha: 0.5);
               textColor = Colors.red.shade800;
             }
           } else if (isSelected) {
-            backgroundColor = AppColorStyles.primary100.withOpacity(
-              0.15,
-            ); // withValues 대신 withOpacity
-            borderColor = AppColorStyles.primary100.withOpacity(
-              0.5,
-            ); // withValues 대신 withOpacity
+            backgroundColor = AppColorStyles.primary100.withValues(alpha: 0.15);
+            borderColor = AppColorStyles.primary100.withValues(alpha: 0.5);
             textColor = AppColorStyles.primary100;
           }
 
@@ -548,7 +501,6 @@ class _QuizContent extends ConsumerWidget {
                   state.isSubmitting || selectedIndex == null
                       ? null
                       : () async {
-                        // selectedIndex가 null이 아님을 확신할 수 있으므로 ! 사용 가능 (위 조건문에서 확인)
                         await notifier.onAction(SubmitAnswer(selectedIndex!));
                       },
               style: ElevatedButton.styleFrom(
@@ -586,14 +538,14 @@ class _QuizContent extends ConsumerWidget {
       decoration: BoxDecoration(
         color:
             isCorrect
-                ? Colors.green.withOpacity(0.1) // withValues 대신 withOpacity
-                : Colors.red.withOpacity(0.1), // withValues 대신 withOpacity
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
               isCorrect
-                  ? Colors.green.withOpacity(0.3) // withValues 대신 withOpacity
-                  : Colors.red.withOpacity(0.3), // withValues 대신 withOpacity
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.red.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -630,7 +582,7 @@ class _QuizContent extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1), // withValues 대신 withOpacity
+              color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -642,7 +594,7 @@ class _QuizContent extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '사용자 스킬: ${skills ?? "없음"}', // skills 변수 사용
+                  '사용자 스킬: ${skills ?? "없음"}',
                   style: AppTextStyles.body2Regular,
                 ),
               ],

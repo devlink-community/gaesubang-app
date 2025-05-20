@@ -1,11 +1,12 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../data/data_source/quiz_dart_source.dart';
-import '../data/repository_impl/quiz_repository_impl.dart';
+
+import '../../auth/module/auth_di.dart';
+import '../data/data_source/quiz_data_source.dart';
+import '../data/repository_impl/quiz_data_repository_impl.dart';
 import '../domain/repository/quiz_repository.dart';
 import '../domain/use_case/answer_quiz_use_case.dart';
 import '../domain/use_case/get_daily_quiz_usecase.dart';
-import '../../auth/module/auth_di.dart';
 
 part 'quiz_di.g.dart';
 

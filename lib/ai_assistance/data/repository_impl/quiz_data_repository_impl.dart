@@ -1,14 +1,15 @@
 // lib/quiz/data/repository_impl/quiz_repository_impl.dart
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
-import '../../../core/result/result.dart';
 import '../../../auth/domain/usecase/get_current_user_use_case.dart';
+import '../../../core/result/result.dart';
 import '../../domain/model/quiz.dart';
 import '../../domain/repository/quiz_repository.dart';
-import '../data_source/quiz_dart_source.dart';
+import '../data_source/quiz_data_source.dart';
 
 class QuizRepositoryImpl implements QuizRepository {
   final QuizDataSource _dataSource;
@@ -88,7 +89,7 @@ class QuizRepositoryImpl implements QuizRepository {
       final quizData = await _dataSource.generateQuiz(skills: skills);
 
       // 구조 검증
-      if (!_validateQuizData(quizData)) {
+      if (!_validateQuizDataFunction(quizData)) {
         return Result.error(
           Failure(
             FailureType.validation,
@@ -232,19 +233,38 @@ class QuizRepositoryImpl implements QuizRepository {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
-  // 퀴즈 데이터 구조 검증 메서드 추가
-  bool _validateQuizData(Map<String, dynamic> quizData) {
-    return quizData.containsKey('question') &&
-        quizData.containsKey('options') &&
-        quizData.containsKey('correctAnswerIndex') &&
-        quizData.containsKey('explanation') &&
-        quizData.containsKey('category') &&
-        quizData['options'] is List &&
-        (quizData['options'] as List).isNotEmpty &&
-        quizData['correctAnswerIndex'] is int &&
-        (quizData['correctAnswerIndex'] as int) >= 0 &&
-        (quizData['correctAnswerIndex'] as int) <
-            (quizData['options'] as List).length;
+  // 퀴즈 데이터 구조 검증 - 메서드명 변경 (함수 호출 오류 방지)
+  // 퀴즈 데이터 구조 검증 - 괄호 사용 수정
+  bool _validateQuizDataFunction(Map<String, dynamic> quizData) {
+    // 필수 필드 확인
+    if (!quizData.containsKey('question') ||
+        !quizData.containsKey('options') ||
+        !quizData.containsKey('correctAnswerIndex') ||
+        !quizData.containsKey('explanation') ||
+        !quizData.containsKey('category')) {
+      return false;
+    }
+
+    // options 타입 및 비어있는지 확인
+    if (!(quizData['options'] is List) ||
+        (quizData['options'] as List).isEmpty) {
+      return false;
+    }
+
+    // correctAnswerIndex 타입 확인
+    if (!(quizData['correctAnswerIndex'] is int)) {
+      return false;
+    }
+
+    // correctAnswerIndex가 범위 내에 있는지 확인
+    final correctIndex = quizData['correctAnswerIndex'] as int;
+    final optionsList = quizData['options'] as List;
+    if (correctIndex < 0 || correctIndex >= optionsList.length) {
+      return false;
+    }
+
+    // 모든 조건 통과
+    return true;
   }
 
   // 퀴즈를 SharedPreferences에 저장 (사용자 ID 기반)
