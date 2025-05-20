@@ -1,6 +1,4 @@
 // lib/community/domain/model/post.dart
-import 'package:devlink_mobile_app/community/domain/model/comment.dart';
-import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -20,10 +18,10 @@ class Post with _$Post {
     required this.createdAt,
     this.hashTags = const <String>[],
     this.imageUrls = const <String>[],
-    this.like = const <Like>[],
-    this.comment = const <Comment>[],
-    this.isLikedByCurrentUser = false, // 추가된 필드
-    this.isBookmarkedByCurrentUser = false, // 추가된 필드
+    this.likeCount = 0,
+    this.commentCount = 0,
+    this.isLikedByCurrentUser = false,
+    this.isBookmarkedByCurrentUser = false,
   });
 
   final String id;
@@ -40,8 +38,8 @@ class Post with _$Post {
   final DateTime createdAt;
   final List<String> hashTags;
   final List<String> imageUrls;
-  final List<Like> like;
-  final List<Comment> comment;
-  final bool isLikedByCurrentUser; // 추가된 필드
-  final bool isBookmarkedByCurrentUser; // 추가된 필드
+  final int likeCount;
+  final int commentCount;
+  final bool isLikedByCurrentUser;
+  final bool isBookmarkedByCurrentUser;
 }
