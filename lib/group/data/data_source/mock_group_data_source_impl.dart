@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:devlink_mobile_app/community/data/dto/hash_tag_dto_old.dart';
 import 'package:devlink_mobile_app/community/data/dto/member_dto_old.dart';
-import 'package:devlink_mobile_app/group/data/dto/group_dto_old.dart';
+import 'package:devlink_mobile_app/group/data/dto/group_dto_old.dart.txt';
 import 'package:intl/intl.dart';
 
 import 'group_data_source.dart';

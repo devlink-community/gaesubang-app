@@ -1,22 +1,29 @@
 // lib/community/data/dto/member_dto_old.dart
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-part 'member_dto_old.freezed.dart';
 part 'member_dto_old.g.dart';
 
-/// 실제 Member 모델은 auth 모듈에서 교체 예정!
-@freezed
-abstract class MemberDto with _$MemberDto {
-  const factory MemberDto({
-    String? id,
-    String? email,
-    String? nickname,
-    String? uid,
-    String? description,
-    bool? onAir,
-    String? image,
-  }) = _MemberDto;
+@JsonSerializable()
+class MemberDto {
+  const MemberDto({
+    this.id,
+    this.email,
+    this.nickname,
+    this.uid,
+    this.description,
+    this.onAir,
+    this.image,
+  });
+
+  final String? id;
+  final String? email;
+  final String? nickname;
+  final String? uid;
+  final String? description;
+  final bool? onAir;
+  final String? image;
 
   factory MemberDto.fromJson(Map<String, dynamic> json) =>
       _$MemberDtoFromJson(json);
+  Map<String, dynamic> toJson() => _$MemberDtoToJson(this);
 }
