@@ -10,7 +10,6 @@ import 'package:devlink_mobile_app/community/presentation/community_detail/commu
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
-import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/layout/main_shell.dart'; // MainShell 추가
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
@@ -25,13 +24,13 @@ import 'package:devlink_mobile_app/map/presentation/map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_screen_root.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
-import '../auth/auth_provider.dart';
 
 part 'app_router.g.dart';
 
@@ -39,50 +38,58 @@ part 'app_router.g.dart';
 @riverpod
 GoRouter appRouter(Ref ref) {
   // 인증 상태 스트림을 직접 가져와서 Listenable로 변환
+  // ✅ 개선된 AuthStateListenable 사용
   final authRepo = ref.watch(authRepositoryProvider);
-  final refreshListenable = StreamListenable(authRepo.authStateChanges);
+  final authStateListenable = AuthStateListenable(authRepo.authStateChanges);
 
   return GoRouter(
     initialLocation: '/login',
-    refreshListenable: refreshListenable, // 인증 상태 변화 감지
+    refreshListenable: authStateListenable, // 인증 상태 변화 감지
     redirect: (context, state) {
+      // 디버깅용 정보 출력 (개발 모드에서만)
+      if (kDebugMode) {
+        authStateListenable.printDebugInfo();
+      }
+
       // 루트 경로('/')에 대한 처리
       if (state.matchedLocation == '/') {
         return '/login';
       }
 
-      // 인증 상태 확인 - switch 패턴 매칭 사용
-      final authStateAsync = ref.read(authStateProvider);
+      // ✅ 최적화: 캐시된 인증 상태 사용
+      final isAuthenticated = authStateListenable.isAuthenticated;
+      final isLoading = authStateListenable.isLoading;
+      final currentPath = state.matchedLocation;
 
-      return switch (authStateAsync) {
-        AsyncData(:final value) => () {
-          final isLoggedIn = value.isAuthenticated;
-          final currentPath = state.matchedLocation;
+      // 로딩 중일 때는 리다이렉트하지 않음 (깜빡임 방지)
+      if (isLoading) {
+        return null;
+      }
 
-          // 로그인이 필요하지 않은 경로 목록
-          final publicPaths = [
-            '/login',
-            '/sign-up',
-            '/terms',
-            '/forget-password',
-          ];
+      // 인증이 필요하지 않은 경로 목록
+      final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
 
-          // 인증이 필요한 페이지에 비로그인 상태로 접근
-          if (!isLoggedIn && !publicPaths.any(currentPath.startsWith)) {
-            return '/login';
-          }
+      final isPublicPath = publicPaths.any(currentPath.startsWith);
 
-          // 이미 로그인된 상태에서 인증 페이지 접근
-          if (isLoggedIn && publicPaths.any(currentPath.startsWith)) {
-            return '/home';
-          }
+      // 인증이 필요한 페이지에 비로그인 상태로 접근
+      if (!isAuthenticated && !isPublicPath) {
+        if (kDebugMode) {
+          print('Router: 비인증 사용자가 인증 필요 페이지 접근 시도 - $currentPath');
+        }
+        return '/login';
+      }
 
-          return null;
-        }(),
-        AsyncLoading() => null, // 로딩 중이면 현재 위치 유지
-        AsyncError() => '/login', // 에러 시 로그인 페이지로
-        _ => null, // 기본값 (다른 모든 경우)
-      };
+      // 이미 로그인된 상태에서 인증 페이지 접근
+      if (isAuthenticated && isPublicPath) {
+        if (kDebugMode) {
+          print('Router: 인증된 사용자가 인증 페이지 접근 시도 - $currentPath');
+        }
+        return '/home';
+      }
+
+      // GoRouter의 refreshListenable이 인증 상태 변화를 자동으로 감지하여
+      // 적절한 리다이렉트를 수행하므로 여기서는 null 반환
+      return null;
     },
     routes: [
       // === 인증 관련 라우트 (로그인 필요 없음) ===
