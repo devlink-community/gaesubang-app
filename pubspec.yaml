@@ -64,14 +64,18 @@ dependencies:
   google_sign_in: ^6.1.5
   googleapis: ^14.0.0
   googleapis_auth: ^2.0.0
-  google_generative_ai: ^0.2.0
+  google_generative_ai: ^0.4.7
   shared_preferences: ^2.5.3
 <<<<<<< HEAD
   firebase_remote_config: ^5.4.4
 =======
   firebase_remote_config: ^5.4.3
+<<<<<<< HEAD
   permission_handler: ^10.2.0
 >>>>>>> f0e90955 (feat: 온보딩, 스플래쉬 화면구현 완료)
+=======
+  permission_handler: ^12.0.0+1
+>>>>>>> 939a689f (feat: 온보딩 화면/ 알림 위치 권한 설정 완료)
 
 
 
