@@ -166,9 +166,12 @@ class PostRepositoryImpl implements PostRepository {
           throw Exception(CommunityErrorMessages.loginRequired);
         }
 
+        // 현재 사용자의 프로필 정보 가져오기 (닉네임, 직책/포지션)
         final createdPostId = await _dataSource.createPost(
           postId: postId,
           authorId: currentUser.uid,
+          authorNickname: currentUser.nickname,
+          authorPosition: currentUser.position ?? '',
           userProfileImage: currentUser.image,
           title: title,
           content: content,

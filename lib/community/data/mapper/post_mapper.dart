@@ -1,4 +1,3 @@
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_like_dto.dart';
@@ -14,7 +13,10 @@ extension PostDtoMapper on PostDto {
       id: id ?? '',
       title: title ?? '',
       content: content ?? '',
-      member: _createDefaultMember(), // 임시 Member 생성
+      // 작성자 정보 (개별 필드로 매핑)
+      authorId: authorId ?? '',
+      authorNickname: authorNickname ?? 'Unknown User',
+      authorPosition: authorPosition ?? '',
       userProfileImageUrl: userProfileImage ?? '',
       boardType: BoardType.free, // 기본값
       createdAt: createdAt ?? DateTime.now(),
@@ -22,18 +24,6 @@ extension PostDtoMapper on PostDto {
       imageUrls: mediaUrls ?? [],
       like: [], // 별도로 조회된 데이터로 채움
       comment: [], // 별도로 조회된 데이터로 채움
-    );
-  }
-
-  /// 임시 Member 생성 (AuthorId만 있는 경우)
-  Member _createDefaultMember() {
-    return Member(
-      id: authorId ?? '',
-      email: '',
-      nickname: authorId ?? 'Unknown User',
-      uid: authorId ?? '',
-      image: userProfileImage ?? '',
-      onAir: false,
     );
   }
 }

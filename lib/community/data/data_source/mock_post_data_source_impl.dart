@@ -12,6 +12,8 @@ class MockPostDataSourceImpl implements PostDataSource {
     PostDto(
       id: 'post1',
       authorId: 'user1',
+      authorNickname: '홍길동',
+      authorPosition: '프론트엔드 개발자',
       userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=author1',
       title: '개발팀 앱 제작',
       content: '플러터로 개발하는 방법을 공유합니다.',
@@ -22,6 +24,8 @@ class MockPostDataSourceImpl implements PostDataSource {
     PostDto(
       id: 'post2',
       authorId: 'user2',
+      authorNickname: '김영희',
+      authorPosition: '백엔드 개발자',
       userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=author2',
       title: '이것은 인기 게시글 입니다.',
       content: '인기 게시글 내용입니다.',
@@ -32,6 +36,8 @@ class MockPostDataSourceImpl implements PostDataSource {
     PostDto(
       id: 'post3',
       authorId: 'user3',
+      authorNickname: '박철수',
+      authorPosition: '데이터 분석가',
       userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=author3',
       title: '개발자커뮤니티 앱 제작',
       content: '함께 개발할 분을 찾습니다.',
@@ -47,7 +53,7 @@ class MockPostDataSourceImpl implements PostDataSource {
       PostCommentDto(
         id: 'comment1',
         userId: 'user1',
-        userName: '사용자1',
+        userName: '홍길동',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user1',
         text: '댓글 내용 1',
         createdAt: DateTime.now().subtract(const Duration(hours: 1)),
@@ -56,7 +62,7 @@ class MockPostDataSourceImpl implements PostDataSource {
       PostCommentDto(
         id: 'comment2',
         userId: 'user2',
-        userName: '사용자2',
+        userName: '김영희',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user2',
         text: '댓글 내용 2',
         createdAt: DateTime.now().subtract(const Duration(hours: 2)),
@@ -67,7 +73,7 @@ class MockPostDataSourceImpl implements PostDataSource {
       PostCommentDto(
         id: 'comment3',
         userId: 'user3',
-        userName: '사용자3',
+        userName: '박철수',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user3',
         text: '댓글 내용 3',
         createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -208,6 +214,8 @@ class MockPostDataSourceImpl implements PostDataSource {
   Future<String> createPost({
     required String postId,
     required String authorId,
+    required String authorNickname,
+    required String authorPosition,
     required String userProfileImage,
     required String title,
     required String content,
@@ -221,6 +229,8 @@ class MockPostDataSourceImpl implements PostDataSource {
       final newPost = PostDto(
         id: postId,
         authorId: authorId,
+        authorNickname: authorNickname,
+        authorPosition: authorPosition,
         userProfileImage: userProfileImage,
         title: title,
         content: content,

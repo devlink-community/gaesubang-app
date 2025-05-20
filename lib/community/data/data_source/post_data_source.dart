@@ -26,10 +26,12 @@ abstract interface class PostDataSource {
   /* Search */
   Future<List<PostDto>> searchPosts(String query);
 
-  /* Create - 사용자 정보 파라미터 추가 */
+  /* Create - 작성자 정보 파라미터 업데이트 */
   Future<String> createPost({
     required String postId,
     required String authorId,
+    required String authorNickname, // 추가: 작성자 닉네임
+    required String authorPosition, // 추가: 작성자 직책/포지션
     required String userProfileImage,
     required String title,
     required String content,

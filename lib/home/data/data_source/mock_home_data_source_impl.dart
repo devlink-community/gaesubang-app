@@ -1,4 +1,3 @@
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
@@ -35,40 +34,14 @@ class MockHomeDataSourceImpl implements HomeDataSource {
     // 데이터 로딩 시간을 시뮬레이션하기 위한 딜레이
     await Future.delayed(const Duration(milliseconds: 600));
 
-    final mockAuthors = [
-      Member(
-        id: 'author1',
-        email: 'author1@example.com',
-        nickname: '개수발',
-        uid: 'author1-uid',
-        // DiceBear API를 사용하여 저자 프로필 이미지 생성
-        image: 'https://api.dicebear.com/6.x/micah/png?seed=author1',
-      ),
-      Member(
-        id: 'author2',
-        email: 'author2@example.com',
-        nickname: '문성용',
-        uid: 'author2-uid',
-        // DiceBear API를 사용하여 저자 프로필 이미지 생성
-        image: 'https://api.dicebear.com/6.x/micah/png?seed=author2',
-      ),
-      Member(
-        id: 'author3',
-        email: 'author3@example.com',
-        nickname: '강지원',
-        uid: 'author3-uid',
-        // DiceBear API를 사용하여 저자 프로필 이미지 생성
-        image: 'https://api.dicebear.com/6.x/micah/png?seed=author3',
-      ),
-    ];
-
     return [
       Post(
         id: 'post1',
         title: '개발팀 앱 제작',
         content: '플러터로 개발하는 방법을 공유합니다.',
-        member: mockAuthors[0],
-        // DiceBear API를 사용한 이미지 URL
+        authorId: 'author1-uid',
+        authorNickname: '개수발',
+        authorPosition: '프론트엔드 개발자',
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author1',
         boardType: BoardType.free,
@@ -100,8 +73,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         id: 'post2',
         title: '이것은 인기 게시글 입니다.',
         content: '인기 게시글 내용입니다.',
-        member: mockAuthors[1],
-        // DiceBear API를 사용한 이미지 URL
+        authorId: 'author2-uid',
+        authorNickname: '문성용',
+        authorPosition: '백엔드 개발자',
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author2',
         boardType: BoardType.free,
@@ -133,8 +107,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         id: 'post3',
         title: '개발자커뮤니티 앱 제작',
         content: '함께 개발할 분을 찾습니다.',
-        member: mockAuthors[2],
-        // DiceBear API를 사용한 이미지 URL
+        authorId: 'author3-uid',
+        authorNickname: '강지원',
+        authorPosition: '데이터 분석가',
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author3',
         boardType: BoardType.qna,
