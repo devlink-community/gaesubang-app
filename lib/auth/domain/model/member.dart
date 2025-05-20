@@ -1,4 +1,8 @@
+// lib/auth/domain/model/member.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
+
+import '../../../profile/domain/model/focus_time_stats.dart';
+import '../../data/dto/joined_group_dto.dart';
 
 part 'member.freezed.dart';
 
@@ -11,11 +15,13 @@ class Member with _$Member {
     required this.uid,
     this.image = "",
     this.onAir = false,
-    this.agreedTermsId, // 동의한 약관 ID (단일 ID)
+    this.agreedTermsId,
     this.description = "",
     this.streakDays = 0,
     this.position = "",
     this.skills = "",
+    this.joinedGroups = const <JoinedGroupDto>[], // 가입한 그룹 목록
+    this.focusStats,
   });
 
   final String id;
@@ -24,9 +30,11 @@ class Member with _$Member {
   final String uid;
   final String image;
   final bool onAir;
-  final String? agreedTermsId; // 약관 동의 ID (하나만 저장)
+  final String? agreedTermsId;
   final String description;
   final int streakDays;
   final String? position;
   final String? skills;
+  final List<JoinedGroupDto> joinedGroups; // 가입한 그룹 목록
+  final FocusTimeStats? focusStats;
 }

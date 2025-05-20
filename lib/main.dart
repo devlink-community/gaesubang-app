@@ -1,6 +1,10 @@
+import 'dart:async';
+
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/styles/app_theme.dart';
+import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -14,21 +18,22 @@ void main() async {
   // Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Firebase 연결 확인 로그 추가
+  print('=== Firebase 초기화 완료 ===');
+  print('Firebase App Name: ${Firebase.app().name}');
+  print('Firebase Project ID: ${Firebase.app().options.projectId}');
+  AppConfig.printConfig(); // 설정 정보 출력
+
+  // API 로깅 초기화 및 주기적 통계 출력 설정
+  _initializeApiLogging();
+
   // 알림 서비스 초기화 - 권한 요청 없이
   await NotificationService().init(requestPermissionOnInit: false);
-
-  // await NaverMapSdk.instance.initialize(
-  //   clientId: 'ye49o0dcu6',
-
-  //   onAuthFailed: (ex) {
-  //     print("********* 네이버맵 인증오류 : $ex *********");
-  //   },
-  // );
 
   // 환경에 따라 클라이언트 ID를 가져오는 방식으로 변경
   final naverMapClientId = const String.fromEnvironment(
     'NAVER_MAP_CLIENT_ID',
-    defaultValue: 'ye49o0dcu6', // 개발 환경용 기본값
+    defaultValue: 'uubpy6izp6', // 개발 환경용 기본값
   );
 
   try {
@@ -45,6 +50,73 @@ void main() async {
   }
 
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// API 로깅 초기화 및 주기적 통계 출력 설정
+void _initializeApiLogging() {
+  if (!AppConfig.enableApiLogging) return;
+
+  print('=== API 로깅 시스템 초기화 ===');
+  print('enableApiLogging: ${AppConfig.enableApiLogging}');
+  print('enableVerboseLogging: ${AppConfig.enableVerboseLogging}');
+  print('==============================');
+
+  // 5분마다 API 통계 출력
+  Timer.periodic(const Duration(minutes: 5), (timer) {
+    final activeCalls = ApiCallLogger.getActiveCalls();
+
+    // 활성 호출이 있는 경우 경고
+    if (activeCalls > 0) {
+      print('⚠️  경고: $activeCalls개의 API 호출이 아직 완료되지 않았습니다');
+    }
+
+    // 통계 출력
+    ApiCallLogger.printStats();
+  });
+
+  // 앱 종료 시 최종 통계 출력
+  _setupAppLifecycleListener();
+}
+
+/// 앱 생명주기 리스너 설정 (종료 시 최종 통계 출력)
+void _setupAppLifecycleListener() {
+  if (!AppConfig.enableApiLogging) return;
+
+  WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
+}
+
+/// 앱 생명주기 관찰자 클래스
+class _AppLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!AppConfig.enableApiLogging) return;
+
+    switch (state) {
+      case AppLifecycleState.paused:
+        print('=== 앱 일시정지 - API 통계 ===');
+        ApiCallLogger.printStats();
+        break;
+      case AppLifecycleState.detached:
+        print('=== 앱 종료 - 최종 API 통계 ===');
+        ApiCallLogger.printStats();
+
+        // 완료되지 않은 API 호출 확인
+        final activeCalls = ApiCallLogger.getActiveCalls();
+        if (activeCalls > 0) {
+          print('⚠️  경고: 앱 종료 시 $activeCalls개의 API 호출이 완료되지 않았습니다');
+        }
+
+        print('============================');
+        break;
+      case AppLifecycleState.resumed:
+        if (AppConfig.enableVerboseLogging) {
+          print('=== 앱 재시작 - API 로깅 시스템 활성 ===');
+        }
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 class MyApp extends ConsumerWidget {

@@ -1,12 +1,15 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/profile/domain/use_case/get_current_profile_usecase.dart';
-import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_image_usecase.dart';
-import 'package:devlink_mobile_app/profile/domain/use_case/update_profile_usecase.dart';
-import 'package:devlink_mobile_app/profile/module/profile_edit_di.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
+import 'package:devlink_mobile_app/auth/module/auth_di.dart';
+import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart'; // 추가
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,216 +17,315 @@ part 'profile_edit_notifier.g.dart';
 
 @riverpod
 class ProfileEditNotifier extends _$ProfileEditNotifier {
-  late final GetCurrentProfileUseCase _getCurrentProfileUseCase;
+  late final GetCurrentUserUseCase _getCurrentUserUseCase;
   late final UpdateProfileUseCase _updateProfileUseCase;
   late final UpdateProfileImageUseCase _updateProfileImageUseCase;
+  late final CheckNicknameAvailabilityUseCase _checkNicknameUseCase;
 
   @override
   ProfileEditState build() {
-    _getCurrentProfileUseCase = ref.watch(getCurrentProfileUseCaseProvider);
+    _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
     _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
     _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
+    _checkNicknameUseCase = ref.watch(checkNicknameAvailabilityUseCaseProvider);
 
-    // 초기 상태만 반환하고, 프로필 로드는 별도 메서드로 분리
     return const ProfileEditState();
-  }
-
-  // 프로필 로드를 public 메서드로 변경하여 외부에서 호출 가능하게 함
-  Future<void> loadProfile() async {
-    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
-
-    try {
-      final result = await _getCurrentProfileUseCase.execute();
-
-      if (result is AsyncData) {
-        // 성공적으로 데이터를 받은 경우
-        debugPrint(
-          '프로필 로드 성공: ${result.value?.nickname}, ${result.value?.description}',
-        );
-
-        state = state.copyWith(
-          isLoading: false,
-          isSuccess: true,
-          member: result.value,
-        );
-      } else if (result is AsyncError) {
-        // 에러가 발생한 경우
-        debugPrint('프로필 로드 실패: ${result.error}');
-
-        state = state.copyWith(
-          isLoading: false,
-          isError: true,
-          errorMessage: result.error.toString(),
-        );
-      }
-    } catch (e) {
-      // 예외 처리
-      debugPrint('프로필 로드 예외: $e');
-
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필을 불러오는 데 실패했습니다: ${e.toString()}',
-      );
-    }
   }
 
   Future<void> onAction(ProfileEditAction action) async {
     switch (action) {
-      case OnChangeNickname(:final nickname):
-        if (state.member != null) {
-          debugPrint('닉네임 변경: $nickname');
-          final updatedMember = state.member!.copyWith(nickname: nickname);
-          state = state.copyWith(member: updatedMember);
-        }
+      case LoadProfile():
+        await _loadProfile();
         break;
 
-      case OnChangeMessage(:final message):
-        if (state.member != null) {
-          debugPrint('소개글 변경: $message');
-          final updatedMember = state.member!.copyWith(description: message);
-          state = state.copyWith(member: updatedMember);
-        }
+      case OnChangeNickname(:final nickname):
+        _updateEditingProfile(
+          (profile) => profile.copyWith(nickname: nickname),
+        );
+        _clearFieldError('nickname');
+        break;
+
+      case OnChangeDescription(:final description):
+        _updateEditingProfile(
+          (profile) => profile.copyWith(description: description),
+        );
         break;
 
       case OnChangePosition(:final position):
-        if (state.member != null) {
-          debugPrint('직무 변경: $position');
-          final updatedMember = state.member!.copyWith(position: position);
-          state = state.copyWith(member: updatedMember);
-        }
+        _updateEditingProfile(
+          (profile) => profile.copyWith(position: position),
+        );
         break;
 
       case OnChangeSkills(:final skills):
-        if (state.member != null) {
-          debugPrint('스킬 변경: $skills');
-          final updatedMember = state.member!.copyWith(skills: skills);
-          state = state.copyWith(member: updatedMember);
-        }
+        _updateEditingProfile((profile) => profile.copyWith(skills: skills));
         break;
 
-      case OnPickImage(:final image):
-        await _updateProfileImage(image);
+      case CheckNicknameAvailability(:final nickname):
+        await _checkNicknameAvailability(nickname);
         break;
 
-      case OnSave():
+      case PickImage():
+        await _pickImage();
+        break;
+
+      case OnChangeImage(:final imageFile):
+        await _updateProfileImage(imageFile);
+        break;
+
+      case ValidateForm():
+        _validateForm();
+        break;
+
+      case SaveProfile():
         await _saveProfile();
         break;
+
+      case ClearErrors():
+        _clearErrors();
+        break;
     }
   }
 
-  Future<void> updateProfileImage(XFile image) async {
-    await _updateProfileImage(File(image.path));
-  }
-
-  Future<void> _updateProfileImage(File image) async {
-    state = state.copyWith(
-      isImageUploading: true,
-      isImageUploadError: false,
-      imageUploadErrorMessage: null,
-    );
+  /// 프로필 로드
+  Future<void> _loadProfile() async {
+    state = state.copyWith(profileState: const AsyncLoading());
 
     try {
-      final xFile = XFile(image.path);
-      debugPrint('이미지 업로드 시작: ${xFile.path}');
+      final result = await _getCurrentUserUseCase.execute();
 
-      final result = await _updateProfileImageUseCase.execute(xFile);
-
-      // 이미지 업로드 결과 처리 - AsyncValue에 따라 분기
-      if (result.hasValue) {
-        debugPrint('이미지 업로드 성공: ${result.value!.image}');
-
+      if (result case AsyncData(:final value)) {
         state = state.copyWith(
-          isImageUploading: false,
-          isImageUploadSuccess: true,
-          member: result.value,
+          profileState: AsyncData(value),
+          editingProfile: value,
         );
-      } else if (result.hasError) {
-        debugPrint('이미지 업로드 실패: ${result.error}');
+      } else if (result case AsyncError(:final error, :final stackTrace)) {
+        state = state.copyWith(profileState: AsyncError(error, stackTrace));
+      }
+    } catch (e, st) {
+      state = state.copyWith(profileState: AsyncError(e, st));
+    }
+  }
 
+  /// 편집 중인 프로필 업데이트
+  void _updateEditingProfile(Function(dynamic) updater) {
+    final currentProfile = state.editingProfile;
+    if (currentProfile != null) {
+      final updatedProfile = updater(currentProfile);
+      state = state.copyWith(editingProfile: updatedProfile);
+    }
+  }
+
+  /// 특정 필드 에러 제거
+  void _clearFieldError(String field) {
+    final updatedErrors = Map<String, String>.from(state.validationErrors);
+    updatedErrors.remove(field);
+    state = state.copyWith(validationErrors: updatedErrors);
+  }
+
+  /// 모든 에러 초기화
+  void _clearErrors() {
+    state = state.copyWith(
+      validationErrors: {},
+      saveState: const AsyncData(null),
+      nicknameCheckState: const AsyncData(null),
+    );
+  }
+
+  /// 닉네임 중복 확인
+  Future<void> _checkNicknameAvailability(String nickname) async {
+    // 현재 사용자의 닉네임과 같으면 중복 확인하지 않음
+    if (state.profileState case AsyncData(:final value)) {
+      if (value.nickname == nickname) {
+        state = state.copyWith(nicknameCheckState: const AsyncData(true));
+        return;
+      }
+    }
+
+    state = state.copyWith(nicknameCheckState: const AsyncLoading());
+
+    try {
+      final result = await _checkNicknameUseCase.execute(nickname);
+
+      if (result case AsyncData(:final value)) {
+        state = state.copyWith(nicknameCheckState: AsyncData(value));
+
+        // 닉네임이 중복이면 에러 메시지 추가
+        if (!value) {
+          final updatedErrors = Map<String, String>.from(
+            state.validationErrors,
+          );
+          updatedErrors['nickname'] = '이미 사용 중인 닉네임입니다';
+          state = state.copyWith(validationErrors: updatedErrors);
+        }
+      } else if (result case AsyncError(:final error, :final stackTrace)) {
         state = state.copyWith(
-          isImageUploading: false,
-          isImageUploadError: true,
-          imageUploadErrorMessage: result.error.toString(),
+          nicknameCheckState: AsyncError(error, stackTrace),
         );
       }
-    } catch (e) {
-      debugPrint('이미지 업로드 예외: $e');
+    } catch (e, st) {
+      state = state.copyWith(nicknameCheckState: AsyncError(e, st));
+    }
+  }
 
-      state = state.copyWith(
-        isImageUploading: false,
-        isImageUploadError: true,
-        imageUploadErrorMessage: '프로필 이미지를 업데이트할 수 없습니다: ${e.toString()}',
+  /// 이미지 선택
+  Future<void> _pickImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
       );
+
+      if (image != null) {
+        await _updateProfileImage(File(image.path));
+      }
+    } catch (e) {
+      debugPrint('이미지 선택 실패: $e');
     }
   }
 
-  Future<bool> updateProfile({required String nickname, String? intro}) async {
-    final updated = state.member?.copyWith(
-      nickname: nickname,
-      description: intro ?? state.member?.description ?? '',
-    );
+  /// 프로필 이미지 업데이트
+  Future<void> _updateProfileImage(File imageFile) async {
+    try {
+      final result = await _updateProfileImageUseCase.execute(imageFile.path);
 
-    if (updated != null) {
-      state = state.copyWith(member: updated);
+      if (result case AsyncData(:final value)) {
+        // 성공 시 편집 중인 프로필과 로드된 프로필 모두 업데이트
+        state = state.copyWith(
+          profileState: AsyncData(value),
+          editingProfile: value,
+        );
+
+        // ✅ 핵심: 이미지 업데이트 성공 시 프로필 갱신 상태 마크
+        ref.read(profileRefreshStateProvider.notifier).markForRefresh();
+
+        debugPrint(
+          '✅ ProfileEditNotifier: 이미지 업데이트 성공 및 갱신 상태 마크: ${value.image}',
+        );
+      } else if (result case AsyncError(:final error)) {
+        debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 실패: $error');
+      }
+    } catch (e) {
+      debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 예외: $e');
     }
-
-    return await _saveProfile();
   }
 
-  Future<bool> _saveProfile() async {
-    if (state.member == null) return false;
+  /// 폼 검증
+  void _validateForm() {
+    final profile = state.editingProfile;
+    if (profile == null) return;
 
-    state = state.copyWith(isLoading: true, isError: false, errorMessage: null);
+    final Map<String, String> errors = {};
 
-    // 디버그 로그 추가
-    debugPrint(
-      '프로필 저장 시작: ${state.member!.nickname}, ${state.member!.description}, ${state.member!.position}, ${state.member!.skills}',
-    );
+    // 닉네임 검증
+    final nicknameError = AuthValidator.validateNickname(profile.nickname);
+    if (nicknameError != null) {
+      errors['nickname'] = nicknameError;
+    }
+
+    // 닉네임 중복 확인 여부 검증
+    if (state.profileState case AsyncData(:final value)) {
+      final originalProfile = value; // ✅ 올바른 문법
+      final isNicknameChanged = originalProfile.nickname != profile.nickname;
+
+      if (isNicknameChanged) {
+        // 닉네임이 변경된 경우에만 중복 확인 필요
+        if (state.nicknameCheckState case AsyncData(:final value)) {
+          final isAvailable = value; // ✅ 올바른 문법
+          if (isAvailable == false) {
+            errors['nickname'] = '이미 사용 중인 닉네임입니다';
+          }
+          // isAvailable == true이면 통과
+        } else {
+          // 중복 확인을 아직 하지 않은 경우
+          errors['nickname'] = '닉네임 중복 확인이 필요합니다';
+        }
+      }
+      // 닉네임이 변경되지 않았으면 중복 확인 생략
+    }
+
+    state = state.copyWith(validationErrors: errors);
+
+    // 디버깅 로그 추가
+    if (errors.isNotEmpty) {
+      debugPrint('❌ ProfileEditNotifier: 폼 검증 실패 - $errors');
+    } else {
+      debugPrint('✅ ProfileEditNotifier: 폼 검증 통과');
+    }
+  }
+
+  /// 프로필 저장
+  Future<void> _saveProfile() async {
+    final profile = state.editingProfile;
+    if (profile == null) return;
+
+    // 저장 전 폼 검증
+    _validateForm();
+    if (state.hasValidationErrors) {
+      return;
+    }
+
+    state = state.copyWith(saveState: const AsyncLoading());
 
     try {
       final result = await _updateProfileUseCase.execute(
-        nickname: state.member!.nickname,
-        intro: state.member!.description,
-        position: state.member!.position,
-        skills: state.member!.skills,
+        nickname: profile.nickname,
+        description: profile.description,
+        position: profile.position,
+        skills: profile.skills,
       );
 
-      // 저장 결과 처리 - AsyncValue에 따라 분기
-      if (result.hasValue) {
-        // 성공 시 디버그 로그 추가
+      if (result case AsyncData(:final value)) {
+        state = state.copyWith(
+          saveState: const AsyncData(true),
+          profileState: AsyncData(value),
+          editingProfile: value,
+        );
+
+        // ✅ 핵심: 프로필 저장 성공 시 프로필 갱신 상태 마크
+        ref.read(profileRefreshStateProvider.notifier).markForRefresh();
+
         debugPrint(
-          '프로필 저장 성공: ${result.value!.nickname}, ${result.value!.description}, ${result.value!.position}, ${result.value!.skills}',
+          '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크: ${value.nickname}',
         );
-
-        state = state.copyWith(
-          isLoading: false,
-          isSuccess: true,
-          member: result.value,
-        );
-        return true;
-      } else if (result.hasError) {
-        // 실패 시 디버그 로그 추가
-        debugPrint('프로필 저장 실패: ${result.error}');
-
-        state = state.copyWith(
-          isLoading: false,
-          isError: true,
-          errorMessage: result.error.toString(),
-        );
-        return false;
+      } else if (result case AsyncError(:final error, :final stackTrace)) {
+        state = state.copyWith(saveState: AsyncError(error, stackTrace));
+        debugPrint('❌ ProfileEditNotifier: 프로필 저장 실패: $error');
       }
-      return false;
-    } catch (e) {
-      // 예외 발생 시 디버그 로그 추가
-      debugPrint('프로필 저장 예외: $e');
-
-      state = state.copyWith(
-        isLoading: false,
-        isError: true,
-        errorMessage: '프로필 정보를 수정할 수 없습니다: ${e.toString()}',
-      );
-      return false;
+    } catch (e, st) {
+      state = state.copyWith(saveState: AsyncError(e, st));
+      debugPrint('❌ ProfileEditNotifier: 프로필 저장 예외: $e');
     }
+  }
+
+  /// 편의 메서드: 프로필 로드 (외부에서 호출 가능)
+  Future<void> loadProfile() async {
+    await onAction(const ProfileEditAction.loadProfile());
+  }
+
+  /// 편의 메서드: 특정 닉네임이 변경되었는지 확인
+  bool get isNicknameChanged {
+    if (state.profileState case AsyncData(:final value)) {
+      return value.nickname != state.editingProfile?.nickname;
+    }
+    return false;
+  }
+
+  /// 편의 메서드: 프로필이 변경되었는지 확인
+  bool get hasChanges {
+    if (state.profileState case AsyncData(:final value)) {
+      final editingProfile = state.editingProfile;
+      if (editingProfile == null) return false;
+
+      return value.nickname != editingProfile.nickname ||
+          value.description != editingProfile.description ||
+          value.position != editingProfile.position ||
+          value.skills != editingProfile.skills ||
+          value.image != editingProfile.image;
+    }
+    return false;
   }
 }

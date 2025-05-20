@@ -4,6 +4,8 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/auth_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -26,20 +28,46 @@ class LoginNotifier extends _$LoginNotifier {
         break;
 
       case NavigateToForgetPassword():
-      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
         break;
 
       case NavigateToSignUp():
-      // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
+        // Root에서 이동 처리 (UI context 이용 → Root 처리 예정)
         break;
     }
   }
 
   Future<void> _handleLogin(String email, String password) async {
     // 입력값 기본 검증
-    if (email.isEmpty || password.isEmpty) {
+    if (email.isEmpty && password.isEmpty) {
       state = state.copyWith(
-        loginErrorMessage: '이메일과 비밀번호를 모두 입력해주세요',
+        loginErrorMessage: AuthErrorMessages.formValidationFailed,
+        loginUserResult: null,
+      );
+      return;
+    }
+
+    if (email.isEmpty) {
+      state = state.copyWith(
+        loginErrorMessage: AuthErrorMessages.emailRequired,
+        loginUserResult: null,
+      );
+      return;
+    }
+
+    if (password.isEmpty) {
+      state = state.copyWith(
+        loginErrorMessage: AuthErrorMessages.passwordRequired,
+        loginUserResult: null,
+      );
+      return;
+    }
+
+    // 이메일 형식 검증
+    final emailError = AuthValidator.validateEmail(email);
+    if (emailError != null) {
+      state = state.copyWith(
+        loginErrorMessage: emailError,
         loginUserResult: null,
       );
       return;
@@ -66,7 +94,7 @@ class LoginNotifier extends _$LoginNotifier {
       debugPrint('로그인 에러: ${error.toString()}');
 
       // 에러 타입에 따른 사용자 친화적 메시지 처리
-      String friendlyMessage = '로그인에 실패했습니다';
+      String friendlyMessage = AuthErrorMessages.loginFailed;
 
       if (error is Failure) {
         switch (error.type) {
@@ -74,10 +102,10 @@ class LoginNotifier extends _$LoginNotifier {
             friendlyMessage = error.message;
             break;
           case FailureType.network:
-            friendlyMessage = '네트워크 연결을 확인해주세요';
+            friendlyMessage = AuthErrorMessages.networkError;
             break;
           case FailureType.timeout:
-            friendlyMessage = '요청 시간이 초과되었습니다. 다시 시도해주세요';
+            friendlyMessage = AuthErrorMessages.timeoutError;
             break;
           default:
             friendlyMessage = error.message;
