@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_state.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/components/comment_item.dart';
+import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -221,25 +222,12 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           // 작성자 정보 및 날짜
           Row(
             children: [
-              // 프로필 이미지
-              ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: Image.network(
-                  post.userProfileImageUrl,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stackTrace) => Container(
-                        width: 50,
-                        height: 50,
-                        color: AppColorStyles.gray60,
-                        child: Icon(
-                          Icons.person,
-                          color: AppColorStyles.gray100,
-                        ),
-                      ),
-                ),
+              // 프로필 이미지 - AppImage 컴포넌트 사용
+              AppImage.profile(
+                imagePath: post.userProfileImageUrl,
+                size: 50,
+                backgroundColor: AppColorStyles.gray60,
+                foregroundColor: AppColorStyles.gray100,
               ),
               const SizedBox(width: 16),
 
@@ -283,7 +271,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           const SizedBox(height: 24),
 
           // 이미지 (있는 경우)
-          if (post.imageUrls.isNotEmpty)
+          if (post.imageUrls.isNotEmpty && post.imageUrls.first.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.network(

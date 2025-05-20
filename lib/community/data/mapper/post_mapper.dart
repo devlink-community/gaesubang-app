@@ -32,12 +32,14 @@ extension PostDtoMapper on PostDto {
 extension PostCommentDtoMapper on PostCommentDto {
   Comment toModel() {
     return Comment(
+      id: id ?? '', // 추가된 id 필드 매핑
       userId: userId ?? '',
       userName: userName ?? 'Unknown User',
       userProfileImage: userProfileImage ?? '',
       text: text ?? '',
       createdAt: createdAt ?? DateTime.now(),
       likeCount: likeCount ?? 0,
+      isLikedByCurrentUser: isLikedByCurrentUser ?? false,
     );
   }
 }
