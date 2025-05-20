@@ -21,7 +21,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   // 타이머 활동과 출석부를 위한 맵 추가
   final Map<String, List<Map<String, dynamic>>> _timerActivities = {};
-  final Map<String, List<Map<String, dynamic>>> _attendances = {};
 
   bool _initialized = false;
 
@@ -765,18 +764,34 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       throw Exception('그룹을 찾을 수 없습니다');
     }
 
-    // 출석부 컬렉션 초기화 (없으면)
-    _attendances[groupId] ??= [];
+    // 타이머 활동 컬렉션 초기화 (없으면)
+    _timerActivities[groupId] ??= [];
 
-    // 해당 월의 데이터만 필터링
-    final monthPrefix = '$year-${month.toString().padLeft(2, '0')}';
+    // 해당 월의 시작일과 종료일 계산
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 1);
 
-    return _attendances[groupId]!
-        .where((attendance) {
-          final dateStr = attendance['date'] as String?;
-          return dateStr != null && dateStr.startsWith(monthPrefix);
+    // 해당 월에 속하는 타이머 활동 필터링
+    return _timerActivities[groupId]!
+        .where((activity) {
+          try {
+            // 활동의 timestamp가 문자열 형태일 경우 DateTime으로 변환
+            final timestamp = activity['timestamp'] as String?;
+            if (timestamp == null) return false;
+
+            final activityDate = _dateFormat.parse(timestamp);
+
+            // 해당 월 범위 내에 있는지 확인
+            return activityDate.isAfter(
+                  startDate.subtract(const Duration(seconds: 1)),
+                ) &&
+                activityDate.isBefore(endDate);
+          } catch (e) {
+            // 날짜 파싱 오류 시 제외
+            return false;
+          }
         })
-        .map((attendance) => Map<String, dynamic>.from(attendance))
+        .map((activity) => Map<String, dynamic>.from(activity))
         .toList();
   }
 }
