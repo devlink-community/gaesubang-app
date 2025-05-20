@@ -193,6 +193,12 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       backgroundColor: backgroundColor,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
+        // 채팅 아이콘 버튼 추가
+        IconButton(
+          icon: const Icon(Icons.chat_bubble, color: Colors.white),
+          onPressed:
+              () => widget.onAction(const GroupDetailAction.navigateToChat()),
+        ),
         IconButton(
           icon: const Icon(Icons.settings, color: Colors.white),
           onPressed:

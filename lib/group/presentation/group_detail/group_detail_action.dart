@@ -49,4 +49,7 @@ sealed class GroupDetailAction with _$GroupDetailAction {
   // 사용자 프로필 화면으로 이동
   const factory GroupDetailAction.navigateToUserProfile(String userId) =
       NavigateToUserProfile;
+  
+  // 그룹 채팅 화면으로 이동 (새로 추가)
+  const factory GroupDetailAction.navigateToChat() = NavigateToChat;
 }

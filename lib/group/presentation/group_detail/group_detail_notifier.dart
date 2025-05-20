@@ -107,6 +107,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       case NavigateToMap():
       case NavigateToSettings():
       case NavigateToUserProfile():
+      case NavigateToChat():
         break;
     }
   }
