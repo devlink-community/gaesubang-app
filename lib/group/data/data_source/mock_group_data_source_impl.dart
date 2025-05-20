@@ -1,6 +1,7 @@
 // lib/group/data/data_source/mock_group_data_source_impl.dart
 import 'dart:math';
 
+import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
 import 'package:intl/intl.dart';
 
 import 'group_data_source.dart';
@@ -17,6 +18,10 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   // 사용자별 그룹 가입 정보 (userId -> List<String>)
   final Map<String, List<String>> _userGroups = {};
+
+  // 타이머 활동과 출석부를 위한 맵 추가
+  final Map<String, List<Map<String, dynamic>>> _timerActivities = {};
+  final Map<String, List<Map<String, dynamic>>> _attendances = {};
 
   bool _initialized = false;
 
@@ -565,5 +570,213 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     }
 
     return filteredGroups.map((g) => Map<String, dynamic>.from(g)).toList();
+  }
+
+  // fetchGroupTimerActivities 메서드에서 수정
+  @override
+  Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
+    String groupId,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _initializeIfNeeded();
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception('그룹을 찾을 수 없습니다: $groupId');
+    }
+
+    // 타이머 활동 컬렉션 초기화 (없으면)
+    _timerActivities[groupId] ??= [];
+
+    // 이 그룹의 타이머 활동 목록
+    final activities = _timerActivities[groupId]!;
+
+    // 타이머 활동이 없는 경우, 각 멤버에 대해 기본 활동 생성
+    if (activities.isEmpty) {
+      final members = _memberships[groupId] ?? [];
+
+      for (final member in members) {
+        final memberId = member['userId'] as String?;
+        final memberName = member['userName'] as String?;
+
+        if (memberId != null && memberName != null) {
+          // 기본 활동 추가 (end 타입)
+          activities.add({
+            'id':
+                'activity_${memberId}_${DateTime.now().millisecondsSinceEpoch}',
+            'memberId': memberId,
+            'memberName': memberName,
+            'type': 'end',
+            'timestamp': _dateFormat.format(
+              DateTime.now().subtract(const Duration(hours: 1)),
+            ),
+            'groupId': groupId,
+          });
+        }
+      }
+    }
+
+    // 멤버별로 가장 최근 활동만 필터링
+    final Map<String, Map<String, dynamic>> memberIdToActivity = {};
+
+    // 활동을 시간순으로 정렬 (최신순)
+    activities.sort((a, b) {
+      final timestampA = a['timestamp'] as String?;
+      final timestampB = b['timestamp'] as String?;
+
+      if (timestampA == null || timestampB == null) return 0;
+
+      try {
+        final dateA = _dateFormat.parse(timestampA);
+        final dateB = _dateFormat.parse(timestampB);
+        return dateB.compareTo(dateA); // 내림차순 (최신순)
+      } catch (e) {
+        return 0;
+      }
+    });
+
+    // 각 멤버의 최신 활동만 수집
+    for (final activity in activities) {
+      final memberId = activity['memberId'] as String?;
+
+      if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
+        memberIdToActivity[memberId] = Map<String, dynamic>.from(activity);
+      }
+    }
+
+    return memberIdToActivity.values.toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> startMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    await _initializeIfNeeded();
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception(GroupErrorMessages.notFound);
+    }
+
+    // 새 타이머 시작 활동 생성
+    final now = DateTime.now();
+    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activity = {
+      'id': activityId,
+      'memberId': memberId,
+      'memberName': memberName,
+      'type': 'start',
+      'timestamp': _dateFormat.format(now),
+      'groupId': groupId,
+    };
+
+    // 타이머 활동 저장
+    _timerActivities[groupId] ??= [];
+    _timerActivities[groupId]!.add(activity);
+
+    return activity;
+  }
+
+  @override
+  Future<Map<String, dynamic>> stopMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    await _initializeIfNeeded();
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception(GroupErrorMessages.notFound);
+    }
+
+    // 새 타이머 종료 활동 생성
+    final now = DateTime.now();
+    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activity = {
+      'id': activityId,
+      'memberId': memberId,
+      'memberName': memberName,
+      'type': 'end',
+      'timestamp': _dateFormat.format(now),
+      'groupId': groupId,
+    };
+
+    // 타이머 활동 저장
+    _timerActivities[groupId] ??= [];
+    _timerActivities[groupId]!.add(activity);
+
+    return activity;
+  }
+
+  @override
+  Future<Map<String, dynamic>> pauseMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _initializeIfNeeded();
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception(GroupErrorMessages.notFound);
+    }
+
+    // 새 타이머 일시정지 활동 생성
+    final now = DateTime.now();
+    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activity = {
+      'id': activityId,
+      'memberId': memberId,
+      'memberName': memberName,
+      'type': 'pause',
+      'timestamp': _dateFormat.format(now),
+      'groupId': groupId,
+    };
+
+    // 타이머 활동 저장
+    _timerActivities[groupId] ??= [];
+    _timerActivities[groupId]!.add(activity);
+
+    return activity;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
+    String groupId,
+    int year,
+    int month,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _initializeIfNeeded();
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception('그룹을 찾을 수 없습니다');
+    }
+
+    // 출석부 컬렉션 초기화 (없으면)
+    _attendances[groupId] ??= [];
+
+    // 해당 월의 데이터만 필터링
+    final monthPrefix = '$year-${month.toString().padLeft(2, '0')}';
+
+    return _attendances[groupId]!
+        .where((attendance) {
+          final dateStr = attendance['date'] as String?;
+          return dateStr != null && dateStr.startsWith(monthPrefix);
+        })
+        .map((attendance) => Map<String, dynamic>.from(attendance))
+        .toList();
   }
 }
