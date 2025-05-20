@@ -1,6 +1,7 @@
-// lib/auth/domain/repository/auth_repository.dart
+import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
+import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
 abstract interface class AuthRepository {
@@ -19,7 +20,7 @@ abstract interface class AuthRepository {
   });
 
   /// 현재 로그인된 유저 조회
-  Future<Result<Member?>> getCurrentUser();
+  Future<Result<Member>> getCurrentUser();
 
   /// 로그아웃
   Future<Result<void>> signOut();
@@ -43,4 +44,34 @@ abstract interface class AuthRepository {
 
   /// 약관 정보 조회
   Future<Result<TermsAgreement?>> getTermsInfo(String? termsId);
+
+  /// 사용자의 타이머 활동 로그 조회
+  Future<Result<List<TimerActivityDto>>> getTimerActivities(String userId);
+
+  /// 타이머 활동 로그 추가
+  Future<Result<void>> saveTimerActivity(
+    String userId,
+    TimerActivityDto activity,
+  );
+
+  /// 프로필 정보 업데이트
+  Future<Result<Member>> updateProfile({
+    required String nickname,
+    String? description,
+    String? position,
+    String? skills,
+  });
+
+  /// 프로필 이미지 업데이트
+  Future<Result<Member>> updateProfileImage(String imagePath);
+
+  // === 새로 추가된 인증 상태 관련 메서드 ===
+
+  /// 인증 상태 변화 스트림
+  /// Firebase Auth 또는 Mock의 상태 변화를 실시간으로 감지
+  Stream<AuthState> get authStateChanges;
+
+  /// 현재 인증 상태 확인
+  /// 라우터에서 초기 리다이렉트 시 사용
+  Future<AuthState> getCurrentAuthState();
 }

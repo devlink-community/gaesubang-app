@@ -13,34 +13,79 @@ class ProfileScreenRoot extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreenRoot> createState() => _ProfileScreenRootState();
 }
 
-class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot> {
+class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
+    with WidgetsBindingObserver {
+  // 화면 상태 관리
+  bool _isInitialized = false;
+  bool _wasInBackground = false;
+  bool _isInitializing = false;
+
   @override
   void initState() {
     super.initState();
-    // 화면이 처음 로드될 때 딱 한 번만 호출
-    _maybeRefreshData();
+
+    // 앱 상태 변화 감지를 위한 관찰자 등록
+    WidgetsBinding.instance.addObserver(this);
+
+    // 초기화 플래그 설정
+    _isInitializing = true;
+
+    // 화면 초기화를 위젯 빌드 이후로 지연
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeScreen();
+    });
   }
 
-  // 필요한 경우에만 데이터 새로고침
-  void _maybeRefreshData() {
-    // Provider 상태를 먼저 확인
-    final ProfileState = ref.read(profileNotifierProvider);
+  // 화면 초기화 (최초 진입 시에만 호출)
+  Future<void> _initializeScreen() async {
+    if (_isInitialized) return;
 
-    // 로딩 중이 아니고 에러가 있거나 데이터가 없는 경우만 새로고침
-    if (!ProfileState.isLoading &&
-        (ProfileState.hasError || !ProfileState.hasValue)) {
-      debugPrint('프로필 화면 데이터 새로고침 필요');
-      _refreshData();
-    } else {
-      debugPrint('프로필 화면 데이터 이미 로드됨');
+    if (mounted) {
+      // 초기 데이터 로드 (ProfileNotifier의 갱신 상태 시스템을 통해)
+      await ref.read(profileNotifierProvider.notifier).refresh();
+    }
+
+    _isInitialized = true;
+    _isInitializing = false;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // 초기화 중이면 생명주기 이벤트 무시
+    if (_isInitializing) return;
+
+    switch (state) {
+      case AppLifecycleState.paused:
+        if (_isInitialized && !_isInitializing && !_wasInBackground) {
+          _wasInBackground = true;
+        }
+        break;
+
+      case AppLifecycleState.resumed:
+        // 실제 백그라운드에서 돌아온 경우만 처리
+        if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
+          // 백그라운드에서 돌아왔을 때 자동 갱신
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ref.read(profileNotifierProvider.notifier).refresh();
+            }
+          });
+        }
+        _wasInBackground = false;
+        break;
+
+      default:
+        break;
     }
   }
 
-  // 프로필 화면 데이터 새로고침
-  void _refreshData() {
-    debugPrint('프로필 화면 데이터 새로고침 실행');
-    // 명시적으로 새로고침 액션 호출
-    ref.read(profileNotifierProvider.notifier).onAction(const RefreshProfile());
+  @override
+  void dispose() {
+    // 관찰자 해제
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -48,32 +93,25 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot> {
     final notifier = ref.watch(profileNotifierProvider.notifier);
     final state = ref.watch(profileNotifierProvider);
 
-    return state.when(
-      data: (data) {
-        return Scaffold(
-          body: ProfileScreen(
-            state: data,
-            onAction: (action) async {
-              switch (action) {
-                case OpenSettings():
-                  debugPrint('설정 버튼 클릭됨 - 설정 화면으로 이동 시도');
-                  context.push('/settings');
-                  break;
-                case RefreshProfile():
-                  debugPrint('새로고침 버튼 클릭됨');
-                  await notifier.onAction(action);
-                  break;
+    return Scaffold(
+      body: ProfileScreen(
+        state: state,
+        onAction: (action) async {
+          switch (action) {
+            case OpenSettings():
+              await context.push('/settings');
+              // 설정에서 돌아왔을 때도 갱신 가능성이 있으므로 처리
+              if (mounted) {
+                ref.read(profileNotifierProvider.notifier).refresh();
               }
-            },
-          ),
-        );
-      },
-      loading:
-          () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error:
-          (error, stackTrace) =>
-              Scaffold(body: Center(child: Text('Error: $error'))),
+              break;
+            case RefreshProfile():
+              // 수동 새로고침 (pull-to-refresh 등)
+              await notifier.onAction(action);
+              break;
+          }
+        },
+      ),
     );
   }
 }

@@ -1,11 +1,8 @@
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_notifier.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import 'profile_edit_action.dart';
 
 class ProfileEditScreenRoot extends ConsumerStatefulWidget {
   const ProfileEditScreenRoot({super.key});
@@ -16,14 +13,12 @@ class ProfileEditScreenRoot extends ConsumerStatefulWidget {
 }
 
 class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
-  // 저장 버튼 클릭 추적을 위한 변수
-  bool _saveButtonPressed = false;
-
   @override
   void initState() {
     super.initState();
-    // 미세한 지연을 두고 프로필 로드 시작
-    Future.microtask(() {
+    debugPrint('🔄 ProfileEditScreenRoot: initState 호출됨');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('🔄 ProfileEditScreenRoot: 프로필 로드 시작');
       ref.read(profileEditNotifierProvider.notifier).loadProfile();
     });
   }
@@ -33,54 +28,43 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     final state = ref.watch(profileEditNotifierProvider);
     final notifier = ref.watch(profileEditNotifierProvider.notifier);
 
-    // 로딩 상태 감시
-    ref.listen(profileEditNotifierProvider.select((s) => s.isLoading), (
+    debugPrint('🔄 ProfileEditScreenRoot: build 호출됨');
+
+    // 저장 성공 시 단순히 뒤로 가기 (ProfileScreenRoot가 갱신을 처리함)
+    ref.listen(profileEditNotifierProvider.select((s) => s.saveState), (
       previous,
       current,
     ) {
-      // 로딩이 끝났고 (이전에 로딩 중이었고, 현재는 아님) 저장 버튼을 눌렀던 경우
-      if (previous == true && current == false && _saveButtonPressed) {
-        // 저장 버튼 상태 초기화
-        _saveButtonPressed = false;
+      debugPrint('🔄 ProfileEditScreenRoot: saveState 변화 감지 - $current');
 
-        // 성공 여부 확인
-        if (state.isSuccess && !state.isError) {
-          // 토스트 메시지 표시
+      if (current case AsyncData(:final value)) {
+        if (value == true) {
+          debugPrint('✅ ProfileEditScreenRoot: 저장 성공! 프로필 화면으로 이동');
           _showSuccessMessage(context);
 
-          // 약간의 지연 후 화면 전환
-          Future.delayed(const Duration(milliseconds: 600), () {
-            // IntroNotifierProvider 무효화 - 프로필 화면이 다시 로드되도록 함
-            ref.invalidate(profileNotifierProvider);
-
-            // 프로필 화면으로 이동
-            context.go('/profile');
-          });
-        } else if (state.isError) {
-          // 에러 시 에러 메시지 표시
-          _showErrorMessage(context, state.errorMessage ?? '프로필 저장 실패');
+          // 여기서 /profile로 이동
+          debugPrint('🔄 ProfileEditScreenRoot: context.go("/profile") 호출');
+          context.go('/profile');
         }
       }
     });
 
-    return ProfileEditScreen(
-      state: state,
-      onAction: (action) async {
-        switch (action) {
-          case OnSave():
-            // 저장 버튼이 눌렸음을 표시
-            _saveButtonPressed = true;
-            await notifier.onAction(action);
-            break;
-          default:
-            await notifier.onAction(action);
-        }
-      },
-    );
+    // 에러 처리
+    ref.listen(profileEditNotifierProvider.select((s) => s.saveState), (
+      previous,
+      current,
+    ) {
+      if (current.hasError) {
+        debugPrint('❌ ProfileEditScreenRoot: 저장 에러 - ${current.error}');
+        _showErrorMessage(context, current.error.toString());
+      }
+    });
+
+    return ProfileEditScreen(state: state, onAction: notifier.onAction);
   }
 
-  // 성공 메시지 표시 메서드
   void _showSuccessMessage(BuildContext context) {
+    debugPrint('🔄 ProfileEditScreenRoot: 성공 메시지 표시');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('프로필이 성공적으로 저장되었습니다'),
@@ -90,12 +74,12 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     );
   }
 
-  // 에러 메시지 표시 메서드
   void _showErrorMessage(BuildContext context, String message) {
+    debugPrint('🔄 ProfileEditScreenRoot: 에러 메시지 표시 - $message');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('저장에 실패하였습니다.'),
-        duration: const Duration(seconds: 2),
+        content: Text(message.isNotEmpty ? message : '저장에 실패했습니다'),
+        duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.red,
       ),
