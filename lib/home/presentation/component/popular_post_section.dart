@@ -84,11 +84,12 @@ class PopularPostSection extends StatelessWidget {
     final formattedDate = dateFormat.format(post.createdAt);
 
     // 작성자
-    final authorName = post.member.nickname;
+    final authorName = post.authorNickname;
 
     return InkWell(
       onTap: () {
-        if (post.id.isNotEmpty) {  // ID가 비어있지 않은지 확인
+        if (post.id.isNotEmpty) {
+          // ID가 비어있지 않은지 확인
           print('게시글 클릭: ${post.id}');
           onTapPost(post.id);
         } else {

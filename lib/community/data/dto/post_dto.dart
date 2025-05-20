@@ -8,6 +8,8 @@ class PostDto {
   const PostDto({
     this.id,
     this.authorId,
+    this.authorNickname,
+    this.authorPosition,
     this.userProfileImage,
     this.title,
     this.content,
@@ -18,6 +20,8 @@ class PostDto {
 
   final String? id;
   final String? authorId;
+  final String? authorNickname; // 추가: 작성자 닉네임
+  final String? authorPosition; // 추가: 작성자 직책/포지션
   final String? userProfileImage;
   final String? title;
   final String? content;

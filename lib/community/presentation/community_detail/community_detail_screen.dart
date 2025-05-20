@@ -222,7 +222,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(25),
                 child: Image.network(
-                  post.member.image,
+                  post.userProfileImageUrl,
                   width: 50,
                   height: 50,
                   fit: BoxFit.cover,
@@ -246,7 +246,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post.member.nickname,
+                      post.authorNickname,
                       style: AppTextStyles.subtitle1Bold,
                     ),
                     const SizedBox(height: 4),

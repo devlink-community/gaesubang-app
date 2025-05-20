@@ -5,19 +5,14 @@ import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 import 'post_data_source.dart';
 
 class PostFirebaseDataSource implements PostDataSource {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
 
-  PostFirebaseDataSource({
-    FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+  PostFirebaseDataSource({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // Collection 참조들
   CollectionReference<Map<String, dynamic>> get _postsCollection =>
@@ -203,6 +198,8 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<String> createPost({
     required String postId,
     required String authorId,
+    required String authorNickname,
+    required String authorPosition,
     required String userProfileImage,
     required String title,
     required String content,
@@ -214,9 +211,11 @@ class PostFirebaseDataSource implements PostDataSource {
         // 전달받은 ID로 문서 참조
         final postRef = _postsCollection.doc(postId);
 
-        // 게시글 데이터 생성
+        // 게시글 데이터 생성 (작성자 정보 추가)
         final postData = {
           'authorId': authorId,
+          'authorNickname': authorNickname, // 작성자 닉네임
+          'authorPosition': authorPosition, // 작성자 직책/포지션
           'userProfileImage': userProfileImage,
           'title': title,
           'content': content,
