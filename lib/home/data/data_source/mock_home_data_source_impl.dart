@@ -1,5 +1,3 @@
-import 'package:devlink_mobile_app/community/domain/model/comment.dart';
-import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 import 'package:devlink_mobile_app/home/data/data_source/home_data_source.dart';
@@ -48,28 +46,10 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
         hashTags: ['텀프로젝트', 'flutter'],
         imageUrls: ['https://picsum.photos/id/237/400/300'], // Lorem Picsum 사용
-        like: List.generate(
-          7,
-          (index) => Like(
-            userId: 'user$index',
-            userName: '사용자$index',
-            timestamp: DateTime.now().subtract(Duration(hours: index)),
-          ),
-        ),
-        comment: List.generate(
-          7,
-          (index) => Comment(
-            id: 'comment_post1_$index', // 추가된 ID 필드
-            userId: 'user$index',
-            userName: '사용자$index',
-            userProfileImage:
-                'https://api.dicebear.com/6.x/micah/png?seed=user$index',
-            text: '댓글 내용 $index',
-            createdAt: DateTime.now().subtract(Duration(hours: index)),
-            likeCount: index, // 명시적으로 likeCount 추가
-            isLikedByCurrentUser: index % 2 == 0, // 임의의 좋아요 상태 설정 (짝수 인덱스만 좋아요)
-          ),
-        ),
+        likeCount: 7, // like 배열 대신 likeCount 사용
+        commentCount: 7, // comment 배열 대신 commentCount 사용
+        isLikedByCurrentUser: false, // 임의의 좋아요 상태 설정
+        isBookmarkedByCurrentUser: false, // 임의의 북마크 상태 설정
       ),
       Post(
         id: 'post2',
@@ -84,29 +64,10 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
         hashTags: ['인기글'],
         imageUrls: ['https://picsum.photos/id/1/400/300'], // Lorem Picsum 사용
-        like: List.generate(
-          4,
-          (index) => Like(
-            userId: 'user${index + 10}',
-            userName: '사용자${index + 10}',
-            timestamp: DateTime.now().subtract(Duration(hours: index + 2)),
-          ),
-        ),
-        comment: List.generate(
-          3,
-          (index) => Comment(
-            id: 'comment_post2_$index', // 추가된 ID 필드
-            userId: 'user${index + 10}',
-            userName: '사용자${index + 10}',
-            userProfileImage:
-                'https://api.dicebear.com/6.x/micah/png?seed=user${index + 10}',
-            text: '댓글 $index',
-            createdAt: DateTime.now().subtract(Duration(hours: index + 2)),
-            likeCount: index, // 명시적으로 likeCount 추가
-            isLikedByCurrentUser:
-                index % 3 == 0, // 임의의 좋아요 상태 설정 (3의 배수 인덱스만 좋아요)
-          ),
-        ),
+        likeCount: 4, // like 배열 대신 likeCount 사용
+        commentCount: 3, // comment 배열 대신 commentCount 사용
+        isLikedByCurrentUser: true, // 임의의 좋아요 상태 설정
+        isBookmarkedByCurrentUser: false, // 임의의 북마크 상태 설정
       ),
       Post(
         id: 'post3',
@@ -121,28 +82,10 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         createdAt: DateTime.now().subtract(const Duration(days: 3, hours: 12)),
         hashTags: ['텀프로젝트', 'flutter'],
         imageUrls: ['https://picsum.photos/id/20/400/300'], // Lorem Picsum 사용
-        like: List.generate(
-          7,
-          (index) => Like(
-            userId: 'user${index + 20}',
-            userName: '사용자${index + 20}',
-            timestamp: DateTime.now().subtract(Duration(hours: index + 5)),
-          ),
-        ),
-        comment: List.generate(
-          7,
-          (index) => Comment(
-            id: 'comment_post3_$index', // 추가된 ID 필드
-            userId: 'user${index + 20}',
-            userName: '사용자${index + 20}',
-            userProfileImage:
-                'https://api.dicebear.com/6.x/micah/png?seed=user${index + 20}',
-            text: '댓글입니다 $index',
-            createdAt: DateTime.now().subtract(Duration(hours: index + 5)),
-            likeCount: index,
-            isLikedByCurrentUser: index % 2 == 1, // 임의의 좋아요 상태 설정 (홀수 인덱스만 좋아요)
-          ),
-        ),
+        likeCount: 7, // like 배열 대신 likeCount 사용
+        commentCount: 7, // comment 배열 대신 commentCount 사용
+        isLikedByCurrentUser: false, // 임의의 좋아요 상태 설정
+        isBookmarkedByCurrentUser: true, // 임의의 북마크 상태 설정
       ),
     ];
   }

@@ -156,18 +156,21 @@ class PopularPostSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${post.comment.length}',
+                    '${post.commentCount}',
                     style: AppTextStyles.captionRegular,
                   ),
                   const SizedBox(width: 12),
                   Icon(
-                    Icons.favorite_outline,
+                    post
+                            .isLikedByCurrentUser // 사용자의 좋아요 상태에 따라 아이콘 변경
+                        ? Icons.favorite
+                        : Icons.favorite_outline,
                     size: 16,
                     color: Colors.grey.shade600,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${post.like.length}',
+                    '${post.likeCount}',
                     style: AppTextStyles.captionRegular,
                   ),
                 ],
