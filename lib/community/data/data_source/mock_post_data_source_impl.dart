@@ -113,6 +113,7 @@ class MockPostDataSourceImpl implements PostDataSource {
       return _mockPosts.map((post) {
         final postId = post.id ?? '';
         final likeCount = _likedPosts[postId]?.length ?? 0;
+        final commentCount = _mockComments[postId]?.length ?? 0;
         final isLikedByCurrentUser =
             _likedPosts[postId]?.contains(currentUserId) ?? false;
         final isBookmarkedByCurrentUser =
@@ -120,6 +121,7 @@ class MockPostDataSourceImpl implements PostDataSource {
 
         return post.copyWith(
           likeCount: likeCount,
+          commentCount: commentCount, // 댓글 수 추가
           isLikedByCurrentUser: isLikedByCurrentUser,
           isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
         );
@@ -144,6 +146,7 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 좋아요 수 및 사용자 상태 설정
       final likeCount = _likedPosts[postId]?.length ?? 0;
+      final commentCount = _mockComments[postId]?.length ?? 0; // 댓글 수 추가
       final isLikedByCurrentUser =
           _likedPosts[postId]?.contains(currentUserId) ?? false;
       final isBookmarkedByCurrentUser =
@@ -152,6 +155,7 @@ class MockPostDataSourceImpl implements PostDataSource {
       // 정보 추가하여 반환
       return post.copyWith(
         likeCount: likeCount,
+        commentCount: commentCount, // 댓글 수 추가
         isLikedByCurrentUser: isLikedByCurrentUser,
         isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
       );
@@ -427,5 +431,55 @@ class MockPostDataSourceImpl implements PostDataSource {
       // 복사본 반환
       return results;
     }, params: {'query': query});
+  }
+
+  // 새로 추가된 메서드 구현
+  @override
+  Future<Map<String, bool>> checkUserLikeStatus(
+    List<String> postIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'MockPost.checkUserLikeStatus',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        final Map<String, bool> result = {};
+
+        // 각 게시글에 대한 좋아요 상태 확인
+        for (final postId in postIds) {
+          final likedUsers = _likedPosts[postId] ?? <String>{};
+          result[postId] = likedUsers.contains(userId);
+        }
+
+        return result;
+      },
+      params: {'postIds': postIds.length, 'userId': userId},
+    );
+  }
+
+  @override
+  Future<Map<String, bool>> checkUserBookmarkStatus(
+    List<String> postIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'MockPost.checkUserBookmarkStatus',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        final Map<String, bool> result = {};
+
+        // 각 게시글에 대한 북마크 상태 확인
+        final userBookmarks = _bookmarkedPosts[userId] ?? <String>{};
+
+        for (final postId in postIds) {
+          result[postId] = userBookmarks.contains(postId);
+        }
+
+        return result;
+      },
+      params: {'postIds': postIds.length, 'userId': userId},
+    );
   }
 }

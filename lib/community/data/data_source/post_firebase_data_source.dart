@@ -19,6 +19,7 @@ class PostFirebaseDataSource implements PostDataSource {
   CollectionReference<Map<String, dynamic>> get _postsCollection =>
       _firestore.collection('posts');
 
+  // 기존 fetchPostList 메서드 수정 - commentCount 추가
   @override
   Future<List<PostDto>> fetchPostList() async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostList', () async {
@@ -38,6 +39,11 @@ class PostFirebaseDataSource implements PostDataSource {
           // 좋아요 수 계산
           final likesSnapshot = await doc.reference.collection('likes').get();
           final likeCount = likesSnapshot.size;
+
+          // 댓글 수 계산 (추가)
+          final commentsSnapshot =
+              await doc.reference.collection('comments').get();
+          final commentCount = commentsSnapshot.size;
 
           // 현재 사용자의 좋아요 상태 확인
           bool isLikedByCurrentUser = false;
@@ -67,6 +73,7 @@ class PostFirebaseDataSource implements PostDataSource {
           final postDto = data.toPostDto();
           return postDto.copyWith(
             likeCount: likeCount,
+            commentCount: commentCount, // 댓글 수 추가
             isLikedByCurrentUser: isLikedByCurrentUser,
             isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
           );
@@ -81,6 +88,7 @@ class PostFirebaseDataSource implements PostDataSource {
     });
   }
 
+  // 기존 fetchPostDetail 메서드 수정 - commentCount 추가
   @override
   Future<PostDto> fetchPostDetail(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostDetail', () async {
@@ -101,6 +109,11 @@ class PostFirebaseDataSource implements PostDataSource {
         final likesSnapshot =
             await docSnapshot.reference.collection('likes').get();
         final likeCount = likesSnapshot.size;
+
+        // 댓글 수 계산 (추가)
+        final commentsSnapshot =
+            await docSnapshot.reference.collection('comments').get();
+        final commentCount = commentsSnapshot.size;
 
         // 현재 사용자의 좋아요/북마크 상태 확인
         bool isLikedByCurrentUser = false;
@@ -130,6 +143,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final postDto = data.toPostDto();
         return postDto.copyWith(
           likeCount: likeCount,
+          commentCount: commentCount, // 댓글 수 추가
           isLikedByCurrentUser: isLikedByCurrentUser,
           isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
         );
@@ -137,12 +151,13 @@ class PostFirebaseDataSource implements PostDataSource {
         if (e.toString().contains(CommunityErrorMessages.postNotFound)) {
           rethrow;
         }
-        print('게시글 상세 로드 오류: $e');
+        print('게시글 상태 로드 오류: $e');
         throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     }, params: {'postId': postId});
   }
 
+  // toggleLike 메서드 - 트랜잭션 활용하여 개선
   @override
   Future<PostDto> toggleLike(
     String postId,
@@ -151,29 +166,53 @@ class PostFirebaseDataSource implements PostDataSource {
   ) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleLike', () async {
       try {
-        // 좋아요 컬렉션 참조
-        final likeRef = _postsCollection
-            .doc(postId)
-            .collection('likes')
-            .doc(userId);
+        // 게시글 문서 참조
+        final postRef = _postsCollection.doc(postId);
 
-        // 좋아요 존재 여부 확인
-        final likeDoc = await likeRef.get();
+        // 트랜잭션 사용하여 좋아요 카운터와 문서를 원자적으로 업데이트
+        return _firestore.runTransaction<PostDto>((transaction) async {
+          // 현재 게시글 상태 조회
+          final postDoc = await transaction.get(postRef);
+          if (!postDoc.exists) {
+            throw Exception(CommunityErrorMessages.postNotFound);
+          }
 
-        if (likeDoc.exists) {
-          // 이미 좋아요가 있으면 삭제 (취소)
-          await likeRef.delete();
-        } else {
-          // 좋아요가 없으면 추가
-          await likeRef.set({
-            'userId': userId,
-            'userName': userName,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-        }
+          // 좋아요 문서 참조 및 조회
+          final likeRef = postRef.collection('likes').doc(userId);
+          final likeDoc = await transaction.get(likeRef);
 
-        // 업데이트된 게시글 정보 반환
-        return await fetchPostDetail(postId);
+          // likeCount 필드 가져오기 (없으면 0으로 초기화)
+          final data = postDoc.data()!;
+          final currentLikeCount = data['likeCount'] as int? ?? 0;
+
+          if (likeDoc.exists) {
+            // 이미 좋아요가 있으면 삭제 및 카운터 감소
+            transaction.delete(likeRef);
+            transaction.update(postRef, {'likeCount': currentLikeCount - 1});
+          } else {
+            // 좋아요가 없으면 추가 및 카운터 증가
+            transaction.set(likeRef, {
+              'userId': userId,
+              'userName': userName,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+            transaction.update(postRef, {'likeCount': currentLikeCount + 1});
+          }
+
+          // 업데이트된 게시글 정보 반환을 위한 준비
+          // 트랜잭션 내에서는 업데이트된 데이터를 바로 읽을 수 없으므로
+          // 수동으로 반환할 DTO를 구성
+
+          // 기존 데이터에 id 추가
+          data['id'] = postDoc.id;
+
+          // DTO 생성 및 필드 업데이트
+          return data.toPostDto().copyWith(
+            likeCount:
+                likeDoc.exists ? currentLikeCount - 1 : currentLikeCount + 1,
+            isLikedByCurrentUser: !likeDoc.exists, // 토글 결과 반영
+          );
+        });
       } catch (e) {
         print('좋아요 토글 오류: $e');
         throw Exception(CommunityErrorMessages.likeFailed);
@@ -543,5 +582,78 @@ class PostFirebaseDataSource implements PostDataSource {
         throw Exception(CommunityErrorMessages.postCreateFailed);
       }
     }, params: {'postId': postId, 'authorId': authorId});
+  }
+
+  // 새로 추가되는 메서드 - 좋아요 상태 일괄 조회
+  @override
+  Future<Map<String, bool>> checkUserLikeStatus(
+    List<String> postIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostFirebase.checkUserLikeStatus',
+      () async {
+        try {
+          // 병렬 처리로 효율성 향상
+          final futures = postIds.map((postId) async {
+            final doc =
+                await _postsCollection
+                    .doc(postId)
+                    .collection('likes')
+                    .doc(userId)
+                    .get();
+
+            // postId를 키로, 좋아요 여부를 값으로 저장
+            return MapEntry(postId, doc.exists);
+          });
+
+          // 모든 미래 값을 기다려서 Map으로 변환
+          final entries = await Future.wait(futures);
+          return Map.fromEntries(entries);
+        } catch (e) {
+          print('좋아요 상태 일괄 조회 오류: $e');
+          // 오류 발생 시 모든 게시글에 대해 false 반환
+          return {for (final id in postIds) id: false};
+        }
+      },
+      params: {'postIds': postIds.length, 'userId': userId},
+    );
+  }
+
+  // 새로 추가되는 메서드 - 북마크 상태 일괄 조회
+  @override
+  Future<Map<String, bool>> checkUserBookmarkStatus(
+    List<String> postIds,
+    String userId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostFirebase.checkUserBookmarkStatus',
+      () async {
+        try {
+          // 병렬 처리로 효율성 향상
+          final futures = postIds.map((postId) async {
+            final doc =
+                await _firestore
+                    .collection('users')
+                    .doc(userId)
+                    .collection('bookmarks')
+                    .doc(postId)
+                    .get();
+
+            // postId를 키로, 북마크 여부를 값으로 저장
+            return MapEntry(postId, doc.exists);
+          });
+
+          // 모든 미래 값을 기다려서 Map으로 변환
+          final entries = await Future.wait(futures);
+          return Map.fromEntries(entries);
+        } catch (e) {
+          print('북마크 상태 일괄 조회 오류: $e');
+          // 오류 발생 시 모든 게시글에 대해 false 반환
+          return {for (final id in postIds) id: false};
+        }
+      },
+      params: {'postIds': postIds.length, 'userId': userId},
+    );
   }
 }

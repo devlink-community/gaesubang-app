@@ -21,12 +21,58 @@ class PostRepositoryImpl implements PostRepository {
   final PostDataSource _dataSource;
   final Ref _ref;
 
-  /* ---------- List ---------- */
+  /* ---------- List - N+1 문제 해결 ---------- */
   @override
   Future<Result<List<Post>>> loadPostList() async {
     return ApiCallDecorator.wrap('PostRepository.loadPostList', () async {
       try {
+        // 1. 게시글 목록 기본 로드
         final postDtos = await _dataSource.fetchPostList();
+
+        // 2. 현재 사용자 정보 확인
+        final currentUser = _ref.read(currentUserProvider);
+
+        // 3. 사용자가 로그인했고, 게시글이 있는 경우 상태 일괄 조회
+        if (currentUser != null && postDtos.isNotEmpty) {
+          final postIds =
+              postDtos
+                  .map((dto) => dto.id ?? '')
+                  .where((id) => id.isNotEmpty)
+                  .toList();
+
+          if (postIds.isNotEmpty) {
+            // 3-1. 좋아요 상태 일괄 조회
+            final likeStatuses = await _dataSource.checkUserLikeStatus(
+              postIds,
+              currentUser.uid,
+            );
+
+            // 3-2. 북마크 상태 일괄 조회
+            final bookmarkStatuses = await _dataSource.checkUserBookmarkStatus(
+              postIds,
+              currentUser.uid,
+            );
+
+            // 3-3. DTO에 상태 정보 업데이트
+            final updatedDtos =
+                postDtos.map((dto) {
+                  final postId = dto.id ?? '';
+                  if (postId.isEmpty) return dto;
+
+                  return dto.copyWith(
+                    isLikedByCurrentUser: likeStatuses[postId] ?? false,
+                    isBookmarkedByCurrentUser:
+                        bookmarkStatuses[postId] ?? false,
+                  );
+                }).toList();
+
+            // 3-4. 업데이트된 DTO로 모델 변환
+            final posts = updatedDtos.toModelList();
+            return Result.success(posts);
+          }
+        }
+
+        // 4. 일괄 조회가 필요 없는 경우 기본 변환 (로그인하지 않았거나 게시글이 없는 경우)
         final posts = postDtos.toModelList();
         return Result.success(posts);
       } catch (e, st) {
@@ -135,12 +181,90 @@ class PostRepositoryImpl implements PostRepository {
     }, params: {'postId': postId});
   }
 
+  /* ---------- Comment Like ---------- */
+  @override
+  Future<Result<Comment>> toggleCommentLike(
+    String postId,
+    String commentId,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'PostRepository.toggleCommentLike',
+      () async {
+        try {
+          // Auth에서 현재 사용자 정보 가져오기
+          final currentUser = _ref.read(currentUserProvider);
+          if (currentUser == null) {
+            throw Exception(CommunityErrorMessages.loginRequired);
+          }
+
+          final commentDto = await _dataSource.toggleCommentLike(
+            postId,
+            commentId,
+            currentUser.uid,
+            currentUser.nickname,
+          );
+          final comment = commentDto.toModel();
+          return Result.success(comment);
+        } catch (e, st) {
+          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        }
+      },
+      params: {'postId': postId, 'commentId': commentId},
+    );
+  }
+
   /* ---------- Search ---------- */
   @override
   Future<Result<List<Post>>> searchPosts(String query) async {
     return ApiCallDecorator.wrap('PostRepository.searchPosts', () async {
       try {
+        // 1. 검색 결과 기본 로드
         final postDtos = await _dataSource.searchPosts(query);
+
+        // 2. 현재 사용자 정보 확인
+        final currentUser = _ref.read(currentUserProvider);
+
+        // 3. 사용자가 로그인했고, 검색 결과가 있는 경우 상태 일괄 조회
+        if (currentUser != null && postDtos.isNotEmpty) {
+          final postIds =
+              postDtos
+                  .map((dto) => dto.id ?? '')
+                  .where((id) => id.isNotEmpty)
+                  .toList();
+
+          if (postIds.isNotEmpty) {
+            // 3-1. 좋아요 상태 일괄 조회
+            final likeStatuses = await _dataSource.checkUserLikeStatus(
+              postIds,
+              currentUser.uid,
+            );
+
+            // 3-2. 북마크 상태 일괄 조회
+            final bookmarkStatuses = await _dataSource.checkUserBookmarkStatus(
+              postIds,
+              currentUser.uid,
+            );
+
+            // 3-3. DTO에 상태 정보 업데이트
+            final updatedDtos =
+                postDtos.map((dto) {
+                  final postId = dto.id ?? '';
+                  if (postId.isEmpty) return dto;
+
+                  return dto.copyWith(
+                    isLikedByCurrentUser: likeStatuses[postId] ?? false,
+                    isBookmarkedByCurrentUser:
+                        bookmarkStatuses[postId] ?? false,
+                  );
+                }).toList();
+
+            // 3-4. 업데이트된 DTO로 모델 변환
+            final posts = updatedDtos.toModelList();
+            return Result.success(posts);
+          }
+        }
+
+        // 4. 일괄 조회가 필요 없는 경우 기본 변환
         final posts = postDtos.toModelList();
         return Result.success(posts);
       } catch (e, st) {
@@ -185,37 +309,6 @@ class PostRepositoryImpl implements PostRepository {
         throw Exception(CommunityErrorMessages.postCreateFailed);
       }
     }, params: {'postId': postId});
-  }
-
-  @override
-  Future<Result<Comment>> toggleCommentLike(
-    String postId,
-    String commentId,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'PostRepository.toggleCommentLike',
-      () async {
-        try {
-          // Auth에서 현재 사용자 정보 가져오기
-          final currentUser = _ref.read(currentUserProvider);
-          if (currentUser == null) {
-            throw Exception(CommunityErrorMessages.loginRequired);
-          }
-
-          final commentDto = await _dataSource.toggleCommentLike(
-            postId,
-            commentId,
-            currentUser.uid,
-            currentUser.nickname,
-          );
-          final comment = commentDto.toModel();
-          return Result.success(comment);
-        } catch (e, st) {
-          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
-        }
-      },
-      params: {'postId': postId, 'commentId': commentId},
-    );
   }
 
   @override
