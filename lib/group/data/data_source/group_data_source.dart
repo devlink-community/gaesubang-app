@@ -9,7 +9,7 @@ abstract interface class GroupDataSource {
   /// 특정 그룹 상세 정보 조회
   Future<Map<String, dynamic>> fetchGroupDetail(
     String groupId, {
-    String? currentUserId,
+    bool? isJoined,
   });
 
   /// 그룹 가입 처리

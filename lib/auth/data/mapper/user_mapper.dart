@@ -15,6 +15,7 @@ extension MapToMemberMapper on Map<String, dynamic> {
         joinedGroupsData?.map((item) {
           final groupData = item as Map<String, dynamic>;
           return JoinedGroupDto(
+            groupId: groupData['group_id'] as String?,
             groupName: groupData['group_name'] as String?,
             groupImage: groupData['group_image'] as String?,
           );
