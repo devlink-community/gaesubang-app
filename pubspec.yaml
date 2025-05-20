@@ -66,6 +66,7 @@ dependencies:
   googleapis_auth: ^2.0.0
   google_generative_ai: ^0.2.0
   shared_preferences: ^2.5.3
+  firebase_remote_config: ^5.4.3
 
 
 
@@ -100,7 +101,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
-    - assets/service_account.json
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
