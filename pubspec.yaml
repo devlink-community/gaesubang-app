@@ -67,6 +67,7 @@ dependencies:
   google_generative_ai: ^0.2.0
   shared_preferences: ^2.5.3
   firebase_remote_config: ^5.4.3
+  permission_handler: ^10.2.0
 
 
 
