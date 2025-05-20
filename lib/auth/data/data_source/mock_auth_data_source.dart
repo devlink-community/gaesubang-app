@@ -1,6 +1,7 @@
 // lib/auth/data/data_source/mock_auth_data_source.dart
 import 'dart:async';
 
+import '../../../core/utils/api_call_logger.dart';
 import '../../../core/utils/auth_error_messages.dart';
 import 'auth_data_source.dart';
 
@@ -186,11 +187,17 @@ class MockAuthDataSource implements AuthDataSource {
   Future<Map<String, dynamic>?> _fetchUserWithTimerActivities(
     String userId,
   ) async {
-    final userData = _users[userId];
-    if (userData == null) return null;
+    return ApiCallDecorator.wrap(
+      'MockAuth.fetchUserWithTimerActivities',
+      () async {
+        final userData = _users[userId];
+        if (userData == null) return null;
 
-    // 타이머 활동 데이터 포함하여 반환
-    return {...userData, 'timerActivities': _timerActivities[userId] ?? []};
+        // 타이머 활동 데이터 포함하여 반환
+        return {...userData, 'timerActivities': _timerActivities[userId] ?? []};
+      },
+      params: {'userId': userId},
+    );
   }
 
   @override
@@ -198,33 +205,35 @@ class MockAuthDataSource implements AuthDataSource {
     required String email,
     required String password,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.fetchLogin', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final lowercaseEmail = email.toLowerCase();
+      final lowercaseEmail = email.toLowerCase();
 
-    // 이메일로 사용자 찾기
-    final userEntry = _users.entries.firstWhere(
-      (entry) => entry.value['email'] == lowercaseEmail,
-      orElse: () => throw Exception(AuthErrorMessages.loginFailed),
-    );
+      // 이메일로 사용자 찾기
+      final userEntry = _users.entries.firstWhere(
+        (entry) => entry.value['email'] == lowercaseEmail,
+        orElse: () => throw Exception(AuthErrorMessages.loginFailed),
+      );
 
-    final userId = userEntry.key;
+      final userId = userEntry.key;
 
-    // 비밀번호 확인
-    if (_passwords[userId] != password) {
-      throw Exception(AuthErrorMessages.loginFailed);
-    }
+      // 비밀번호 확인
+      if (_passwords[userId] != password) {
+        throw Exception(AuthErrorMessages.loginFailed);
+      }
 
-    // 로그인 상태 설정
-    _currentUserId = userId;
+      // 로그인 상태 설정
+      _currentUserId = userId;
 
-    // 타이머 활동 포함하여 반환
-    final userWithActivities = await _fetchUserWithTimerActivities(userId);
-    if (userWithActivities == null) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
-    return userWithActivities;
+      // 타이머 활동 포함하여 반환
+      final userWithActivities = await _fetchUserWithTimerActivities(userId);
+      if (userWithActivities == null) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
+      return userWithActivities;
+    }, params: {'email': email});
   }
 
   @override
@@ -234,193 +243,219 @@ class MockAuthDataSource implements AuthDataSource {
     required String nickname,
     String? agreedTermsId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.createUser', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final lowercaseEmail = email.toLowerCase();
+      final lowercaseEmail = email.toLowerCase();
 
-    // 약관 동의 확인
-    if (agreedTermsId == null || agreedTermsId.isEmpty) {
-      throw Exception(AuthErrorMessages.termsNotAgreed);
-    }
+      // 약관 동의 확인
+      if (agreedTermsId == null || agreedTermsId.isEmpty) {
+        throw Exception(AuthErrorMessages.termsNotAgreed);
+      }
 
-    // 이메일 중복 확인
-    final emailExists = _users.values.any(
-      (user) => user['email'] == lowercaseEmail,
-    );
-    if (emailExists) {
-      throw Exception(AuthErrorMessages.emailAlreadyInUse);
-    }
+      // 이메일 중복 확인
+      final emailExists = _users.values.any(
+        (user) => user['email'] == lowercaseEmail,
+      );
+      if (emailExists) {
+        throw Exception(AuthErrorMessages.emailAlreadyInUse);
+      }
 
-    // 닉네임 중복 확인
-    final nicknameExists = _users.values.any(
-      (user) => user['nickname'] == nickname,
-    );
-    if (nicknameExists) {
-      throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
-    }
+      // 닉네임 중복 확인
+      final nicknameExists = _users.values.any(
+        (user) => user['nickname'] == nickname,
+      );
+      if (nicknameExists) {
+        throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
+      }
 
-    // 새 사용자 생성
-    final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
-    final newUserData = {
-      'uid': userId,
-      'email': lowercaseEmail,
-      'nickname': nickname,
-      'image': '',
-      'description': '',
-      'onAir': false,
-      'position': '',
-      'skills': '',
-      'streakDays': 0,
-      'agreedTermId': agreedTermsId,
-      'isServiceTermsAgreed': true,
-      'isPrivacyPolicyAgreed': true,
-      'isMarketingAgreed': false,
-      'agreedAt': DateTime.now(),
-      'joingroup': <Map<String, dynamic>>[],
-    };
+      // 새 사용자 생성
+      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final newUserData = {
+        'uid': userId,
+        'email': lowercaseEmail,
+        'nickname': nickname,
+        'image': '',
+        'description': '',
+        'onAir': false,
+        'position': '',
+        'skills': '',
+        'streakDays': 0,
+        'agreedTermId': agreedTermsId,
+        'isServiceTermsAgreed': true,
+        'isPrivacyPolicyAgreed': true,
+        'isMarketingAgreed': false,
+        'agreedAt': DateTime.now(),
+        'joingroup': <Map<String, dynamic>>[],
+      };
 
-    _users[userId] = newUserData;
-    _passwords[userId] = password;
-    _timerActivities[userId] = [];
+      _users[userId] = newUserData;
+      _passwords[userId] = password;
+      _timerActivities[userId] = [];
 
-    // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
-    return {...newUserData, 'timerActivities': []};
+      // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
+      return {...newUserData, 'timerActivities': []};
+    }, params: {'email': email, 'nickname': nickname});
   }
 
   @override
   Future<Map<String, dynamic>?> fetchCurrentUser() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.fetchCurrentUser', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    if (_currentUserId == null) return null;
+      if (_currentUserId == null) return null;
 
-    // 타이머 활동 포함하여 현재 사용자 정보 반환
-    return await _fetchUserWithTimerActivities(_currentUserId!);
+      // 타이머 활동 포함하여 현재 사용자 정보 반환
+      return await _fetchUserWithTimerActivities(_currentUserId!);
+    });
   }
 
   @override
   Future<void> signOut() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _currentUserId = null;
+    return ApiCallDecorator.wrap('MockAuth.signOut', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _currentUserId = null;
+    });
   }
 
   @override
   Future<bool> checkNicknameAvailability(String nickname) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap(
+      'MockAuth.checkNicknameAvailability',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _initializeDefaultUsers();
 
-    return !_users.values.any((user) => user['nickname'] == nickname);
+        return !_users.values.any((user) => user['nickname'] == nickname);
+      },
+      params: {'nickname': nickname},
+    );
   }
 
   @override
   Future<bool> checkEmailAvailability(String email) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.checkEmailAvailability', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final lowercaseEmail = email.toLowerCase();
-    return !_users.values.any((user) => user['email'] == lowercaseEmail);
+      final lowercaseEmail = email.toLowerCase();
+      return !_users.values.any((user) => user['email'] == lowercaseEmail);
+    }, params: {'email': email});
   }
 
   @override
   Future<void> sendPasswordResetEmail(String email) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.sendPasswordResetEmail', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final lowercaseEmail = email.toLowerCase();
-    final emailExists = _users.values.any(
-      (user) => user['email'] == lowercaseEmail,
-    );
+      final lowercaseEmail = email.toLowerCase();
+      final emailExists = _users.values.any(
+        (user) => user['email'] == lowercaseEmail,
+      );
 
-    if (!emailExists) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
+      if (!emailExists) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
 
-    // Mock: 실제로는 이메일 전송
+      // Mock: 실제로는 이메일 전송
+    }, params: {'email': email});
   }
 
   @override
   Future<void> deleteAccount(String email) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.deleteAccount', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final lowercaseEmail = email.toLowerCase();
+      final lowercaseEmail = email.toLowerCase();
 
-    // 사용자 찾기
-    final userEntry = _users.entries.firstWhere(
-      (entry) => entry.value['email'] == lowercaseEmail,
-      orElse: () => throw Exception(AuthErrorMessages.userDataNotFound),
-    );
+      // 사용자 찾기
+      final userEntry = _users.entries.firstWhere(
+        (entry) => entry.value['email'] == lowercaseEmail,
+        orElse: () => throw Exception(AuthErrorMessages.userDataNotFound),
+      );
 
-    final userId = userEntry.key;
+      final userId = userEntry.key;
 
-    // 현재 로그인된 사용자인지 확인
-    if (_currentUserId != userId) {
-      throw Exception(AuthErrorMessages.noLoggedInUser);
-    }
+      // 현재 로그인된 사용자인지 확인
+      if (_currentUserId != userId) {
+        throw Exception(AuthErrorMessages.noLoggedInUser);
+      }
 
-    // 사용자 데이터 삭제
-    _users.remove(userId);
-    _passwords.remove(userId);
-    _timerActivities.remove(userId);
-    _currentUserId = null;
+      // 사용자 데이터 삭제
+      _users.remove(userId);
+      _passwords.remove(userId);
+      _timerActivities.remove(userId);
+      _currentUserId = null;
+    }, params: {'email': email});
   }
 
   @override
   Future<Map<String, dynamic>> saveTermsAgreement(
     Map<String, dynamic> termsData,
   ) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    return ApiCallDecorator.wrap('MockAuth.saveTermsAgreement', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    // 필수 약관 동의 여부 확인
-    final isServiceTermsAgreed =
-        termsData['isServiceTermsAgreed'] as bool? ?? false;
-    final isPrivacyPolicyAgreed =
-        termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
+      // 필수 약관 동의 여부 확인
+      final isServiceTermsAgreed =
+          termsData['isServiceTermsAgreed'] as bool? ?? false;
+      final isPrivacyPolicyAgreed =
+          termsData['isPrivacyPolicyAgreed'] as bool? ?? false;
 
-    if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
-      throw Exception(AuthErrorMessages.termsNotAgreed);
-    }
+      if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
+        throw Exception(AuthErrorMessages.termsNotAgreed);
+      }
 
-    // 타임스탬프 추가
-    termsData['agreedAt'] = DateTime.now();
-    final termsId = termsData['id'] as String;
-    _termsAgreements[termsId] = Map<String, dynamic>.from(termsData);
+      // 타임스탬프 추가
+      termsData['agreedAt'] = DateTime.now();
+      final termsId = termsData['id'] as String;
+      _termsAgreements[termsId] = Map<String, dynamic>.from(termsData);
 
-    return Map<String, dynamic>.from(termsData);
+      return Map<String, dynamic>.from(termsData);
+    }, params: {'termsId': termsData['id']});
   }
 
   @override
   Future<Map<String, dynamic>> fetchTermsInfo() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    return ApiCallDecorator.wrap('MockAuth.fetchTermsInfo', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    return {
-      'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
-      'isAllAgreed': false,
-      'isServiceTermsAgreed': false,
-      'isPrivacyPolicyAgreed': false,
-      'isMarketingAgreed': false,
-      'agreedAt': DateTime.now(),
-    };
+      return {
+        'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
+        'isAllAgreed': false,
+        'isServiceTermsAgreed': false,
+        'isPrivacyPolicyAgreed': false,
+        'isMarketingAgreed': false,
+        'agreedAt': DateTime.now(),
+      };
+    });
   }
 
   @override
   Future<Map<String, dynamic>?> getTermsInfo(String termsId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    return ApiCallDecorator.wrap('MockAuth.getTermsInfo', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    final termsInfo = _termsAgreements[termsId];
-    return termsInfo != null ? Map<String, dynamic>.from(termsInfo) : null;
+      final termsInfo = _termsAgreements[termsId];
+      return termsInfo != null ? Map<String, dynamic>.from(termsInfo) : null;
+    }, params: {'termsId': termsId});
   }
 
   @override
   Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.fetchTimerActivities', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    final activities = _timerActivities[userId] ?? [];
-    return activities
-        .map((activity) => Map<String, dynamic>.from(activity))
-        .toList();
+      final activities = _timerActivities[userId] ?? [];
+      return activities
+          .map((activity) => Map<String, dynamic>.from(activity))
+          .toList();
+    }, params: {'userId': userId});
   }
 
   @override
@@ -428,12 +463,18 @@ class MockAuthDataSource implements AuthDataSource {
     String userId,
     Map<String, dynamic> activityData,
   ) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap(
+      'MockAuth.saveTimerActivity',
+      () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _initializeDefaultUsers();
 
-    final activities = _timerActivities[userId] ?? [];
-    activities.add(Map<String, dynamic>.from(activityData));
-    _timerActivities[userId] = activities;
+        final activities = _timerActivities[userId] ?? [];
+        activities.add(Map<String, dynamic>.from(activityData));
+        _timerActivities[userId] = activities;
+      },
+      params: {'userId': userId, 'activityType': activityData['type']},
+    );
   }
 
   @override
@@ -443,73 +484,77 @@ class MockAuthDataSource implements AuthDataSource {
     String? position,
     String? skills,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.updateUser', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    if (_currentUserId == null) {
-      throw Exception(AuthErrorMessages.noLoggedInUser);
-    }
-
-    final currentUser = _users[_currentUserId];
-    if (currentUser == null) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
-
-    // 현재 닉네임과 다른 경우에만 중복 확인
-    final currentNickname = currentUser['nickname'] as String?;
-    if (currentNickname != nickname) {
-      final nicknameAvailable = await checkNicknameAvailability(nickname);
-      if (!nicknameAvailable) {
-        throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
+      if (_currentUserId == null) {
+        throw Exception(AuthErrorMessages.noLoggedInUser);
       }
-    }
 
-    // 사용자 정보 업데이트
-    final updatedUser = Map<String, dynamic>.from(currentUser);
-    updatedUser['nickname'] = nickname;
-    updatedUser['description'] = description ?? '';
-    updatedUser['position'] = position ?? '';
-    updatedUser['skills'] = skills ?? '';
+      final currentUser = _users[_currentUserId];
+      if (currentUser == null) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
 
-    _users[_currentUserId!] = updatedUser;
+      // 현재 닉네임과 다른 경우에만 중복 확인
+      final currentNickname = currentUser['nickname'] as String?;
+      if (currentNickname != nickname) {
+        final nicknameAvailable = await checkNicknameAvailability(nickname);
+        if (!nicknameAvailable) {
+          throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
+        }
+      }
 
-    // 타이머 활동 포함하여 반환
-    final userWithActivities = await _fetchUserWithTimerActivities(
-      _currentUserId!,
-    );
-    if (userWithActivities == null) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
-    return userWithActivities;
+      // 사용자 정보 업데이트
+      final updatedUser = Map<String, dynamic>.from(currentUser);
+      updatedUser['nickname'] = nickname;
+      updatedUser['description'] = description ?? '';
+      updatedUser['position'] = position ?? '';
+      updatedUser['skills'] = skills ?? '';
+
+      _users[_currentUserId!] = updatedUser;
+
+      // 타이머 활동 포함하여 반환
+      final userWithActivities = await _fetchUserWithTimerActivities(
+        _currentUserId!,
+      );
+      if (userWithActivities == null) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
+      return userWithActivities;
+    }, params: {'nickname': nickname});
   }
 
   @override
   Future<Map<String, dynamic>> updateUserImage(String imagePath) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _initializeDefaultUsers();
+    return ApiCallDecorator.wrap('MockAuth.updateUserImage', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
 
-    if (_currentUserId == null) {
-      throw Exception(AuthErrorMessages.noLoggedInUser);
-    }
+      if (_currentUserId == null) {
+        throw Exception(AuthErrorMessages.noLoggedInUser);
+      }
 
-    final currentUser = _users[_currentUserId];
-    if (currentUser == null) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
+      final currentUser = _users[_currentUserId];
+      if (currentUser == null) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
 
-    // 이미지 경로 업데이트
-    final updatedUser = Map<String, dynamic>.from(currentUser);
-    updatedUser['image'] = imagePath;
+      // 이미지 경로 업데이트
+      final updatedUser = Map<String, dynamic>.from(currentUser);
+      updatedUser['image'] = imagePath;
 
-    _users[_currentUserId!] = updatedUser;
+      _users[_currentUserId!] = updatedUser;
 
-    // 타이머 활동 포함하여 반환
-    final userWithActivities = await _fetchUserWithTimerActivities(
-      _currentUserId!,
-    );
-    if (userWithActivities == null) {
-      throw Exception(AuthErrorMessages.userDataNotFound);
-    }
-    return userWithActivities;
+      // 타이머 활동 포함하여 반환
+      final userWithActivities = await _fetchUserWithTimerActivities(
+        _currentUserId!,
+      );
+      if (userWithActivities == null) {
+        throw Exception(AuthErrorMessages.userDataNotFound);
+      }
+      return userWithActivities;
+    }, params: {'imagePath': imagePath});
   }
 }
