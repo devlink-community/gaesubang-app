@@ -4,8 +4,10 @@ part 'joined_group_dto.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class JoinedGroupDto {
-  const JoinedGroupDto({this.groupName, this.groupImage});
+  const JoinedGroupDto({this.groupId, this.groupName, this.groupImage});
 
+  @JsonKey(name: 'group_id')
+  final String? groupId;
   @JsonKey(name: 'group_name')
   final String? groupName;
   @JsonKey(name: 'group_image')
