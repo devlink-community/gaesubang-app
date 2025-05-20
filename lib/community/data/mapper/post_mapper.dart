@@ -1,3 +1,4 @@
+// lib/community/data/mapper/post_mapper.dart
 import 'package:devlink_mobile_app/community/data/dto/post_comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_like_dto.dart';
@@ -22,7 +23,7 @@ extension PostDtoMapper on PostDto {
       hashTags: hashTags ?? [],
       imageUrls: mediaUrls ?? [],
       likeCount: likeCount ?? 0,
-      commentCount: 0, // DTO에 필드가 없으면 기본값 0 사용
+      commentCount: commentCount ?? 0,
       isLikedByCurrentUser: isLikedByCurrentUser ?? false,
       isBookmarkedByCurrentUser: isBookmarkedByCurrentUser ?? false,
     );
@@ -33,7 +34,7 @@ extension PostDtoMapper on PostDto {
 extension PostCommentDtoMapper on PostCommentDto {
   Comment toModel() {
     return Comment(
-      id: id ?? '', // 추가된 id 필드 매핑
+      id: id ?? '',
       userId: userId ?? '',
       userName: userName ?? 'Unknown User',
       userProfileImage: userProfileImage ?? '',

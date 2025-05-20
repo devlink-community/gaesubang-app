@@ -1,3 +1,4 @@
+// lib/community/data/dto/post_dto.dart
 import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -17,14 +18,15 @@ class PostDto {
     this.createdAt,
     this.hashTags,
     this.likeCount,
-    this.isLikedByCurrentUser = false, // 추가된 필드
-    this.isBookmarkedByCurrentUser = false, // 추가된 필드
+    this.commentCount,
+    this.isLikedByCurrentUser = false,
+    this.isBookmarkedByCurrentUser = false,
   });
 
   final String? id;
   final String? authorId;
-  final String? authorNickname; // 추가: 작성자 닉네임
-  final String? authorPosition; // 추가: 작성자 직책/포지션
+  final String? authorNickname;
+  final String? authorPosition;
   final String? userProfileImage;
   final String? title;
   final String? content;
@@ -36,20 +38,22 @@ class PostDto {
   final DateTime? createdAt;
   final List<String>? hashTags;
 
-  @JsonKey(includeFromJson: false, includeToJson: false) // Firebase에 저장하지 않음
-  final int? likeCount; // 서브컬렉션 쿼리로 계산
+  // 비정규화된 카운터 - 실제 Firestore에 저장됨
+  final int? likeCount;
+  final int? commentCount;
 
-  @JsonKey(includeFromJson: false, includeToJson: false) // Firebase에 저장하지 않음
-  final bool? isLikedByCurrentUser; // 현재 사용자의 좋아요 상태
+  // UI 전용 필드 - Firestore에는 저장하지 않음
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final bool? isLikedByCurrentUser;
 
-  @JsonKey(includeFromJson: false, includeToJson: false) // Firebase에 저장하지 않음
-  final bool? isBookmarkedByCurrentUser; // 현재 사용자의 북마크 상태
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final bool? isBookmarkedByCurrentUser;
 
   factory PostDto.fromJson(Map<String, dynamic> json) =>
       _$PostDtoFromJson(json);
   Map<String, dynamic> toJson() => _$PostDtoToJson(this);
 
-  // 필드 업데이트를 위한 copyWith 메서드 추가
+  // 필드 업데이트를 위한 copyWith 메서드
   PostDto copyWith({
     String? id,
     String? authorId,
@@ -62,6 +66,7 @@ class PostDto {
     DateTime? createdAt,
     List<String>? hashTags,
     int? likeCount,
+    int? commentCount,
     bool? isLikedByCurrentUser,
     bool? isBookmarkedByCurrentUser,
   }) {
@@ -77,6 +82,7 @@ class PostDto {
       createdAt: createdAt ?? this.createdAt,
       hashTags: hashTags ?? this.hashTags,
       likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
       isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
       isBookmarkedByCurrentUser:
           isBookmarkedByCurrentUser ?? this.isBookmarkedByCurrentUser,
