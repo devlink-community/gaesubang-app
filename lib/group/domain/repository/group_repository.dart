@@ -1,5 +1,7 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 
 abstract interface class GroupRepository {
   Future<Result<List<Group>>> getGroupList();
@@ -12,4 +14,16 @@ abstract interface class GroupRepository {
 
   /// 특정 사용자가 가입한 그룹 목록 조회
   Future<Result<List<Group>>> getUserJoinedGroups(String userId);
+
+  /// 그룹 멤버 목록과 해당 타이머 상태 조회
+  Future<Result<List<GroupMember>>> getGroupMembersWithTimerStatus(
+    String groupId,
+  );
+
+  /// 특정 그룹의 특정 월 출석 기록 조회
+  Future<Result<List<Attendance>>> getAttendancesByMonth(
+    String groupId,
+    int year,
+    int month,
+  );
 }
