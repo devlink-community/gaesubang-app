@@ -3,7 +3,6 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
-import '../../quiz/presentation/quiz_banner.dart';
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
