@@ -39,14 +39,14 @@ class PostFirebaseDataSource implements PostDataSource {
         Map<String, bool> bookmarkStatuses = {};
 
         if (currentUserId != null && currentUserId.isNotEmpty) {
-          // 좋아요 상태 일괄 조회
-          likeStatuses = await checkUserLikeStatus(postIds, currentUserId);
+          // 좋아요 상태와 북마크 상태 병렬 조회
+          final results = await Future.wait<dynamic>([
+            checkUserLikeStatus(postIds, currentUserId),
+            checkUserBookmarkStatus(postIds, currentUserId),
+          ]);
 
-          // 북마크 상태 일괄 조회
-          bookmarkStatuses = await checkUserBookmarkStatus(
-            postIds,
-            currentUserId,
-          );
+          likeStatuses = results[0] as Map<String, bool>;
+          bookmarkStatuses = results[1] as Map<String, bool>;
         }
 
         // 4. 각 게시글 정보로 DTO 생성
@@ -55,17 +55,19 @@ class PostFirebaseDataSource implements PostDataSource {
               final data = doc.data();
               data['id'] = doc.id;
 
-              // 비정규화된 카운터 필드 사용 (없으면 0으로 초기화)
-              final likeCount = data['likeCount'] as int? ?? 0;
-              final commentCount = data['commentCount'] as int? ?? 0;
+              // JSON으로부터 DTO 생성
+              final postDto = PostDto.fromJson(data);
+
+              // 비정규화된 카운터 값 가져오기 (DTO에 이미 포함되어 있을 수 있음)
+              int? likeCount = postDto.likeCount;
+              int? commentCount = postDto.commentCount;
 
               // 현재 사용자의 좋아요/북마크 상태
               final isLikedByCurrentUser = likeStatuses[doc.id] ?? false;
               final isBookmarkedByCurrentUser =
                   bookmarkStatuses[doc.id] ?? false;
 
-              // DTO 생성 및 필드 설정
-              final postDto = data.toPostDto();
+              // 필요한 필드만 업데이트하여 DTO 반환
               return postDto.copyWith(
                 likeCount: likeCount,
                 commentCount: commentCount,
@@ -258,6 +260,7 @@ class PostFirebaseDataSource implements PostDataSource {
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchComments', () async {
       try {
+        // 1. 댓글 목록 조회 (최신순 정렬)
         final querySnapshot =
             await _postsCollection
                 .doc(postId)
@@ -269,45 +272,57 @@ class PostFirebaseDataSource implements PostDataSource {
           return [];
         }
 
-        // 현재 Firebase Auth 사용자 ID (없으면 빈 문자열)
-        final userId = currentUserId ?? '';
-
-        // 댓글 ID 목록 추출
+        // 2. 댓글 ID 목록 추출
         final commentIds = querySnapshot.docs.map((doc) => doc.id).toList();
 
-        // 사용자 좋아요 상태 확인 (빈 ID면 모두 false 반환)
-        Map<String, bool> likeStatuses = {};
-        if (userId.isNotEmpty) {
-          likeStatuses = await checkCommentsLikeStatus(
-            postId,
-            commentIds,
-            userId,
-          );
-        }
+        // 3. 현재 사용자가 로그인한 경우 좋아요 상태 일괄 조회
+        final userId = currentUserId ?? '';
+        final likeStatusesFuture =
+            userId.isNotEmpty
+                ? checkCommentsLikeStatus(postId, commentIds, userId)
+                : Future.value(<String, bool>{});
 
-        // 댓글 목록 처리 (좋아요 수와 사용자 좋아요 상태 포함)
-        final comments = await Future.wait(
+        // 4. 병렬 처리로 각 댓글의 처리를 수행
+        final commentsFuture = Future.wait(
           querySnapshot.docs.map((doc) async {
             final data = doc.data();
             data['id'] = doc.id;
 
-            // 좋아요 수 가져오기
-            final likesSnapshot = await doc.reference.collection('likes').get();
-            final likeCount = likesSnapshot.size;
+            // DTO로 변환
+            final commentDto = PostCommentDto.fromJson(data);
 
-            // 현재 사용자의 좋아요 상태
-            final isLikedByCurrentUser = likeStatuses[doc.id] ?? false;
+            // likeCount가 없는 경우를 위한 처리
+            int? likeCount = commentDto.likeCount;
+            if (likeCount == null) {
+              // 필요한 경우에만 추가 쿼리 (성능 최적화)
+              final likesSnapshot =
+                  await doc.reference.collection('likes').get();
+              likeCount = likesSnapshot.size;
+            }
 
-            // DTO로 변환 후 좋아요 정보 추가
-            final commentDto = data.toPostCommentDto();
-            return commentDto.copyWith(
-              likeCount: likeCount,
-              isLikedByCurrentUser: isLikedByCurrentUser,
-            );
+            return commentDto.copyWith(likeCount: likeCount);
           }),
         );
 
-        return comments;
+        // 5. 모든 비동기 작업 완료 대기 (타입 명시)
+        final results = await Future.wait<dynamic>([
+          likeStatusesFuture,
+          commentsFuture,
+        ]);
+
+        final Map<String, bool> likeStatuses = results[0] as Map<String, bool>;
+        final List<PostCommentDto> commentDtos =
+            results[1] as List<PostCommentDto>;
+
+        // 6. 좋아요 상태 적용
+        final finalComments =
+            commentDtos.map((dto) {
+              final commentId = dto.id ?? '';
+              final isLiked = likeStatuses[commentId] ?? false;
+              return dto.copyWith(isLikedByCurrentUser: isLiked);
+            }).toList();
+
+        return finalComments;
       } catch (e) {
         print('댓글 목록 로드 오류: $e');
         throw Exception(CommunityErrorMessages.commentLoadFailed);
