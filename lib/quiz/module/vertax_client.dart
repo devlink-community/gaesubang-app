@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
@@ -191,10 +190,18 @@ class VertexAIClient {
       JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
       """;
 
-      return await _callVertexAI(prompt);
+      try {
+        return await _callVertexAIWithFallback(prompt);
+      } catch (e) {
+        debugPrint('스킬 기반 퀴즈 생성 실패, 기본 퀴즈 사용: $e');
+        // 오류 발생 시 기본 데이터 반환
+        final defaultQuiz = _getDefaultQuiz(effectiveSkills.first);
+        return [defaultQuiz];
+      }
     } catch (e) {
       debugPrint('스킬 기반 퀴즈 생성 실패: $e');
-      rethrow;
+      // 모든 예외 상황에서 기본 퀴즈 반환
+      return [_getDefaultQuiz()];
     }
   }
 
@@ -235,14 +242,18 @@ class VertexAIClient {
       JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
       """;
 
-      return await _callVertexAI(prompt);
+      try {
+        return await _callVertexAIWithFallback(prompt);
+      } catch (e) {
+        debugPrint('일반 퀴즈 생성 실패, 기본 퀴즈 사용: $e');
+        return [_getDefaultQuiz()];
+      }
     } catch (e) {
       debugPrint('일반 퀴즈 생성 실패: $e');
-      rethrow;
+      return [_getDefaultQuiz()];
     }
   }
 
-  /// Vertex AI API 직접 호출 - 개선된 오류 처리
   Future<List<Map<String, dynamic>>> _callVertexAI(String prompt) async {
     // 기존 코드 유지
     try {
@@ -266,12 +277,20 @@ class VertexAIClient {
           'topP': 0.95,
         },
       };
+
+      // API 호출 (인증된 클라이언트가 없는 경우 처리)
+      if (!_initialized) {
+        debugPrint('API 호출 실패: VertexAI 클라이언트가 초기화되지 않았습니다');
+        throw Exception('VertexAI 클라이언트가 초기화되지 않았습니다');
+      }
+
       // API 호출
       final response = await _authClient.post(
         Uri.parse(endpoint),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
       );
+
       // 응답 처리 - 개선된 오류 처리
       if (response.statusCode == 200) {
         // 전체 응답 확인
@@ -313,8 +332,12 @@ class VertexAIClient {
           }
         } catch (e) {
           debugPrint('응답 처리 오류: $e');
-          // 디버깅 목적으로 전체 응답 확인
-          debugPrint('원본 응답: ${response.body}');
+          // 디버깅 목적으로 전체 응답 확인 (첫 100자만)
+          final responsePreview =
+              response.body.length > 100
+                  ? response.body.substring(0, 100) + '...'
+                  : response.body;
+          debugPrint('원본 응답 미리보기: $responsePreview');
           throw Exception('응답 처리 오류: $e');
         }
       } else {
@@ -323,37 +346,117 @@ class VertexAIClient {
       }
     } catch (e) {
       debugPrint('Vertex AI API 호출 실패: $e');
-      rethrow;
+      throw Exception('API 호출 실패: $e');
     }
   }
 
-  // 기본 퀴즈 제공 (오류 시)
-  Map<String, dynamic> _getDefaultQuiz() {
+  // 예외처리 개선: 오류 발생 시 기본 응답 제공
+  Future<List<Map<String, dynamic>>> _callVertexAIWithFallback(
+    String prompt,
+  ) async {
+    try {
+      return await _callVertexAI(prompt);
+    } catch (e) {
+      debugPrint('Vertex AI 호출 실패, 기본 퀴즈 사용: $e');
+      return [
+        // generateQuizBySkills와 generateGeneralQuiz에서 호출하는 형식에 맞게
+        // 기본 퀴즈 데이터 구조 맞춤
+        {
+          "question": "Flutter 앱에서 상태 관리를 위해 사용되지 않는 패키지는?",
+          "options": ["Provider", "Riverpod", "MobX", "Django"],
+          "correctOptionIndex": 3,
+          "explanation": "Django는 Python 웹 프레임워크로, Flutter 상태 관리에 사용되지 않습니다.",
+          "relatedSkill": "Flutter",
+        },
+      ];
+    }
+  }
+
+  // 기본 퀴즈 제공 메서드 개선 (스킬 기반)
+  Map<String, dynamic> _getDefaultQuiz([String? skill]) {
     final defaultQuizzes = [
       {
         "question": "Flutter 앱에서 상태 관리를 위해 사용되지 않는 패키지는?",
         "options": ["Provider", "Riverpod", "MobX", "Django"],
-        "correctAnswerIndex": 3,
+        "correctOptionIndex": 3,
         "explanation": "Django는 Python 웹 프레임워크로, Flutter 상태 관리에 사용되지 않습니다.",
         "category": "Flutter",
       },
       {
         "question": "다음 중 시간 복잡도가 O(n log n)인 정렬 알고리즘은?",
         "options": ["버블 정렬", "퀵 정렬", "삽입 정렬", "선택 정렬"],
-        "correctAnswerIndex": 1,
+        "correctOptionIndex": 1,
         "explanation": "퀵 정렬의 평균 시간 복잡도는 O(n log n)입니다.",
         "category": "알고리즘",
       },
       {
         "question": "Dart에서 불변 객체를 생성하기 위해 주로 사용되는 패키지는?",
         "options": ["immutable.js", "freezed", "immutable", "const_builder"],
-        "correctAnswerIndex": 1,
+        "correctOptionIndex": 1,
         "explanation": "freezed는 Dart에서 불변 객체를 쉽게 생성할 수 있게 해주는 코드 생성 패키지입니다.",
         "category": "Dart",
       },
+      {
+        "question": "다음 중 React 컴포넌트의 생명주기 메소드가 아닌 것은?",
+        "options": [
+          "componentDidMount",
+          "componentWillUpdate",
+          "onRender",
+          "render",
+        ],
+        "correctOptionIndex": 2,
+        "explanation":
+            "onRender는 React 생명주기 메소드가 아닙니다. 나머지는 모두 React 클래스 컴포넌트의 생명주기 메소드입니다.",
+        "category": "React",
+      },
+      {
+        "question": "다음 중 JavaScript의 원시(primitive) 타입이 아닌 것은?",
+        "options": ["String", "Number", "Boolean", "Array"],
+        "correctOptionIndex": 3,
+        "explanation":
+            "Array는 객체(Object) 타입이며, JavaScript의 원시 타입에는 String, Number, Boolean, Null, Undefined, Symbol, BigInt가 있습니다.",
+        "category": "JavaScript",
+      },
     ];
 
-    return defaultQuizzes[Random().nextInt(defaultQuizzes.length)];
+    // 스킬과 관련된 퀴즈 찾기
+    if (skill != null && skill.isNotEmpty) {
+      final skillLower = skill.toLowerCase();
+      debugPrint('스킬 "$skill"에 맞는 기본 퀴즈 찾는 중...');
+
+      final matchingQuizzes =
+          defaultQuizzes.where((quiz) {
+            final quizSkill = (quiz["category"] as String).toLowerCase();
+            return quizSkill.contains(skillLower) ||
+                skillLower.contains(quizSkill) ||
+                // 특정 스킬과 관련 기술 매핑
+                (skillLower.contains('flutter') &&
+                    quizSkill.contains('dart')) ||
+                (skillLower.contains('dart') &&
+                    quizSkill.contains('flutter')) ||
+                (skillLower.contains('js') &&
+                    quizSkill.contains('javascript')) ||
+                (skillLower.contains('frontend') &&
+                    (quizSkill.contains('react') ||
+                        quizSkill.contains('javascript') ||
+                        quizSkill.contains('flutter')));
+          }).toList();
+
+      // 매칭되는 퀴즈가 있으면 사용
+      if (matchingQuizzes.isNotEmpty) {
+        final selectedQuiz = matchingQuizzes.first;
+        debugPrint('스킬 "$skill"에 맞는 퀴즈 찾음: ${selectedQuiz["question"]}');
+        return {...selectedQuiz}; // 깊은 복사
+      }
+
+      debugPrint('스킬 "$skill"에 맞는 퀴즈를 찾지 못함, 랜덤 선택');
+    }
+
+    // 매칭되는 퀴즈가 없거나 스킬이 없는 경우 랜덤 선택
+    final randomIndex =
+        DateTime.now().millisecondsSinceEpoch % defaultQuizzes.length;
+    debugPrint('랜덤 기본 퀴즈 사용 (인덱스: $randomIndex)');
+    return {...defaultQuizzes[randomIndex]}; // 깊은 복사
   }
 
   // 인스턴스 소멸 시 리소스 정리

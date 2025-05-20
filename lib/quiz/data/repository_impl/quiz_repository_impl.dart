@@ -1,3 +1,4 @@
+// lib/quiz/data/repository_impl/quiz_repository_impl.dart
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,11 +50,16 @@ class QuizRepositoryImpl implements QuizRepository {
 
       // 사용자별 퀴즈 키 가져오기
       final quizKey = await _getQuizStorageKey();
-      debugPrint('퀴즈 생성 - 사용자 키: $quizKey');
+
+      // 스킬 정보가 있는 경우 키에 추가 (스킬별 다른 퀴즈)
+      final finalKey =
+          skills != null ? "${quizKey}_${skills.hashCode}" : quizKey;
+
+      debugPrint('퀴즈 생성 - 최종 저장 키: $finalKey, 스킬: $skills');
 
       // 이미 오늘 퀴즈가 있는지 확인
       final prefs = await SharedPreferences.getInstance();
-      final storedQuizJson = prefs.getString(quizKey);
+      final storedQuizJson = prefs.getString(finalKey);
 
       if (storedQuizJson != null) {
         final quizMap = jsonDecode(storedQuizJson);
@@ -61,38 +67,49 @@ class QuizRepositoryImpl implements QuizRepository {
 
         // 오늘 날짜와 일치하면 저장된 퀴즈 반환
         if (storedDate == today) {
-          debugPrint('이미 저장된 오늘의 퀴즈 반환');
+          debugPrint('이미 저장된 오늘의 퀴즈 반환 (스킬: $skills)');
           return Result.success(
             Quiz(
-              question: quizMap['question'],
+              question: quizMap['question'] as String,
               options: List<String>.from(quizMap['options']),
-              correctAnswerIndex: quizMap['correctAnswerIndex'],
-              explanation: quizMap['explanation'],
-              category: quizMap['category'],
+              correctAnswerIndex: quizMap['correctAnswerIndex'] as int,
+              explanation: quizMap['explanation'] as String,
+              category: quizMap['category'] as String,
               generatedDate: DateTime.parse(quizMap['generatedDate']),
               isAnswered: quizMap['isAnswered'] ?? false,
-              attemptedAnswerIndex: quizMap['attemptedAnswerIndex'],
+              attemptedAnswerIndex: quizMap['attemptedAnswerIndex'] as int?,
             ),
           );
         }
       }
 
       // 새 퀴즈 생성
-      debugPrint('새 퀴즈 생성');
+      debugPrint('새 퀴즈 생성 (스킬: $skills)');
       final quizData = await _dataSource.generateQuiz(skills: skills);
+
+      // 구조 검증
+      if (!_validateQuizData(quizData)) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '퀴즈 데이터 형식이 올바르지 않습니다',
+            cause: 'Invalid quiz data structure',
+          ),
+        );
+      }
 
       // 퀴즈 모델로 변환
       final quiz = Quiz(
-        question: quizData['question'],
+        question: quizData['question'] as String,
         options: List<String>.from(quizData['options']),
-        correctAnswerIndex: quizData['correctAnswerIndex'],
-        explanation: quizData['explanation'],
-        category: quizData['category'],
+        correctAnswerIndex: quizData['correctAnswerIndex'] as int,
+        explanation: quizData['explanation'] as String,
+        category: quizData['category'] as String,
         generatedDate: DateTime.now(),
       );
 
-      // 로컬에 퀴즈 저장
-      await _saveQuizToPrefs(quiz);
+      // 로컬에 퀴즈 저장 (스킬별 키 사용)
+      await _saveQuizToPrefs(quiz, finalKey);
 
       return Result.success(quiz);
     } catch (e, st) {
@@ -136,14 +153,14 @@ class QuizRepositoryImpl implements QuizRepository {
 
       // 퀴즈 모델로 변환
       final quiz = Quiz(
-        question: quizMap['question'],
+        question: quizMap['question'] as String,
         options: List<String>.from(quizMap['options']),
-        correctAnswerIndex: quizMap['correctAnswerIndex'],
-        explanation: quizMap['explanation'],
-        category: quizMap['category'],
+        correctAnswerIndex: quizMap['correctAnswerIndex'] as int,
+        explanation: quizMap['explanation'] as String,
+        category: quizMap['category'] as String,
         generatedDate: DateTime.parse(quizMap['generatedDate']),
         isAnswered: quizMap['isAnswered'] ?? false,
-        attemptedAnswerIndex: quizMap['attemptedAnswerIndex'],
+        attemptedAnswerIndex: quizMap['attemptedAnswerIndex'] as int?,
       );
 
       debugPrint('저장된 퀴즈 반환 - 답변 상태: ${quiz.isAnswered}');
@@ -180,10 +197,20 @@ class QuizRepositoryImpl implements QuizRepository {
         'saveQuizAnswer - 업데이트된 퀴즈: isAnswered=${updatedQuiz.isAnswered}, attemptedAnswerIndex=${updatedQuiz.attemptedAnswerIndex}',
       );
 
-      // 로컬에 저장
-      await _saveQuizToPrefs(updatedQuiz);
+      // 사용자별 퀴즈 키 가져오기
+      final quizKey = await _getQuizStorageKey();
 
-      debugPrint('saveQuizAnswer - SharedPreferences에 저장 완료');
+      // 스킬 정보가 있는 경우 추가 (원래 퀴즈를 저장한 키와 동일하게)
+      String finalKey = quizKey;
+      if (quiz.category.isNotEmpty) {
+        // 카테고리(스킬)에 따른 저장 키 생성 (원래 키와 일관성 유지)
+        finalKey = "${quizKey}_${quiz.category.hashCode}";
+      }
+
+      // 로컬에 저장
+      await _saveQuizToPrefs(updatedQuiz, finalKey);
+
+      debugPrint('saveQuizAnswer - SharedPreferences에 저장 완료 (키: $finalKey)');
 
       return Result.success(updatedQuiz);
     } catch (e, st) {
@@ -205,12 +232,25 @@ class QuizRepositoryImpl implements QuizRepository {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
+  // 퀴즈 데이터 구조 검증 메서드 추가
+  bool _validateQuizData(Map<String, dynamic> quizData) {
+    return quizData.containsKey('question') &&
+        quizData.containsKey('options') &&
+        quizData.containsKey('correctAnswerIndex') &&
+        quizData.containsKey('explanation') &&
+        quizData.containsKey('category') &&
+        quizData['options'] is List &&
+        (quizData['options'] as List).isNotEmpty &&
+        quizData['correctAnswerIndex'] is int &&
+        (quizData['correctAnswerIndex'] as int) >= 0 &&
+        (quizData['correctAnswerIndex'] as int) <
+            (quizData['options'] as List).length;
+  }
+
   // 퀴즈를 SharedPreferences에 저장 (사용자 ID 기반)
-  Future<void> _saveQuizToPrefs(Quiz quiz) async {
+  Future<void> _saveQuizToPrefs(Quiz quiz, String key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // 사용자별 키 생성
-      final quizKey = await _getQuizStorageKey();
 
       final quizMap = {
         'question': quiz.question,
@@ -224,11 +264,11 @@ class QuizRepositoryImpl implements QuizRepository {
       };
 
       final quizJson = jsonEncode(quizMap);
-      await prefs.setString(quizKey, quizJson);
+      await prefs.setString(key, quizJson);
 
       // 디버그 로그
       debugPrint(
-        '퀴즈 저장 완료 (키: $quizKey): ${quiz.isAnswered ? "답변됨" : "답변안됨"}, 선택 인덱스: ${quiz.attemptedAnswerIndex}',
+        '퀴즈 저장 완료 (키: $key): ${quiz.isAnswered ? "답변됨" : "답변안됨"}, 선택 인덱스: ${quiz.attemptedAnswerIndex}',
       );
     } catch (e) {
       debugPrint('퀴즈 로컬 저장 실패: $e');

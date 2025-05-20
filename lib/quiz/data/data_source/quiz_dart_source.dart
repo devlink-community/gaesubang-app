@@ -13,6 +13,8 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
   @override
   Future<Map<String, dynamic>> generateQuiz({String? skills}) async {
     try {
+      debugPrint('QuizDataSource: 퀴즈 생성 시작, 스킬 정보: $skills');
+
       // VertexAI 클라이언트 초기화 확인
       await _vertexAIClient.initialize();
 
@@ -26,7 +28,7 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
 
       // 스킬 기반 또는 일반 퀴즈 생성
       if (skillList.isNotEmpty) {
-        debugPrint('스킬($skillList) 기반으로 퀴즈 생성');
+        debugPrint('스킬(${skillList.join(", ")}) 기반으로 퀴즈 생성');
         quizzes = await _vertexAIClient.generateQuizBySkills(skillList, 1);
       } else {
         debugPrint('일반 퀴즈 생성');
@@ -35,19 +37,26 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
 
       // 생성된 퀴즈가 없으면 예외 처리
       if (quizzes.isEmpty) {
-        throw Exception('생성된 퀴즈가 없습니다');
+        debugPrint('생성된 퀴즈가 없음, 기본 퀴즈 사용');
+        return _getFallbackQuiz(skills);
       }
 
       // 첫 번째 퀴즈 가져오기
       final quizData = quizzes.first;
 
+      // 퀴즈 데이터 유효성 검사
+      if (!_validateQuizData(quizData)) {
+        debugPrint('퀴즈 데이터 형식 오류, 기본 퀴즈 사용');
+        return _getFallbackQuiz(skills);
+      }
+
       // 필드명 호환성 처리 (VertexAI의 필드명을 우리 모델에 맞게 변환)
       final processedQuiz = {
         'question': quizData['question'],
         'options': quizData['options'],
-        'correctAnswerIndex': quizData['correctOptionIndex'],
+        'correctAnswerIndex': quizData['correctOptionIndex'] ?? 0, // 기본값 제공
         'explanation': quizData['explanation'],
-        'category': quizData['relatedSkill'],
+        'category': quizData['relatedSkill'] ?? skills ?? '프로그래밍',
       };
 
       // 디버그 로그
@@ -60,6 +69,40 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
       // 오류 발생 시 기본 퀴즈 반환 (API 오류에도 앱이 동작하도록)
       return _getFallbackQuiz(skills);
     }
+  }
+
+  // 퀴즈 데이터 구조 검증 헬퍼 메서드 추가
+  bool _validateQuizData(Map<String, dynamic> data) {
+    // 필수 필드 확인
+    final requiredFields = ['question', 'options', 'explanation'];
+    for (final field in requiredFields) {
+      if (!data.containsKey(field) || data[field] == null) {
+        debugPrint('필수 필드 누락: $field');
+        return false;
+      }
+    }
+
+    // options 배열 검증
+    if (data['options'] is! List || (data['options'] as List).isEmpty) {
+      debugPrint('options 필드 오류: 배열이 아니거나 비어있음');
+      return false;
+    }
+
+    // correctOptionIndex 검증
+    final correctIndex =
+        data['correctOptionIndex'] ?? data['correctAnswerIndex'];
+    if (correctIndex == null || correctIndex is! int) {
+      debugPrint('correctOptionIndex 필드 오류: 정수가 아니거나 없음');
+      return false;
+    }
+
+    // correctOptionIndex가 options 범위 내에 있는지 확인
+    if (correctIndex < 0 || correctIndex >= (data['options'] as List).length) {
+      debugPrint('correctOptionIndex 범위 오류: $correctIndex는 유효한 인덱스가 아님');
+      return false;
+    }
+
+    return true;
   }
 
   // API 오류 시 사용할 기본 퀴즈 목록
