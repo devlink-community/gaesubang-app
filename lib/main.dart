@@ -52,8 +52,6 @@ void main() async {
     print("네이버맵 초기화 실패: $e");
     // TODO: 초기화 실패 시 대체 처리 로직
   }
-
-  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
