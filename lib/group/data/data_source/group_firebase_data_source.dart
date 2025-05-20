@@ -257,53 +257,72 @@ class GroupFirebaseDataSource implements GroupDataSource {
         // 업데이트 시간 추가
         updates['updatedAt'] = FieldValue.serverTimestamp();
 
-        // 그룹 문서 업데이트
-        await _groupsCollection.doc(groupId).update(updates);
+        // 그룹 이름이나 이미지가 변경되는 경우에만 멤버 정보 업데이트 필요
+        final nameChanged = updates.containsKey('name');
+        final imageUrlChanged = updates.containsKey('imageUrl');
 
-        // 그룹 이름이 변경된 경우, 멤버들의 joingroup 정보도 업데이트해야 함
-        if (updates.containsKey('name') || updates.containsKey('imageUrl')) {
-          // 모든 멤버 조회
+        if (nameChanged || imageUrlChanged) {
+          // WriteBatch 생성
+          final batch = _firestore.batch();
+
+          // 그룹 문서 업데이트
+          batch.update(_groupsCollection.doc(groupId), updates);
+
+          // 멤버 목록 조회
           final membersSnapshot =
               await _groupsCollection.doc(groupId).collection('members').get();
 
+          // 각 멤버의 사용자 문서에서 joingroup 배열 업데이트
           for (final memberDoc in membersSnapshot.docs) {
             final userId = memberDoc.data()['userId'] as String?;
-            if (userId != null) {
-              // 사용자 문서에서 현재 그룹 정보 조회
-              final userDoc = await _usersCollection.doc(userId).get();
+            if (userId == null) continue;
 
-              if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
-                final joingroups =
-                    userDoc.data()!['joingroup'] as List<dynamic>;
+            // 사용자 문서 참조
+            final userRef = _usersCollection.doc(userId);
 
-                // 그룹 ID로 항목 찾기
-                for (int i = 0; i < joingroups.length; i++) {
-                  final groupInfo = joingroups[i] as Map<String, dynamic>;
+            // 현재 그룹 정보 조회 (사용자마다 한 번의 조회만 수행)
+            final userDoc = await userRef.get();
+            if (!userDoc.exists || !userDoc.data()!.containsKey('joingroup')) {
+              continue;
+            }
 
-                  if (groupInfo['group_id'] == groupId) {
-                    // 그룹 정보 업데이트
-                    await _usersCollection.doc(userId).update({
-                      'joingroup': FieldValue.arrayRemove([groupInfo]),
-                    });
+            final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
 
-                    await _usersCollection.doc(userId).update({
-                      'joingroup': FieldValue.arrayUnion([
-                        {
-                          'group_id': groupId,
-                          'group_name':
-                              updates['name'] ?? groupInfo['group_name'],
-                          'group_image':
-                              updates['imageUrl'] ?? groupInfo['group_image'],
-                        },
-                      ]),
-                    });
+            // 현재 그룹 정보 찾기
+            for (int i = 0; i < joingroups.length; i++) {
+              final groupInfo = joingroups[i] as Map<String, dynamic>;
 
-                    break;
-                  }
-                }
+              if (groupInfo['group_id'] == groupId) {
+                // 새 그룹 정보 생성
+                final updatedGroupInfo = {
+                  'group_id': groupId,
+                  'group_name':
+                      nameChanged ? updates['name'] : groupInfo['group_name'],
+                  'group_image':
+                      imageUrlChanged
+                          ? updates['imageUrl']
+                          : groupInfo['group_image'],
+                };
+
+                // 기존 그룹 정보 제거 후 새 정보 추가 (배치에 작업 추가)
+                batch.update(userRef, {
+                  'joingroup': FieldValue.arrayRemove([groupInfo]),
+                });
+
+                batch.update(userRef, {
+                  'joingroup': FieldValue.arrayUnion([updatedGroupInfo]),
+                });
+
+                break;
               }
             }
           }
+
+          // 모든 작업을 한 번에 커밋
+          await batch.commit();
+        } else {
+          // 그룹 이름/이미지가 변경되지 않았으면 그룹 문서만 업데이트
+          await _groupsCollection.doc(groupId).update(updates);
         }
       } catch (e) {
         print('그룹 업데이트 오류: $e');
