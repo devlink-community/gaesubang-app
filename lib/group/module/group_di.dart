@@ -5,14 +5,10 @@ import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/mock_get_group_detail_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/record_timer_attendance_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:flutter/foundation.dart';
@@ -42,9 +38,10 @@ GroupDataSource groupDataSource(Ref ref) {
 
 // Repository 프로바이더
 @riverpod
-GroupRepository groupRepository(Ref ref) =>
-    GroupRepositoryImpl(dataSource: ref.watch(groupDataSourceProvider));
-
+GroupRepository groupRepository(Ref ref) => GroupRepositoryImpl(
+  dataSource: ref.watch(groupDataSourceProvider),
+  ref: ref,
+);
 // UseCase 프로바이더들
 @riverpod
 GetGroupListUseCase getGroupListUseCase(Ref ref) =>

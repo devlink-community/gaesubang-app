@@ -1,4 +1,5 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
@@ -9,18 +10,34 @@ import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;
+  final Ref _ref;
 
-  GroupRepositoryImpl({required GroupDataSource dataSource})
-    : _dataSource = dataSource;
+  GroupRepositoryImpl({required GroupDataSource dataSource, required Ref ref})
+    : _dataSource = dataSource,
+      _ref = ref;
 
   @override
   Future<Result<List<Group>>> getGroupList() async {
     try {
-      // currentUserId를 null로 전달하면 모든 그룹을 가져옴
-      final groupsData = await _dataSource.fetchGroupList();
+      // 현재 사용자 정보 확인
+      final currentUser = _ref.read(currentUserProvider);
+
+      // 사용자가 가입한 그룹 ID 목록 확인
+      Set<String> joinedGroupIds = {};
+      if (currentUser != null) {
+        // 현재 사용자의 가입 그룹 ID 추출
+        // 예시 코드: 실제 구현에서는 currentUser에서 가입 그룹 ID를 추출하는 로직이 필요
+        // 임시로 빈 Set 사용
+      }
+
+      // 데이터소스에 가입 그룹 ID 전달
+      final groupsData = await _dataSource.fetchGroupList(
+        joinedGroupIds: joinedGroupIds.isNotEmpty ? joinedGroupIds : null,
+      );
 
       // Map<String, dynamic> → GroupDto → Group 변환
       final groupDtos =

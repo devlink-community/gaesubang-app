@@ -25,9 +25,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
+  // lib/group/data/data_source/group_firebase_data_source.dart 파일의 fetchGroupList 메서드 수정
+
   @override
   Future<List<Map<String, dynamic>>> fetchGroupList({
-    String? currentUserId,
+    Set<String>? joinedGroupIds,
   }) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupList', () async {
       try {
@@ -41,46 +43,15 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return [];
         }
 
-        // FIXME: 왜 groupIds를 불러오고 사용하지 않는지 검토 필요
-        // 그룹 문서 ID 목록
-        final groupIds = querySnapshot.docs.map((doc) => doc.id).toList();
-
-        // 현재 사용자의 가입 그룹 목록 (로그인한 경우만)
-        Set<String> userJoinedGroupIds = {};
-
-        if (currentUserId != null && currentUserId.isNotEmpty) {
-          // 사용자 문서에서 가입한 그룹 ID 가져오기
-          final userDoc = await _usersCollection.doc(currentUserId).get();
-
-          if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
-            final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
-
-            // 가입 그룹 ID 목록 추출
-            for (final joingroup in joingroups) {
-              final groupName = joingroup['group_name'] as String?;
-
-              // 그룹 이름으로 ID 찾기 (Firebase에서는 관계가 비정규화되어 있기 때문)
-              final matchingGroup = querySnapshot.docs.firstWhere(
-                (doc) => doc.data()['name'] == groupName,
-                orElse: () => querySnapshot.docs.first,
-              );
-
-              userJoinedGroupIds.add(matchingGroup.id);
-            }
-          }
-        }
-
         // 그룹 데이터 변환 및 멤버십 상태 설정
         final groups =
             querySnapshot.docs.map((doc) {
               final data = doc.data();
               data['id'] = doc.id;
 
-              // 현재 사용자 가입 여부 설정
-              if (currentUserId != null) {
-                data['isJoinedByCurrentUser'] = userJoinedGroupIds.contains(
-                  doc.id,
-                );
+              // 가입 그룹 ID가 전달된 경우, 해당 정보로 멤버십 상태 설정
+              if (joinedGroupIds != null) {
+                data['isJoinedByCurrentUser'] = joinedGroupIds.contains(doc.id);
               }
 
               return data;
