@@ -51,6 +51,12 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   }
 
   @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final quizAsync = ref.watch(quizNotifierProvider);
     final notifier = ref.watch(quizNotifierProvider.notifier);
@@ -58,6 +64,12 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
     // 배너를 표시하지 않는 경우
     if (!notifier.showBanner) {
       return const SizedBox.shrink();
+    }
+
+    // 퀴즈 참여 여부 확인 (퀴즈가 로드되었고 이미 참여한 경우 버튼 텍스트 변경)
+    bool hasCompletedQuiz = false;
+    if (quizAsync case AsyncData(:final value)) {
+      hasCompletedQuiz = value?.isAnswered ?? false;
     }
 
     return FadeTransition(
@@ -142,7 +154,8 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                     ),
                   ),
                   child: Text(
-                    '퀴즈 풀기',
+                    // 이미 완료한 경우 "참여 완료"로 표시, 그렇지 않으면 "퀴즈 풀기"
+                    hasCompletedQuiz ? '참여 완료' : '퀴즈 풀기',
                     style: AppTextStyles.button2Regular.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -157,62 +170,101 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   }
 
   void _showQuizPopup(BuildContext context) {
-    final quizAsync = ref.read(quizNotifierProvider);
+    // 퀴즈 팝업 표시하기 전에 선택된 인덱스 초기화
+    setState(() {
+      _selectedAnswerIndex = null;
+    });
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder:
-          (context) => DraggableScrollableSheet(
-            initialChildSize: 0.8,
-            maxChildSize: 0.95,
-            minChildSize: 0.5,
-            builder:
-                (context, scrollController) => Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      Expanded(
-                        child: quizAsync.when(
-                          data:
-                              (quiz) =>
-                                  quiz != null
-                                      ? _buildQuizContent(
-                                        context,
-                                        quiz,
-                                        scrollController,
-                                      )
-                                      : _buildErrorContent(context),
-                          loading:
-                              () => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                          error: (_, __) => _buildErrorContent(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+          (context) => _QuizBottomSheet(
+            skills: widget.skills,
+            initialSelectedIndex: _selectedAnswerIndex,
+            onAnswerSelected: (index) {
+              setState(() {
+                _selectedAnswerIndex = index;
+              });
+            },
           ),
     );
   }
+}
 
-  Widget _buildErrorContent(BuildContext context) {
+// 퀴즈 바텀 시트를 별도 위젯으로 분리
+class _QuizBottomSheet extends ConsumerStatefulWidget {
+  final String? skills;
+  final int? initialSelectedIndex;
+  final Function(int) onAnswerSelected;
+
+  const _QuizBottomSheet({
+    Key? key,
+    this.skills,
+    this.initialSelectedIndex,
+    required this.onAnswerSelected,
+  }) : super(key: key);
+
+  @override
+  ConsumerState<_QuizBottomSheet> createState() => _QuizBottomSheetState();
+}
+
+class _QuizBottomSheetState extends ConsumerState<_QuizBottomSheet> {
+  int? _selectedAnswerIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedAnswerIndex = widget.initialSelectedIndex;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      maxChildSize: 0.95,
+      minChildSize: 0.5,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(child: _buildQuizContent(scrollController)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuizContent(ScrollController scrollController) {
+    final quizAsync = ref.watch(quizNotifierProvider);
+
+    return quizAsync.when(
+      data:
+          (quiz) =>
+              quiz != null
+                  ? _buildQuizDetails(quiz, scrollController)
+                  : _buildErrorContent(),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _buildErrorContent(),
+    );
+  }
+
+  Widget _buildErrorContent() {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Center(
@@ -248,11 +300,9 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
     );
   }
 
-  Widget _buildQuizContent(
-    BuildContext context,
-    Quiz quiz,
-    ScrollController scrollController,
-  ) {
+  Widget _buildQuizDetails(Quiz quiz, ScrollController scrollController) {
+    final isAnswered = quiz.isAnswered;
+
     return ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(20),
@@ -296,7 +346,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
           final option = quiz.options[index];
           final isSelected = _selectedAnswerIndex == index;
           final isCorrect = quiz.correctAnswerIndex == index;
-          final isAnswered = quiz.isAnswered;
+          final userAnswered = quiz.attemptedAnswerIndex == index;
 
           // 색상 결정
           Color backgroundColor = Colors.grey.shade100;
@@ -308,7 +358,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
               backgroundColor = Colors.green.withValues(alpha: 0.15);
               borderColor = Colors.green.withValues(alpha: 0.5);
               textColor = Colors.green.shade800;
-            } else if (isSelected) {
+            } else if (userAnswered) {
               backgroundColor = Colors.red.withValues(alpha: 0.15);
               borderColor = Colors.red.withValues(alpha: 0.5);
               textColor = Colors.red.shade800;
@@ -321,52 +371,59 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: InkWell(
-              onTap:
-                  isAnswered
-                      ? null
-                      : () {
-                        setState(() {
-                          _selectedAnswerIndex = index;
-                        });
-                      },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      '${String.fromCharCode(65 + index)}.',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        color: textColor,
-                      ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap:
+                    isAnswered
+                        ? null
+                        : () {
+                          setState(() {
+                            _selectedAnswerIndex = index;
+                            debugPrint('선택한 답변: $index');
+                          });
+                          widget.onAnswerSelected(index);
+                        },
+                borderRadius: BorderRadius.circular(12),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        option,
-                        style: AppTextStyles.body1Regular.copyWith(
-                          color: textColor,
+                    child: Row(
+                      children: [
+                        Text(
+                          '${String.fromCharCode(65 + index)}.',
+                          style: AppTextStyles.subtitle1Bold.copyWith(
+                            color: textColor,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            option,
+                            style: AppTextStyles.body1Regular.copyWith(
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                        if (isAnswered && isCorrect)
+                          const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 24,
+                          ),
+                        if (isAnswered && userAnswered && !isCorrect)
+                          const Icon(Icons.cancel, color: Colors.red, size: 24),
+                      ],
                     ),
-                    if (isAnswered && isCorrect)
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 24,
-                      ),
-                    if (isAnswered && isSelected && !isCorrect)
-                      const Icon(Icons.cancel, color: Colors.red, size: 24),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -374,7 +431,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
         }),
 
         // 제출 버튼 또는 결과 설명
-        if (!quiz.isAnswered)
+        if (!isAnswered)
           Padding(
             padding: const EdgeInsets.only(top: 16),
             child: ElevatedButton(
@@ -386,9 +443,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                         ref
                             .read(quizNotifierProvider.notifier)
                             .onAction(SubmitAnswer(_selectedAnswerIndex!));
-
-                        // 팝업은 유지하고 상태만 업데이트
-                        setState(() {});
                       },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColorStyles.primary100,
@@ -410,7 +464,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
           ),
 
         // 설명 (정답 제출 후)
-        if (quiz.isAnswered)
+        if (isAnswered)
           Padding(
             padding: const EdgeInsets.only(top: 24),
             child: _buildExplanation(quiz),
