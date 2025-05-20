@@ -350,6 +350,7 @@ class PostFirebaseDataSource implements PostDataSource {
           'userProfileImage': userProfileImage,
           'text': content,
           'createdAt': FieldValue.serverTimestamp(),
+          'likeCount': 0, // 초기 좋아요 수
         };
 
         // 댓글 추가
