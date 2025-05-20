@@ -101,7 +101,7 @@ class MockPostDataSourceImpl implements PostDataSource {
   };
 
   @override
-  Future<List<PostDto>> fetchPostList() async {
+  Future<List<PostDto>> fetchPostList({String? currentUserId}) async {
     return ApiCallDecorator.wrap('MockPost.fetchPostList', () async {
       // 데이터 로딩 시뮬레이션
       await Future.delayed(const Duration(milliseconds: 500));
@@ -130,7 +130,10 @@ class MockPostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<PostDto> fetchPostDetail(String postId) async {
+  Future<PostDto> fetchPostDetail(
+    String postId, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('MockPost.fetchPostDetail', () async {
       // 로딩 시뮬레이션
       await Future.delayed(const Duration(milliseconds: 300));
@@ -209,7 +212,10 @@ class MockPostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<List<PostCommentDto>> fetchComments(String postId) async {
+  Future<List<PostCommentDto>> fetchComments(
+    String postId, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('MockPost.fetchComments', () async {
       await Future.delayed(const Duration(milliseconds: 300));
 
@@ -382,7 +388,10 @@ class MockPostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<List<PostDto>> searchPosts(String query) async {
+  Future<List<PostDto>> searchPosts(
+    String query, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('MockPost.searchPosts', () async {
       await Future.delayed(const Duration(milliseconds: 300));
 

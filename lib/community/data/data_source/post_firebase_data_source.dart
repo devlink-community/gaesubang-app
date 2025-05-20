@@ -5,7 +5,6 @@ import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import 'post_data_source.dart';
 
@@ -21,7 +20,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
   // 기존 fetchPostList 메서드 수정 - commentCount 추가
   @override
-  Future<List<PostDto>> fetchPostList() async {
+  Future<List<PostDto>> fetchPostList({String? currentUserId}) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostList', () async {
       try {
         // 게시글 목록 조회 (최신순 정렬)
@@ -29,7 +28,7 @@ class PostFirebaseDataSource implements PostDataSource {
             await _postsCollection.orderBy('createdAt', descending: true).get();
 
         // 현재 로그인한 사용자 ID (없으면 빈 문자열)
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final userId = currentUserId ?? '';
 
         // 병렬 처리로 성능 최적화
         final futures = querySnapshot.docs.map((doc) async {
@@ -49,7 +48,7 @@ class PostFirebaseDataSource implements PostDataSource {
           bool isLikedByCurrentUser = false;
           bool isBookmarkedByCurrentUser = false;
 
-          if (currentUserId.isNotEmpty) {
+          if (userId.isNotEmpty) {
             // 좋아요 상태 확인
             final userLikeDoc =
                 await doc.reference
@@ -90,7 +89,10 @@ class PostFirebaseDataSource implements PostDataSource {
 
   // 기존 fetchPostDetail 메서드 수정 - commentCount 추가
   @override
-  Future<PostDto> fetchPostDetail(String postId) async {
+  Future<PostDto> fetchPostDetail(
+    String postId, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostDetail', () async {
       try {
         final docSnapshot = await _postsCollection.doc(postId).get();
@@ -103,7 +105,7 @@ class PostFirebaseDataSource implements PostDataSource {
         data['id'] = docSnapshot.id;
 
         // 현재 로그인한 사용자 ID (없으면 빈 문자열)
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final userId = currentUserId ?? '';
 
         // 좋아요 수 계산
         final likesSnapshot =
@@ -119,7 +121,7 @@ class PostFirebaseDataSource implements PostDataSource {
         bool isLikedByCurrentUser = false;
         bool isBookmarkedByCurrentUser = false;
 
-        if (currentUserId.isNotEmpty) {
+        if (userId.isNotEmpty) {
           // 좋아요 상태 확인
           final userLikeDoc =
               await docSnapshot.reference
@@ -255,7 +257,10 @@ class PostFirebaseDataSource implements PostDataSource {
   }
 
   @override
-  Future<List<PostCommentDto>> fetchComments(String postId) async {
+  Future<List<PostCommentDto>> fetchComments(
+    String postId, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchComments', () async {
       try {
         final querySnapshot =
@@ -270,18 +275,18 @@ class PostFirebaseDataSource implements PostDataSource {
         }
 
         // 현재 Firebase Auth 사용자 ID (없으면 빈 문자열)
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final userId = currentUserId ?? '';
 
         // 댓글 ID 목록 추출
         final commentIds = querySnapshot.docs.map((doc) => doc.id).toList();
 
         // 사용자 좋아요 상태 확인 (빈 ID면 모두 false 반환)
         Map<String, bool> likeStatuses = {};
-        if (currentUserId.isNotEmpty) {
+        if (userId.isNotEmpty) {
           likeStatuses = await checkCommentsLikeStatus(
             postId,
             commentIds,
-            currentUserId,
+            userId,
           );
         }
 
@@ -464,7 +469,10 @@ class PostFirebaseDataSource implements PostDataSource {
   }
 
   @override
-  Future<List<PostDto>> searchPosts(String query) async {
+  Future<List<PostDto>> searchPosts(
+    String query, {
+    String? currentUserId,
+  }) async {
     return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
       try {
         final lowercaseQuery = query.toLowerCase();
@@ -473,7 +481,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final querySnapshot = await _postsCollection.get();
 
         // 현재 로그인한 사용자 ID (없으면 빈 문자열)
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        final userId = currentUserId ?? '';
 
         final List<PostDto> searchResults = [];
 
@@ -502,20 +510,17 @@ class PostFirebaseDataSource implements PostDataSource {
             bool isLikedByCurrentUser = false;
             bool isBookmarkedByCurrentUser = false;
 
-            if (currentUserId.isNotEmpty) {
+            if (userId.isNotEmpty) {
               // 좋아요 상태 확인
               final userLikeDoc =
-                  await doc.reference
-                      .collection('likes')
-                      .doc(currentUserId)
-                      .get();
+                  await doc.reference.collection('likes').doc(userId).get();
               isLikedByCurrentUser = userLikeDoc.exists;
 
               // 북마크 상태 확인
               final userBookmarkDoc =
                   await _firestore
                       .collection('users')
-                      .doc(currentUserId)
+                      .doc(userId)
                       .collection('bookmarks')
                       .doc(doc.id)
                       .get();
