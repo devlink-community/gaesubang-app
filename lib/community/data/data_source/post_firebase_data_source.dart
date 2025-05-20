@@ -58,10 +58,6 @@ class PostFirebaseDataSource implements PostDataSource {
               // JSON으로부터 DTO 생성
               final postDto = PostDto.fromJson(data);
 
-              // 비정규화된 카운터 값 가져오기 (DTO에 이미 포함되어 있을 수 있음)
-              int? likeCount = postDto.likeCount;
-              int? commentCount = postDto.commentCount;
-
               // 현재 사용자의 좋아요/북마크 상태
               final isLikedByCurrentUser = likeStatuses[doc.id] ?? false;
               final isBookmarkedByCurrentUser =
@@ -69,8 +65,6 @@ class PostFirebaseDataSource implements PostDataSource {
 
               // 필요한 필드만 업데이트하여 DTO 반환
               return postDto.copyWith(
-                likeCount: likeCount,
-                commentCount: commentCount,
                 isLikedByCurrentUser: isLikedByCurrentUser,
                 isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
               );
@@ -104,15 +98,28 @@ class PostFirebaseDataSource implements PostDataSource {
         // 현재 로그인한 사용자 ID (없으면 빈 문자열)
         final userId = currentUserId ?? '';
 
-        // 좋아요 수 계산
-        final likesSnapshot =
-            await docSnapshot.reference.collection('likes').get();
-        final likeCount = likesSnapshot.size;
+        // 좋아요 수와 댓글 수 가져오기
+        int likeCount = 0;
+        int commentCount = 0;
 
-        // 댓글 수 계산 (추가)
-        final commentsSnapshot =
-            await docSnapshot.reference.collection('comments').get();
-        final commentCount = commentsSnapshot.size;
+        // 필드가 있고 null이 아닌 경우 해당 값 사용
+        if (data.containsKey('likeCount') && data['likeCount'] != null) {
+          likeCount = data['likeCount'] as int;
+        } else {
+          // 값이 없거나 null인 경우에만 실제 계산
+          final likesSnapshot =
+              await docSnapshot.reference.collection('likes').get();
+          likeCount = likesSnapshot.size;
+        }
+
+        if (data.containsKey('commentCount') && data['commentCount'] != null) {
+          commentCount = data['commentCount'] as int;
+        } else {
+          // 값이 없거나 null인 경우에만 실제 계산
+          final commentsSnapshot =
+              await docSnapshot.reference.collection('comments').get();
+          commentCount = commentsSnapshot.size;
+        }
 
         // 현재 사용자의 좋아요/북마크 상태 확인
         bool isLikedByCurrentUser = false;
@@ -121,17 +128,14 @@ class PostFirebaseDataSource implements PostDataSource {
         if (userId.isNotEmpty) {
           // 좋아요 상태 확인
           final userLikeDoc =
-              await docSnapshot.reference
-                  .collection('likes')
-                  .doc(currentUserId)
-                  .get();
+              await docSnapshot.reference.collection('likes').doc(userId).get();
           isLikedByCurrentUser = userLikeDoc.exists;
 
           // 북마크 상태 확인
           final userBookmarkDoc =
               await _firestore
                   .collection('users')
-                  .doc(currentUserId)
+                  .doc(userId)
                   .collection('bookmarks')
                   .doc(postId)
                   .get();
@@ -142,7 +146,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final postDto = data.toPostDto();
         return postDto.copyWith(
           likeCount: likeCount,
-          commentCount: commentCount, // 댓글 수 추가
+          commentCount: commentCount,
           isLikedByCurrentUser: isLikedByCurrentUser,
           isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
         );
@@ -150,7 +154,7 @@ class PostFirebaseDataSource implements PostDataSource {
         if (e.toString().contains(CommunityErrorMessages.postNotFound)) {
           rethrow;
         }
-        print('게시글 상태 로드 오류: $e');
+        print('게시글 상세 로드 오류: $e');
         throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     }, params: {'postId': postId});
