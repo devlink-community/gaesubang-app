@@ -223,29 +223,48 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<PostDto> toggleBookmark(String postId, String userId) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleBookmark', () async {
       try {
-        // 사용자 북마크 컬렉션 참조
-        final bookmarkRef = _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('bookmarks')
-            .doc(postId);
+        // 사용자 북마크 컬렉션 및 게시글 참조
+        final userRef = _firestore.collection('users').doc(userId);
+        final bookmarkRef = userRef.collection('bookmarks').doc(postId);
+        final postRef = _postsCollection.doc(postId);
 
-        // 북마크 존재 여부 확인
-        final bookmarkDoc = await bookmarkRef.get();
+        // 트랜잭션 사용하여 북마크 상태 원자적으로 업데이트
+        return _firestore.runTransaction<PostDto>((transaction) async {
+          // 현재 게시글 및 북마크 상태 조회
+          final postDoc = await transaction.get(postRef);
+          final bookmarkDoc = await transaction.get(bookmarkRef);
 
-        if (bookmarkDoc.exists) {
-          // 이미 북마크가 있으면 삭제 (취소)
-          await bookmarkRef.delete();
-        } else {
-          // 북마크가 없으면 추가
-          await bookmarkRef.set({
-            'postId': postId,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-        }
+          if (!postDoc.exists) {
+            throw Exception(CommunityErrorMessages.postNotFound);
+          }
 
-        // 업데이트된 게시글 정보 반환
-        return await fetchPostDetail(postId);
+          // 게시글 데이터 준비
+          final data = postDoc.data()!;
+          data['id'] = postDoc.id;
+
+          // 북마크 상태 토글
+          if (bookmarkDoc.exists) {
+            // 이미 북마크가 있으면 삭제 (취소)
+            transaction.delete(bookmarkRef);
+          } else {
+            // 북마크가 없으면 추가
+            transaction.set(bookmarkRef, {
+              'postId': postId,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+          }
+
+          // 현재 좋아요 수와 댓글 수 유지 (이미 데이터에 있을 수 있음)
+          final likeCount = data['likeCount'] as int? ?? 0;
+          final commentCount = data['commentCount'] as int? ?? 0;
+
+          // DTO 생성 및 필드 업데이트 (북마크 상태만 토글)
+          return data.toPostDto().copyWith(
+            likeCount: likeCount,
+            commentCount: commentCount,
+            isBookmarkedByCurrentUser: !bookmarkDoc.exists, // 토글 결과 반영
+          );
+        });
       } catch (e) {
         print('북마크 토글 오류: $e');
         throw Exception(CommunityErrorMessages.bookmarkFailed);
@@ -376,61 +395,56 @@ class PostFirebaseDataSource implements PostDataSource {
       'PostFirebase.toggleCommentLike',
       () async {
         try {
-          // 댓글 좋아요 컬렉션 참조
-          final likeRef = _postsCollection
+          // 댓글 및 좋아요 참조
+          final commentRef = _postsCollection
               .doc(postId)
               .collection('comments')
-              .doc(commentId)
-              .collection('likes')
-              .doc(userId);
+              .doc(commentId);
+          final likeRef = commentRef.collection('likes').doc(userId);
 
-          // 좋아요 존재 여부 확인
-          final likeDoc = await likeRef.get();
+          // 트랜잭션 사용하여 좋아요 토글 및 카운터 원자적으로 업데이트
+          return _firestore.runTransaction<PostCommentDto>((transaction) async {
+            // 현재 댓글 및 좋아요 상태 조회
+            final commentDoc = await transaction.get(commentRef);
+            final likeDoc = await transaction.get(likeRef);
 
-          if (likeDoc.exists) {
-            // 이미 좋아요가 있으면 삭제 (취소)
-            await likeRef.delete();
-          } else {
-            // 좋아요가 없으면 추가
-            await likeRef.set({
-              'userId': userId,
-              'userName': userName,
-              'timestamp': FieldValue.serverTimestamp(),
-            });
-          }
+            if (!commentDoc.exists) {
+              throw Exception(CommunityErrorMessages.commentLoadFailed);
+            }
 
-          // 댓글 정보 가져오기
-          final commentDoc =
-              await _postsCollection
-                  .doc(postId)
-                  .collection('comments')
-                  .doc(commentId)
-                  .get();
+            // 댓글 데이터 준비
+            final commentData = commentDoc.data()!;
+            commentData['id'] = commentDoc.id;
 
-          if (!commentDoc.exists) {
-            throw Exception(CommunityErrorMessages.commentLoadFailed);
-          }
+            // likeCount 필드 가져오기 (없으면 0으로 초기화)
+            final currentLikeCount = commentData['likeCount'] as int? ?? 0;
 
-          final commentData = commentDoc.data()!;
-          commentData['id'] = commentDoc.id;
+            // 좋아요 상태 토글
+            if (likeDoc.exists) {
+              // 이미 좋아요가 있으면 삭제 및 카운터 감소
+              transaction.delete(likeRef);
+              transaction.update(commentRef, {
+                'likeCount': currentLikeCount > 0 ? currentLikeCount - 1 : 0,
+              });
+            } else {
+              // 좋아요가 없으면 추가 및 카운터 증가
+              transaction.set(likeRef, {
+                'userId': userId,
+                'userName': userName,
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+              transaction.update(commentRef, {
+                'likeCount': currentLikeCount + 1,
+              });
+            }
 
-          // 좋아요 수 계산
-          final likesSnapshot =
-              await _postsCollection
-                  .doc(postId)
-                  .collection('comments')
-                  .doc(commentId)
-                  .collection('likes')
-                  .get();
-
-          final likeCount = likesSnapshot.size;
-
-          // 변환 및 좋아요 상태 설정
-          final dto = commentData.toPostCommentDto();
-          return dto.copyWith(
-            likeCount: likeCount,
-            isLikedByCurrentUser: !likeDoc.exists, // 토글 후 상태 반환
-          );
+            // DTO 생성 및 필드 업데이트
+            return commentData.toPostCommentDto().copyWith(
+              likeCount:
+                  likeDoc.exists ? currentLikeCount - 1 : currentLikeCount + 1,
+              isLikedByCurrentUser: !likeDoc.exists, // 토글 결과 반영
+            );
+          });
         } catch (e) {
           print('댓글 좋아요 토글 오류: $e');
           throw Exception(CommunityErrorMessages.likeFailed);
@@ -653,6 +667,8 @@ class PostFirebaseDataSource implements PostDataSource {
           'mediaUrls': imageUris.map((uri) => uri.toString()).toList(),
           'createdAt': FieldValue.serverTimestamp(),
           'hashTags': hashTags,
+          'likeCount': 0, // 좋아요 수 초기화
+          'commentCount': 0, // 댓글 수 초기화
         };
 
         // 게시글 추가
