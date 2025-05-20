@@ -1,5 +1,3 @@
-// lib/group/data/data_source/group_location_data_source.dart
-
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
 
 abstract interface class GroupLocationDataSource {
