@@ -1,6 +1,5 @@
-// lib/group/data/data_source/group_location_data_source_impl.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:devlink_mobile_app/map/data/data_source/group_loscation_data_source.dart';
+import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
 
 class GroupLocationDataSourceImpl implements GroupLocationDataSource {

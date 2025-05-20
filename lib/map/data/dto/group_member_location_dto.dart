@@ -1,4 +1,3 @@
-// lib/group/data/dto/group_member_location_dto.dart
 import 'package:json_annotation/json_annotation.dart';
 import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 
