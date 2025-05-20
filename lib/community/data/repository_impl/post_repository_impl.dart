@@ -26,14 +26,18 @@ class PostRepositoryImpl implements PostRepository {
   Future<Result<List<Post>>> loadPostList() async {
     return ApiCallDecorator.wrap('PostRepository.loadPostList', () async {
       try {
-        // 1. 게시글 목록 기본 로드
-        final postDtos = await _dataSource.fetchPostList();
-
-        // 2. 현재 사용자 정보 확인
+        // 1. 현재 사용자 정보 확인
         final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+        // 2. 게시글 목록 기본 로드
+        final postDtos = await _dataSource.fetchPostList(
+          currentUserId: currentUser.uid,
+        );
 
         // 3. 사용자가 로그인했고, 게시글이 있는 경우 상태 일괄 조회
-        if (currentUser != null && postDtos.isNotEmpty) {
+        if (postDtos.isNotEmpty) {
           final postIds =
               postDtos
                   .map((dto) => dto.id ?? '')
@@ -86,7 +90,14 @@ class PostRepositoryImpl implements PostRepository {
   Future<Result<Post>> getPostDetail(String id) async {
     return ApiCallDecorator.wrap('PostRepository.getPostDetail', () async {
       try {
-        final postDto = await _dataSource.fetchPostDetail(id);
+        final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+        final postDto = await _dataSource.fetchPostDetail(
+          id,
+          currentUserId: currentUser.uid,
+        );
         final post = postDto.toModel();
         return Result.success(post);
       } catch (e, st) {
@@ -143,7 +154,15 @@ class PostRepositoryImpl implements PostRepository {
   Future<Result<List<Comment>>> getComments(String id) async {
     return ApiCallDecorator.wrap('PostRepository.getComments', () async {
       try {
-        final commentDtos = await _dataSource.fetchComments(id);
+        // Auth에서 현재 사용자 정보 가져오기
+        final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+        final commentDtos = await _dataSource.fetchComments(
+          id,
+          currentUserId: currentUser.uid,
+        );
         final comments = commentDtos.toModelList();
         return Result.success(comments);
       } catch (e, st) {
@@ -218,14 +237,20 @@ class PostRepositoryImpl implements PostRepository {
   Future<Result<List<Post>>> searchPosts(String query) async {
     return ApiCallDecorator.wrap('PostRepository.searchPosts', () async {
       try {
-        // 1. 검색 결과 기본 로드
-        final postDtos = await _dataSource.searchPosts(query);
-
-        // 2. 현재 사용자 정보 확인
+        // Auth에서 현재 사용자 정보 가져오기
         final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+
+        // 1. 검색 결과 기본 로드
+        final postDtos = await _dataSource.searchPosts(
+          query,
+          currentUserId: currentUser.uid,
+        );
 
         // 3. 사용자가 로그인했고, 검색 결과가 있는 경우 상태 일괄 조회
-        if (currentUser != null && postDtos.isNotEmpty) {
+        if (postDtos.isNotEmpty) {
           final postIds =
               postDtos
                   .map((dto) => dto.id ?? '')
