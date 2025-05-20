@@ -1,89 +1,94 @@
-// lib/community/data/mapper/post_mapper.dart
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
-import 'package:devlink_mobile_app/community/data/dto/comment_dto_old.dart';
-import 'package:devlink_mobile_app/community/data/dto/like_dto_old.dart';
-import 'package:devlink_mobile_app/community/data/dto/member_dto_old.dart';
-import 'package:devlink_mobile_app/community/data/dto/post_dto_old.dart';
+import 'package:devlink_mobile_app/community/data/dto/post_comment_dto.dart';
+import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
+import 'package:devlink_mobile_app/community/data/dto/post_like_dto.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
 
+/// PostDto → Post 변환
 extension PostDtoMapper on PostDto {
-  Post toModel() => Post(
-    id: id ?? '',
-    title: title ?? '',
-    content: content ?? '',
-    member:
-        member?.toModel() ??
-        Member(
-          id: '',
-          email: '',
-          nickname: '',
-          uid: '',
-          onAir: false,
-          image: '',
-        ),
-    userProfileImageUrl: userProfileImageUrl ?? '',
-    boardType: _parseBoardType(boardType),
-    createdAt: createdAt ?? DateTime.now(),
-    hashTags: (hashTags ?? []),
-    imageUrls: (imageUrls ?? []),
-    like: (like ?? []).map((e) => e.toModel()).toList(),
-    comment: (comment ?? []).map((e) => e.toModel()).toList(),
-  );
+  Post toModel() {
+    return Post(
+      id: id ?? '',
+      title: title ?? '',
+      content: content ?? '',
+      member: _createDefaultMember(), // 임시 Member 생성
+      userProfileImageUrl: userProfileImage ?? '',
+      boardType: BoardType.free, // 기본값
+      createdAt: createdAt ?? DateTime.now(),
+      hashTags: hashTags ?? [],
+      imageUrls: mediaUrls ?? [],
+      like: [], // 별도로 조회된 데이터로 채움
+      comment: [], // 별도로 조회된 데이터로 채움
+    );
+  }
 
-  // 문자열로 저장된 boardType을 enum으로 변환
-  BoardType _parseBoardType(dynamic boardTypeValue) {
-    if (boardTypeValue is BoardType) {
-      return boardTypeValue;
-    }
-
-    if (boardTypeValue is String) {
-      try {
-        return BoardType.values.firstWhere(
-          (e) => e.name == boardTypeValue,
-          orElse: () => BoardType.free,
-        );
-      } catch (_) {
-        return BoardType.free;
-      }
-    }
-
-    return BoardType.free;
+  /// 임시 Member 생성 (AuthorId만 있는 경우)
+  Member _createDefaultMember() {
+    return Member(
+      id: authorId ?? '',
+      email: '',
+      nickname: authorId ?? 'Unknown User',
+      uid: authorId ?? '',
+      image: userProfileImage ?? '',
+      onAir: false,
+    );
   }
 }
 
-extension on MemberDto {
-  Member toModel() => Member(
-    id: id ?? '',
-    email: email ?? '',
-    nickname: nickname ?? '',
-    uid: uid ?? '',
-    onAir: onAir ?? false,
-    image: image ?? '',
-  );
+/// PostCommentDto → Comment 변환
+extension PostCommentDtoMapper on PostCommentDto {
+  Comment toModel() {
+    return Comment(
+      userId: userId ?? '',
+      userName: userName ?? 'Unknown User',
+      userProfileImage: userProfileImage ?? '',
+      text: text ?? '',
+      createdAt: createdAt ?? DateTime.now(),
+      likeCount: likeCount ?? 0,
+    );
+  }
 }
 
-extension on LikeDto {
-  Like toModel() => Like(
-    userId: userId ?? '',
-    userName: userName ?? '',
-    timestamp: timestamp ?? DateTime.now(),
-  );
+/// PostLikeDto → Like 변환
+extension PostLikeDtoMapper on PostLikeDto {
+  Like toModel() {
+    return Like(
+      userId: userId ?? '',
+      userName: userName ?? 'Unknown User',
+      timestamp: timestamp ?? DateTime.now(),
+    );
+  }
 }
 
-extension on CommentDto {
-  Comment toModel() => Comment(
-    userId: userId ?? '',
-    userName: userName ?? '',
-    userProfileImage: userProfileImage ?? '',
-    text: text ?? '',
-    createdAt: createdAt ?? DateTime.now(),
-    likeCount: likeCount ?? 0,
-  );
+/// List 변환 확장
+extension PostDtoListMapper on List<PostDto> {
+  List<Post> toModelList() => map((dto) => dto.toModel()).toList();
 }
 
-extension PostDtoListX on List<PostDto> {
-  List<Post> toModelList() => map((e) => e.toModel()).toList();
+extension PostCommentDtoListMapper on List<PostCommentDto> {
+  List<Comment> toModelList() => map((dto) => dto.toModel()).toList();
+}
+
+extension PostLikeDtoListMapper on List<PostLikeDto> {
+  List<Like> toModelList() => map((dto) => dto.toModel()).toList();
+}
+
+/// Firebase Document → DTO 변환
+extension FirebasePostMapper on Map<String, dynamic> {
+  PostDto toPostDto() => PostDto.fromJson(this);
+  PostCommentDto toPostCommentDto() => PostCommentDto.fromJson(this);
+  PostLikeDto toPostLikeDto() => PostLikeDto.fromJson(this);
+}
+
+/// Firebase Document List → DTO List 변환
+extension FirebasePostListMapper on List<Map<String, dynamic>> {
+  List<PostDto> toPostDtoList() =>
+      map((json) => PostDto.fromJson(json)).toList();
+  List<PostCommentDto> toPostCommentDtoList() =>
+      map((json) => PostCommentDto.fromJson(json)).toList();
+  List<PostLikeDto> toPostLikeDtoList() =>
+      map((json) => PostLikeDto.fromJson(json)).toList();
 }
