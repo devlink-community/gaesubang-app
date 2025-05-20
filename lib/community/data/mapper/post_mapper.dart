@@ -24,6 +24,9 @@ extension PostDtoMapper on PostDto {
       imageUrls: mediaUrls ?? [],
       like: [], // 별도로 조회된 데이터로 채움
       comment: [], // 별도로 조회된 데이터로 채움
+      isLikedByCurrentUser: isLikedByCurrentUser ?? false, // 추가된 필드 매핑
+      isBookmarkedByCurrentUser:
+          isBookmarkedByCurrentUser ?? false, // 추가된 필드 매핑
     );
   }
 }

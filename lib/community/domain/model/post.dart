@@ -22,6 +22,8 @@ class Post with _$Post {
     this.imageUrls = const <String>[],
     this.like = const <Like>[],
     this.comment = const <Comment>[],
+    this.isLikedByCurrentUser = false, // 추가된 필드
+    this.isBookmarkedByCurrentUser = false, // 추가된 필드
   });
 
   final String id;
@@ -40,4 +42,6 @@ class Post with _$Post {
   final List<String> imageUrls;
   final List<Like> like;
   final List<Comment> comment;
+  final bool isLikedByCurrentUser; // 추가된 필드
+  final bool isBookmarkedByCurrentUser; // 추가된 필드
 }
