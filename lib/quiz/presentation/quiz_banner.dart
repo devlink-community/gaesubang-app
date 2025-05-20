@@ -22,7 +22,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   int? _selectedAnswerIndex;
-  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -52,12 +51,6 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   }
 
   @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final quizAsync = ref.watch(quizNotifierProvider);
     final notifier = ref.watch(quizNotifierProvider.notifier);
@@ -71,69 +64,182 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColorStyles.primary100.withValues(alpha: 0.1),
-                AppColorStyles.primary100.withValues(alpha: 0.2),
+        child: GestureDetector(
+          onTap: () => _showQuizPopup(context),
+          child: Container(
+            width: 280, // 고정 너비 설정
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.purple.shade400, Colors.purple.shade800],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-            border: Border.all(
-              color: AppColorStyles.primary100.withValues(alpha: 0.3),
-              width: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '오늘의 개발 퀴즈',
+                        style: AppTextStyles.body1Regular.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.quiz,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Icon(Icons.psychology, color: Colors.white, size: 32),
+                const SizedBox(height: 12),
+                Text(
+                  '개발 지식을 테스트해보세요',
+                  style: AppTextStyles.subtitle1Bold.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => _showQuizPopup(context),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.purple.shade700,
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    '퀴즈 풀기',
+                    style: AppTextStyles.button2Regular.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          child: _buildQuizContent(quizAsync),
         ),
       ),
     );
   }
 
-  Widget _buildQuizContent(AsyncValue<Quiz?> quizAsync) {
-    return quizAsync.when(
-      data: (quiz) => quiz != null ? _buildQuizCard(quiz) : _buildError(),
-      loading:
-          () => const Padding(
-            padding: EdgeInsets.all(20),
-            child: Center(child: CircularProgressIndicator()),
+  void _showQuizPopup(BuildContext context) {
+    final quizAsync = ref.read(quizNotifierProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.8,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            builder:
+                (context, scrollController) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Expanded(
+                        child: quizAsync.when(
+                          data:
+                              (quiz) =>
+                                  quiz != null
+                                      ? _buildQuizContent(
+                                        context,
+                                        quiz,
+                                        scrollController,
+                                      )
+                                      : _buildErrorContent(context),
+                          loading:
+                              () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                          error: (_, __) => _buildErrorContent(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
           ),
-      error: (error, _) => _buildError(),
     );
   }
 
-  Widget _buildError() {
+  Widget _buildErrorContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, color: AppColorStyles.error, size: 32),
-            const SizedBox(height: 8),
+            Icon(Icons.error_outline, color: AppColorStyles.error, size: 48),
+            const SizedBox(height: 16),
             Text(
               '퀴즈를 불러오는 데 실패했습니다',
-              style: AppTextStyles.body1Regular.copyWith(
+              style: AppTextStyles.subtitle1Bold.copyWith(
                 color: AppColorStyles.error,
               ),
               textAlign: TextAlign.center,
             ),
-            TextButton(
-              onPressed:
-                  () => ref
-                      .read(quizNotifierProvider.notifier)
-                      .onAction(const LoadQuiz()),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref
+                    .read(quizNotifierProvider.notifier)
+                    .onAction(const LoadQuiz());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorStyles.primary100,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('다시 시도'),
             ),
           ],
@@ -142,296 +248,174 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
     );
   }
 
-  Widget _buildQuizCard(Quiz quiz) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildQuizContent(
+    BuildContext context,
+    Quiz quiz,
+    ScrollController scrollController,
+  ) {
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.all(20),
       children: [
         // 헤더
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColorStyles.primary100.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  '오늘의 개발 퀴즈',
-                  style: AppTextStyles.heading3Bold.copyWith(
-                    color: AppColorStyles.primary100,
-                    fontWeight: FontWeight.w600,
-                  ),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColorStyles.primary100.withValues(alpha: 0.3),
+                  width: 1,
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(
-                  _isExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: AppColorStyles.primary100,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isExpanded = !_isExpanded;
-                  });
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, size: 20),
-                onPressed:
-                    () => ref
-                        .read(quizNotifierProvider.notifier)
-                        .onAction(const CloseQuiz()),
-                color: AppColorStyles.gray80,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-        ),
-
-        // 퀴즈 카테고리
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Icon(
-                Icons.school_outlined,
-                size: 16,
-                color: AppColorStyles.primary100,
-              ),
-              const SizedBox(width: 4),
-              Text(
+              child: Text(
                 quiz.category,
                 style: AppTextStyles.button2Regular.copyWith(
                   color: AppColorStyles.primary100,
                 ),
               ),
-            ],
-          ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.close, size: 24),
+              onPressed: () => Navigator.of(context).pop(),
+              color: AppColorStyles.gray80,
+            ),
+          ],
         ),
+        const SizedBox(height: 24),
 
         // 퀴즈 질문
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Text(
-            quiz.question,
-            style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 16),
-          ),
-        ),
+        Text(quiz.question, style: AppTextStyles.heading6Bold),
+        const SizedBox(height: 24),
 
-        // 퀴즈 옵션들 (접힌 상태가 아닐 때만 표시)
-        if (_isExpanded) ...[
-          ...List.generate(quiz.options.length, (index) {
-            final option = quiz.options[index];
-            final isSelected = _selectedAnswerIndex == index;
-            final isCorrect = quiz.correctAnswerIndex == index;
-            final isAnswered = quiz.isAnswered;
+        // 퀴즈 옵션들
+        ...List.generate(quiz.options.length, (index) {
+          final option = quiz.options[index];
+          final isSelected = _selectedAnswerIndex == index;
+          final isCorrect = quiz.correctAnswerIndex == index;
+          final isAnswered = quiz.isAnswered;
 
-            // 색상 결정
-            Color backgroundColor = AppColorStyles.gray40;
-            Color borderColor = AppColorStyles.gray40;
-            Color textColor = AppColorStyles.textPrimary;
+          // 색상 결정
+          Color backgroundColor = Colors.grey.shade100;
+          Color borderColor = Colors.grey.shade300;
+          Color textColor = AppColorStyles.textPrimary;
 
-            if (isAnswered) {
-              if (isCorrect) {
-                backgroundColor = Colors.green.withValues(alpha: 0.15);
-                borderColor = Colors.green.withValues(alpha: 0.5);
-                textColor = Colors.green.shade800;
-              } else if (isSelected) {
-                backgroundColor = Colors.red.withValues(alpha: 0.15);
-                borderColor = Colors.red.withValues(alpha: 0.5);
-                textColor = Colors.red.shade800;
-              }
+          if (isAnswered) {
+            if (isCorrect) {
+              backgroundColor = Colors.green.withValues(alpha: 0.15);
+              borderColor = Colors.green.withValues(alpha: 0.5);
+              textColor = Colors.green.shade800;
             } else if (isSelected) {
-              backgroundColor = AppColorStyles.primary100.withValues(
-                alpha: 0.15,
-              );
-              borderColor = AppColorStyles.primary100.withValues(alpha: 0.5);
-              textColor = AppColorStyles.primary100;
+              backgroundColor = Colors.red.withValues(alpha: 0.15);
+              borderColor = Colors.red.withValues(alpha: 0.5);
+              textColor = Colors.red.shade800;
             }
+          } else if (isSelected) {
+            backgroundColor = AppColorStyles.primary100.withValues(alpha: 0.15);
+            borderColor = AppColorStyles.primary100.withValues(alpha: 0.5);
+            textColor = AppColorStyles.primary100;
+          }
 
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: InkWell(
-                onTap:
-                    isAnswered
-                        ? null
-                        : () {
-                          setState(() {
-                            _selectedAnswerIndex = index;
-                          });
-                        },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        '${String.fromCharCode(65 + index)}.',
-                        style: AppTextStyles.body2Regular.copyWith(
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InkWell(
+              onTap:
+                  isAnswered
+                      ? null
+                      : () {
+                        setState(() {
+                          _selectedAnswerIndex = index;
+                        });
+                      },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '${String.fromCharCode(65 + index)}.',
+                      style: AppTextStyles.subtitle1Bold.copyWith(
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        option,
+                        style: AppTextStyles.body1Regular.copyWith(
                           color: textColor,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          option,
-                          style: AppTextStyles.body2Regular.copyWith(
-                            color: textColor,
-                          ),
-                        ),
+                    ),
+                    if (isAnswered && isCorrect)
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 24,
                       ),
-                      if (isAnswered && isCorrect)
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 20,
-                        ),
-                      if (isAnswered && isSelected && !isCorrect)
-                        const Icon(Icons.cancel, color: Colors.red, size: 20),
-                    ],
-                  ),
+                    if (isAnswered && isSelected && !isCorrect)
+                      const Icon(Icons.cancel, color: Colors.red, size: 24),
+                  ],
                 ),
               ),
-            );
-          }),
+            ),
+          );
+        }),
 
-          // 제출 버튼 또는 결과 설명
+        // 제출 버튼 또는 결과 설명
+        if (!quiz.isAnswered)
           Padding(
-            padding: const EdgeInsets.all(16),
-            child:
-                quiz.isAnswered
-                    ? _buildExplanation(quiz)
-                    : _buildSubmitButton(),
-          ),
-        ],
+            padding: const EdgeInsets.only(top: 16),
+            child: ElevatedButton(
+              onPressed:
+                  _selectedAnswerIndex == null
+                      ? null
+                      : () {
+                        // 답변 제출
+                        ref
+                            .read(quizNotifierProvider.notifier)
+                            .onAction(SubmitAnswer(_selectedAnswerIndex!));
 
-        // 접힌 상태이고, 아직 답변하지 않은 경우 "퀴즈 풀기" 버튼 표시
-        if (!_isExpanded && !quiz.isAnswered)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _isExpanded = true;
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorStyles.primary100,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
+                        // 팝업은 유지하고 상태만 업데이트
+                        setState(() {});
+                      },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColorStyles.primary100,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  '퀴즈 풀기',
-                  style: AppTextStyles.button2Regular.copyWith(
-                    color: Colors.white,
-                  ),
+                minimumSize: const Size(double.infinity, 48),
+                disabledBackgroundColor: AppColorStyles.gray40,
+              ),
+              child: Text(
+                '정답 제출하기',
+                style: AppTextStyles.button1Medium.copyWith(
+                  color: Colors.white,
                 ),
               ),
             ),
           ),
 
-        // 접힌 상태이고, 이미 답변한 경우 결과 요약 표시
-        if (!_isExpanded && quiz.isAnswered)
+        // 설명 (정답 제출 후)
+        if (quiz.isAnswered)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              children: [
-                Icon(
-                  quiz.attemptedAnswerIndex == quiz.correctAnswerIndex
-                      ? Icons.check_circle
-                      : Icons.cancel,
-                  color:
-                      quiz.attemptedAnswerIndex == quiz.correctAnswerIndex
-                          ? Colors.green
-                          : Colors.red,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    quiz.attemptedAnswerIndex == quiz.correctAnswerIndex
-                        ? '정답입니다!'
-                        : '틀렸습니다. 정답은 ${String.fromCharCode(65 + quiz.correctAnswerIndex)}번입니다.',
-                    style: AppTextStyles.body2Regular.copyWith(
-                      color:
-                          quiz.attemptedAnswerIndex == quiz.correctAnswerIndex
-                              ? Colors.green.shade800
-                              : Colors.red.shade800,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isExpanded = true;
-                    });
-                  },
-                  child: Text(
-                    '더 보기',
-                    style: AppTextStyles.button2Regular.copyWith(
-                      color: AppColorStyles.primary100,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.only(top: 24),
+            child: _buildExplanation(quiz),
           ),
       ],
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return ElevatedButton(
-      onPressed:
-          _selectedAnswerIndex == null
-              ? null
-              : () {
-                // 답변 제출
-                ref
-                    .read(quizNotifierProvider.notifier)
-                    .onAction(SubmitAnswer(_selectedAnswerIndex!));
-              },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColorStyles.primary100,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: const Size(double.infinity, 48),
-        disabledBackgroundColor: AppColorStyles.gray40,
-      ),
-      child: Text(
-        '정답 제출하기',
-        style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
-      ),
     );
   }
 
@@ -461,7 +445,7 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
               Icon(
                 isCorrect ? Icons.check_circle : Icons.cancel,
                 color: isCorrect ? Colors.green : Colors.red,
-                size: 20,
+                size: 24,
               ),
               const SizedBox(width: 8),
               Text(
@@ -474,15 +458,15 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             '정답: ${String.fromCharCode(65 + quiz.correctAnswerIndex)}. ${quiz.options[quiz.correctAnswerIndex]}',
-            style: AppTextStyles.body2Regular.copyWith(
+            style: AppTextStyles.body1Regular.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
-          Text('설명: ${quiz.explanation}', style: AppTextStyles.body2Regular),
+          const SizedBox(height: 16),
+          Text('설명: ${quiz.explanation}', style: AppTextStyles.body1Regular),
         ],
       ),
     );
