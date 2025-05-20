@@ -205,16 +205,28 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<Group>> createGroup(Group group) async {
     try {
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
       // Group → GroupDto → Map<String, dynamic> 변환
       final groupDto = group.toDto();
       final groupData = groupDto.toJson();
 
-      // 실제 구현에서는 현재 사용자 정보를 가져와서 전달해야 함
+      // 사용자 정보 전달
       final createdGroupData = await _dataSource.fetchCreateGroup(
         groupData,
-        ownerId: group.createdBy,
-        ownerName: '그룹 생성자', // 실제로는 현재 사용자 이름
-        ownerProfileUrl: '', // 실제로는 현재 사용자 프로필 URL
+        ownerId: currentUser.id,
+        ownerName: currentUser.nickname,
+        ownerProfileUrl: currentUser.image,
       );
 
       // Map<String, dynamic> → GroupDto → Group 변환
@@ -223,6 +235,18 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return Result.success(createdGroup);
     } catch (e, st) {
+      // 특정 에러 타입 구분
+      if (e.toString().contains('그룹 생성에 실패했습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '그룹 생성에 실패했습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
       return Result.error(
         Failure(
           FailureType.unknown,
@@ -237,6 +261,18 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> updateGroup(Group group) async {
     try {
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
       // Group → GroupDto → Map<String, dynamic> 변환
       final groupDto = group.toDto();
       final groupData = groupDto.toJson();
@@ -245,6 +281,18 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return const Result.success(null);
     } catch (e, st) {
+      // 특정 에러 타입 구분
+      if (e.toString().contains('그룹을 찾을 수 없습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '그룹을 찾을 수 없습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
       return Result.error(
         Failure(
           FailureType.unknown,
@@ -259,11 +307,53 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> leaveGroup(String groupId) async {
     try {
-      // 실제 구현에서는 현재 사용자 ID를 가져와서 전달해야 함
-      await _dataSource.fetchLeaveGroup(groupId, 'currentUser');
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 그룹 탈퇴 처리
+      await _dataSource.fetchLeaveGroup(groupId, currentUser.id);
 
       return const Result.success(null);
     } catch (e, st) {
+      // 특정 에러 타입 구분
+      if (e.toString().contains('그룹 소유자는 탈퇴할 수 없습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '그룹 소유자는 탈퇴할 수 없습니다. 그룹을 삭제하거나 소유권을 이전하세요.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      } else if (e.toString().contains('해당 그룹의 멤버가 아닙니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '해당 그룹의 멤버가 아닙니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      } else if (e.toString().contains('그룹을 찾을 수 없습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '그룹을 찾을 수 없습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
       return Result.error(
         Failure(
           FailureType.unknown,
