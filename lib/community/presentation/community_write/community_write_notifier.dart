@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_state.dart';
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
 import 'package:devlink_mobile_app/storage/module/storage_di.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -119,7 +120,11 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
 
     try {
       // 현재 사용자 ID (임시로 'user1' 사용)
-      const currentUserId = 'user1';
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser == null) {
+        throw Exception(CommunityErrorMessages.loginRequired);
+      }
+      final currentUserId = currentUser.uid;
 
       // 이미지 업로드를 위한 UseCase 가져오기
       final uploadImagesUseCase = ref.read(uploadImagesUseCaseProvider);
