@@ -66,7 +66,12 @@ dependencies:
   googleapis_auth: ^2.0.0
   google_generative_ai: ^0.2.0
   shared_preferences: ^2.5.3
+<<<<<<< HEAD
   firebase_remote_config: ^5.4.4
+=======
+  firebase_remote_config: ^5.4.3
+  permission_handler: ^10.2.0
+>>>>>>> f0e90955 (feat: 온보딩, 스플래쉬 화면구현 완료)
 
 
 

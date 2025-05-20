@@ -10,7 +10,7 @@ import 'package:devlink_mobile_app/community/presentation/community_detail/commu
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
-import 'package:devlink_mobile_app/core/layout/main_shell.dart'; // MainShell 추가
+import 'package:devlink_mobile_app/core/layout/main_shell.dart';
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
@@ -22,6 +22,9 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/map/presentation/map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
+import 'package:devlink_mobile_app/onboarding/module.dart/onboarding_completion_status.dart';
+import 'package:devlink_mobile_app/onboarding/presentation/onboarding_screen_root.dart';
+import 'package:devlink_mobile_app/onboarding/presentation/splash_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_screen_root.dart';
 import 'package:flutter/foundation.dart';
@@ -34,70 +37,65 @@ import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
 
 part 'app_router.g.dart';
 
+// 라우터 상태 유지를 위한 StatefulNavigationShell 클래스
+class OnboardingShell extends StatefulWidget {
+  final Widget child;
+
+  const OnboardingShell({super.key, required this.child});
+
+  @override
+  State<OnboardingShell> createState() => _OnboardingShellState();
+}
+
+class _OnboardingShellState extends State<OnboardingShell> {
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
+
 // GoRouter Provider
 @riverpod
 GoRouter appRouter(Ref ref) {
   // 인증 상태 스트림을 직접 가져와서 Listenable로 변환
-  // ✅ 개선된 AuthStateListenable 사용
   final authRepo = ref.watch(authRepositoryProvider);
   final authStateListenable = AuthStateListenable(authRepo.authStateChanges);
 
+  // 온보딩 상태 구독
+  final onboardingCompleted = ref.watch(onboardingCompletionStatusProvider);
+
+  if (kDebugMode) {
+    print('appRouter 재계산: onboardingCompleted=$onboardingCompleted');
+  }
+
   return GoRouter(
-    initialLocation: '/login',
-    refreshListenable: authStateListenable, // 인증 상태 변화 감지
-    redirect: (context, state) {
-      // 디버깅용 정보 출력 (개발 모드에서만)
-      if (kDebugMode) {
-        authStateListenable.printDebugInfo();
-      }
-
-      // 루트 경로('/')에 대한 처리
-      if (state.matchedLocation == '/') {
-        return '/login';
-      }
-
-      // ✅ 최적화: 캐시된 인증 상태 사용
-      final isAuthenticated = authStateListenable.isAuthenticated;
-      final isLoading = authStateListenable.isLoading;
-      final currentPath = state.matchedLocation;
-
-      // 로딩 중일 때는 리다이렉트하지 않음 (깜빡임 방지)
-      if (isLoading) {
-        return null;
-      }
-
-      // 인증이 필요하지 않은 경로 목록
-      final publicPaths = [
-        '/login',
-        '/sign-up',
-        '/terms',
-        '/forget-password',
-        'forgot-password-2',
-      ];
-
-      final isPublicPath = publicPaths.any(currentPath.startsWith);
-
-      // 인증이 필요한 페이지에 비로그인 상태로 접근
-      if (!isAuthenticated && !isPublicPath) {
-        if (kDebugMode) {
-          print('Router: 비인증 사용자가 인증 필요 페이지 접근 시도 - $currentPath');
-        }
-        return '/login';
-      }
-
-      // 이미 로그인된 상태에서 인증 페이지 접근
-      if (isAuthenticated && isPublicPath) {
-        if (kDebugMode) {
-          print('Router: 인증된 사용자가 인증 페이지 접근 시도 - $currentPath');
-        }
-        return '/home';
-      }
-
-      // GoRouter의 refreshListenable이 인증 상태 변화를 자동으로 감지하여
-      // 적절한 리다이렉트를 수행하므로 여기서는 null 반환
-      return null;
-    },
+    initialLocation: '/',
+    debugLogDiagnostics: true, // 디버그 모드에서 라우팅 정보 출력
+    refreshListenable: authStateListenable, // 인증 상태 변경만 감시
     routes: [
+      // === 스플래시 라우트 ===
+      GoRoute(path: '/', builder: (context, state) => const SplashScreenRoot()),
+
+      // === 온보딩 라우트 (ShellRoute로 감싸기) ===
+      ShellRoute(
+        builder: (context, state, child) {
+          // OnboardingShell로 감싸서 상태 유지
+          return OnboardingShell(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: '/onboarding',
+            builder: (context, state) => const OnboardingScreenRoot(),
+          ),
+        ],
+      ),
+
+      // === 스플래시 라우트 유지 ===
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreenRoot(),
+      ),
+
       // === 인증 관련 라우트 (로그인 필요 없음) ===
       GoRoute(
         path: '/login',
@@ -219,6 +217,78 @@ GoRouter appRouter(Ref ref) {
                 MockUserProfileScreen(userId: state.pathParameters['id']!),
       ),
     ],
+    redirect: (context, state) {
+      // 현재 경로 및 인증 상태
+      final currentPath = state.matchedLocation;
+      final isAuthenticated = authStateListenable.isAuthenticated;
+
+      // 디버깅용 정보 출력(개발자 모드에서만)
+      if (kDebugMode) {
+        print('Router.redirect: 현재 경로 - $currentPath');
+        print('onboardingCompleted: $onboardingCompleted');
+        print('isAuthenticated: $isAuthenticated');
+      }
+
+      // 1. 루트 경로('/')는 앱 시작시 스플래시를 위해 유지
+      if (currentPath == '/') {
+        return null;
+      }
+
+      // 2. '/splash' 경로로의 직접 접근은 적절한 화면으로 리다이렉션
+      if (currentPath == '/splash') {
+        if (!onboardingCompleted) {
+          return '/onboarding';
+        } else {
+          return isAuthenticated ? '/home' : '/login';
+        }
+      }
+
+      // 3. 온보딩 경로는 항상 유지 (중요: 이 부분이 핵심)
+      if (currentPath == '/onboarding') {
+        return null;
+      }
+
+      // 인증이 필요하지 않은 경로 목록
+      final publicPaths = [
+        '/login',
+        '/sign-up',
+        '/terms',
+        '/forget-password',
+        '/forgot-password-2',
+      ];
+
+      // 현재 경로가 퍼블릭 경로인지 확인
+      final isPublicPath = publicPaths.any(
+        (path) => currentPath == path || currentPath.startsWith(path),
+      );
+
+      // 4. 온보딩 미완료 사용자는 온보딩으로 리디렉션 (퍼블릭 경로는 제외)
+      if (!onboardingCompleted && !isPublicPath) {
+        if (kDebugMode) {
+          print('Router: 온보딩 미완료 사용자 리다이렉트 - $currentPath → /onboarding');
+        }
+        return '/onboarding';
+      }
+
+      // 5. 비인증 사용자는 퍼블릭 경로 외에는 로그인으로 리디렉션
+      if (!isAuthenticated && !isPublicPath) {
+        if (kDebugMode) {
+          print('Router: 비인증 사용자가 인증 필요 페이지 접근 시도 - $currentPath');
+        }
+        return '/login';
+      }
+
+      // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리디렉션
+      if (isAuthenticated && isPublicPath) {
+        if (kDebugMode) {
+          print('Router: 인증된 사용자가 인증 페이지 접근 시도 - $currentPath');
+        }
+        return '/home';
+      }
+
+      // 기타 경로는 그대로 유지
+      return null;
+    },
 
     // === 에러 페이지 처리 ===
     errorBuilder:
