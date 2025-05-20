@@ -1,4 +1,5 @@
 // lib/group/data/data_source/group_data_source.dart
+
 abstract interface class GroupDataSource {
   /// 전체 그룹 목록 조회
   Future<List<Map<String, dynamic>>> fetchGroupList({String? currentUserId});
@@ -40,6 +41,9 @@ abstract interface class GroupDataSource {
   /// 그룹의 모든 멤버 조회
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId);
 
+  /// 그룹의 모든 타이머 활동 조회 (최신순, 멤버별 필터링)
+  Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(String groupId);
+
   /// 사용자의 그룹 멤버십 상태 확인
   Future<Map<String, dynamic>?> checkUserMembershipStatus(
     String groupId,
@@ -61,17 +65,6 @@ abstract interface class GroupDataSource {
     String? currentUserId,
   });
 
-  /// 그룹 멤버와 타이머 상태 함께 조회
-  Future<List<Map<String, dynamic>>> fetchGroupMembersWithTimerState(
-    String groupId,
-  );
-
-  /// 로그인한 사용자의 타이머 상태 조회
-  Future<Map<String, dynamic>?> fetchCurrentUserTimerState(
-    String groupId,
-    String userId,
-  );
-
   /// 멤버 타이머 시작
   Future<Map<String, dynamic>> startMemberTimer(
     String groupId,
@@ -84,7 +77,6 @@ abstract interface class GroupDataSource {
     String groupId,
     String memberId,
     String memberName,
-    int durationInSeconds,
   );
 
   /// 멤버 타이머 일시정지

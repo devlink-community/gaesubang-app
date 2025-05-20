@@ -858,12 +858,44 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
+  // 1. 그룹 멤버 정보 조회
   @override
-  Future<List<Map<String, dynamic>>> fetchGroupMembersWithTimerState(
+  Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
+    return ApiCallDecorator.wrap('GroupFirebase.fetchGroupMembers', () async {
+      try {
+        // 그룹 존재 확인
+        final groupDoc = await _groupsCollection.doc(groupId).get();
+        if (!groupDoc.exists) {
+          throw Exception(GroupErrorMessages.notFound);
+        }
+
+        // 멤버 컬렉션 조회
+        final membersSnapshot =
+            await _groupsCollection.doc(groupId).collection('members').get();
+
+        // 멤버 데이터 변환
+        final members =
+            membersSnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList();
+
+        return members;
+      } catch (e) {
+        print('그룹 멤버 조회 오류: $e');
+        throw Exception(GroupErrorMessages.loadFailed);
+      }
+    }, params: {'groupId': groupId});
+  }
+
+  // 2. 그룹 타이머 활동 조회
+  @override
+  Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
     String groupId,
   ) async {
     return ApiCallDecorator.wrap(
-      'GroupFirebase.fetchGroupMembersWithTimerState',
+      'GroupFirebase.fetchGroupTimerActivities',
       () async {
         try {
           // 그룹 존재 확인
@@ -872,487 +904,36 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 그룹 멤버 조회
-          final membersSnapshot =
-              await _groupsCollection.doc(groupId).collection('members').get();
+          // 타이머 활동 컬렉션 조회 (최신순)
+          final activitiesSnapshot =
+              await _groupsCollection
+                  .doc(groupId)
+                  .collection('timerActivities')
+                  .orderBy('timestamp', descending: true)
+                  .get();
 
-          if (membersSnapshot.docs.isEmpty) {
-            return [];
-          }
+          // 멤버별로 가장 최근 활동만 필터링
+          final memberIdToActivity = <String, Map<String, dynamic>>{};
 
-          // 각 멤버의 최근 타이머 활동 조회 (병렬 처리)
-          final memberIds = membersSnapshot.docs.map((doc) => doc.id).toList();
-          final List<Future<QuerySnapshot<Map<String, dynamic>>>> queries = [];
+          for (final activityDoc in activitiesSnapshot.docs) {
+            final activityData = activityDoc.data();
+            final memberId = activityData['memberId'] as String?;
 
-          for (final memberId in memberIds) {
-            final query =
-                _groupsCollection
-                    .doc(groupId)
-                    .collection('timerActivities')
-                    .where('memberId', isEqualTo: memberId)
-                    .orderBy('timestamp', descending: true)
-                    .limit(1)
-                    .get();
-
-            queries.add(query);
-          }
-
-          // 모든 쿼리 실행
-          final results = await Future.wait(queries);
-
-          // 결과 처리 및 멤버 정보와 타이머 상태 결합
-          final membersWithState = <Map<String, dynamic>>[];
-          final now = DateTime.now();
-
-          for (int i = 0; i < membersSnapshot.docs.length; i++) {
-            final memberDoc = membersSnapshot.docs[i];
-            final memberData = memberDoc.data();
-            memberData['id'] = memberDoc.id;
-
-            // 해당 멤버의 타이머 활동 가져오기
-            final activitySnapshot = results[i];
-
-            if (activitySnapshot.docs.isNotEmpty) {
-              final activity = activitySnapshot.docs.first.data();
-              activity['id'] = activitySnapshot.docs.first.id;
-
-              final type = activity['type'] as String?;
-              final timestamp = activity['timestamp'] as Timestamp?;
-
-              if (timestamp != null) {
-                final activityTime = timestamp.toDate();
-                final elapsedSeconds = now.difference(activityTime).inSeconds;
-
-                // 타이머 상태 및 경과 시간 추가
-                memberData['timerState'] = type ?? 'inactive';
-                memberData['timerActivity'] = activity;
-                memberData['elapsedSeconds'] = elapsedSeconds;
-              } else {
-                // 타임스탬프 없는 경우 비활성 상태로 처리
-                memberData['timerState'] = 'inactive';
-              }
-            } else {
-              // 활동 기록 없는 경우 비활성 상태로 처리
-              memberData['timerState'] = 'inactive';
+            if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
+              // 아직 추가되지 않은 멤버의 활동만 추가 (가장 최근 활동)
+              activityData['id'] = activityDoc.id;
+              memberIdToActivity[memberId] = activityData;
             }
-
-            membersWithState.add(memberData);
           }
 
-          return membersWithState;
+          // 타이머 활동 정보 리스트로 반환
+          return memberIdToActivity.values.toList();
         } catch (e) {
-          print('그룹 멤버 및 타이머 상태 조회 오류: $e');
+          print('그룹 타이머 활동 조회 오류: $e');
           throw Exception(GroupErrorMessages.loadFailed);
         }
       },
       params: {'groupId': groupId},
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>?> fetchCurrentUserTimerState(
-    String groupId,
-    String userId,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.fetchCurrentUserTimerState',
-      () async {
-        try {
-          // 멤버십 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(userId)
-                  .get();
-
-          if (!memberDoc.exists) {
-            throw Exception(GroupErrorMessages.notMember);
-          }
-
-          // 최근 타이머 활동 조회
-          final activitySnapshot =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: userId)
-                  .orderBy('timestamp', descending: true)
-                  .limit(1)
-                  .get();
-
-          if (activitySnapshot.docs.isEmpty) {
-            // 활동 기록 없음 - 기본 상태 반환
-            final memberData = memberDoc.data()!;
-            memberData['id'] = memberDoc.id;
-            memberData['timerState'] = 'inactive';
-            return memberData;
-          }
-
-          // 가장 최근 활동 가져오기
-          final activity = activitySnapshot.docs.first.data();
-          activity['id'] = activitySnapshot.docs.first.id;
-
-          final type = activity['type'] as String?;
-          final timestamp = activity['timestamp'] as Timestamp?;
-          final now = DateTime.now();
-
-          // 멤버 정보와 타이머 상태 결합
-          final memberData = memberDoc.data()!;
-          memberData['id'] = memberDoc.id;
-          memberData['timerState'] = type ?? 'inactive';
-          memberData['timerActivity'] = activity;
-
-          // 경과 시간 계산 (타임스탬프가 있는 경우)
-          if (timestamp != null) {
-            final activityTime = timestamp.toDate();
-            memberData['elapsedSeconds'] =
-                now.difference(activityTime).inSeconds;
-          }
-
-          return memberData;
-        } catch (e) {
-          print('사용자 타이머 상태 조회 오류: $e');
-          throw Exception(GroupErrorMessages.loadFailed);
-        }
-      },
-      params: {'groupId': groupId, 'userId': userId},
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> startMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.startMemberTimer',
-      () async {
-        try {
-          // 멤버십 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(memberId)
-                  .get();
-
-          if (!memberDoc.exists) {
-            throw Exception(GroupErrorMessages.notMember);
-          }
-
-          // 트랜잭션으로 처리 - 기존 활성 타이머가 있다면 종료 후 새로 시작
-          return _firestore.runTransaction<Map<String, dynamic>>((
-            transaction,
-          ) async {
-            // 현재 활성 타이머 확인
-            final activeTimerSnapshot = await transaction.get(
-              _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1),
-            );
-
-            // 이미 활성 타이머가 있다면 자동 종료 처리
-            if (activeTimerSnapshot.docs.isNotEmpty) {
-              final activeTimer = activeTimerSnapshot.docs.first;
-              transaction.update(
-                _groupsCollection
-                    .doc(groupId)
-                    .collection('timerActivities')
-                    .doc(activeTimer.id),
-                {'type': 'end'},
-              );
-            }
-
-            // 새 타이머 활동 기록 생성
-            final timerActivityRef =
-                _groupsCollection
-                    .doc(groupId)
-                    .collection('timerActivities')
-                    .doc(); // 자동 ID 생성
-
-            final timerData = {
-              'memberId': memberId,
-              'memberName': memberName,
-              'type': 'start',
-              'timestamp': FieldValue.serverTimestamp(),
-              'groupId': groupId,
-            };
-
-            transaction.set(timerActivityRef, timerData);
-
-            // 결과 반환 (트랜잭션 내에서는 직접 새 문서를 읽을 수 없어 여기서 구성)
-            return {
-              'id': timerActivityRef.id,
-              ...timerData,
-              'timestamp': Timestamp.now(), // 클라이언트 시각 사용 (서버 시각은 아직 없음)
-              'timerState': 'start',
-              'elapsedSeconds': 0,
-            };
-          });
-        } catch (e) {
-          print('타이머 시작 오류: $e');
-          throw Exception(GroupErrorMessages.operationFailed);
-        }
-      },
-      params: {'groupId': groupId, 'memberId': memberId},
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> stopMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-    int durationInSeconds,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.stopMemberTimer',
-      () async {
-        try {
-          // 멤버십 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(memberId)
-                  .get();
-
-          if (!memberDoc.exists) {
-            throw Exception(GroupErrorMessages.notMember);
-          }
-
-          // 트랜잭션으로 처리 - 타이머 종료 및 활동 시간 기록
-          return _firestore.runTransaction<Map<String, dynamic>>((
-            transaction,
-          ) async {
-            // 현재 활성 타이머 확인
-            final activeTimerSnapshot = await transaction.get(
-              _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1),
-            );
-
-            // 활성 타이머가 없으면 오류
-            if (activeTimerSnapshot.docs.isEmpty) {
-              throw Exception(GroupErrorMessages.timerNotActive);
-            }
-
-            // 타이머 활동 업데이트 (종료 상태로)
-            final activeTimer = activeTimerSnapshot.docs.first;
-            transaction.update(
-              _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .doc(activeTimer.id),
-              {
-                'type': 'end',
-                'endTimestamp': FieldValue.serverTimestamp(),
-                'durationInSeconds': durationInSeconds,
-              },
-            );
-
-            // 출석부에 시간 기록
-            final today = DateTime.now();
-            final dateKey =
-                '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-            final attendanceId = '${memberId}_${dateKey}';
-
-            final attendanceRef = _groupsCollection
-                .doc(groupId)
-                .collection('attendances')
-                .doc(attendanceId);
-
-            // 기존 출석 기록 확인
-            final attendanceDoc = await transaction.get(attendanceRef);
-
-            if (attendanceDoc.exists) {
-              // 기존 기록 있음 - 시간만 업데이트
-              final existingData = attendanceDoc.data()!;
-              final existingMinutes =
-                  existingData['timeInMinutes'] as int? ?? 0;
-              final additionalMinutes =
-                  (durationInSeconds / 60).ceil(); // 초를 분으로 변환
-
-              transaction.update(attendanceRef, {
-                'timeInMinutes': existingMinutes + additionalMinutes,
-                'updatedAt': FieldValue.serverTimestamp(),
-              });
-            } else {
-              // 새 기록 생성
-              final normalizedDate = DateTime(
-                today.year,
-                today.month,
-                today.day,
-              );
-              final minutes = (durationInSeconds / 60).ceil(); // 초를 분으로 변환
-
-              transaction.set(attendanceRef, {
-                'memberId': memberId,
-                'memberName': memberName,
-                'date': Timestamp.fromDate(normalizedDate),
-                'timeInMinutes': minutes,
-                'createdAt': FieldValue.serverTimestamp(),
-                'updatedAt': FieldValue.serverTimestamp(),
-              });
-            }
-
-            // 결과 반환
-            return {
-              'id': activeTimer.id,
-              'memberId': memberId,
-              'memberName': memberName,
-              'type': 'end',
-              'timestamp': activeTimer.data()['timestamp'],
-              'endTimestamp': Timestamp.now(),
-              'durationInSeconds': durationInSeconds,
-              'groupId': groupId,
-              'timerState': 'inactive',
-            };
-          });
-        } catch (e) {
-          print('타이머 종료 오류: $e');
-          throw Exception(GroupErrorMessages.operationFailed);
-        }
-      },
-      params: {
-        'groupId': groupId,
-        'memberId': memberId,
-        'durationInSeconds': durationInSeconds,
-      },
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> pauseMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.pauseMemberTimer',
-      () async {
-        try {
-          // 멤버십 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(memberId)
-                  .get();
-
-          if (!memberDoc.exists) {
-            throw Exception(GroupErrorMessages.notMember);
-          }
-
-          // 트랜잭션으로 처리
-          return _firestore.runTransaction<Map<String, dynamic>>((
-            transaction,
-          ) async {
-            // 현재 활성 타이머 확인
-            final activeTimerSnapshot = await transaction.get(
-              _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1),
-            );
-
-            // 활성 타이머가 없으면 오류
-            if (activeTimerSnapshot.docs.isEmpty) {
-              throw Exception(GroupErrorMessages.timerNotActive);
-            }
-
-            // 타이머 활동 업데이트 (일시정지 상태로)
-            final activeTimer = activeTimerSnapshot.docs.first;
-            transaction.update(
-              _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .doc(activeTimer.id),
-              {'type': 'pause', 'pauseTimestamp': FieldValue.serverTimestamp()},
-            );
-
-            // 결과 반환
-            return {
-              'id': activeTimer.id,
-              'memberId': memberId,
-              'memberName': memberName,
-              'type': 'pause',
-              'timestamp': activeTimer.data()['timestamp'],
-              'pauseTimestamp': Timestamp.now(),
-              'groupId': groupId,
-              'timerState': 'pause',
-            };
-          });
-        } catch (e) {
-          print('타이머 일시정지 오류: $e');
-          throw Exception(GroupErrorMessages.operationFailed);
-        }
-      },
-      params: {'groupId': groupId, 'memberId': memberId},
-    );
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
-    String groupId,
-    int year,
-    int month,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.fetchMonthlyAttendances',
-      () async {
-        try {
-          // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-          if (!groupDoc.exists) {
-            throw Exception(GroupErrorMessages.notFound);
-          }
-
-          // 해당 월의 시작일과 종료일 계산
-          final startDate = DateTime(year, month, 1);
-          final endDate = DateTime(year, month + 1, 0, 23, 59, 59); // 월의 마지막 날
-
-          // 출석 기록 쿼리 구성
-          final query = _groupsCollection
-              .doc(groupId)
-              .collection('attendances')
-              .where(
-                'date',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
-              )
-              .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-              .orderBy('date', descending: false);
-
-          // 쿼리 실행
-          final snapshot = await query.get();
-
-          // 결과 변환
-          final attendances =
-              snapshot.docs.map((doc) {
-                final data = doc.data();
-                data['id'] = doc.id;
-                return data;
-              }).toList();
-
-          return attendances;
-        } catch (e) {
-          print('월별 출석 데이터 조회 오류: $e');
-          throw Exception(GroupErrorMessages.loadFailed);
-        }
-      },
-      params: {'groupId': groupId, 'year': year, 'month': month},
     );
   }
 }
