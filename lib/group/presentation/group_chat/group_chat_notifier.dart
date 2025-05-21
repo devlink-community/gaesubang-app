@@ -21,8 +21,9 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   late final GetGroupMessagesStreamUseCase _getGroupMessagesStreamUseCase;
   late final MarkMessagesAsReadUseCase _markMessagesAsReadUseCase;
   late final GetGroupMembersUseCase _getGroupMembersUseCase; // 추가
-  
+
   StreamSubscription? _messagesSubscription;
+  Timer? _timer; // 여기에 타이머 변수 추가
 
   @override
   GroupChatState build() {
@@ -31,7 +32,9 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     // 의존성 주입
     _getGroupMessagesUseCase = ref.watch(getGroupMessagesUseCaseProvider);
     _sendMessageUseCase = ref.watch(sendMessageUseCaseProvider);
-    _getGroupMessagesStreamUseCase = ref.watch(getGroupMessagesStreamUseCaseProvider);
+    _getGroupMessagesStreamUseCase = ref.watch(
+      getGroupMessagesStreamUseCaseProvider,
+    );
     _markMessagesAsReadUseCase = ref.watch(markMessagesAsReadUseCaseProvider);
     _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider); // 추가
 
@@ -39,6 +42,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     ref.onDispose(() {
       print('🗑️ GroupChatNotifier dispose - 스트림 구독 해제');
       _messagesSubscription?.cancel();
+      _timer?.cancel(); // 타이머 해제 추가
     });
 
     return const GroupChatState();
@@ -47,23 +51,23 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   // 액션 처리
   Future<void> onAction(GroupChatAction action) async {
     print('🎬 GroupChatAction: $action');
-    
+
     switch (action) {
       case LoadMessages(:final groupId):
         await _handleLoadMessages(groupId);
-        
+
       case SendMessage(:final content):
         await _handleSendMessage(content);
-        
+
       case MarkAsRead():
         await _handleMarkAsRead();
-        
+
       case SetGroupId(:final groupId):
         await _handleSetGroupId(groupId);
-        
+
       case MessageChanged(:final message):
         _handleMessageChanged(message);
-        
+
       case LoadGroupMembers():
         await _handleLoadGroupMembers();
     }
@@ -78,10 +82,10 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
     // 메시지 스트림 구독 시작
     await _subscribeToMessages(groupId);
-    
+
     // 그룹 멤버 목록 로드 (추가)
     await _handleLoadGroupMembers();
-    
+
     // 메시지 읽음 상태 업데이트
     await _handleMarkAsRead();
   }
@@ -89,14 +93,14 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   // 그룹 멤버 목록 로드 (추가)
   Future<void> _handleLoadGroupMembers() async {
     if (state.groupId.isEmpty) return;
-    
+
     try {
       // 로딩 상태로 변경
       state = state.copyWith(groupMembersResult: const AsyncValue.loading());
-      
+
       // 멤버 목록 로드
       final result = await _getGroupMembersUseCase.execute(state.groupId);
-      
+
       // 결과 반영
       state = state.copyWith(groupMembersResult: result);
     } catch (e) {
@@ -106,22 +110,29 @@ class GroupChatNotifier extends _$GroupChatNotifier {
       );
     }
   }
+
   // 메시지 스트림 구독
   Future<void> _subscribeToMessages(String groupId) async {
     // 기존 구독 해제
     _messagesSubscription?.cancel();
-    
+
     // 새 스트림 구독
     final messagesStream = _getGroupMessagesStreamUseCase.execute(groupId);
-    
+
     _messagesSubscription = messagesStream.listen(
       (asyncMessages) {
         // 메시지 상태 업데이트
         state = state.copyWith(messagesResult: asyncMessages);
-        
+
         // 자동 읽음 처리 (필요시)
-        if (asyncMessages is AsyncData && asyncMessages.value != null && asyncMessages.value!.isNotEmpty) {
-          _handleMarkAsRead();
+        if (asyncMessages is AsyncData &&
+            asyncMessages.value != null &&
+            asyncMessages.value!.isNotEmpty) {
+          // _handleMarkAsRead();
+
+          // 디바운스 적용
+          _timer?.cancel();
+          _timer = Timer(const Duration(seconds: 1), _handleMarkAsRead);
         }
       },
       onError: (error) {
@@ -138,10 +149,10 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   Future<void> _handleLoadMessages(String groupId) async {
     // 로딩 상태로 변경
     state = state.copyWith(messagesResult: const AsyncValue.loading());
-    
+
     // 메시지 로드
     final result = await _getGroupMessagesUseCase.execute(groupId);
-    
+
     // 결과 반영
     state = state.copyWith(messagesResult: result);
   }
@@ -149,17 +160,17 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   // 메시지 전송
   Future<void> _handleSendMessage(String content) async {
     if (content.trim().isEmpty) return;
-    
+
     try {
       // 전송 중 상태로 변경
       state = state.copyWith(
         sendingStatus: const AsyncValue.loading(),
         currentMessage: '', // 입력 필드 비우기
       );
-      
+
       // 메시지 전송
       final result = await _sendMessageUseCase.execute(state.groupId, content);
-      
+
       // 결과 처리
       if (result is AsyncError) {
         state = state.copyWith(
@@ -184,7 +195,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   // 메시지 읽음 처리
   Future<void> _handleMarkAsRead() async {
     if (state.groupId.isEmpty) return;
-    
+
     try {
       await _markMessagesAsReadUseCase.execute(state.groupId);
     } catch (e) {
