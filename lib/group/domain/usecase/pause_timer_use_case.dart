@@ -3,10 +3,10 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class ResumeTimerUseCase {
+class PauseTimerUseCase {
   final GroupRepository _repository;
 
-  ResumeTimerUseCase({required GroupRepository repository})
+  PauseTimerUseCase({required GroupRepository repository})
     : _repository = repository;
 
   Future<AsyncValue<void>> execute(String groupId) async {

@@ -5,11 +5,16 @@ import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -70,3 +75,26 @@ LeaveGroupUseCase leaveGroupUseCase(Ref ref) =>
 @riverpod
 SearchGroupsUseCase searchGroupsUseCase(Ref ref) =>
     SearchGroupsUseCase(repository: ref.watch(groupRepositoryProvider));
+
+// 새로 추가된 UseCase 프로바이더들
+@riverpod
+GetGroupMembersUseCase getGroupMembersUseCase(Ref ref) =>
+    GetGroupMembersUseCase(repository: ref.watch(groupRepositoryProvider));
+
+@riverpod
+GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) =>
+    GetAttendancesByMonthUseCase(
+      repository: ref.watch(groupRepositoryProvider),
+    );
+
+@riverpod
+StartTimerUseCase startTimerUseCase(Ref ref) =>
+    StartTimerUseCase(repository: ref.watch(groupRepositoryProvider));
+
+@riverpod
+StopTimerUseCase stopTimerUseCase(Ref ref) =>
+    StopTimerUseCase(repository: ref.watch(groupRepositoryProvider));
+
+@riverpod
+PauseTimerUseCase pauseTimerUseCase(Ref ref) =>
+    PauseTimerUseCase(repository: ref.watch(groupRepositoryProvider));
