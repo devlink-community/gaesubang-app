@@ -5,9 +5,11 @@ import 'package:devlink_mobile_app/notification/domain/usecase/delete_notificati
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_all_notifications_as_read_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_notification_as_read_use_case.dart';
+import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 import 'package:devlink_mobile_app/notification/module/notification_di.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
+import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'notification_notifier.g.dart';
@@ -19,6 +21,8 @@ class NotificationNotifier extends _$NotificationNotifier {
   late final MarkNotificationAsReadUseCase _markAsReadUseCase;
   late final MarkAllNotificationsAsReadUseCase _markAllAsReadUseCase;
   late final DeleteNotificationUseCase _deleteNotificationUseCase;
+  late final FCMService _fcmService;
+  StreamSubscription? _fcmSubscription;
 
   // 현재 사용자 ID (실제 구현에서는 인증 서비스에서 가져옴)
   String get _currentUserId => 'testUser'; // 임시 하드코딩 값
@@ -32,10 +36,40 @@ class NotificationNotifier extends _$NotificationNotifier {
       markAllNotificationsAsReadUseCaseProvider,
     );
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
+    _fcmService = ref.watch(fcmServiceProvider);
+
+    // FCM 알림 클릭 이벤트 구독
+    _subscribeToFCMEvents();
 
     // 초기 로딩은 별도 메서드로 처리하고, 초기 상태만 반환
     Future.microtask(() => onAction(const NotificationAction.refresh()));
+
+    // ref가 dispose될 때 구독 해제
+    ref.onDispose(() {
+      _fcmSubscription?.cancel();
+    });
+
     return const NotificationState();
+  }
+
+  /// FCM 이벤트 구독
+  void _subscribeToFCMEvents() {
+    _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
+      // FCM 알림 탭 이벤트 처리
+      // 여기서는 간단히 알림 목록을 새로고침하고 특정 알림을 읽음 처리
+      onAction(const NotificationAction.refresh());
+
+      // 알림 타입 및 타겟 ID를 기반으로 화면 이동 로직은 Root에서 처리
+    });
+  }
+
+  /// FCM 토큰 서버 등록
+  Future<void> registerFCMToken() async {
+    final token = await _fcmService.getToken();
+    if (token != null) {
+      // TODO: 실제 구현에서는 사용자의 FCM 토큰을 서버에 등록하는 API 호출
+      print('FCM 토큰 등록: $token');
+    }
   }
 
   /// 액션 핸들러 - 모든 사용자 액션의 진입점
