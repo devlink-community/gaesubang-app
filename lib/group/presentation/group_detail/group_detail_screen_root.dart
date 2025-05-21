@@ -318,6 +318,14 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
                 _handleScreenReturn();
               });
 
+            case NavigateToChat():
+              // 그룹 채팅 화면으로 이동 - 경고창 표시 후 처리
+              await _handleNavigation(() async {
+                await context.push('/group/${widget.groupId}/chat');
+                // 화면에서 돌아왔을 때 데이터 갱신
+                _handleScreenReturn();
+              });
+
             default:
               // 기타 액션은 Notifier에 위임
               if (mounted) {
