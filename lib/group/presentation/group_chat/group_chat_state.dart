@@ -1,5 +1,6 @@
 // lib/group/presentation/group_chat/group_chat_state.dart
 import 'package:devlink_mobile_app/group/domain/model/chat_message.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -22,6 +23,9 @@ class GroupChatState with _$GroupChatState {
     
     // 오류 메시지
     this.errorMessage,
+    
+    // 그룹 멤버 목록 추가
+    this.groupMembersResult = const AsyncValue.loading(),
   });
 
   final String groupId;
@@ -29,4 +33,5 @@ class GroupChatState with _$GroupChatState {
   final AsyncValue<void> sendingStatus;
   final String currentMessage;
   final String? errorMessage;
+  final AsyncValue<List<GroupMember>> groupMembersResult;
 }
