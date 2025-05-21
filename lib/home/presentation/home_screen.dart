@@ -1,9 +1,12 @@
+// lib/home/presentation/home_screen.dart
+
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
 import '../../ai_assistance/presentation/quiz_banner.dart';
+import '../../ai_assistance/presentation/study_tip_banner.dart'; // 추가됨
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
@@ -106,15 +109,18 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // 공부 팁 카드
-                    _buildTodayTipCard(),
+                    // 학습 팁 배너 (새로 추가)
+                    StudyTipBanner(
+                      skills: skills,
+                      key: ObjectKey(skills), // 스킬 변경시 새로고침을 위한 키 추가
+                    ),
 
                     const SizedBox(width: 12),
 
-                    // 퀴즈 배너
+                    // 퀴즈 배너 (기존)
                     DailyQuizBanner(
-                      skills: userSkills,
-                      key: ObjectKey(userSkills), // 스킬 변경시 새로고침을 위한 키 추가
+                      skills: skills,
+                      key: ObjectKey(skills), // 스킬 변경시 새로고침을 위한 키 추가
                     ),
                   ],
                 ),
@@ -142,7 +148,7 @@ class HomeScreen extends StatelessWidget {
                     posts: state.popularPosts,
                     onTapPost:
                         (postId) =>
-                            onAction(HomeAction.onTapPopularPost(postId)),
+                        onAction(HomeAction.onTapPopularPost(postId)),
                   ),
 
                   // 하단 여백
@@ -164,7 +170,7 @@ class HomeScreen extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -199,7 +205,7 @@ class HomeScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColorStyles.primary80.withValues(alpha: 0.05),
+          color: AppColorStyles.primary80.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -216,91 +222,6 @@ class HomeScreen extends StatelessWidget {
             Text(value, style: AppTextStyles.subtitle1Bold),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTodayTipCard() {
-    return Container(
-      width: 280, // 넓이 고정
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.indigo.shade400, Colors.indigo.shade800],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.indigo.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '오늘의 공부 팁',
-                  style: AppTextStyles.body1Regular.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.tips_and_updates_outlined,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '집중력 향상을 위한 포모도로 기법',
-            style: AppTextStyles.subtitle1Bold.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 32),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.indigo.shade700,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              minimumSize: const Size(double.infinity, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              '자세히 보기',
-              style: AppTextStyles.button2Regular.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
