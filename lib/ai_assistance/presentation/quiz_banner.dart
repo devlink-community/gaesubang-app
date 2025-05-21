@@ -138,7 +138,53 @@ class DailyQuizBanner extends ConsumerWidget {
     return '${skillList.join(", ")} 관련 지식을 테스트해보세요.';
   }
 
+  // 스킬 목록 파싱 메서드 추가
+  List<String> _parseSkillList(String? skills) {
+    if (skills == null || skills.isEmpty) {
+      return ['컴퓨터 기초'];
+    }
+
+    final skillList =
+        skills
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+
+    debugPrint('파싱된 스킬 목록: $skillList');
+    return skillList.isEmpty ? ['컴퓨터 기초'] : skillList;
+  }
+
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
+    // 디버그 로그 추가
+    debugPrint('퀴즈 생성 시작: skills=$skills');
+
+    // 스킬 목록 파싱 및 로그 출력
+    final skillList = _parseSkillList(skills);
+    debugPrint('파싱된 스킬 목록: $skillList (${skillList.length}개)');
+
+    // 무작위 스킬 선택
+    String selectedSkill;
+    if (skillList.isEmpty) {
+      selectedSkill = 'Flutter';
+    } else {
+      selectedSkill = skillList[_random.nextInt(skillList.length)];
+
+      // 이상한 값이 들어온 경우를 필터링
+      if (selectedSkill.length > 30 ||
+          selectedSkill.contains('{') ||
+          selectedSkill.contains('}') ||
+          selectedSkill.contains(':')) {
+        selectedSkill = 'Flutter';
+      }
+    }
+
+    debugPrint('선택된 스킬: $selectedSkill');
+
+    // 타임스탬프를 추가하여 캐시 방지
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+    final quizPrompt = '$selectedSkill-$currentTime';
+
     // 대화상자 컨텍스트 추적을 위한 변수
     BuildContext? loadingDialogContext;
 
@@ -199,8 +245,8 @@ class DailyQuizBanner extends ConsumerWidget {
           ),
         );
 
-        // 백업 퀴즈 표시
-        _showBackupQuiz(context, ref);
+        // 백업 퀴즈 표시 - 선택된 스킬 전달
+        _showBackupQuiz(context, ref, selectedSkill);
       }
     });
 
@@ -208,15 +254,14 @@ class DailyQuizBanner extends ConsumerWidget {
       // 퀴즈 생성 UseCase 직접 사용
       final generateQuizUseCase = ref.read(generateQuizUseCaseProvider);
 
-      // 스킬 목록 파싱 및 무작위 선택
-      final skillList = _parseSkillList(skills);
-      final selectedSkill =
-          skillList.isEmpty
-              ? '컴퓨터 기초'
-              : skillList[_random.nextInt(skillList.length)];
+      // 타임스탬프를 추가하여 캐시 방지
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final quizPrompt = '$selectedSkill-$currentTime';
+
+      debugPrint('퀴즈 생성 요청: $quizPrompt');
 
       // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
-      final asyncQuizResult = await generateQuizUseCase.execute(selectedSkill);
+      final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);
 
       // 타이머 취소
       loadingTimer.cancel();
@@ -228,14 +273,20 @@ class DailyQuizBanner extends ConsumerWidget {
       asyncQuizResult.when(
         data: (quiz) {
           if (context.mounted && quiz != null) {
-            // 퀴즈 표시
+            debugPrint(
+              '퀴즈 생성 성공 (${quiz.relatedSkill}): ${quiz.question.substring(0, min(30, quiz.question.length))}...',
+            );
+
+            // 퀴즈 표시 - 원본 skills 목록 전달
             _showQuizDialog(context, ref, quiz);
           } else {
             // 백업 퀴즈 표시
-            _showBackupQuiz(context, ref);
+            _showBackupQuiz(context, ref, selectedSkill);
           }
         },
         error: (error, _) {
+          debugPrint('퀴즈 생성 오류: $error');
+
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -246,19 +297,21 @@ class DailyQuizBanner extends ConsumerWidget {
             );
 
             // 백업 퀴즈 표시
-            _showBackupQuiz(context, ref);
+            _showBackupQuiz(context, ref, selectedSkill);
           }
         },
         loading: () {
           // 일반적으로 여기에 도달하지 않지만, 도달했다면 백업 퀴즈 표시
           _closeLoadingDialog(loadingDialogContext);
-          _showBackupQuiz(context, ref);
+          _showBackupQuiz(context, ref, selectedSkill);
         },
       );
     } catch (e) {
       // 예외 발생 시 타이머 취소 및 백업 퀴즈 표시
       loadingTimer.cancel();
       _closeLoadingDialog(loadingDialogContext);
+
+      debugPrint('퀴즈 생성 예외 발생: $e');
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -270,25 +323,9 @@ class DailyQuizBanner extends ConsumerWidget {
         );
 
         // 백업 퀴즈 표시
-        _showBackupQuiz(context, ref);
+        _showBackupQuiz(context, ref, selectedSkill);
       }
     }
-  }
-
-  // 스킬 목록 파싱 메서드 추가
-  List<String> _parseSkillList(String? skills) {
-    if (skills == null || skills.isEmpty) {
-      return ['컴퓨터 기초'];
-    }
-
-    final skillList =
-        skills
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-
-    return skillList.isEmpty ? ['컴퓨터 기초'] : skillList;
   }
 
   // 로딩 다이얼로그 닫기 유틸리티 메서드
@@ -362,29 +399,83 @@ class DailyQuizBanner extends ConsumerWidget {
   }
 
   // 백업 퀴즈 표시 메서드
-  void _showBackupQuiz(BuildContext context, WidgetRef ref) {
-    // 스킬 목록 파싱
-    final skillList = _parseSkillList(skills);
-    // 랜덤 스킬 선택
-    final selectedSkill =
-        skillList.isEmpty
-            ? '프로그래밍 기초'
-            : skillList[_random.nextInt(skillList.length)];
+  void _showBackupQuiz(BuildContext context, WidgetRef ref, String skillArea) {
+    debugPrint('백업 퀴즈 표시: 스킬=$skillArea');
 
-    final fallbackQuiz = Quiz(
-      question: "프로그래밍에서 변수명 작성 규칙으로 올바른 것은?",
-      options: [
-        "변수명은 숫자로 시작할 수 있다",
-        "변수명에는 공백이 포함될 수 있다",
-        "변수명은 대소문자를 구분한다",
-        "변수명에는 특수문자(%, &, #)를 자유롭게 사용할 수 있다",
-      ],
-      explanation:
-          "대부분의 프로그래밍 언어에서 변수명은 대소문자를 구분합니다. 예를 들어 'name'과 'Name'은 서로 다른 변수로 취급됩니다.",
-      correctOptionIndex: 2,
-      relatedSkill: selectedSkill,
-    );
-
+    final fallbackQuiz = _generateFallbackQuiz(skillArea);
     _showQuizDialog(context, ref, fallbackQuiz);
+  }
+
+  // 백업 퀴즈 생성 메서드
+  Quiz _generateFallbackQuiz(String skillArea) {
+    // 해당 스킬에 맞는 퀴즈 생성
+    if (skillArea.toLowerCase().contains('python')) {
+      return Quiz(
+        question: "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
+        options: [
+          "메모리 사용량 증가",
+          "코드가 더 간결하고 가독성이 좋아짐",
+          "항상 더 빠른 실행 속도",
+          "버그 방지 기능",
+        ],
+        explanation:
+            "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
+        correctOptionIndex: 1,
+        relatedSkill: "Python",
+      );
+    } else if (skillArea.toLowerCase().contains('flutter') ||
+        skillArea.toLowerCase().contains('dart')) {
+      return Quiz(
+        question: "Flutter에서 StatefulWidget과 StatelessWidget의 주요 차이점은 무엇인가요?",
+        options: [
+          "StatefulWidget만 빌드 메서드를 가짐",
+          "StatelessWidget이 더 성능이 좋음",
+          "StatefulWidget은 내부 상태를 가질 수 있음",
+          "StatelessWidget은 항상 더 적은 메모리를 사용함",
+        ],
+        explanation:
+            "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
+        correctOptionIndex: 2,
+        relatedSkill: "Flutter",
+      );
+    } else if (skillArea.toLowerCase().contains('javascript') ||
+        skillArea.toLowerCase().contains('js')) {
+      return Quiz(
+        question: "JavaScript에서 const와 let의 주요 차이점은 무엇인가요?",
+        options: [
+          "const는 객체를 불변으로 만들지만, let은 가변 객체를 선언합니다.",
+          "const로 선언된 변수는 재할당할 수 없지만, let은 가능합니다.",
+          "const는 함수 스코프, let은 블록 스코프를 가집니다.",
+          "const는 호이스팅되지 않지만, let은 호이스팅됩니다.",
+        ],
+        explanation:
+            "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
+        correctOptionIndex: 1,
+        relatedSkill: "JavaScript",
+      );
+    } else if (skillArea.toLowerCase().contains('react')) {
+      return Quiz(
+        question: "React에서 hooks의 주요 규칙 중 하나는 무엇인가요?",
+        options: [
+          "클래스 컴포넌트에서만 사용 가능하다",
+          "반복문, 조건문, 중첩 함수 내에서 호출해야 한다",
+          "컴포넌트 내부 최상위 레벨에서만 호출해야 한다",
+          "항상 useEffect 내부에서 호출해야 한다",
+        ],
+        explanation:
+            "React Hooks는 컴포넌트 최상위 레벨에서만 호출해야 하며, 반복문, 조건문, 중첩 함수 내에서 호출하면 안 됩니다. 이는 React가 hooks의 호출 순서에 의존하기 때문입니다.",
+        correctOptionIndex: 2,
+        relatedSkill: "React",
+      );
+    }
+
+    // 기본 컴퓨터 기초 퀴즈
+    return Quiz(
+      question: "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
+      options: ["4비트", "8비트", "16비트", "32비트"],
+      explanation: "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
+      correctOptionIndex: 1,
+      relatedSkill: skillArea,
+    );
   }
 }

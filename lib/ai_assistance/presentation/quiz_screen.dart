@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -308,12 +310,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () {
-              // 타임스탬프를 명시적으로 추가
-              final currentTime = DateTime.now().millisecondsSinceEpoch;
-
+              debugPrint('새 퀴즈 요청 - 원본 스킬 목록: ${widget.skills}');
               // 새로운 퀴즈 로드 액션 트리거
               if (widget.onAction != null) {
-                widget.onAction!(QuizAction.loadQuiz(skills: widget.skills));
+                widget.onAction!(
+                  QuizAction.loadQuiz(
+                    skills: widget.skills, // 원본 스킬 목록 그대로 전달
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -332,13 +336,17 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     );
   }
 
+  // 답변 선택 메서드 추가
   void _selectAnswer(int index) {
+    debugPrint('답변 선택: $index');
     setState(() {
       selectedAnswerIndex = index;
     });
   }
 
+  // 답변 확인 메서드 추가
   void _checkAnswer(int index) {
+    debugPrint('답변 제출: $index, 정답: ${widget.quiz.correctOptionIndex}');
     setState(() {
       hasAnswered = true;
     });
