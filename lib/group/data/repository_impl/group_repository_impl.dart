@@ -427,6 +427,159 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
+  Future<Result<Map<String, dynamic>>> startMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    try {
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 타이머 시작 처리
+      final activityData = await _dataSource.startMemberTimer(
+        groupId,
+        memberId,
+        memberName,
+      );
+
+      return Result.success(activityData);
+    } catch (e, st) {
+      // 특정 오류 타입 처리
+      if (e.toString().contains('이미 진행 중인 타이머 세션이 있습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '이미 진행 중인 타이머 세션이 있습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '타이머 시작에 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> stopMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    try {
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 타이머 정지 처리
+      final activityData = await _dataSource.stopMemberTimer(
+        groupId,
+        memberId,
+        memberName,
+      );
+
+      return Result.success(activityData);
+    } catch (e, st) {
+      // 특정 오류 타입 처리
+      if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '타이머가 활성화되어 있지 않습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '타이머 정지에 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> pauseMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    try {
+      // Auth에서 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
+      if (currentUser == null) {
+        return Result.error(
+          Failure(
+            FailureType.unauthorized,
+            '로그인이 필요합니다.',
+            stackTrace: StackTrace.current,
+          ),
+        );
+      }
+
+      // 타이머 일시정지 처리
+      final activityData = await _dataSource.pauseMemberTimer(
+        groupId,
+        memberId,
+        memberName,
+      );
+
+      return Result.success(activityData);
+    } catch (e, st) {
+      // 특정 오류 타입 처리
+      if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.validation,
+            '타이머가 활성화되어 있지 않습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '타이머 일시정지에 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  @override
   Future<Result<List<Attendance>>> getAttendancesByMonth(
     String groupId,
     int year,
