@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -7,6 +8,7 @@ import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
 import '../domain/model/quiz.dart';
 import '../module/quiz_di.dart';
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 // 캐시 관리를 위한 상태 Provider 추가
@@ -76,6 +78,8 @@ final quizProvider = FutureProvider.autoDispose.family<Quiz?, String?>((
 =======
 import 'quiz_action.dart';
 import 'quiz_notifier.dart';
+=======
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
 import 'quiz_screen.dart';
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
 
@@ -213,6 +217,9 @@ class DailyQuizBanner extends ConsumerWidget {
     // 로딩 타이머 및 리스너 관리를 위한 변수
     Timer? loadingTimer;
 
+    // 로딩 다이얼로그에 고유 키 부여
+    final loadingDialogKey = UniqueKey();
+
     // 퀴즈 로딩 중 표시할 다이얼로그
     showDialog(
       context: context,
@@ -222,6 +229,7 @@ class DailyQuizBanner extends ConsumerWidget {
         loadingDialogContext = dialogContext;
 
         return Dialog(
+          key: loadingDialogKey,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -345,30 +353,63 @@ class DailyQuizBanner extends ConsumerWidget {
     }
   }
 
-  // 퀴즈 표시 메서드
+  // 퀴즈 표시 메서드 - 이 부분이 변경됨
   void _showQuizDialog(BuildContext context, WidgetRef ref, Quiz quiz) {
-    final quizNotifier = ref.read(quizNotifierProvider.notifier);
-
-    // 퀴즈 상태 업데이트
-    quizNotifier.onAction(QuizAction.loadQuiz(skills: skills));
+    // StatefulWidget의 상태를 초기화하기 위한 키 생성
+    final uniqueKey = UniqueKey();
 
     showDialog(
       context: context,
+      barrierDismissible: true, // 바탕 클릭으로 닫기 가능
       builder: (dialogContext) {
+        // 화면 크기를 가져와서 다이얼로그 크기를 적절히 조정
+        final screenSize = MediaQuery.of(context).size;
+
         return Dialog(
+          key: uniqueKey, // 매번 새로운 키 사용으로 상태 리셋 보장
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          child: QuizScreen(
-            quiz: quiz,
-            skills: skills,
-            onAction: (action) {
-              quizNotifier.onAction(action);
+          // 화면의 최대 90%까지 확장 가능하도록 설정
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: screenSize.width * 0.05,
+            vertical: screenSize.height * 0.05,
+          ),
+          // 크기 제한을 좀 더 넓게 설정
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: screenSize.width * 0.9,
+              maxHeight: screenSize.height * 0.8,
+            ),
+            child: QuizScreen(
+              key: uniqueKey, // QuizScreen에도 고유 키 전달
+              quiz: quiz,
+              skills: skills,
+              onAction: (action) {
+                switch (action) {
+                  case LoadQuiz(:final skills):
+                    // 현재 다이얼로그 닫기
+                    Navigator.of(dialogContext).pop();
 
-              if (action is CloseQuiz) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
+                    // 약간의 지연 후 새 퀴즈 로딩 다이얼로그 표시
+                    Future.delayed(const Duration(milliseconds: 100), () {
+                      if (context.mounted) {
+                        // 새 퀴즈 로딩 시작
+                        _handleQuizTap(context, ref);
+                      }
+                    });
+                    break;
+
+                  case SubmitAnswer(:final answerIndex):
+                    // 답변 제출은 QuizScreen에서 로컬로 처리
+                    break;
+
+                  case CloseQuiz():
+                    Navigator.of(dialogContext).pop();
+                    break;
+                }
+              },
+            ),
           ),
         );
       },

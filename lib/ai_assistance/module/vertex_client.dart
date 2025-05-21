@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 import 'dart:async'; // Completer 사용을 위해 추가
+=======
+import 'dart:async';
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +25,14 @@ class VertexAIClient {
   final String _location = 'us-central1';
   final String _modelId = 'gemini-2.0-flash';
 
+<<<<<<< HEAD
   // 초기화 상태 관리 개선
+=======
+  // Random 객체 추가
+  final Random _random = Random();
+
+  // 초기화 상태
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
   bool _initialized = false;
   bool _initializing = false; // 초기화 진행 중 여부를 추적하는 플래그 추가
   Completer<void>? _initializeCompleter; // 초기화 작업 Completer 추가
@@ -340,28 +352,59 @@ class VertexAIClient {
       // 스킬 확인 및 기본값 설정
       final skill = skillArea.isNotEmpty ? skillArea : '컴퓨터 기초';
 
+      // 랜덤 요소 추가 (난이도, 주제 다양화)
+      final randomTopics = ['개념', '문법', '라이브러리', '프레임워크', '모범 사례', '디자인 패턴'];
+      final randomLevels = ['초급', '중급', '입문'];
+
+      final selectedTopic = randomTopics[_random.nextInt(randomTopics.length)];
+      final selectedLevel = randomLevels[_random.nextInt(randomLevels.length)];
+      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+
+      // 타임스탬프 제거 (형식: "스킬-12345678901234")
+      final cleanSkill = _cleanSkillArea(skill);
+
       // 단일 퀴즈 생성을 위한 프롬프트 구성
       final prompt = """
-      당신은 프로그래밍 퀴즈 전문가입니다. 다음 지식 영역에 관한 간단한 객관식 퀴즈 문제를 생성해주세요: $skill
+    당신은 프로그래밍 퀴즈 전문가입니다. 다음 조건으로 완전히 새로운 퀴즈를 생성해주세요:
 
-      - 문제는 초급 수준으로, 해당 영역을 배우는 사람이 풀 수 있는 난이도여야 합니다.
-      - 4개의 객관식 보기를 제공해주세요.
-      - 정답과 짧은 설명도 함께 제공해주세요.
+    주제: $cleanSkill ($selectedTopic)
+    난이도: $selectedLevel
+    고유 ID: $uniqueId
 
-      결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
-      {
-        "question": "문제 내용",
-        "options": ["보기1", "보기2", "보기3", "보기4"],
-        "correctOptionIndex": 0,
-        "explanation": "간략한 설명",
-        "relatedSkill": "$skill"
-      }
+    매번 다른 질문을 반드시 생성해야 합니다. 이전에 생성한 퀴즈와 중복되지 않도록 해주세요.
 
-      직접적인 설명 없이 JSON 형식으로만 응답해주세요.
-      """;
+    - 문제는 $selectedLevel 수준으로, 해당 영역을 배우는 사람이 풀 수 있는 난이도여야 합니다.
+    - 4개의 객관식 보기를 제공해주세요.
+    - 정답과 짧은 설명도 함께 제공해주세요.
 
+    결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
+    {
+      "question": "문제 내용",
+      "options": ["보기1", "보기2", "보기3", "보기4"],
+      "correctOptionIndex": 0,
+      "explanation": "간략한 설명",
+      "relatedSkill": "$cleanSkill"
+    }
+
+    직접적인 설명 없이 JSON 형식으로만 응답해주세요.
+    """;
+
+      debugPrint('퀴즈 생성 시작: 스킬=$cleanSkill, 고유ID=$uniqueId');
+
+      // 단일 퀴즈 호출 - 10초 타임아웃 추가
+      final quizList = await _callVertexAI(prompt).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          debugPrint('Vertex AI API 호출 타임아웃 (15초)');
+          throw TimeoutException('API 호출이 15초 이내에 완료되지 않았습니다');
+        },
+      );
+
+<<<<<<< HEAD
       // 단일 퀴즈 호출
       final quizList = await _callVertexAIForQuiz(prompt);
+=======
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
       if (quizList.isNotEmpty) {
         return quizList.first;
       } else {
@@ -375,11 +418,38 @@ class VertexAIClient {
     }
   }
 
+<<<<<<< HEAD
   /// Quiz용 API 호출 메서드
   Future<List<Map<String, dynamic>>> _callVertexAIForQuiz(String prompt) async {
+=======
+  // 스킬 영역에서 타임스탬프 제거
+  String _cleanSkillArea(String skillArea) {
+    // 타임스탬프가 포함된 경우 (형식: "스킬-12345678901234") 처리
+    final timestampSeparatorIndex = skillArea.lastIndexOf('-');
+    if (timestampSeparatorIndex > 0) {
+      final possibleTimestamp = skillArea.substring(
+        timestampSeparatorIndex + 1,
+      );
+      // 숫자로만 구성된 타임스탬프인지 확인
+      if (RegExp(r'^\d+$').hasMatch(possibleTimestamp)) {
+        return skillArea.substring(0, timestampSeparatorIndex).trim();
+      }
+    }
+    return skillArea.trim();
+  }
+
+  Future<List<Map<String, dynamic>>> _callVertexAI(String prompt) async {
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
     try {
       // 기존 엔드포인트 로직 유지
       final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+
+      // 각 요청마다 다른 temperature 값 사용하여 다양성 증가
+      final random = Random();
+      final temperature = 0.5 + random.nextDouble() * 0.4; // 0.5~0.9 사이의 랜덤 값
+
+      // 요청마다 고유한 ID 추가 (캐시 방지)
+      final uniqueId = DateTime.now().millisecondsSinceEpoch;
 
       // generateContent API에 맞는 페이로드 구성
       final payload = {
@@ -387,26 +457,45 @@ class VertexAIClient {
           {
             'role': 'user',
             'parts': [
-              {'text': prompt},
+              {'text': '$prompt\n\n요청 ID: $uniqueId'},
             ],
           },
         ],
         'generationConfig': {
-          'temperature': 0.2,
+          'temperature': temperature,
           'maxOutputTokens': 1024,
           'topK': 40,
           'topP': 0.95,
         },
+        // 캐싱 방지를 위한 속성 추가
+        'safetySettings': [
+          {
+            'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            'threshold': 'BLOCK_NONE',
+          },
+        ],
       };
+
+      debugPrint(
+        'Vertex AI API 요청: temperature=${temperature.toStringAsFixed(2)}, uniqueId=$uniqueId',
+      );
 
       // API 호출
       final response = await _authClient.post(
         Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': '', // 필요한 경우 API 키 추가
+          'Cache-Control': 'no-cache',
+        },
         body: jsonEncode(payload),
       );
 
+<<<<<<< HEAD
       // 응답 처리
+=======
+      // 응답 처리 - 코드는 기존과 동일하게 유지
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
       if (response.statusCode == 200) {
         debugPrint('API 응답 상태: ${response.statusCode}');
 
@@ -431,6 +520,7 @@ class VertexAIClient {
 
           final String generatedText = parts[0]['text'] ?? '';
 
+<<<<<<< HEAD
           // 코드 블록 제거
           String cleanedText = generatedText;
           if (cleanedText.contains('```')) {
@@ -457,10 +547,53 @@ class VertexAIClient {
           } else {
             // 배열이 없으면 객체로 시도
             return _tryParseAsObject(cleanedText);
+=======
+          // JSON 파싱 (생성된 텍스트에서 JSON 부분 추출)
+          final jsonStart = generatedText.indexOf('{');
+          final jsonEnd = generatedText.lastIndexOf('}') + 1;
+
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            try {
+              final Map<String, dynamic> parsedJson = jsonDecode(
+                generatedText.substring(jsonStart, jsonEnd),
+              );
+
+              debugPrint(
+                '퀴즈 파싱 성공: 문제=${parsedJson['question']?.toString().substring(0, min(20, parsedJson['question']?.toString().length ?? 0))}...',
+              );
+
+              return [parsedJson]; // 단일 객체를 리스트로 반환
+            } catch (e) {
+              // 배열 형태 확인
+              final arrayStart = generatedText.indexOf('[');
+              final arrayEnd = generatedText.lastIndexOf(']') + 1;
+
+              if (arrayStart >= 0 && arrayEnd > arrayStart) {
+                try {
+                  final List<dynamic> parsedArray = jsonDecode(
+                    generatedText.substring(arrayStart, arrayEnd),
+                  );
+                  return parsedArray
+                      .map((item) => Map<String, dynamic>.from(item))
+                      .toList();
+                } catch (e) {
+                  debugPrint('JSON 배열 파싱 오류: $e');
+                  throw Exception('JSON 배열 파싱 오류: $e');
+                }
+              } else {
+                debugPrint('JSON 객체 파싱 오류: $e');
+                throw Exception('JSON 객체 파싱 오류: $e');
+              }
+            }
+          } else {
+            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $generatedText');
+            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
           }
         } catch (e) {
           debugPrint('응답 처리 오류: $e');
           debugPrint('원본 응답: ${response.body}');
+<<<<<<< HEAD
 
           // 폴백 반환
           return [
@@ -477,6 +610,9 @@ class VertexAIClient {
               "relatedSkill": "API 디버깅",
             },
           ];
+=======
+          return [_generateFallbackQuiz(prompt)];
+>>>>>>> 22afa4f8 (fix: 프롬프트 수정)
         }
       } else {
         debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');

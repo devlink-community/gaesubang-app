@@ -29,19 +29,25 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildQuestion(),
-          const SizedBox(height: 16),
-          _buildOptions(),
-          if (hasAnswered) ...[const SizedBox(height: 16), _buildExplanation()],
-          const SizedBox(height: 20),
-          _buildActions(),
-        ],
+      // SingleChildScrollView 추가
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildQuestion(),
+            const SizedBox(height: 16),
+            _buildOptions(),
+            if (hasAnswered) ...[
+              const SizedBox(height: 16),
+              _buildExplanation(),
+            ],
+            const SizedBox(height: 20),
+            _buildActions(),
+          ],
+        ),
       ),
     );
   }
@@ -81,6 +87,51 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   }
 
   Widget _buildQuestion() {
+    // 코드 블록이 있는지 확인 (```로 감싸진 부분)
+    final regex = RegExp(r'```(.*?)```', dotAll: true);
+    final match = regex.firstMatch(widget.quiz.question);
+
+    if (match != null) {
+      // 코드 블록 전후로 나누기
+      final parts = widget.quiz.question.split(match.group(0)!);
+      final beforeCode = parts[0];
+      final code = match.group(1) ?? '';
+      final afterCode = parts.length > 1 ? parts[1] : '';
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (beforeCode.isNotEmpty)
+            Text(beforeCode.trim(), style: AppTextStyles.subtitle1Bold),
+          if (code.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.all(12),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Text(
+                  code.trim(),
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          if (afterCode.isNotEmpty)
+            Text(afterCode.trim(), style: AppTextStyles.subtitle1Bold),
+        ],
+      );
+    }
+
+    // 코드 블록이 없는 경우 기존 스타일 유지
     return Text(widget.quiz.question, style: AppTextStyles.subtitle1Bold);
   }
 
@@ -257,15 +308,23 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () {
+              // 타임스탬프를 명시적으로 추가
+              final currentTime = DateTime.now().millisecondsSinceEpoch;
+
               // 새로운 퀴즈 로드 액션 트리거
               if (widget.onAction != null) {
-                widget.onAction!(QuizAction.loadQuiz(skills: widget.skills));
+                widget.onAction!(
+                  QuizAction.loadQuiz(
+                    skills: '${widget.skills ?? ""}-$currentTime',
+                  ),
+                );
               }
-              // 상태 초기화
-              setState(() {
-                selectedAnswerIndex = null;
-                hasAnswered = false;
-              });
+
+              // 상태 초기화 - 이 부분은 실행될 필요가 없음 (다이얼로그가 완전히 닫히기 때문)
+              // setState(() {
+              //   selectedAnswerIndex = null;
+              //   hasAnswered = false;
+              // });
             },
             style: ElevatedButton.styleFrom(
               foregroundColor: Colors.white,
