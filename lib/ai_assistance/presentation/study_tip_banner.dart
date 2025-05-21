@@ -8,25 +8,33 @@ import '../../core/styles/app_color_styles.dart';
 import '../domain/model/study_tip.dart';
 import '../module/study_tip_di.dart';
 
-// 캐시 키 기반 FutureProvider
+// 캐시 키 기반 FutureProvider 개선
 final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
     ref,
     skills,
     ) async {
-  // 캐시 키 - 오늘 날짜 + 스킬
+  // 캐시 키 - 오늘 날짜 + 스킬 (첫 3글자만)
   final today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
   final skillArea = skills?.split(',')
       .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
       .trim() ??
       '프로그래밍 기초';
 
-  final cacheKey = '$today-$skillArea';
+  // 스킬 첫 3글자만 사용하여 잦은 캐시 미스 방지
+  final skillPrefix = skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
+  final cacheKey = '$today-$skillPrefix';
+
+  // 디버그 정보
+  debugPrint('StudyTip 캐시 키: $cacheKey 확인 중');
 
   // 캐시된 데이터 확인
   final cache = ref.read(studyTipCacheProvider);
   if (cache.containsKey(cacheKey)) {
+    debugPrint('StudyTip 캐시 히트: $cacheKey');
     return cache[cacheKey] as StudyTip?;
   }
+
+  debugPrint('StudyTip 캐시 미스: $cacheKey, API 호출 필요');
 
   try {
     // 캐시 없으면 새로 생성
@@ -36,16 +44,27 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
     // 값이 있으면 캐시에 저장
     if (asyncValue.hasValue) {
       final studyTip = asyncValue.value;
-      ref.read(studyTipCacheProvider.notifier).update((state) => {
-        ...state,
-        cacheKey: studyTip,
-      });
+      debugPrint('StudyTip 생성 성공, 캐시에 저장: $cacheKey');
+
+      // 캐시 크기 제한 확인 (최대 10개 항목)
+      final currentCache = Map<String, dynamic>.from(ref.read(studyTipCacheProvider));
+      if (currentCache.length >= 10) {
+        // 가장 오래된 항목 하나 제거
+        final oldestKey = currentCache.keys.first;
+        currentCache.remove(oldestKey);
+        debugPrint('StudyTip 캐시 정리: 오래된 항목 제거 $oldestKey');
+      }
+
+      // 새 항목 추가
+      currentCache[cacheKey] = studyTip;
+      ref.read(studyTipCacheProvider.notifier).state = currentCache;
+
       return studyTip;
     }
 
     return null;
   } catch (e) {
-    print('학습 팁 생성 중 오류: $e');
+    debugPrint('학습 팁 생성 중 오류: $e');
     return null;
   }
 });

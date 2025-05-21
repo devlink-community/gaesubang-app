@@ -1,3 +1,4 @@
+import 'dart:async'; // Completer 사용을 위해 추가
 import 'dart:convert';
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -19,16 +20,32 @@ class VertexAIClient {
   final String _location = 'us-central1';
   final String _modelId = 'gemini-2.0-flash';
 
-  // 초기화 상태
+  // 초기화 상태 관리 개선
   bool _initialized = false;
+  bool _initializing = false; // 초기화 진행 중 여부를 추적하는 플래그 추가
+  Completer<void>? _initializeCompleter; // 초기화 작업 Completer 추가
+
   late http.Client _httpClient;
   late AutoRefreshingAuthClient _authClient;
 
-  /// 초기화 메서드
+  /// 초기화 메서드 개선
   Future<void> initialize() async {
+    // 이미 초기화 완료된 경우 즉시 반환
     if (_initialized) return;
 
+    // 초기화가 진행 중인 경우 해당 작업이 완료될 때까지 대기
+    if (_initializing) {
+      debugPrint('Vertex AI 클라이언트 초기화 진행 중... 기존 작업 완료 대기');
+      return _initializeCompleter!.future;
+    }
+
+    // 초기화 진행 중 플래그 설정 및 Completer 생성
+    _initializing = true;
+    _initializeCompleter = Completer<void>();
+
     try {
+      debugPrint('Vertex AI 클라이언트 초기화 시작');
+
       // Remote Config에서 Base64로 인코딩된 서비스 계정 키 가져오기
       final Map<String, dynamic> serviceAccountJson =
       await _loadServiceAccountFromRemoteConfig();
@@ -48,10 +65,18 @@ class VertexAIClient {
       ]);
 
       _initialized = true;
+      _initializing = false;
       debugPrint('Vertex AI 클라이언트 초기화 완료');
+
+      // 완료 알림
+      _initializeCompleter!.complete();
     } catch (e) {
       debugPrint('Vertex AI 클라이언트 초기화 실패: $e');
       _initialized = false;
+      _initializing = false;
+
+      // 오류 전파
+      _initializeCompleter!.completeError(e);
       rethrow;
     }
   }
@@ -343,20 +368,6 @@ class VertexAIClient {
     }
   }
 
-  /// 이 메서드는 더 이상 사용하지 않음
-  /// callTextModel() 메서드를 대신 사용할 것
-  /// 이전 호환성을 위해 남겨둠 (deprecated)
-  Future<Map<String, dynamic>> generateStudyTip(String skillArea) async {
-    try {
-      // Repository에서 프롬프트를 생성하므로 더 이상 사용할 필요 없음
-      // 인라인 프롬프트 제거
-      return await callTextModel("$skillArea 관련 짧은 학습 팁을 주세요");
-    } catch (e) {
-      debugPrint('학습 팁 생성 실패: $e');
-      return _generateFallbackStudyTip(skillArea);
-    }
-  }
-
   /// Quiz용 API 호출 메서드
   Future<List<Map<String, dynamic>>> _callVertexAIForQuiz(String prompt) async {
     try {
@@ -495,13 +506,13 @@ class VertexAIClient {
     // prompt에서 언급된 스킬에 따라 다른 퀴즈 반환
     if (prompt.toLowerCase().contains('python')) {
       return {
-      "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
-      "options": [
-      "메모리 사용량 증가",
-      "코드가 더 간결하고 가독성이 좋아짐",
-      "항상 더 빠른 실행 속도",
-      "버그 방지 기능",
-      ],
+        "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
+        "options": [
+          "메모리 사용량 증가",
+          "코드가 더 간결하고 가독성이 좋아짐",
+          "항상 더 빠른 실행 속도",
+          "버그 방지 기능",
+        ],
         "correctOptionIndex": 1,
         "explanation":
         "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
@@ -569,10 +580,14 @@ class VertexAIClient {
     };
   }
 
-  // 인스턴스 소멸 시 리소스 정리
+  // 인스턴스 소멸 시 리소스 정리 개선
   void dispose() {
     if (_initialized) {
+      _httpClient.close();
       _authClient.close();
+      _initialized = false;
+      _initializing = false;
+      _initializeCompleter = null;
     }
   }
 }
