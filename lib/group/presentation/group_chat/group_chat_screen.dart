@@ -320,7 +320,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (widget.state.groupMembersResult is AsyncData) {
       final AsyncData<List<GroupMember>> data =
           widget.state.groupMembersResult as AsyncData<List<GroupMember>>;
-      return data.value.length ?? 0;
+      return data.value.length;
     }
     return 0;
   }
