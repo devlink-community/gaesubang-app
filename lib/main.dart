@@ -20,6 +20,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // FCM 서비스 기본 초기화 (사용자별 토큰 등록은 로그인 시 처리)
   final fcmService = FCMService();
   await fcmService.initialize();
@@ -30,6 +31,11 @@ void main() async {
   final fcmService = FCMService();
   await fcmService.initialize();
 >>>>>>> 66158447 (fix: main 에 fcm 서비스 초기화 추가 완료)
+=======
+  // FCM 서비스 초기화
+  final fcmService = FCMService();
+  await fcmService.initialize();
+>>>>>>> 01ad0f1e (fix: main 에 fcm 서비스 초기화 추가 완료)
   await fcmService.requestPermission();
 
   // Firebase 연결 확인 로그 추가
