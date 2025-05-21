@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../auth/domain/model/member.dart';
-import '../../auth/domain/repository/auth_repository.dart';
 import '../../auth/module/auth_di.dart';
 import 'auth_state.dart';
 

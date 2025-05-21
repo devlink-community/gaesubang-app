@@ -1,4 +1,5 @@
 // lib/core/layout/main_shell.dart
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -15,6 +16,8 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+
     // 현재 경로 가져오기
     final String currentPath = GoRouterState.of(context).matchedLocation;
 
