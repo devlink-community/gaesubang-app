@@ -1,52 +1,82 @@
+// lib/home/presentation/home_screen_root.dart - 대체 방안
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../auth/domain/usecase/get_current_user_use_case.dart';
+import '../../auth/module/auth_di.dart';
 import 'home_action.dart';
 import 'home_notifier.dart';
 import 'home_screen.dart';
 
-class HomeScreenRoot extends ConsumerWidget {
+class HomeScreenRoot extends ConsumerStatefulWidget {
   const HomeScreenRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.watch(homeNotifierProvider.notifier);
-    final state = ref.watch(homeNotifierProvider);
+  ConsumerState<HomeScreenRoot> createState() => _HomeScreenRootState();
+}
+
+class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
+  String? userSkills;
+
+  @override
+  void initState() {
+    super.initState();
+    // 초기화 시점에 사용자 스킬 정보 로드
+    _loadUserSkills();
+  }
+
+  Future<void> _loadUserSkills() async {
+    final currentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
+    final userResult = await currentUserUseCase.execute();
+
+    userResult.when(
+      data: (user) {
+        setState(() {
+          userSkills = user.skills;
+          debugPrint('HomeScreenRoot: 사용자 스킬 정보 로드 - $userSkills');
+        });
+      },
+      error: (error, stackTrace) {
+        debugPrint('HomeScreenRoot: 사용자 정보 로드 실패 - $error');
+      },
+      loading: () {},
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final homeNotifier = ref.watch(homeNotifierProvider.notifier);
+    final homeState = ref.watch(homeNotifierProvider);
 
     return HomeScreen(
-      state: state,
+      state: homeState,
+      userSkills: userSkills, // 상태 변수에 저장된 스킬 정보 전달
       onAction: (action) async {
         switch (action) {
           case RefreshHome():
-            await notifier.onAction(action);
+            await homeNotifier.onAction(action);
+            _loadUserSkills(); // 새로고침 시 스킬 정보도 다시 로드
             break;
-
           case OnTapNotice(:final noticeId):
-            // 임시 처리: 토스트 메시지 표시
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text('공지사항 $noticeId 클릭')));
             break;
-
           case OnTapGroup(:final groupId):
-            // 그룹 상세 페이지로 이동
             context.push('/group/$groupId');
             break;
-
           case OnTapPopularPost(:final postId):
-            // 게시글 상세 페이지로 이동
             context.push('/community/$postId');
             break;
-
           case OnTapSettings():
-            // 설정 페이지로 이동
             context.push('/settings');
             break;
-
           case OnTapNotification():
-            // 알림 페이지로 이동
             context.push('/notifications');
+            break;
+          default:
+            await homeNotifier.onAction(action);
             break;
         }
       },

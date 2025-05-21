@@ -7,20 +7,16 @@ class Quiz with _$Quiz {
   const Quiz({
     required this.question,
     required this.options,
-    required this.correctAnswerIndex,
     required this.explanation,
-    required this.category,
-    required this.generatedDate,
-    this.attemptedAnswerIndex,
-    this.isAnswered = false,
+    this.correctOptionIndex = 0,
+    this.relatedSkill = '',
+    this.answer = '',
   });
 
   final String question;
   final List<String> options;
-  final int correctAnswerIndex;
   final String explanation;
-  final String category;
-  final DateTime generatedDate;
-  final int? attemptedAnswerIndex;
-  final bool isAnswered;
+  final int correctOptionIndex;
+  final String relatedSkill;
+  final String answer; // 이전 호환성을 위해 유지
 }
