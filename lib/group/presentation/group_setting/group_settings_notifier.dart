@@ -1,13 +1,12 @@
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_settings_notifier.g.dart';
@@ -17,14 +16,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
   late final UpdateGroupUseCase _updateGroupUseCase;
   late final LeaveGroupUseCase _leaveGroupUseCase;
-  late final GetCurrentMemberUseCase _getCurrentMemberUseCase;
 
   @override
   GroupSettingsState build(String groupId) {
     _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
     _updateGroupUseCase = ref.watch(updateGroupUseCaseProvider);
     _leaveGroupUseCase = ref.watch(leaveGroupUseCaseProvider);
-    _getCurrentMemberUseCase = ref.watch(getCurrentMemberUseCaseProvider);
 
     // 그룹 정보 로드
     _loadGroupDetail(groupId);
@@ -34,22 +31,25 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
   Future<void> _loadGroupDetail(String groupId) async {
     // 현재 사용자 정보 로드
-    final currentMember = await _getCurrentMemberUseCase.execute();
+    final currentUser = ref.read(currentUserProvider);
 
     final result = await _getGroupDetailUseCase.execute(groupId);
 
     switch (result) {
       case AsyncData(:final value):
-        // 현재 사용자가 방장인지 확인 (하드코딩된 ID 제거)
-        final isOwner = value.owner.id == currentMember.id;
+        // 현재 사용자가 방장인지 확인
+        final isOwner = value.ownerId == currentUser?.id;
 
         state = state.copyWith(
           group: result,
           name: value.name,
           description: value.description,
           imageUrl: value.imageUrl,
-          hashTags: value.hashTags,
-          limitMemberCount: value.limitMemberCount,
+          hashTags:
+              value.hashTags
+                  .map((tag) => HashTag(id: tag, content: tag))
+                  .toList(),
+          limitMemberCount: value.maxMemberCount,
           isOwner: isOwner,
         );
       case AsyncError(:final error):
@@ -109,8 +109,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
               name: originalGroup.name,
               description: originalGroup.description,
               imageUrl: originalGroup.imageUrl,
-              hashTags: originalGroup.hashTags,
-              limitMemberCount: originalGroup.limitMemberCount,
+              hashTags:
+                  originalGroup.hashTags
+                      .map((tag) => HashTag(id: tag, content: tag))
+                      .toList(),
+              limitMemberCount: originalGroup.maxMemberCount,
             );
           }
         }
@@ -153,13 +156,15 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       id: currentGroup.id,
       name: state.name,
       description: state.description,
-      members: currentGroup.members,
-      hashTags: state.hashTags,
-      limitMemberCount: state.limitMemberCount,
-      owner: currentGroup.owner,
+      hashTags: state.hashTags.map((tag) => tag.content).toList(),
+      maxMemberCount: state.limitMemberCount,
+      memberCount: currentGroup.memberCount,
+      ownerId: currentGroup.ownerId,
+      ownerNickname: currentGroup.ownerNickname,
+      ownerProfileImage: currentGroup.ownerProfileImage,
       imageUrl: state.imageUrl,
       createdAt: currentGroup.createdAt,
-      updatedAt: DateTime.now(),
+      isJoinedByCurrentUser: currentGroup.isJoinedByCurrentUser,
     );
 
     // 그룹 업데이트

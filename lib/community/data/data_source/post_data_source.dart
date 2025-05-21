@@ -69,4 +69,20 @@ abstract interface class PostDataSource {
     required List<String> hashTags,
     required List<Uri> imageUris,
   });
+
+  /* Update */
+  Future<String> updatePost({
+    required String postId,
+    required String authorId, // 권한 확인용
+    required String authorNickname,
+    required String authorPosition,
+    required String userProfileImage,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  });
+
+  /* Delete */
+  Future<bool> deletePost(String postId, String userId);
 }

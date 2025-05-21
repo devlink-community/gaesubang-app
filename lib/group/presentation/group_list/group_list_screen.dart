@@ -1,10 +1,11 @@
 import 'package:devlink_mobile_app/core/component/app_image.dart';
+import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/component/gradient_app_bar.dart';
-import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
 import 'package:devlink_mobile_app/core/component/search_bar_component.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/component/group_list_item.dart';
+import 'package:devlink_mobile_app/group/presentation/group_list/components/group_list_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:flutter/material.dart';
@@ -42,10 +43,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    print(
-      'didChangeDependencies 호출됨, 상태: ${widget.state.groupList.runtimeType}',
-    );
-
     // AsyncValue 패턴 매칭으로 올바르게 접근
     switch (widget.state.groupList) {
       case AsyncData(:final value):
@@ -64,11 +61,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
     for (final group in groups.take(10)) {
       if (group.imageUrl != null && group.imageUrl!.isNotEmpty) {
         imageUrls.add(group.imageUrl!);
-      }
-
-      // 방장 이미지도 사전 로드
-      if (group.owner.image.isNotEmpty) {
-        imageUrls.add(group.owner.image);
       }
     }
 
@@ -303,25 +295,14 @@ class _GroupListScreenState extends State<GroupListScreen> {
       case GroupFilter.all:
         return groups;
       case GroupFilter.joined:
-        return groups
-            .where(
-              (group) =>
-                  widget.state.currentMember != null &&
-                  group.members.any(
-                    (member) => member.id == widget.state.currentMember!.id,
-                  ),
-            )
-            .toList();
+        return groups.where((group) => group.isJoinedByCurrentUser).toList();
       case GroupFilter.open:
         // 참여 가능은 내가 참여하지 않은 그룹 중에서 인원이 여유 있는 그룹
         return groups
             .where(
               (group) =>
-                  group.memberCount < group.limitMemberCount &&
-                  (widget.state.currentMember == null ||
-                      !group.members.any(
-                        (member) => member.id == widget.state.currentMember!.id,
-                      )),
+                  !group.isJoinedByCurrentUser &&
+                  group.memberCount < group.maxMemberCount,
             )
             .toList();
     }
@@ -337,7 +318,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
             child: Column(
               children: [
                 // 스켈레톤 UI 추가
-                const ListSkeleton(itemCount: 3),
+                const GroupListSkeleton(itemCount: 3),
 
                 // 하단 로딩 표시 (선택적)
                 Container(
@@ -372,45 +353,10 @@ class _GroupListScreenState extends State<GroupListScreen> {
         );
       case AsyncError(:final error):
         return SliverFillRemaining(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline_rounded,
-                  size: 60,
-                  color: Colors.redAccent,
-                ),
-                const SizedBox(height: 16),
-                Text('데이터를 불러오지 못했습니다', style: AppTextStyles.subtitle1Bold),
-                const SizedBox(height: 8),
-                Text(
-                  '잠시 후 다시 시도해 주세요',
-                  style: AppTextStyles.body1Regular.copyWith(
-                    color: AppColorStyles.gray100,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed:
-                      () => widget.onAction(
-                        const GroupListAction.onLoadGroupList(),
-                      ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorStyles.primary100,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('새로고침'),
-                ),
-              ],
-            ),
+          child: ErrorView(
+            error: error,
+            onRetry:
+                () => widget.onAction(const GroupListAction.onLoadGroupList()),
           ),
         );
       case AsyncData(:final value):
@@ -474,12 +420,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final group = filteredGroups[index];
-              final isJoined =
-                  widget.state.currentMember != null &&
-                  group.members.any(
-                    (member) => member.id == widget.state.currentMember!.id,
-                  );
-
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Material(
@@ -487,7 +427,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
                   child: GroupListItem(
                     key: ValueKey('group_${group.id}'),
                     group: group,
-                    isCurrentMemberJoined: isJoined,
+                    isCurrentMemberJoined: group.isJoinedByCurrentUser,
                     onTap:
                         () => widget.onAction(
                           GroupListAction.onTapGroup(group.id),
@@ -498,8 +438,9 @@ class _GroupListScreenState extends State<GroupListScreen> {
             }, childCount: filteredGroups.length),
           ),
         );
+      default:
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    return const SliverToBoxAdapter(child: SizedBox.shrink());
   }
 
   // 빈 상태 아이콘
@@ -610,18 +551,4 @@ class _StickyFilterBarDelegate extends SliverPersistentHeaderDelegate {
         minHeight != oldDelegate.minHeight ||
         child != oldDelegate.child;
   }
-}
-
-// 이미지 로딩 실패 시 플레이스홀더 위젯
-Widget placeholderImageOnError(dynamic error, StackTrace? stackTrace) {
-  return Container(
-    color: AppColorStyles.gray40,
-    child: Center(
-      child: Icon(
-        Icons.person_outline,
-        color: AppColorStyles.gray100,
-        size: 20,
-      ),
-    ),
-  );
 }

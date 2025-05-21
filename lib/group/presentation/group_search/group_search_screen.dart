@@ -89,7 +89,9 @@ class _GroupSearchScreenState extends State<GroupSearchScreen> {
       height: 40,
       decoration: BoxDecoration(
         color:
-            _isFocused ? Colors.white : AppColorStyles.gray40.withOpacity(0.3),
+            _isFocused
+                ? Colors.white
+                : AppColorStyles.gray40.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: _isFocused ? AppColorStyles.primary100 : Colors.transparent,
@@ -99,7 +101,7 @@ class _GroupSearchScreenState extends State<GroupSearchScreen> {
             _isFocused
                 ? [
                   BoxShadow(
-                    color: AppColorStyles.primary100.withOpacity(0.1),
+                    color: AppColorStyles.primary100.withValues(alpha: 0.1),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -407,10 +409,9 @@ class _GroupSearchScreenState extends State<GroupSearchScreen> {
           itemBuilder: (context, index) {
             final group = value[index];
             final isJoined =
-                widget.state.currentMember != null &&
-                group.members.any(
-                  (member) => member.id == widget.state.currentMember!.id,
-                );
+                group.isJoinedByCurrentUser ||
+                (widget.state.currentMember != null &&
+                    group.ownerId == widget.state.currentMember!.id);
             return GroupListItem(
               key: ValueKey('group_${group.id}'),
               group: group,

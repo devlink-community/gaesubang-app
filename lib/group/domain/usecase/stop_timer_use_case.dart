@@ -1,28 +1,23 @@
+// lib/group/domain/usecase/stop_timer_use_case.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
-import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
+import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class StopTimerUseCase {
-  final TimerRepository _repository;
+  final GroupRepository _repository;
 
-  StopTimerUseCase({required TimerRepository repository})
+  StopTimerUseCase({required GroupRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<TimerSession>> execute({
-    required String sessionId,
-    required int duration,
-  }) async {
-    final result = await _repository.stopTimer(
-      sessionId: sessionId,
-      duration: duration,
-    );
+  Future<AsyncValue<void>> execute(String groupId) async {
+    final result = await _repository.stopMemberTimer(groupId);
 
-    switch (result) {
-      case Success(:final data):
-        return AsyncData(data);
-      case Error(failure: final failure):
-        return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
-    }
+    return switch (result) {
+      Success() => const AsyncData(null),
+      Error(failure: final failure) => AsyncError(
+        failure,
+        failure.stackTrace ?? StackTrace.current,
+      ),
+    };
   }
 }

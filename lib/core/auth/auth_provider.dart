@@ -2,8 +2,8 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../auth/data/mapper/user_mapper.dart';
 import '../../auth/domain/model/member.dart';
-import '../../auth/domain/repository/auth_repository.dart';
 import '../../auth/module/auth_di.dart';
 import 'auth_state.dart';
 
@@ -13,8 +13,16 @@ part 'auth_provider.g.dart';
 /// 앱 전체에서 실시간 인증 상태 변화를 감지
 @riverpod
 Stream<AuthState> authState(Ref ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return repository.authStateChanges;
+  final authDataSource = ref.watch(authDataSourceProvider);
+
+  return authDataSource.authStateChanges.map((userData) {
+    if (userData == null) {
+      return const AuthState.unauthenticated();
+    }
+
+    final member = userData.toMemberWithCalculatedStats();
+    return AuthState.authenticated(member);
+  });
 }
 
 /// 현재 인증 여부 Provider (편의용)
@@ -44,7 +52,19 @@ Member? currentUser(Ref ref) {
 /// 인증 상태 동기 확인 Provider
 /// 라우터에서 리다이렉트 시 사용 (스트림이 아닌 한 번만 확인)
 @riverpod
-Future<AuthState> currentAuthState(Ref ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return repository.getCurrentAuthState();
+Future<AuthState> currentAuthState(Ref ref) async {
+  final authDataSource = ref.watch(authDataSourceProvider);
+
+  try {
+    final userData = await authDataSource.getCurrentAuthState();
+
+    if (userData == null) {
+      return const AuthState.unauthenticated();
+    }
+
+    final member = userData.toMemberWithCalculatedStats();
+    return AuthState.authenticated(member);
+  } catch (e) {
+    return const AuthState.unauthenticated();
+  }
 }

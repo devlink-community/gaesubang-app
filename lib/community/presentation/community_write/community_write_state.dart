@@ -14,6 +14,9 @@ class CommunityWriteState with _$CommunityWriteState {
     this.submitting = false,
     this.errorMessage,
     this.createdPostId,
+    this.updatedPostId, // 수정된 게시글 ID
+    this.isEditMode = false, // 수정 모드 여부
+    this.originalPostId, // 수정 중인 원본 게시글 ID
   });
 
   @override
@@ -30,4 +33,10 @@ class CommunityWriteState with _$CommunityWriteState {
   final String? errorMessage;
   @override
   final String? createdPostId;
+  @override
+  final String? updatedPostId;
+  @override
+  final bool isEditMode;
+  @override
+  final String? originalPostId;
 }

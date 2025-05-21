@@ -1,6 +1,6 @@
 // lib/group/presentation/group_search/group_search_notifier.dart
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -14,25 +14,22 @@ part 'group_search_notifier.g.dart';
 class GroupSearchNotifier extends _$GroupSearchNotifier {
   late final SearchGroupsUseCase _searchGroupsUseCase;
   late final JoinGroupUseCase _joinGroupUseCase;
-  late final GetCurrentMemberUseCase _getCurrentMemberUseCase;
 
   @override
   GroupSearchState build() {
     _searchGroupsUseCase = ref.watch(searchGroupsUseCaseProvider);
     _joinGroupUseCase = ref.watch(joinGroupUseCaseProvider);
-    _getCurrentMemberUseCase = ref.watch(getCurrentMemberUseCaseProvider);
 
-    _loadCurrentMember();
+    // 현재 사용자 정보를 auth provider에서 가져옴
+    final currentUser = ref.watch(currentUserProvider);
+
     // 최근 검색어는 로컬 저장소에서 가져올 수 있지만, 여기서는 간단히 하드코딩
     final recentSearches = ['정보처리기사', '개발자', '스터디'];
 
-    return GroupSearchState(recentSearches: recentSearches);
-  }
-
-  Future<void> _loadCurrentMember() async {
-    final currentMember = await _getCurrentMemberUseCase.execute();
-    // 타입 캐스팅 제거
-    state = state.copyWith(currentMember: currentMember);
+    return GroupSearchState(
+      recentSearches: recentSearches,
+      currentMember: currentUser,
+    );
   }
 
   void _selectGroup(String groupId) {
@@ -50,7 +47,14 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
     final currentMember = state.currentMember;
     if (currentMember == null) return false;
 
-    return group.members.any((member) => member.id == currentMember.id);
+    // Group 모델에 따라 현재 사용자가 그룹에 속해 있는지 확인하는 로직
+    // 1. 사용자가 그룹의 소유자인지 확인
+    if (group.ownerId == currentMember.id) return true;
+
+    // 2. 사용자가 참여한 그룹 목록에 해당 그룹이 있는지 확인
+    return currentMember.joinedGroups.any(
+      (joinedGroup) => joinedGroup.groupName == group.name,
+    );
   }
 
   Future<void> _joinGroup(String groupId) async {

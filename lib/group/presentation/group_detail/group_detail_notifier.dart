@@ -1,9 +1,9 @@
+// lib/group/presentation/group_detail/group_detail_notifier.dart
 import 'dart:async';
 
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -19,10 +19,10 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Timer? _timer;
   late final StartTimerUseCase _startTimerUseCase;
   late final StopTimerUseCase _stopTimerUseCase;
-  late final ResumeTimerUseCase _resumeTimerUseCase;
-  late final GetTimerSessionsUseCase _getTimerSessionsUseCase;
-  late final GetMemberTimersUseCase _getMemberTimersUseCase;
+  late final PauseTimerUseCase _pauseTimerUseCase;
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
+  late final GetGroupMembersUseCase _getGroupMembersUseCase;
+  String _groupId = '';
 
   @override
   GroupDetailState build() {
@@ -31,10 +31,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 의존성 주입
     _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
     _stopTimerUseCase = ref.watch(stopTimerUseCaseProvider);
-    _resumeTimerUseCase = ref.watch(resumeTimerUseCaseProvider);
-    _getTimerSessionsUseCase = ref.watch(getTimerSessionsUseCaseProvider);
-    _getMemberTimersUseCase = ref.watch(getMemberTimersUseCaseProvider);
+    _pauseTimerUseCase = ref.watch(pauseTimerUseCaseProvider);
     _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
+    _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
 
     // 화면 이탈 시 타이머 정리
     ref.onDispose(() {
@@ -48,7 +47,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 화면 재진입 시 데이터 갱신 (Root에서 호출)
   Future<void> onScreenReenter() async {
-    if (state.groupId.isEmpty) {
+    if (_groupId.isEmpty) {
       print('⚠️ 그룹 ID가 설정되지 않아 데이터 갱신을 건너뜁니다');
       return;
     }
@@ -64,7 +63,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         await _handleStartTimer();
 
       case PauseTimer():
-        _handlePauseTimer();
+        await _handlePauseTimer();
 
       case ResumeTimer():
         _handleResumeTimer();
@@ -78,23 +77,18 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       case SetGroupId(:final groupId):
         await _handleSetGroupId(groupId);
 
-      case SetGroupInfo(:final groupName, :final hashTags):
-        _handleSetGroupInfo(groupName, hashTags);
-
       case RefreshSessions():
-        await _loadGroupSessions(state.groupId);
+        await refreshAllData();
 
       case TimerTick():
         _handleTimerTick();
 
       case ToggleTimer():
         if (state.timerStatus == TimerStatus.running) {
-          _handlePauseTimer();
+          await _handlePauseTimer();
         } else if (state.timerStatus == TimerStatus.paused ||
-            state.timerStatus == TimerStatus.initial ||
-            state.timerStatus == TimerStatus.completed) {
-          if (state.timerStatus == TimerStatus.initial ||
-              state.timerStatus == TimerStatus.completed) {
+            state.timerStatus == TimerStatus.stop) {
+          if (state.timerStatus == TimerStatus.stop) {
             await _handleStartTimer();
           } else {
             _handleResumeTimer();
@@ -107,6 +101,11 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       case NavigateToMap():
       case NavigateToSettings():
       case NavigateToUserProfile():
+      case NavigateToChat():
+        break;
+
+      case SetGroupInfo():
+        // 더 이상 필요 없음 - 그룹 상세 정보에서 직접 사용
         break;
     }
   }
@@ -123,27 +122,23 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
 
     // 새 타이머 세션 시작
-    final result = await _startTimerUseCase.execute(
-      groupId: state.groupId,
-      userId: 'current_user_id',
-    );
-
-    // 결과 처리
-    state = state.copyWith(activeSession: result);
+    await _startTimerUseCase.execute(_groupId);
 
     // 타이머 시작
     _startTimerCountdown();
 
     // 멤버 타이머 데이터 업데이트
-    await _updateMemberTimers();
+    await _updateGroupMembers();
   }
 
   // 타이머 일시정지 처리
-  void _handlePauseTimer() {
+  Future<void> _handlePauseTimer() async {
     if (state.timerStatus != TimerStatus.running) return;
 
     _timer?.cancel();
     state = state.copyWith(timerStatus: TimerStatus.paused);
+
+    await _pauseTimerUseCase.execute(_groupId);
   }
 
   // 타이머 재개 처리
@@ -156,50 +151,29 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 타이머 종료 처리
   Future<void> _handleStopTimer() async {
-    if (state.timerStatus == TimerStatus.initial ||
-        state.timerStatus == TimerStatus.completed) {
+    if (state.timerStatus == TimerStatus.stop) {
       return;
     }
 
     _timer?.cancel();
 
-    // 세션 정보 확인
-    final activeSession = state.activeSession.valueOrNull;
-    if (activeSession == null) {
-      state = state.copyWith(
-        timerStatus: TimerStatus.completed,
-        errorMessage: '세션 정보를 찾을 수 없습니다.',
-      );
-      return;
-    }
-
     // 세션 종료
-    final result = await _stopTimerUseCase.execute(
-      sessionId: activeSession.id,
-      duration: state.elapsedSeconds,
-    );
+    await _stopTimerUseCase.execute(_groupId);
 
     // 상태 업데이트
-    state = state.copyWith(
-      timerStatus: TimerStatus.completed,
-      activeSession: result,
-    );
+    state = state.copyWith(timerStatus: TimerStatus.stop);
 
-    // 세션 목록 새로고침
-    await _loadGroupSessions(state.groupId);
+    // 데이터 새로고침
+    await refreshAllData();
   }
 
   // 타이머 초기화 처리
   Future<void> _handleResetTimer() async {
     _timer?.cancel();
-    state = state.copyWith(
-      timerStatus: TimerStatus.initial,
-      elapsedSeconds: 0,
-      activeSession: const AsyncValue.data(null),
-    );
+    state = state.copyWith(timerStatus: TimerStatus.stop, elapsedSeconds: 0);
 
     // 데이터 새로고침
-    if (state.groupId.isNotEmpty) {
+    if (_groupId.isNotEmpty) {
       await refreshAllData();
     }
   }
@@ -207,8 +181,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 그룹 ID 설정 (초기화 시에만 호출)
   Future<void> _handleSetGroupId(String groupId) async {
     print('📊 Setting group ID in notifier: $groupId');
-
-    state = state.copyWith(groupId: groupId);
+    _groupId = groupId;
 
     // 그룹 ID 설정 후 초기 데이터 로드 (한 번만)
     await _loadInitialData();
@@ -216,58 +189,20 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 초기 데이터 로드 (새로고침과 활성 세션 확인을 한 번에)
   Future<void> _loadInitialData() async {
-    if (state.groupId.isEmpty) return;
+    if (_groupId.isEmpty) return;
 
-    print('🔄 초기 데이터 로드 시작 - groupId: ${state.groupId}');
+    print('🔄 초기 데이터 로드 시작 - groupId: $_groupId');
 
     try {
       // 모든 초기 데이터를 병렬로 로드
       await Future.wait([
-        _loadGroupDetail(state.groupId),
-        _loadGroupSessions(state.groupId),
-        _updateMemberTimers(),
-        _checkActiveSession(),
+        _loadGroupDetail(),
+        _updateGroupMembers(),
       ], eagerError: false);
       print('✅ 초기 데이터 로드 완료');
     } catch (e, s) {
       print('❌ _loadInitialData 실패: $e');
       debugPrintStack(stackTrace: s);
-    }
-  }
-
-  // 그룹 정보 설정
-  void _handleSetGroupInfo(String groupName, List<String> hashTags) {
-    state = state.copyWith(groupName: groupName, hashTags: hashTags);
-  }
-
-  // 그룹 세션 목록 로드
-  Future<void> _loadGroupSessions(String groupId) async {
-    if (groupId.isEmpty) return;
-
-    state = state.copyWith(sessions: const AsyncValue.loading());
-    final result = await _getTimerSessionsUseCase.execute(groupId);
-    state = state.copyWith(sessions: result);
-  }
-
-  // 진행 중인 세션 확인
-  Future<void> _checkActiveSession() async {
-    state = state.copyWith(activeSession: const AsyncValue.loading());
-
-    final result = await _resumeTimerUseCase.execute('current_user_id');
-
-    state = state.copyWith(activeSession: result);
-
-    // 진행 중인 세션이 있으면 타이머 재개
-    final session = result.valueOrNull;
-    if (session != null && !session.isCompleted) {
-      // 경과 시간 계산 (세션 시작 시간부터 현재까지)
-      final elapsedTime =
-          DateTime.now().difference(session.startTime).inSeconds;
-      state = state.copyWith(
-        elapsedSeconds: elapsedTime,
-        timerStatus: TimerStatus.running,
-      );
-      _startTimerCountdown();
     }
   }
 
@@ -288,33 +223,29 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 5초마다 멤버 타이머 업데이트
     if (state.elapsedSeconds % 5 == 0) {
-      _updateMemberTimers();
+      _updateGroupMembers();
     }
   }
 
   // 멤버 타이머 데이터 업데이트
-  Future<void> _updateMemberTimers() async {
-    if (state.groupId.isEmpty) return;
+  Future<void> _updateGroupMembers() async {
+    if (_groupId.isEmpty) return;
 
-    final result = await _getMemberTimersUseCase.execute(state.groupId);
-
-    if (result case AsyncData(:final value)) {
-      state = state.copyWith(memberTimers: value);
-    }
+    state = state.copyWith(groupMembersResult: const AsyncValue.loading());
+    final result = await _getGroupMembersUseCase.execute(_groupId);
+    state = state.copyWith(groupMembersResult: result);
   }
 
   // 데이터 새로고침 메서드 - 화면 재진입 시에만 사용
   Future<void> refreshAllData() async {
-    if (state.groupId.isEmpty) return;
+    if (_groupId.isEmpty) return;
 
-    print('🔄 데이터 새로고침 시작 - groupId: ${state.groupId}');
+    print('🔄 데이터 새로고침 시작 - groupId: $_groupId');
 
-    // 활성 세션 확인은 제외하고 그룹 데이터만 새로고침
     try {
       await Future.wait([
-        _loadGroupDetail(state.groupId),
-        _loadGroupSessions(state.groupId),
-        _updateMemberTimers(),
+        _loadGroupDetail(),
+        _updateGroupMembers(),
       ], eagerError: false);
       print('✅ 데이터 새로고침 완료');
     } catch (e, s) {
@@ -324,29 +255,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   }
 
   // 그룹 세부 정보 로드 헬퍼 메서드
-  Future<void> _loadGroupDetail(String groupId) async {
-    try {
-      print('🔍 그룹 세부 정보 로드 시작: $groupId');
-      final groupDetailResult = await _getGroupDetailUseCase.execute(groupId);
-
-      switch (groupDetailResult) {
-        case AsyncData(:final value):
-          print('✅ 그룹 세부 정보 로드 성공: ${value.name}');
-          state = state.copyWith(
-            groupName: value.name,
-            participantCount: value.memberCount,
-            totalMemberCount: value.limitMemberCount,
-            hashTags: value.hashTags.map((tag) => tag.content).toList(),
-          );
-
-        case AsyncError(:final error):
-          print('❌ Failed to load group detail: $error');
-
-        case AsyncLoading():
-          print('⏳ Loading group detail...');
-      }
-    } catch (e) {
-      print('❌ Error loading group detail: $e');
-    }
+  Future<void> _loadGroupDetail() async {
+    state = state.copyWith(groupDetailResult: const AsyncValue.loading());
+    final result = await _getGroupDetailUseCase.execute(_groupId);
+    state = state.copyWith(groupDetailResult: result);
   }
 }
