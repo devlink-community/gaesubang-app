@@ -11,7 +11,7 @@ class GetDailyQuizUseCase {
 
   Future<AsyncValue<Quiz>> execute({String? skills}) async {
     // 1. 오늘의 퀴즈가 있는지 확인
-    final todayResult = await _repository.getTodayQuiz();
+    final todayResult = await _repository.getTodayQuiz(skills: skills);
 
     switch (todayResult) {
       case Success(:final data):

@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../module/vertax_client.dart';
@@ -17,6 +18,7 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
 
       // VertexAI 클라이언트 초기화 확인
       await _vertexAIClient.initialize();
+      debugPrint('VertexAI 클라이언트 초기화 완료');
 
       // 스킬 파싱 - skills가 문자열로 제공되면 리스트로 변환
       List<String> skillList = [];
@@ -64,7 +66,7 @@ class VertexAIQuizDataSourceImpl implements QuizDataSource {
 
       return processedQuiz;
     } catch (e) {
-      debugPrint('퀴즈 생성 실패: $e');
+      debugPrint('퀴즈 생성 실패 (상세 에러): $e');
 
       // 오류 발생 시 기본 퀴즈 반환 (API 오류에도 앱이 동작하도록)
       return _getFallbackQuiz(skills);

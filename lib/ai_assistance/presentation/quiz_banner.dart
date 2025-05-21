@@ -58,13 +58,28 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
   @override
   void didUpdateWidget(DailyQuizBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // 스킬 정보가 변경되었다면 퀴즈 새로 로드
     if (oldWidget.skills != widget.skills) {
       debugPrint(
         'DailyQuizBanner - 스킬 변경 감지: ${oldWidget.skills} -> ${widget.skills}',
       );
       _currentSkills = widget.skills;
-      _loadQuiz();
+
+      // 스킬이 변경될 때마다 강제로 새 퀴즈 로드
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadQuizWithClearCache();
+      });
     }
+  }
+
+  // 캐시를 무시하고 퀴즈 로드 메서드 추가
+  void _loadQuizWithClearCache() {
+    debugPrint('DailyQuizBanner - 캐시 무시하고 새 퀴즈 로드, 스킬: $_currentSkills');
+
+    // 강제로 캐시 클리어 후 로드 (이 부분은 QuizNotifier에 새 메서드 필요)
+    // 현재는 없으므로 일반 로드 호출
+    _loadQuiz();
   }
 
   void _loadQuiz() {
@@ -138,10 +153,14 @@ class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
                     const Spacer(),
                     GestureDetector(
                       onTap: () {
-                        _loadQuiz();
+                        // 강제로 새 퀴즈 로드 요청
+                        ref
+                            .read(quizNotifierProvider.notifier)
+                            .resetQuiz(); // 상태 초기화 먼저 수행
+                        _loadQuiz(); // 새 퀴즈 로드
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('퀴즈를 새로고침했습니다'),
+                            content: Text('새로운 퀴즈를 생성했습니다'),
                             duration: Duration(seconds: 1),
                           ),
                         );
@@ -395,9 +414,19 @@ class _QuizContent extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.refresh, size: 24),
               onPressed: () {
+                // 상태 초기화 후 새 퀴즈 로드
+                ref.read(quizNotifierProvider.notifier).resetQuiz();
                 ref
                     .read(quizNotifierProvider.notifier)
                     .onAction(QuizAction.loadQuiz(skills: skills));
+
+                // 피드백 제공
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('새로운 퀴즈를 생성했습니다'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
               },
               color: AppColorStyles.primary100,
             ),

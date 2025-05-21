@@ -1,4 +1,4 @@
-// lib/quiz/data/repository_impl/quiz_repository_impl.dart
+// lib/ai_assistance/data/repository_impl/quiz_data_repository_impl.dart
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -43,78 +43,119 @@ class QuizRepositoryImpl implements QuizRepository {
     return 'daily_quiz_$userId';
   }
 
+  // 스킬 문자열을 정규화하여 일관된 키 생성 (수정된 부분)
+  String _normalizeSkillsKey(String skills) {
+    // 스킬 문자열을 정규화: 모두 소문자로 변환하고, 공백 제거, 알파벳 순 정렬
+    final skillsList =
+        skills
+            .toLowerCase()
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList()
+          ..sort(); // 순서에 관계없이 동일한 스킬셋은 동일한 키를 가지도록
+
+    // 고유 식별자 생성
+    return skillsList.join('_');
+  }
+
+  // 스킬 변경 감지를 개선한 메서드 (새로 추가)
+  Future<bool> _isSkillChanged(String quizKey, String? skills) async {
+    final prefs = await SharedPreferences.getInstance();
+    // 현재 저장된 스킬 정보 키 가져오기
+    final currentSkillKey = prefs.getString('${quizKey}_current_skills');
+
+    // 정규화된 새 스킬 키 계산
+    final newSkillKey = skills != null ? _normalizeSkillsKey(skills) : null;
+
+    // 스킬 정보가 변경되었는지 비교
+    final hasChanged = currentSkillKey != newSkillKey;
+
+    if (hasChanged) {
+      debugPrint('스킬 정보 변경 감지: $currentSkillKey → $newSkillKey');
+      // 새 스킬 정보 저장
+      if (newSkillKey != null) {
+        await prefs.setString('${quizKey}_current_skills', newSkillKey);
+      } else {
+        await prefs.remove('${quizKey}_current_skills');
+      }
+    }
+
+    return hasChanged;
+  }
+
   @override
   Future<Result<Quiz>> generateDailyQuiz({String? skills}) async {
     try {
+      await _clearAllQuizData();
       // 오늘 날짜 가져오기
       final today = _getTodayDateString();
 
-      // 사용자별 퀴즈 키 가져오기
-      final quizKey = await _getQuizStorageKey();
+      // 사용자 ID 가져오기
+      final userId = await _getUserId();
+      final quizKey = 'daily_quiz_$userId';
 
       // 스킬 정보가 있는 경우 키에 추가 (스킬별 다른 퀴즈)
       final finalKey =
           skills != null ? "${quizKey}_${skills.hashCode}" : quizKey;
 
-      debugPrint('퀴즈 생성 - 최종 저장 키: $finalKey, 스킬: $skills');
+      debugPrint('새 퀴즈 생성 시도 - 사용자 키: $finalKey, 스킬: $skills');
 
-      // 이미 오늘 퀴즈가 있는지 확인
-      final prefs = await SharedPreferences.getInstance();
-      final storedQuizJson = prefs.getString(finalKey);
-
-      if (storedQuizJson != null) {
-        final quizMap = jsonDecode(storedQuizJson);
-        final storedDate = quizMap['generatedDate'] as String;
-
-        // 오늘 날짜와 일치하면 저장된 퀴즈 반환
-        if (storedDate == today) {
-          debugPrint('이미 저장된 오늘의 퀴즈 반환 (스킬: $skills)');
-          return Result.success(
-            Quiz(
-              question: quizMap['question'] as String,
-              options: List<String>.from(quizMap['options']),
-              correctAnswerIndex: quizMap['correctAnswerIndex'] as int,
-              explanation: quizMap['explanation'] as String,
-              category: quizMap['category'] as String,
-              generatedDate: DateTime.parse(quizMap['generatedDate']),
-              isAnswered: quizMap['isAnswered'] ?? false,
-              attemptedAnswerIndex: quizMap['attemptedAnswerIndex'] as int?,
-            ),
-          );
-        }
-      }
-
-      // 새 퀴즈 생성
-      debugPrint('새 퀴즈 생성 (스킬: $skills)');
-      final quizData = await _dataSource.generateQuiz(skills: skills);
-
-      // 구조 검증
-      if (!_validateQuizDataFunction(quizData)) {
-        return Result.error(
-          Failure(
-            FailureType.validation,
-            '퀴즈 데이터 형식이 올바르지 않습니다',
-            cause: 'Invalid quiz data structure',
-          ),
+      // 새 퀴즈 생성 - API 호출 로그 추가
+      try {
+        // 데이터 소스를 통한 API 호출
+        debugPrint('DataSource.generateQuiz 호출 시작 - 스킬: $skills');
+        final quizData = await _dataSource.generateQuiz(skills: skills);
+        debugPrint(
+          'DataSource.generateQuiz 호출 완료 - 성공적으로 데이터 수신: ${quizData['question']}',
         );
+
+        // 퀴즈 모델로 변환
+        final quiz = Quiz(
+          question: quizData['question'],
+          options: List<String>.from(quizData['options']),
+          correctAnswerIndex: quizData['correctAnswerIndex'],
+          explanation: quizData['explanation'],
+          category: quizData['category'],
+          generatedDate: DateTime.now(),
+        );
+
+        // 로컬에 퀴즈 저장
+        await _saveQuizToPrefs(quiz, finalKey);
+
+        debugPrint('새 퀴즈 생성 성공: ${quiz.question}');
+        return Result.success(quiz);
+      } catch (apiError, st) {
+        debugPrint('API를 통한 퀴즈 생성 실패: $apiError');
+
+        // API 호출 실패 시 기본 퀴즈 생성
+        final defaultQuestion = "Python에서 리스트 컴프리헨션을 올바르게 사용한 예는?";
+        final defaultOptions = [
+          "list = [x in range(10)]",
+          "list = [x for x in range(10)]",
+          "list = [for x in range(10)]",
+          "list = [x if x in range(10)]",
+        ];
+        final defaultExplanation =
+            "리스트 컴프리헨션은 [표현식 for 항목 in 반복가능객체]의 형태로 작성합니다.";
+
+        final quiz = Quiz(
+          question: defaultQuestion,
+          options: defaultOptions,
+          correctAnswerIndex: 1,
+          explanation: defaultExplanation,
+          category: skills ?? "Python",
+          generatedDate: DateTime.now(),
+        );
+
+        // 로컬에 퀴즈 저장
+        await _saveQuizToPrefs(quiz, finalKey);
+
+        debugPrint('기본 Python 퀴즈 생성 완료 (API 오류로 인한 대체)');
+        return Result.success(quiz);
       }
-
-      // 퀴즈 모델로 변환
-      final quiz = Quiz(
-        question: quizData['question'] as String,
-        options: List<String>.from(quizData['options']),
-        correctAnswerIndex: quizData['correctAnswerIndex'] as int,
-        explanation: quizData['explanation'] as String,
-        category: quizData['category'] as String,
-        generatedDate: DateTime.now(),
-      );
-
-      // 로컬에 퀴즈 저장 (스킬별 키 사용)
-      await _saveQuizToPrefs(quiz, finalKey);
-
-      return Result.success(quiz);
     } catch (e, st) {
-      debugPrint('퀴즈 생성 실패: $e');
+      debugPrint('전체 퀴즈 생성 과정 실패: $e');
       return Result.error(
         Failure(
           FailureType.unknown,
@@ -127,14 +168,19 @@ class QuizRepositoryImpl implements QuizRepository {
   }
 
   @override
-  Future<Result<Quiz?>> getTodayQuiz() async {
+  Future<Result<Quiz?>> getTodayQuiz({String? skills}) async {
     try {
       // 사용자별 퀴즈 키 가져오기
       final quizKey = await _getQuizStorageKey();
-      debugPrint('오늘의 퀴즈 조회 - 사용자 키: $quizKey');
+
+      // 스킬 정보가 있는 경우 키에 추가 (스킬별 다른 퀴즈)
+      final finalKey =
+          skills != null ? "${quizKey}_${skills.hashCode}" : quizKey;
+
+      debugPrint('오늘의 퀴즈 조회 - 사용자 키: $finalKey, 스킬: $skills');
 
       final prefs = await SharedPreferences.getInstance();
-      final storedQuizJson = prefs.getString(quizKey);
+      final storedQuizJson = prefs.getString(finalKey);
 
       if (storedQuizJson == null) {
         debugPrint('저장된 퀴즈 없음');
@@ -143,9 +189,10 @@ class QuizRepositoryImpl implements QuizRepository {
 
       final quizMap = jsonDecode(storedQuizJson);
 
-      // 저장된 날짜와 오늘 날짜 비교
+      // 여기서는 기존 코드의 메서드 이름을 그대로 사용
+      // 저장된 날짜와 오늘 날짜 비교 - 클래스의 실제 메서드 이름을 사용
       final storedDate = quizMap['generatedDate'] as String;
-      final today = _getTodayDateString();
+      final today = _getTodayDateString(); // 실제 메서드 이름으로 교체 필요
 
       if (storedDate != today) {
         debugPrint('오늘 날짜와 일치하지 않는 퀴즈');
@@ -201,11 +248,17 @@ class QuizRepositoryImpl implements QuizRepository {
       // 사용자별 퀴즈 키 가져오기
       final quizKey = await _getQuizStorageKey();
 
-      // 스킬 정보가 있는 경우 추가 (원래 퀴즈를 저장한 키와 동일하게)
+      // 현재 사용중인 스킬 정보 확인 (수정된 부분)
+      final prefs = await SharedPreferences.getInstance();
+      final currentSkillKey = prefs.getString('${quizKey}_current_skills');
+
+      // 스킬 정보에 맞는 최종 키 생성
       String finalKey = quizKey;
-      if (quiz.category.isNotEmpty) {
-        // 카테고리(스킬)에 따른 저장 키 생성 (원래 키와 일관성 유지)
-        finalKey = "${quizKey}_${quiz.category.hashCode}";
+      if (currentSkillKey != null) {
+        finalKey = "${quizKey}_${currentSkillKey}";
+      } else if (quiz.category.isNotEmpty) {
+        // 이전 버전과의 호환성을 위한 코드
+        finalKey = "${quizKey}_${_normalizeSkillsKey(quiz.category)}";
       }
 
       // 로컬에 저장
@@ -294,5 +347,34 @@ class QuizRepositoryImpl implements QuizRepository {
       debugPrint('퀴즈 로컬 저장 실패: $e');
       rethrow;
     }
+  }
+
+  @override
+  Future<String> getQuizStorageKey() async {
+    final userId = await _getUserId();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return 'quiz_${userId}_$timestamp';
+  }
+}
+
+/// 모든 퀴즈 데이터 삭제 (캐시 초기화)
+Future<void> _clearAllQuizData() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 'daily_quiz_' 로 시작하는 모든 키 찾기
+    final allKeys = prefs.getKeys();
+    final quizKeys =
+        allKeys.where((key) => key.startsWith('daily_quiz_')).toList();
+
+    // 퀴즈 관련 모든 키 삭제
+    for (final key in quizKeys) {
+      await prefs.remove(key);
+      debugPrint('퀴즈 데이터 삭제: $key');
+    }
+
+    debugPrint('모든 퀴즈 데이터 삭제 완료 (${quizKeys.length}개)');
+  } catch (e) {
+    debugPrint('퀴즈 데이터 삭제 실패: $e');
   }
 }
