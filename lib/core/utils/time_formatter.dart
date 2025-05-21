@@ -37,7 +37,10 @@ class TimeFormatter {
   ///
   /// [startTime] 시작 시간
   /// [includeSeconds] 초 단위 포함 여부
-  static String formatElapsedTime(DateTime startTime, {bool includeSeconds = true}) {
+  static String formatElapsedTime(
+    DateTime startTime, {
+    bool includeSeconds = true,
+  }) {
     final now = DateTime.now();
     final difference = now.difference(startTime);
     return formatSeconds(difference.inSeconds, includeSeconds: includeSeconds);
@@ -49,10 +52,10 @@ class TimeFormatter {
   /// [endTime] 종료 시간
   /// [includeSeconds] 초 단위 포함 여부
   static String formatTimeDifference(
-      DateTime startTime,
-      DateTime endTime,
-      {bool includeSeconds = true}
-      ) {
+    DateTime startTime,
+    DateTime endTime, {
+    bool includeSeconds = true,
+  }) {
     final difference = endTime.difference(startTime);
     return formatSeconds(difference.inSeconds, includeSeconds: includeSeconds);
   }
@@ -103,15 +106,6 @@ class TimeFormatter {
   /// [hours], [minutes], [seconds]를 각각 지정 가능
   static DateTime addTime({int hours = 0, int minutes = 0, int seconds = 0}) {
     final now = DateTime.now();
-    return now.add(Duration(
-      hours: hours,
-      minutes: minutes,
-      seconds: seconds,
-    ));
+    return now.add(Duration(hours: hours, minutes: minutes, seconds: seconds));
   }
-
-  /// 남은 시간을 "HH:MM:SS" 형식으로 변환 (카운트다운 용도)
-  ///
-  /// [endTime] 종료 시간
-  static String formatRemainingTime(DateTime endTime) {
-    final now = DateTime.
+}
