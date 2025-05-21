@@ -32,7 +32,12 @@ class QuizNotifier extends _$QuizNotifier {
   }
 
   Future<void> _loadQuiz(String? skills) async {
-    state = state.copyWith(quizResult: const AsyncLoading());
+    // 이전 상태를 초기화하고 로딩 상태로 설정
+    state = state.copyWith(
+      quizResult: const AsyncLoading(),
+      selectedAnswerIndex: null,
+      hasAnswered: false,
+    );
 
     try {
       final selectedSkill =
@@ -42,29 +47,39 @@ class QuizNotifier extends _$QuizNotifier {
               .trim() ??
           '컴퓨터 기초';
 
-      final asyncQuiz = await _generateQuizUseCase.execute(selectedSkill);
+      // 현재 시간을 추가하여 캐시를 방지 (같은 스킬이라도 항상 새 퀴즈 요청)
+      final skillWithTimestamp =
+          '$selectedSkill-${DateTime.now().millisecondsSinceEpoch}';
 
-      // 성공/실패 확인
-      asyncQuiz.when(
-        data: (quiz) {
+      // UseCase 호출 전 디버그 로그 추가
+      print('퀴즈 생성 요청: $skillWithTimestamp');
+
+      final asyncQuiz = await _generateQuizUseCase.execute(skillWithTimestamp);
+
+      // 성공/실패 확인 및 상태 업데이트
+      switch (asyncQuiz) {
+        case AsyncData(:final value):
           state = state.copyWith(
-            quizResult: AsyncData(quiz),
+            quizResult: AsyncData(value),
             selectedAnswerIndex: null,
             hasAnswered: false,
           );
-        },
-        error: (error, stackTrace) {
+          print('퀴즈 생성 성공: ${value?.question?.substring(0, 20)}...');
+
+        case AsyncError(:final error, :final stackTrace):
           state = state.copyWith(
             quizResult: AsyncError(error, stackTrace),
             selectedAnswerIndex: null,
             hasAnswered: false,
           );
-        },
-        loading: () {
-          // 이미 AsyncLoading으로 설정했으므로 추가 처리 불필요
-        },
-      );
+          print('퀴즈 생성 실패: $error');
+
+        case AsyncLoading():
+          // 이미 로딩 상태로 설정했으므로 추가 처리 불필요
+          break;
+      }
     } catch (e, stack) {
+      print('퀴즈 생성 예외 발생: $e');
       state = state.copyWith(
         quizResult: AsyncError(e, stack),
         selectedAnswerIndex: null,

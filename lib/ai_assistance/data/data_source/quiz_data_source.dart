@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
+
 import '../../module/vertex_client.dart';
 
 abstract interface class VertexAiDataSource {
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt);
+
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
     List<String> skills,
     int count,
   );
+
   Future<List<Map<String, dynamic>>> generateGeneralQuiz(int count);
 }
 
@@ -67,33 +70,129 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
 
   /// 프롬프트에서 스킬 영역 추출
   String _extractSkillAreaFromPrompt(String prompt) {
-    // 간단한 방법: 프롬프트에서 "지식 영역: [영역명]" 패턴 찾기
-    final skillPattern = RegExp(r'지식 영역: ?([\w\s]+)');
+    // 타임스탬프 제거 (형식: "스킬-12345678901234")
+    final timestampSeparatorIndex = prompt.lastIndexOf('-');
+    if (timestampSeparatorIndex > 0) {
+      final possibleTimestamp = prompt.substring(timestampSeparatorIndex + 1);
+      // 숫자로만 구성된 타임스탬프인지 확인
+      if (RegExp(r'^\d+$').hasMatch(possibleTimestamp)) {
+        // 타임스탬프 제거 후 스킬만 추출
+        prompt = prompt.substring(0, timestampSeparatorIndex).trim();
+      }
+    }
+
+    // 정규식에서 대소문자 구분 없이 검색
+    final skillPattern = RegExp(r'지식 영역: ?([\w\s]+)', caseSensitive: false);
     final match = skillPattern.firstMatch(prompt);
 
     if (match != null && match.groupCount >= 1) {
       return match.group(1)?.trim() ?? '';
     }
 
-    // 프롬프트에서 직접 영역 단어 추출 시도
-    final commonSkills = [
-      'Python',
-      'JavaScript',
-      'Java',
-      'Flutter',
-      'Dart',
-      'HTML',
-      'CSS',
-      'C++',
-    ];
-    for (final skill in commonSkills) {
-      if (prompt.contains(skill)) {
-        return skill;
-      }
+    // 1. 완전 일치 검사 (대소문자 구분 없이)
+    final promptLower = prompt.toLowerCase().trim();
+
+    // 완전히 정확한 매칭을 위한 기술 목록 (소문자로 통일)
+    final exactSkills = {
+      'python': 'Python',
+      'javascript': 'JavaScript',
+      'js': 'JavaScript',
+      'java': 'Java',
+      'flutter': 'Flutter',
+      'dart': 'Dart',
+      'html': 'HTML',
+      'css': 'CSS',
+      'c++': 'C++',
+      'c#': 'C#',
+      'ruby': 'Ruby',
+      'php': 'PHP',
+      'swift': 'Swift',
+      'kotlin': 'Kotlin',
+      'go': 'Go',
+      'golang': 'Go',
+      'rust': 'Rust',
+      'typescript': 'TypeScript',
+      'ts': 'TypeScript',
+      'react': 'React',
+      'angular': 'Angular',
+      'vue': 'Vue',
+      'node.js': 'Node.js',
+      'nodejs': 'Node.js',
+      'django': 'Django',
+      'spring': 'Spring',
+      'spring boot': 'Spring Boot',
+      'flask': 'Flask',
+      'laravel': 'Laravel',
+      'express': 'Express',
+      'mysql': 'MySQL',
+      'postgresql': 'PostgreSQL',
+      'mongodb': 'MongoDB',
+      'redis': 'Redis',
+      'aws': 'AWS',
+      'azure': 'Azure',
+      'docker': 'Docker',
+      'kubernetes': 'Kubernetes',
+      'k8s': 'Kubernetes',
+      'devops': 'DevOps',
+      'git': 'Git',
+      'tensorflow': 'TensorFlow',
+      'pytorch': 'PyTorch',
+      'machine learning': 'Machine Learning',
+      'ml': 'Machine Learning',
+      'deep learning': 'Deep Learning',
+      'dl': 'Deep Learning',
+      'ai': 'AI',
+      'artificial intelligence': 'AI',
+      'data science': 'Data Science',
+      'blockchain': 'Blockchain',
+      'ios': 'iOS',
+      'android': 'Android',
+      'web development': 'Web Development',
+      'web dev': 'Web Development',
+      'frontend': 'Frontend',
+      'front-end': 'Frontend',
+      'backend': 'Backend',
+      'back-end': 'Backend',
+      'full stack': 'Full Stack',
+      'fullstack': 'Full Stack',
+      'ui/ux': 'UI/UX',
+      'ui': 'UI/UX',
+      'ux': 'UI/UX',
+      'unity': 'Unity',
+      'unreal engine': 'Unreal Engine',
+      'game development': 'Game Development',
+      'game dev': 'Game Development',
+      'computer science': 'Computer Science',
+      'cs': 'Computer Science',
+      'algorithm': 'Algorithms',
+      'algorithms': 'Algorithms',
+      'data structure': 'Data Structures',
+      'data structures': 'Data Structures',
+    };
+
+    // 완전 일치 검사
+    if (exactSkills.containsKey(promptLower)) {
+      return exactSkills[promptLower]!;
     }
 
-    // 기본값 반환
-    return '컴퓨터 기초';
+    // 2. 입력 문자열이 그대로 스킬명인지 확인
+    // 외래어/영어인 경우 첫 글자 대문자로 변환
+    if (promptLower.isNotEmpty &&
+        RegExp(r'^[a-z0-9\s\-\+\/]+$').hasMatch(promptLower)) {
+      // 공백으로 구분된 단어들의 첫 글자를 대문자로 변환
+      final capitalizedWords = promptLower
+          .split(' ')
+          .map((word) {
+            if (word.isEmpty) return word;
+            return word[0].toUpperCase() + word.substring(1);
+          })
+          .join(' ');
+
+      return capitalizedWords;
+    }
+
+    // 3. 사용자 입력이 한글이거나 복합어인 경우 그대로 사용
+    return prompt.trim();
   }
 
   /// 폴백 퀴즈 데이터 생성 메서드

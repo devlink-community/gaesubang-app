@@ -23,4 +23,23 @@ class QuizDto {
   factory QuizDto.fromJson(Map<String, dynamic> json) =>
       _$QuizDtoFromJson(json);
   Map<String, dynamic> toJson() => _$QuizDtoToJson(this);
+
+  // copyWith 메서드 추가
+  QuizDto copyWith({
+    String? question,
+    List<String>? options,
+    String? explanation,
+    int? correctOptionIndex,
+    String? skillArea,
+    String? answer,
+  }) {
+    return QuizDto(
+      question: question ?? this.question,
+      options: options ?? this.options,
+      explanation: explanation ?? this.explanation,
+      correctOptionIndex: correctOptionIndex ?? this.correctOptionIndex,
+      skillArea: skillArea ?? this.skillArea,
+      answer: answer ?? this.answer,
+    );
+  }
 }
