@@ -1,6 +1,7 @@
 // lib/group/presentation/group_chat/group_chat_notifier.dart
 import 'dart:async';
 
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_stream_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/mark_messages_as_read_use_case.dart';
@@ -19,6 +20,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   late final SendMessageUseCase _sendMessageUseCase;
   late final GetGroupMessagesStreamUseCase _getGroupMessagesStreamUseCase;
   late final MarkMessagesAsReadUseCase _markMessagesAsReadUseCase;
+  late final GetGroupMembersUseCase _getGroupMembersUseCase; // 추가
   
   StreamSubscription? _messagesSubscription;
 
@@ -31,6 +33,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     _sendMessageUseCase = ref.watch(sendMessageUseCaseProvider);
     _getGroupMessagesStreamUseCase = ref.watch(getGroupMessagesStreamUseCaseProvider);
     _markMessagesAsReadUseCase = ref.watch(markMessagesAsReadUseCaseProvider);
+    _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider); // 추가
 
     // 화면 이탈 시 구독 해제
     ref.onDispose(() {
@@ -60,6 +63,9 @@ class GroupChatNotifier extends _$GroupChatNotifier {
         
       case MessageChanged(:final message):
         _handleMessageChanged(message);
+        
+      case LoadGroupMembers():
+        await _handleLoadGroupMembers();
     }
   }
 
@@ -73,10 +79,33 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     // 메시지 스트림 구독 시작
     await _subscribeToMessages(groupId);
     
+    // 그룹 멤버 목록 로드 (추가)
+    await _handleLoadGroupMembers();
+    
     // 메시지 읽음 상태 업데이트
     await _handleMarkAsRead();
   }
 
+  // 그룹 멤버 목록 로드 (추가)
+  Future<void> _handleLoadGroupMembers() async {
+    if (state.groupId.isEmpty) return;
+    
+    try {
+      // 로딩 상태로 변경
+      state = state.copyWith(groupMembersResult: const AsyncValue.loading());
+      
+      // 멤버 목록 로드
+      final result = await _getGroupMembersUseCase.execute(state.groupId);
+      
+      // 결과 반영
+      state = state.copyWith(groupMembersResult: result);
+    } catch (e) {
+      state = state.copyWith(
+        groupMembersResult: AsyncError(e, StackTrace.current),
+        errorMessage: '그룹 멤버 목록을 불러오는데 실패했습니다',
+      );
+    }
+  }
   // 메시지 스트림 구독
   Future<void> _subscribeToMessages(String groupId) async {
     // 기존 구독 해제
