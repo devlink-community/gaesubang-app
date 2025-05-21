@@ -109,7 +109,7 @@ class _SlideToMapGestureState extends State<SlideToMapGesture>
             end: Alignment.centerRight,
             colors: [
               Colors.transparent,
-              widget.indicatorColor.withOpacity(0.1),
+              widget.indicatorColor.withValues(alpha: 0.1),
             ],
           ),
         ),
@@ -137,7 +137,7 @@ class _SlideToMapGestureState extends State<SlideToMapGesture>
     return Center(
       child: Icon(
         Icons.arrow_forward_ios,
-        color: widget.indicatorColor.withOpacity(0.5 + (progress * 0.5)),
+        color: widget.indicatorColor.withValues(alpha: 0.5 + (progress * 0.5)),
         size: 18 + (progress * 8), // 드래그에 따라 아이콘 크기 커짐
       ),
     );
@@ -147,8 +147,8 @@ class _SlideToMapGestureState extends State<SlideToMapGesture>
     return Center(
       child: Icon(
         Icons.arrow_forward_ios,
-        color: widget.indicatorColor.withOpacity(
-          0.3 + (_animation.value * 0.4),
+        color: widget.indicatorColor.withValues(
+          alpha: 0.3 + (_animation.value * 0.4),
         ),
         size: 18,
       ),

@@ -33,7 +33,7 @@ class OnboardingScreenRoot extends ConsumerWidget {
     final List<OnboardingPageModel> pages = [
       // 앱 소개 페이지
       OnboardingPageModel(
-        title: '개수방에 오신 것을 환영합니다',
+        title: '개수방에 오신 것을\n 환영합니다',
         description: '개발자들이 함께 성장하는 공간,\n집중하고 성장하는 시간을 만들어 보세요.',
         icon: Icons.timer,
         backgroundColor: AppColorStyles.primary100,
@@ -56,7 +56,7 @@ class OnboardingScreenRoot extends ConsumerWidget {
       ),
       // 마지막 페이지
       OnboardingPageModel(
-        title: '모든 준비가 완료되었습니다!',
+        title: '모든 준비가\n 완료되었습니다!',
         description: '이제 개수방과 함께\n개발 공부를 시작해볼까요?',
         icon: Icons.check_circle,
         backgroundColor: const Color(0xFF4CAF50), // 성공 색상

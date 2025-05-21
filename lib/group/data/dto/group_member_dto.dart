@@ -1,3 +1,4 @@
+// lib/group/data/dto/group_member_dto.dart
 import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -12,22 +13,39 @@ class GroupMemberDto {
     this.profileUrl,
     this.role,
     this.joinedAt,
-    this.isActive,
   });
 
   final String? id;
   final String? userId;
   final String? userName;
   final String? profileUrl;
-  final String? role; // "admin", "moderator", "member"
+  final String? role; // "owner", "member"
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? joinedAt;
-  final bool? isActive;
 
   factory GroupMemberDto.fromJson(Map<String, dynamic> json) =>
       _$GroupMemberDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupMemberDtoToJson(this);
+
+  // 필드 업데이트를 위한 copyWith 메서드
+  GroupMemberDto copyWith({
+    String? id,
+    String? userId,
+    String? userName,
+    String? profileUrl,
+    String? role,
+    DateTime? joinedAt,
+  }) {
+    return GroupMemberDto(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      profileUrl: profileUrl ?? this.profileUrl,
+      role: role ?? this.role,
+      joinedAt: joinedAt ?? this.joinedAt,
+    );
+  }
 }

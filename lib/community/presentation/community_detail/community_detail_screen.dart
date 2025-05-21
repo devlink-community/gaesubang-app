@@ -1,4 +1,6 @@
 // lib/community/presentation/community_detail/community_detail_screen.dart
+import 'dart:async';
+
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_state.dart';
@@ -16,10 +18,12 @@ class CommunityDetailScreen extends StatefulWidget {
     super.key,
     required this.state,
     required this.onAction,
+    this.currentUserId, // nullable로 설정
   });
 
   final CommunityDetailState state;
   final void Function(CommunityDetailAction action) onAction;
+  final String? currentUserId;
 
   @override
   State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
@@ -27,15 +31,12 @@ class CommunityDetailScreen extends StatefulWidget {
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   final _controller = TextEditingController();
-  // _isLiked, _isBookmarked 로컬 변수 제거
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
-
-  // didUpdateWidget 메서드 제거 (더 이상 필요하지 않음)
 
   // 댓글 제출 핸들러
   void _submitComment() {
@@ -213,6 +214,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     final dateFormat = DateFormat('yyyy.MM.dd HH:mm');
     final formattedDate = dateFormat.format(post.createdAt);
 
+    // 작성자 확인 (widget.currentUserId 사용)
+    final isAuthor =
+        widget.currentUserId != null && widget.currentUserId == post.authorId;
+
     return Container(
       padding: const EdgeInsets.all(20),
       color: Colors.white,
@@ -250,6 +255,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ],
                 ),
               ),
+
+              // 작성자인 경우 수정/삭제 버튼 표시
+              if (isAuthor) _buildAuthorActions(),
             ],
           ),
 
@@ -390,6 +398,153 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // 작성자 전용 액션 버튼 (수정/삭제) - 깔끔한 팝업 메뉴 버전
+  Widget _buildAuthorActions() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColorStyles.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: PopupMenuButton<String>(
+        icon: Icon(Icons.more_vert, color: AppColorStyles.gray80, size: 20),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+        offset: const Offset(0, 8),
+        // 팝업 메뉴 색상을 흰색으로 설정
+        color: Colors.white,
+        itemBuilder:
+            (context) => [
+              // 수정 메뉴 아이템
+              PopupMenuItem<String>(
+                value: 'edit',
+                height: 42,
+
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      color: AppColorStyles.primary100,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '수정',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: AppColorStyles.gray100,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 삭제 메뉴 아이템
+              PopupMenuItem<String>(
+                value: 'delete',
+                height: 42,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: AppColorStyles.error,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '삭제',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: AppColorStyles.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+        onSelected: (value) {
+          switch (value) {
+            case 'edit':
+              widget.onAction(const CommunityDetailAction.editPost());
+              break;
+            case 'delete':
+              _showDeleteConfirmDialog();
+              break;
+          }
+        },
+      ),
+    );
+  }
+
+  // 삭제 확인 다이얼로그 - 깔끔한 버전
+  void _showDeleteConfirmDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            title: Text('게시글 삭제', style: AppTextStyles.subtitle1Bold),
+            content: Text(
+              '이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.',
+              style: AppTextStyles.body2Regular.copyWith(
+                color: AppColorStyles.gray80,
+                height: 1.5,
+              ),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 취소 버튼
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColorStyles.gray80,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text('취소', style: AppTextStyles.button2Regular),
+                  ),
+                  const SizedBox(width: 8),
+                  // 삭제 버튼
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onAction(const CommunityDetailAction.deletePost());
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: AppColorStyles.error,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      '삭제',
+                      style: AppTextStyles.button2Regular.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
     );
   }
 
