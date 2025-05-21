@@ -31,13 +31,13 @@ void main() async {
     await remoteConfig.setConfigSettings(
       RemoteConfigSettings(
         fetchTimeout: const Duration(minutes: 1),
-        minimumFetchInterval: const Duration(hours: 1),
+        minimumFetchInterval: Duration.zero,
       ),
     );
 
     // 기본값 설정 - 값을 찾지 못할 경우 사용
     await remoteConfig.setDefaults({
-      'vertex_ai_key': '', // 비어있는 기본값
+      'gaesubang_ai_key': '', // 비어있는 기본값
     });
 
     // 설정 가져오기
@@ -49,7 +49,7 @@ void main() async {
       print('Remote Config 가져오기 실패!');
     }
 
-    final vertexKey = remoteConfig.getString('vertex_ai_key');
+    final vertexKey = remoteConfig.getString('gaesubang_ai_key');
     print('Vertex AI 키 존재 여부: ${vertexKey.isNotEmpty ? '있음' : '없음'}');
   } catch (e) {
     print('Remote Config 초기화 중 오류 발생: $e');
