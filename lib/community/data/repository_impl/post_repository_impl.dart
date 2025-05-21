@@ -1,4 +1,5 @@
 // lib/community/data/repository_impl/post_repository_impl.dart
+import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_data_source.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
@@ -305,6 +306,7 @@ class PostRepositoryImpl implements PostRepository {
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
+    Member? author,
   }) async {
     return ApiCallDecorator.wrap('PostRepository.createPost', () async {
       try {
@@ -314,13 +316,18 @@ class PostRepositoryImpl implements PostRepository {
           throw Exception(CommunityErrorMessages.loginRequired);
         }
 
-        // 현재 사용자의 프로필 정보 가져오기 (닉네임, 직책/포지션)
+        // 작성자 정보: 전달받은 author 또는 현재 사용자
+        final authorNickname = author?.nickname ?? currentUser.nickname;
+        final authorPosition = author?.position ?? currentUser.position ?? '';
+        final userProfileImage = author?.image ?? currentUser.image;
+
+        // 현재 사용자의 프로필 정보 가져오기
         final createdPostId = await _dataSource.createPost(
           postId: postId,
           authorId: currentUser.uid,
-          authorNickname: currentUser.nickname,
-          authorPosition: currentUser.position ?? '',
-          userProfileImage: currentUser.image,
+          authorNickname: authorNickname, // 전달받은 또는 현재 닉네임
+          authorPosition: authorPosition, // 전달받은 또는 현재 직책
+          userProfileImage: userProfileImage, // 전달받은 또는 현재 이미지
           title: title,
           content: content,
           hashTags: hashTags,

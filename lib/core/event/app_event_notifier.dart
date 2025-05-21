@@ -21,8 +21,6 @@ class AppEventNotifier extends _$AppEventNotifier {
 
     // 상태 업데이트 (새 이벤트 발행)
     state = List.from(_events);
-
-    print('🔔 AppEventNotifier: 이벤트 발행 - $event');
   }
 
   /// 최근 이벤트 조회
@@ -50,15 +48,3 @@ class AppEventNotifier extends _$AppEventNotifier {
     state = [];
   }
 }
-
-// // 사용 예시 (CommunityDetailNotifier에서):
-// void _handleLike() async {
-//   // ... 기존 로직 ...
-//   final result = await _toggleLike.execute(_postId);
-//   state = state.copyWith(post: result);
-  
-//   // 이벤트 발행: 좋아요 상태 변경됨
-//   ref.read(appEventNotifierProvider.notifier).emit(
-//     AppEvent.postLiked(_postId),
-//   );
-// }
