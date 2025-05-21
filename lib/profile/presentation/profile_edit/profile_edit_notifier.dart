@@ -5,8 +5,6 @@ import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
-import 'package:devlink_mobile_app/core/event/app_event.dart';
-import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
@@ -227,13 +225,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         // ✅ 핵심: 이미지 업데이트 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        // 앱 이벤트 발행: 프로필 업데이트됨
-        ref
-            .read(appEventNotifierProvider.notifier)
-            .emit(const AppEvent.profileUpdated());
+        // 앱 이벤트 발행 코드 제거
+        // ref
+        //     .read(appEventNotifierProvider.notifier)
+        //     .emit(const AppEvent.profileUpdated());
 
         debugPrint(
-          '✅ ProfileEditNotifier: 이미지 업데이트 성공, 갱신 상태 마크 및 이벤트 발행: ${value.image}',
+          '✅ ProfileEditNotifier: 이미지 업데이트 성공, 갱신 상태 마크: ${value.image}',
         );
       } else if (result case AsyncError(:final error)) {
         debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 실패: $error');
@@ -329,13 +327,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         // ✅ 핵심 1: 프로필 저장 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        // ✅ 핵심 2: 앱 이벤트 발행 (프로필 업데이트됨)
-        ref
-            .read(appEventNotifierProvider.notifier)
-            .emit(const AppEvent.profileUpdated());
+        // ✅ 핵심 2: 앱 이벤트 발행 코드 제거
+        // ref
+        //     .read(appEventNotifierProvider.notifier)
+        //     .emit(const AppEvent.profileUpdated());
 
         debugPrint(
-          '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크, 이벤트 발행: ${value.nickname}',
+          '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크: ${value.nickname}',
         );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
         state = state.copyWith(saveState: AsyncError(error, stackTrace));

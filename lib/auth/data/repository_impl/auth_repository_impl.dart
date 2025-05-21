@@ -103,6 +103,25 @@ class AuthRepositoryImpl implements AuthRepository {
     _cachedMember = member;
     _lastFirebaseUserId = userId;
 
+    // 캐시 업데이트 후 Firebase 토큰 갱신을 통해 authStateChanges에 이벤트 발행
+    if (!AppConfig.useMockAuth) {
+      // Firebase 토큰 갱신 (비동기)
+      FirebaseAuth.instance.currentUser
+          ?.getIdToken(true)
+          .then((_) {
+            debugPrint('AuthRepository: Firebase 토큰 갱신 성공 - 인증 상태 업데이트 예상');
+
+            // 토큰 갱신 완료 후 명시적으로 현재 사용자 리로드
+            return FirebaseAuth.instance.currentUser?.reload();
+          })
+          .then((_) {
+            // 사용자 리로드 후 추가 이벤트 발행을 위한 동작
+            // 예: 추가 메서드 호출이나 이벤트 발행
+            debugPrint('AuthRepository: 사용자 정보 리로드 완료 - UI 갱신 예상');
+          })
+          .catchError((e) => debugPrint('Firebase 갱신 실패: $e'));
+    }
+
     if (AppConfig.enableVerboseLogging) {
       debugPrint('AuthRepository: Firebase 캐시 업데이트됨 - ${member.nickname}');
     }

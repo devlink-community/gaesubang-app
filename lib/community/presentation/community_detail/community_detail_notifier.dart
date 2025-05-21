@@ -44,18 +44,18 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     _toggleCommentLike = ref.watch(toggleCommentLikeUseCaseProvider);
     _deletePostUseCase = ref.watch(deletePostUseCaseProvider);
 
-    // 이벤트 리스너로 프로필 업데이트를 감지하여 화면 새로고침
-    ref.listen(appEventNotifierProvider, (previous, current) {
-      if (previous != current) {
-        final eventNotifier = ref.read(appEventNotifierProvider.notifier);
-
-        // 프로필 변경 이벤트가 있으면 화면 새로고침
-        if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
-          debugPrint('🔄 CommunityDetailNotifier: 프로필 업데이트 감지, 게시글 새로고침');
-          _loadAll();
-        }
-      }
-    });
+    // // 이벤트 리스너로 프로필 업데이트를 감지하여 화면 새로고침
+    // ref.listen(appEventNotifierProvider, (previous, current) {
+    //   if (previous != current) {
+    //     final eventNotifier = ref.read(appEventNotifierProvider.notifier);
+    //
+    //     // 프로필 변경 이벤트가 있으면 화면 새로고침
+    //     if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
+    //       debugPrint('🔄 CommunityDetailNotifier: 프로필 업데이트 감지, 게시글 새로고침');
+    //       _loadAll();
+    //     }
+    //   }
+    // });
 
     // 초기 상태 → 비동기 로드
     _loadAll();
