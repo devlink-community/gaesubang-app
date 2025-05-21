@@ -31,7 +31,7 @@ class VertexAIClient {
     try {
       // Remote Config에서 Base64로 인코딩된 서비스 계정 키 가져오기
       final Map<String, dynamic> serviceAccountJson =
-          await _loadServiceAccountFromRemoteConfig();
+      await _loadServiceAccountFromRemoteConfig();
 
       if (serviceAccountJson.isEmpty) {
         throw Exception('서비스 계정 정보를 Remote Config에서 로드할 수 없습니다.');
@@ -107,29 +107,12 @@ class VertexAIClient {
     }
   }
 
-  // /// 로컬 assets에서 서비스 계정 키를 가져오는 폴백 메서드
-  // Future<Map<String, dynamic>> _loadServiceAccountFromAssets() async {
-  //   try {
-  //     // 로컬 assets에서 서비스 계정 JSON 파일 로드
-  //     final String jsonString = await rootBundle.loadString(
-  //       'assets/service_account.json',
-  //     );
-  //     final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
-  //
-  //     debugPrint('로컬 assets에서 서비스 계정 정보 로드 완료');
-  //     return jsonMap;
-  //   } catch (e) {
-  //     debugPrint('로컬 assets에서 서비스 계정 정보 로드 실패: $e');
-  //     return {};
-  //   }
-  // }
-
-  /// 스킬 기반 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
+  /// 스킬 기반 퀴즈 생성 - 개선된 버전
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
-    List<String> skills,
-    int questionCount, {
-    String difficultyLevel = '중간',
-  }) async {
+      List<String> skills,
+      int questionCount, {
+        String difficultyLevel = '중간',
+      }) async {
     try {
       if (!_initialized) await initialize();
 
@@ -171,18 +154,18 @@ class VertexAIClient {
       JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
       """;
 
-      return await _callVertexAI(prompt);
+      return await _callVertexAIForQuiz(prompt);
     } catch (e) {
       debugPrint('스킬 기반 퀴즈 생성 실패: $e');
       rethrow;
     }
   }
 
-  /// 일반 컴퓨터 지식 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
+  /// 일반 컴퓨터 지식 퀴즈 생성 - 개선된 버전
   Future<List<Map<String, dynamic>>> generateGeneralQuiz(
-    int questionCount, {
-    String difficultyLevel = '중간',
-  }) async {
+      int questionCount, {
+        String difficultyLevel = '중간',
+      }) async {
     try {
       if (!_initialized) await initialize();
 
@@ -213,7 +196,7 @@ class VertexAIClient {
       JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
       """;
 
-      return await _callVertexAI(prompt);
+      return await _callVertexAIForQuiz(prompt);
     } catch (e) {
       debugPrint('일반 퀴즈 생성 실패: $e');
       rethrow;
@@ -249,7 +232,7 @@ class VertexAIClient {
       """;
 
       // 단일 퀴즈 호출
-      final quizList = await _callVertexAI(prompt);
+      final quizList = await _callVertexAIForQuiz(prompt);
       if (quizList.isNotEmpty) {
         return quizList.first;
       } else {
@@ -263,12 +246,49 @@ class VertexAIClient {
     }
   }
 
-  /// Vertex AI API 직접 호출 - 개선된 오류 처리 (기존 코드 유지)
-  Future<List<Map<String, dynamic>>> _callVertexAI(String prompt) async {
+  /// 학습 팁 생성 메서드
+  Future<Map<String, dynamic>> generateStudyTip(String skillArea) async {
     try {
-      // 올바른 generateContent API 엔드포인트 구성
-      final endpoint =
-          'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+      if (!_initialized) await initialize();
+
+      // 스킬 확인 및 기본값 설정
+      final skill = skillArea.isNotEmpty ? skillArea : '프로그래밍 기초';
+
+      // 학습 팁 생성을 위한 프롬프트 구성
+      final prompt = """
+      당신은 개발자를 위한 학습 팁 생성 전문가입니다. 다음 기술 분야에 관한 유익한 학습 팁과 영어 한 마디를 생성해주세요: $skill
+
+      팁은 실제 개발자가 해당 기술을 효과적으로 학습하는데 도움이 되는 구체적인 내용이어야 합니다.
+      영어 회화 한문장은 해당 기술 분야에서 자주 사용 되는 영어 문장이나 용어와 그 한국어 해석을 포함해야 합니다.
+
+      결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
+      {
+        "title": "짧은 팁 제목",
+        "content": "구체적인 학습 팁 내용 (120자 이상 150자 이하)",
+        "relatedSkill": "$skill",
+        "englishPhrase": "오늘 학습팁과 관련된 실전에서 많이 쓰이는 실리콘 개발자가 사용하는 심플한 대화체 영어문장.",
+        "translation": "한국어 해석 및 용어 설명",
+        "source": "선택적 출처 (책, 웹사이트 등)"
+      }
+
+      직접적인 설명 없이 JSON 형식으로만 응답해주세요.
+      """;
+
+      // 학습 팁 호출 - 새 메서드 사용
+      return await _callVertexAIForStudyTip(prompt);
+    } catch (e) {
+      debugPrint('학습 팁 생성 실패: $e');
+
+      // 폴백 학습 팁 반환
+      return _generateFallbackStudyTip(skillArea);
+    }
+  }
+
+  /// Quiz용 API 호출 메서드
+  Future<List<Map<String, dynamic>>> _callVertexAIForQuiz(String prompt) async {
+    try {
+      // 기존 엔드포인트 로직 유지
+      final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
 
       // generateContent API에 맞는 페이로드 구성
       final payload = {
@@ -295,9 +315,8 @@ class VertexAIClient {
         body: jsonEncode(payload),
       );
 
-      // 응답 처리 - 개선된 오류 처리
+      // 응답 처리
       if (response.statusCode == 200) {
-        // 전체 응답 확인
         debugPrint('API 응답 상태: ${response.statusCode}');
 
         final Map<String, dynamic> data = jsonDecode(response.body);
@@ -321,12 +340,18 @@ class VertexAIClient {
 
           final String generatedText = parts[0]['text'] ?? '';
 
-          // JSON 파싱 (생성된 텍스트에서 JSON 부분 추출)
-          final jsonStart = generatedText.indexOf('[');
-          final jsonEnd = generatedText.lastIndexOf(']') + 1;
+          // 코드 블록 제거
+          String cleanedText = generatedText;
+          if (cleanedText.contains('```')) {
+            cleanedText = cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
+          }
+
+          // JSON 배열 찾기 (Quiz는 주로 배열 형태)
+          final jsonStart = cleanedText.indexOf('[');
+          final jsonEnd = cleanedText.lastIndexOf(']') + 1;
 
           if (jsonStart >= 0 && jsonEnd > jsonStart) {
-            final jsonString = generatedText.substring(jsonStart, jsonEnd);
+            final jsonString = cleanedText.substring(jsonStart, jsonEnd);
 
             try {
               final List<dynamic> parsedJson = jsonDecode(jsonString);
@@ -334,41 +359,19 @@ class VertexAIClient {
                   .map((item) => Map<String, dynamic>.from(item))
                   .toList();
             } catch (e) {
-              // 단일 객체 형태({})인지 확인
-              final objectStart = generatedText.indexOf('{');
-              final objectEnd = generatedText.lastIndexOf('}') + 1;
-
-              if (objectStart >= 0 && objectEnd > objectStart) {
-                final objectString = generatedText.substring(
-                  objectStart,
-                  objectEnd,
-                );
-                try {
-                  final Map<String, dynamic> parsedObject = jsonDecode(
-                    objectString,
-                  );
-                  return [parsedObject]; // 단일 객체를 리스트로 반환
-                } catch (e) {
-                  debugPrint('JSON 객체 파싱 오류: $e');
-                  throw Exception('JSON 객체 파싱 오류: $e');
-                }
-              } else {
-                debugPrint('JSON 파싱 오류: $e');
-                throw Exception('JSON 파싱 오류: $e');
-              }
+              debugPrint('JSON 배열 파싱 오류: $e');
+              // 단일 객체 확인 (배열 파싱 실패시)
+              return _tryParseAsObject(cleanedText);
             }
           } else {
-            // 전체 텍스트 출력
-            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $generatedText');
-            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+            // 배열이 없으면 객체로 시도
+            return _tryParseAsObject(cleanedText);
           }
         } catch (e) {
           debugPrint('응답 처리 오류: $e');
-
-          // 디버깅 목적으로 전체 응답 확인
           debugPrint('원본 응답: ${response.body}');
 
-          // 임시 퀴즈를 반환하여 UI가 깨지지 않도록 함
+          // 폴백 반환
           return [
             {
               "question": "API 응답 처리 중 오류가 발생했습니다. 다음 중 API 오류 해결 방법으로 적절한 것은?",
@@ -379,8 +382,7 @@ class VertexAIClient {
                 "모든 위 항목",
               ],
               "correctOptionIndex": 3,
-              "explanation":
-                  "API 오류를 해결하기 위해서는 응답 구조, 네트워크 연결, 권한 확인 등 여러 방면의 점검이 필요합니다.",
+              "explanation": "API 오류를 해결하기 위해서는 응답 구조, 네트워크 연결, 권한 확인 등 여러 방면의 점검이 필요합니다.",
               "relatedSkill": "API 디버깅",
             },
           ];
@@ -395,10 +397,165 @@ class VertexAIClient {
     }
   }
 
-  /// 폴백 퀴즈 데이터 생성 메서드 (기존 코드 유지)
+  /// StudyTip용 API 호출 메서드
+  Future<Map<String, dynamic>> _callVertexAIForStudyTip(String prompt) async {
+    try {
+      // 기존 엔드포인트 로직 유지
+      final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+
+      // generateContent API에 맞는 페이로드 구성
+      final payload = {
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {
+          'temperature': 0.2,
+          'maxOutputTokens': 1024,
+          'topK': 40,
+          'topP': 0.95,
+        },
+      };
+
+      // API 호출
+      final response = await _authClient.post(
+        Uri.parse(endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      // 응답 처리
+      if (response.statusCode == 200) {
+        debugPrint('API 응답 상태: ${response.statusCode}');
+
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        try {
+          // 응답 구조 확인 및 안전하게 처리
+          final candidates = data['candidates'];
+          if (candidates == null || candidates.isEmpty) {
+            throw Exception('응답에 candidates가 없습니다');
+          }
+
+          final content = candidates[0]['content'];
+          if (content == null) {
+            throw Exception('응답에 content가 없습니다');
+          }
+
+          final parts = content['parts'];
+          if (parts == null || parts.isEmpty) {
+            throw Exception('응답에 parts가 없습니다');
+          }
+
+          final String generatedText = parts[0]['text'] ?? '';
+
+          // 코드 블록 제거
+          String cleanedText = generatedText;
+          if (cleanedText.contains('```')) {
+            cleanedText = cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
+          }
+
+          debugPrint('정제된 텍스트: $cleanedText');
+
+          // JSON 객체 찾기 (StudyTip은 주로 객체 형태)
+          final jsonStart = cleanedText.indexOf('{');
+          final jsonEnd = cleanedText.lastIndexOf('}') + 1;
+
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            final jsonString = cleanedText.substring(jsonStart, jsonEnd);
+            try {
+              return jsonDecode(jsonString);
+            } catch (e) {
+              debugPrint('JSON 객체 파싱 오류: $e');
+              throw Exception('JSON 객체 파싱 오류: $e');
+            }
+          } else {
+            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $cleanedText');
+            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+          }
+        } catch (e) {
+          debugPrint('응답 처리 오류: $e');
+          debugPrint('원본 응답: ${response.body}');
+
+          // 폴백 반환
+          return {
+            "title": "API 응답 처리 중 오류가 발생했습니다",
+            "content": "학습 팁을 가져오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            "relatedSkill": "프로그래밍 기초",
+            "englishPhrase": "Expect the unexpected.",
+            "translation": "예상치 못한 일을 예상하라.",
+            "source": "개발자의 지혜"
+          };
+        }
+      } else {
+        debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
+        throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Vertex AI API 호출 실패: $e');
+      rethrow;
+    }
+  }
+
+  // 객체 파싱 시도 헬퍼 메서드
+  List<Map<String, dynamic>> _tryParseAsObject(String text) {
+    final objectStart = text.indexOf('{');
+    final objectEnd = text.lastIndexOf('}') + 1;
+
+    if (objectStart >= 0 && objectEnd > objectStart) {
+      final objectString = text.substring(objectStart, objectEnd);
+      try {
+        final Map<String, dynamic> parsedObject = jsonDecode(objectString);
+        return [parsedObject]; // 단일 객체를 리스트로 반환
+      } catch (e) {
+        debugPrint('JSON 객체 파싱 오류: $e');
+        throw Exception('JSON 객체 파싱 오류: $e');
+      }
+    } else {
+      debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $text');
+      throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+    }
+  }
+
+  /// 폴백 퀴즈 데이터 생성 메서드
   Map<String, dynamic> _generateFallbackQuiz(String prompt) {
-    // prompt에서 언급된 스킬에 따라 다른 퀴즈 반환...
-    // (기존 코드 유지)
+    // prompt에서 언급된 스킬에 따라 다른 퀴즈 반환
+    if (prompt.toLowerCase().contains('python')) {
+      return {
+        "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
+        "options": [
+          "메모리 사용량 증가",
+          "코드가 더 간결하고 가독성이 좋아짐",
+          "항상 더 빠른 실행 속도",
+          "버그 방지 기능",
+        ],
+        "correctOptionIndex": 1,
+        "explanation":
+        "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
+        "relatedSkill": "Python",
+      };
+    } else if (prompt.toLowerCase().contains('flutter') ||
+        prompt.toLowerCase().contains('dart')) {
+      return {
+        "question": "Flutter에서 StatefulWidget과 StatelessWidget의 주요 차이점은 무엇인가요?",
+        "options": [
+          "StatefulWidget만 빌드 메서드를 가짐",
+          "StatelessWidget이 더 성능이 좋음",
+          "StatefulWidget은 내부 상태를 가질 수 있음",
+          "StatelessWidget은 항상 더 적은 메모리를 사용함",
+        ],
+        "correctOptionIndex": 2,
+        "explanation":
+        "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
+        "relatedSkill": "Flutter",
+      };
+    }
+
+    // 기본 컴퓨터 기초 퀴즈
     return {
       "question": "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
       "options": ["4비트", "8비트", "16비트", "32비트"],
@@ -406,50 +563,6 @@ class VertexAIClient {
       "explanation": "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
       "relatedSkill": "컴퓨터 기초",
     };
-  }
-
-  /// lib/ai_assistance/module/vertex_client.dart (확장)
-  /// 학습 팁 생성 메서드
-  Future<Map<String, dynamic>> generateStudyTip(String skillArea) async {
-    try {
-      if (!_initialized) await initialize();
-
-      // 스킬 확인 및 기본값 설정
-      final skill = skillArea.isNotEmpty ? skillArea : '프로그래밍 기초';
-
-      // 학습 팁 생성을 위한 프롬프트 구성
-      final prompt = """
-    당신은 개발자를 위한 학습 팁 생성 전문가입니다. 다음 기술 분야에 관한 유익한 학습 팁과 영어 한 마디를 생성해주세요: $skill
-
-    팁은 실제 개발자가 해당 기술을 효과적으로 학습하는데 도움이 되는 구체적인 내용이어야 합니다.
-    영어 한 마디는 해당 기술 분야에서 자주 사용되는 영어 문장이나 용어와 그 한국어 해석을 포함해야 합니다.
-
-    결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
-    {
-      "title": "짧은 팁 제목",
-      "content": "구체적인 학습 팁 내용 (100자 이상 300자 이하)",
-      "relatedSkill": "$skill",
-      "englishPhrase": "기술 분야 관련 영어 문장이나 용어",
-      "translation": "한국어 해석",
-      "source": "선택적 출처 (책, 웹사이트 등)"
-    }
-
-    직접적인 설명 없이 JSON 형식으로만 응답해주세요.
-    """;
-
-      // 단일 학습 팁 호출
-      final tipList = await _callVertexAI(prompt);
-      if (tipList.isNotEmpty) {
-        return tipList.first;
-      } else {
-        throw Exception('학습 팁 생성에 실패했습니다');
-      }
-    } catch (e) {
-      debugPrint('학습 팁 생성 실패: $e');
-
-      // 폴백 학습 팁 반환
-      return _generateFallbackStudyTip(skillArea);
-    }
   }
 
   /// 폴백 학습 팁 데이터 생성 메서드
@@ -486,9 +599,6 @@ class VertexAIClient {
       "source": "Donald Knuth"
     };
   }
-
-
-
 
   // 인스턴스 소멸 시 리소스 정리
   void dispose() {
