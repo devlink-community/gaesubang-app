@@ -297,7 +297,6 @@ class StudyTipBanner extends ConsumerWidget {
       );
     }
   }
-
   void _showStudyTipDetailsDialog(BuildContext context, StudyTip tip, String? skills) {
     // 현재 팁 업데이트
     _currentSelectedTip = tip;
@@ -317,7 +316,7 @@ class StudyTipBanner extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 헤더 영역 - "One More Tip" 버튼 추가
+              // 헤더 영역
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -331,57 +330,21 @@ class StudyTipBanner extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 제목 및 아이콘 영역
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 좌측: 제목 및 아이콘
-                        Expanded(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.lightbulb_rounded,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  tip.title,
-                                  style: AppTextStyles.subtitle1Bold.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        Icon(
+                          Icons.lightbulb_rounded,
+                          color: Colors.white,
+                          size: 24,
                         ),
-
-                        // 우측: "One More Tip" 버튼
-                        Consumer(
-                          builder: (context, ref, _) => TextButton.icon(
-                            onPressed: () => _loadNewTip(context, skills, ref),
-                            icon: const Icon(
-                              Icons.refresh,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            tip.title,
+                            style: AppTextStyles.subtitle1Bold.copyWith(
                               color: Colors.white,
-                              size: 16,
-                            ),
-                            label: Text(
-                              'One More Tip',
-                              style: AppTextStyles.button2Regular.copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
                             ),
                           ),
                         ),
@@ -389,8 +352,9 @@ class StudyTipBanner extends ConsumerWidget {
                     ),
 
                     // 스킬 영역
+                    const SizedBox(height: 8),
                     Padding(
-                      padding: const EdgeInsets.only(left: 36, top: 8),
+                      padding: const EdgeInsets.only(left: 36),
                       child: Text(
                         tip.relatedSkill,
                         style: AppTextStyles.captionRegular.copyWith(
@@ -472,47 +436,75 @@ class StudyTipBanner extends ConsumerWidget {
                 ),
               ),
 
-              // 하단 버튼
+              // 하단 버튼들 - 두 버튼을 나란히 배치
               Consumer(
                 builder: (context, ref, _) => Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () {
-                        // 현재 선택된 팁이 있으면 캐시 업데이트
-                        if (_currentSelectedTip != null) {
-                          final today = DateTime.now().toString().split(' ')[0];
-                          final skillArea = skills?.split(',')
-                              .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
-                              .trim() ??
-                              '프로그래밍 기초';
-                          final cacheKey = '$today-$skillArea';
+                  child: Row(
+                    children: [
+                      // 확인 버튼
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            // 현재 선택된 팁이 있으면 캐시 업데이트
+                            if (_currentSelectedTip != null) {
+                              final today = DateTime.now().toString().split(' ')[0];
+                              final skillArea = skills?.split(',')
+                                  .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
+                                  .trim() ??
+                                  '프로그래밍 기초';
+                              final cacheKey = '$today-$skillArea';
 
-                          // 캐시 업데이트
-                          ref.read(studyTipCacheProvider.notifier).update((state) => {
-                            ...state,
-                            cacheKey: _currentSelectedTip,
-                          });
-                        }
+                              // 캐시 업데이트
+                              ref.read(studyTipCacheProvider.notifier).update((state) => {
+                                ...state,
+                                cacheKey: _currentSelectedTip,
+                              });
+                            }
 
-                        Navigator.of(context).pop();
-                      },
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColorStyles.primary80,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                            Navigator.of(context).pop();
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColorStyles.primary80,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '확인',
+                            style: AppTextStyles.button1Medium.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        '확인',
-                        style: AppTextStyles.button1Medium.copyWith(
-                          color: Colors.white,
+
+                      // 간격
+                      const SizedBox(width: 12),
+
+                      // One More Tip 버튼
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => _loadNewTip(context, skills, ref),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColorStyles.primary80,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            '💡 Next Insight',
+                            style: AppTextStyles.button1Medium.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),

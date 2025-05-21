@@ -59,6 +59,7 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
       'HTML',
       'CSS',
       'C++',
+      'Algorithm',
     ];
     for (final skill in commonSkills) {
       if (prompt.contains(skill)) {
