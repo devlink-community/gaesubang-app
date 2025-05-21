@@ -12,6 +12,22 @@ abstract interface class GroupRepository {
   Future<Result<void>> leaveGroup(String groupId);
   Future<Result<List<Group>>> searchGroups(String query);
 
+  Future<Result<Map<String, dynamic>>> startMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  );
+  Future<Result<Map<String, dynamic>>> stopMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  );
+  Future<Result<Map<String, dynamic>>> pauseMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  );
+
   /// 그룹 멤버 목록과 해당 타이머 상태 조회
   Future<Result<List<GroupMember>>> getGroupMembers(String groupId);
 
