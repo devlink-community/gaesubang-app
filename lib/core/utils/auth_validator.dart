@@ -1,5 +1,6 @@
 // lib/core/utils/auth_validator.dart
-import 'auth_error_messages.dart';
+
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 
 class AuthValidator {
   const AuthValidator._();

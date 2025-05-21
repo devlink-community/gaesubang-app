@@ -23,8 +23,6 @@ class CommunityListNotifier extends _$CommunityListNotifier {
     // TODO: 차후 공통 이벤트 상태 관리 시스템으로 리팩토링 필요
     // 현재는 Mock 상태이므로 글쓰기 완료를 직접 감지하여 목록 갱신
     // 추후 AppEventNotifier 같은 중앙 이벤트 관리자로 대체 예정
-    // AppEventNotifier의 상태 변경을 구독하고, 자기 하위의 Root에 전달하기 위해
-    // CommunityListState 내 refresh 등의 상태 갱신하는 로직 필요
     ref.listen(
       communityWriteNotifierProvider.select((state) => state.createdPostId),
       (previous, current) {
@@ -125,8 +123,9 @@ class CommunityListNotifier extends _$CommunityListNotifier {
 
     switch (tab) {
       case CommunityTabType.popular:
-        final sorted = [...list]
-          ..sort((a, b) => b.like.length.compareTo(a.like.length));
+        final sorted = [...list]..sort(
+          (a, b) => b.likeCount.compareTo(a.likeCount),
+        ); // likeCount 필드 사용
         print(
           'CommunityListNotifier: Sorted by popularity (${sorted.length} posts)',
         );

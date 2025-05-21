@@ -11,15 +11,10 @@ class CreateCommentUseCase {
 
   Future<AsyncValue<List<Comment>>> execute({
     required String postId,
-    required String memberId,
     required String content,
   }) async {
-    final result = await _repo.createComment(
-      postId: postId, 
-      memberId: memberId, 
-      content: content
-    );
-    
+    final result = await _repo.createComment(postId: postId, content: content);
+
     switch (result) {
       case Success(:final data):
         return AsyncData(data);
