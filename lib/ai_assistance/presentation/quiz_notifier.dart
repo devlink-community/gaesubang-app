@@ -1,9 +1,7 @@
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../domain/model/quiz.dart';
 import '../domain/use_case/generate_quiz_use_case.dart';
-import '../module/quiz_di.dart';
+import '../module/ai_client_di.dart';
 import 'quiz_action.dart';
 import 'quiz_state.dart';
 

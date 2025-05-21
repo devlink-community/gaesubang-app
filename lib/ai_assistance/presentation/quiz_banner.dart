@@ -8,7 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
 import '../domain/model/quiz.dart';
-import '../module/quiz_di.dart';
+import '../module/ai_client_di.dart';
 import 'quiz_screen.dart';
 
 class DailyQuizBanner extends ConsumerWidget {
