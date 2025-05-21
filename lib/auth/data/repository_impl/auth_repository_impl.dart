@@ -1,4 +1,3 @@
-// lib/auth/data/repository_impl/auth_repository_impl.dart
 import 'dart:async';
 
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
@@ -8,22 +7,17 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
-import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource _authDataSource;
-  // final FirebaseAuth _firebaseAuth;
 
-  AuthRepositoryImpl({
-    required AuthDataSource authDataSource,
-    FirebaseAuth? firebaseAuth,
-  }) : _authDataSource = authDataSource;
+  AuthRepositoryImpl({required AuthDataSource authDataSource})
+    : _authDataSource = authDataSource;
 
   @override
   Future<Result<Member>> login({
@@ -262,41 +256,24 @@ class AuthRepositoryImpl implements AuthRepository {
     String? position,
     String? skills,
   }) async {
-    return ApiCallDecorator.wrap(
-      'AuthRepository.updateProfile',
-      () async {
-        try {
-          final response = await _authDataSource.updateUser(
-            nickname: nickname,
-            description: description,
-            position: position,
-            skills: skills,
-          );
+    return ApiCallDecorator.wrap('AuthRepository.updateProfile', () async {
+      try {
+        final response = await _authDataSource.updateUser(
+          nickname: nickname,
+          description: description,
+          position: position,
+          skills: skills,
+        );
 
-          // Firebase Auth 사용자 정보도 업데이트 (중요!)
-          if (!AppConfig.useMockAuth) {
-            final currentUser = _firebaseAuth.currentUser;
-            if (currentUser != null) {
-              await currentUser.updateDisplayName(nickname);
-            }
-          }
-
-          // 프로필 업데이트 시에도 통계까지 포함된 Member 반환
-          final member = response.toMemberWithCalculatedStats();
-          return Result.success(member);
-        } catch (e, st) {
-          debugPrint('프로필 업데이트 에러: $e');
-          debugPrint('StackTrace: $st');
-          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
-        }
-      },
-      params: {
-        'nickname': nickname,
-        'description': description,
-        'position': position,
-        'skills': skills,
-      },
-    );
+        // 프로필 업데이트 시에도 통계까지 포함된 Member 반환
+        final member = response.toMemberWithCalculatedStats();
+        return Result.success(member);
+      } catch (e, st) {
+        debugPrint('프로필 업데이트 에러: $e');
+        debugPrint('StackTrace: $st');
+        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+      }
+    }, params: {'nickname': nickname});
   }
 
   @override
@@ -304,14 +281,6 @@ class AuthRepositoryImpl implements AuthRepository {
     return ApiCallDecorator.wrap('AuthRepository.updateProfileImage', () async {
       try {
         final response = await _authDataSource.updateUserImage(imagePath);
-
-        // Firebase Auth 사용자 정보도 업데이트
-        if (!AppConfig.useMockAuth) {
-          final currentUser = _firebaseAuth.currentUser;
-          if (currentUser != null) {
-            await currentUser.updatePhotoURL(imagePath);
-          }
-        }
 
         // 이미지 업데이트 시에도 통계까지 포함된 Member 반환
         final member = response.toMemberWithCalculatedStats();
@@ -324,59 +293,34 @@ class AuthRepositoryImpl implements AuthRepository {
     }, params: {'imagePath': imagePath});
   }
 
-  // Firebase Auth를 직접 활용하는 메서드들
+  // === 인증 상태 관련 메서드 구현 ===
 
   @override
   Stream<AuthState> get authStateChanges {
-    if (AppConfig.useMockAuth) {
-      // Mock 환경에서는 기존 방식 유지
-      return _authDataSource.authStateChanges().map((userMap) {
-        if (userMap == null) return const AuthState.unauthenticated();
-        final member = userMap.toMemberWithCalculatedStats();
-        return AuthState.authenticated(member);
-      });
-    } else {
-      // Firebase 환경에서는 userChanges() 활용
-      // userChanges()는 authStateChanges()와 달리 프로필 정보 변경도 감지함
-      return _firebaseAuth.userChanges().asyncMap((firebaseUser) async {
-        if (firebaseUser == null) {
-          return const AuthState.unauthenticated();
-        }
+    return _authDataSource.authStateChanges.map((userData) {
+      if (userData == null) {
+        return const AuthState.unauthenticated();
+      }
 
-        try {
-          // 사용자 추가 정보 조회
-          final userMap = await _authDataSource.fetchCurrentUser();
-          if (userMap != null) {
-            final member = userMap.toMemberWithCalculatedStats();
-            return AuthState.authenticated(member);
-          }
-          return const AuthState.unauthenticated();
-        } catch (e) {
-          debugPrint('Auth state stream error: $e');
-          return const AuthState.unauthenticated();
-        }
-      });
-    }
+      final member = userData.toMemberWithCalculatedStats();
+      return AuthState.authenticated(member);
+    });
   }
 
   @override
   Future<AuthState> getCurrentAuthState() async {
-    return ApiCallDecorator.wrap(
-      'AuthRepository.getCurrentAuthState',
-      () async {
-        try {
-          final result = await getCurrentUser();
-          switch (result) {
-            case Success(data: final member):
-              return AuthState.authenticated(member);
-            case Error():
-              return const AuthState.unauthenticated();
-          }
-        } catch (e) {
-          debugPrint('Get current auth state error: $e');
-          return const AuthState.unauthenticated();
-        }
-      },
-    );
+    try {
+      final userData = await _authDataSource.getCurrentAuthState();
+
+      if (userData == null) {
+        return const AuthState.unauthenticated();
+      }
+
+      final member = userData.toMemberWithCalculatedStats();
+      return AuthState.authenticated(member);
+    } catch (e) {
+      debugPrint('Get current auth state error: $e');
+      return const AuthState.unauthenticated();
+    }
   }
 }

@@ -1,4 +1,4 @@
-// lib/auth/data/data_source/auth_data_source.dart 수정
+// lib/auth/data/data_source/auth_data_source.dart
 abstract interface class AuthDataSource {
   /// 이메일, 비밀번호로 로그인
   Future<Map<String, dynamic>> fetchLogin({
@@ -63,6 +63,9 @@ abstract interface class AuthDataSource {
   /// 사용자 이미지 업데이트
   Future<Map<String, dynamic>> updateUserImage(String imagePath);
 
-  /// 인증 상태 변화 스트림 제공
-  Stream<Map<String, dynamic>?> authStateChanges();
+  /// 인증 상태 변화 스트림 (추가)
+  Stream<Map<String, dynamic>?> get authStateChanges;
+
+  /// 현재 인증 상태 확인 (추가)
+  Future<Map<String, dynamic>?> getCurrentAuthState();
 }
