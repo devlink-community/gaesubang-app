@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
 import '../../ai_assistance/presentation/quiz_banner.dart';
+import '../../ai_assistance/presentation/study_tip_banner.dart'; // 추가됨
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
@@ -98,6 +99,7 @@ class HomeScreen extends StatelessWidget {
 
             // 카드 영역 - 횡스크롤로 변경
             const SizedBox(height: 24),
+            // StudyTipBanner와 DailyQuizBanner 렌더링 부분 수정
             SizedBox(
               height: 220, // 카드 높이 고정
               child: SingleChildScrollView(
@@ -106,12 +108,18 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // 공부 팁 카드
-                    _buildTodayTipCard(),
+                    // 학습 팁 배너 - ValueKey로 변경
+                    StudyTipBanner(
+                      skills: skills,
+                      key:
+                          skills != null
+                              ? ValueKey('study_tip_banner_${skills!}')
+                              : const ValueKey('study_tip_banner'),
+                    ),
 
                     const SizedBox(width: 12),
 
-                    // 퀴즈 배너
+                    // 퀴즈 배너 - ValueKey로 변경
                     DailyQuizBanner(
                       skills: userSkills,
                       key: ValueKey(
@@ -218,91 +226,6 @@ class HomeScreen extends StatelessWidget {
             Text(value, style: AppTextStyles.subtitle1Bold),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTodayTipCard() {
-    return Container(
-      width: 280, // 넓이 고정
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.indigo.shade400, Colors.indigo.shade800],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.indigo.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '오늘의 공부 팁',
-                  style: AppTextStyles.body1Regular.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.tips_and_updates_outlined,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '집중력 향상을 위한 포모도로 기법',
-            style: AppTextStyles.subtitle1Bold.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 32),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.indigo.shade700,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              minimumSize: const Size(double.infinity, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              '자세히 보기',
-              style: AppTextStyles.button2Regular.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

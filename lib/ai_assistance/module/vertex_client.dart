@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async'; // Completer 사용을 위해 추가
 import 'dart:convert';
 import 'dart:math';
 
@@ -26,13 +26,29 @@ class VertexAIClient {
 
   // 초기화 상태
   bool _initialized = false;
+  bool _initializing = false; // 초기화 진행 중 여부를 추적하는 플래그 추가
+  Completer<void>? _initializeCompleter; // 초기화 작업 Completer 추가
+
   late http.Client _httpClient;
   late AutoRefreshingAuthClient _authClient;
 
   /// 초기화 메서드
   Future<void> initialize() async {
     if (_initialized) return;
+
+    // 초기화가 진행 중인 경우 해당 작업이 완료될 때까지 대기
+    if (_initializing) {
+      debugPrint('Vertex AI 클라이언트 초기화 진행 중... 기존 작업 완료 대기');
+      return _initializeCompleter!.future;
+    }
+
+    // 초기화 진행 중 플래그 설정 및 Completer 생성
+    _initializing = true;
+    _initializeCompleter = Completer<void>();
+
     try {
+      debugPrint('Vertex AI 클라이언트 초기화 시작');
+
       // Remote Config에서 Base64로 인코딩된 서비스 계정 키 가져오기
       final Map<String, dynamic> serviceAccountJson =
           await _loadServiceAccountFromRemoteConfig();
@@ -52,10 +68,18 @@ class VertexAIClient {
       ]);
 
       _initialized = true;
+      _initializing = false;
       debugPrint('Vertex AI 클라이언트 초기화 완료');
+
+      // 완료 알림
+      _initializeCompleter!.complete();
     } catch (e) {
       debugPrint('Vertex AI 클라이언트 초기화 실패: $e');
       _initialized = false;
+      _initializing = false;
+
+      // 오류 전파
+      _initializeCompleter!.completeError(e);
       rethrow;
     }
   }
@@ -111,6 +135,109 @@ class VertexAIClient {
     }
   }
 
+  /// LLM API 호출을 위한 통합 메서드 - 새로 추가
+  Future<Map<String, dynamic>> callTextModel(String prompt) async {
+    try {
+      if (!_initialized) await initialize();
+
+      // 기존 엔드포인트 로직 유지
+      final endpoint =
+          'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+
+      // generateContent API에 맞는 페이로드 구성
+      final payload = {
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {
+          'temperature': 0.2,
+          'maxOutputTokens': 1024,
+          'topK': 40,
+          'topP': 0.95,
+        },
+      };
+
+      // API 호출
+      final response = await _authClient.post(
+        Uri.parse(endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      // 응답 처리
+      if (response.statusCode == 200) {
+        debugPrint('API 응답 상태: ${response.statusCode}');
+
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        try {
+          // 응답 구조 확인 및 안전하게 처리
+          final candidates = data['candidates'];
+          if (candidates == null || candidates.isEmpty) {
+            throw Exception('응답에 candidates가 없습니다');
+          }
+
+          final content = candidates[0]['content'];
+          if (content == null) {
+            throw Exception('응답에 content가 없습니다');
+          }
+
+          final parts = content['parts'];
+          if (parts == null || parts.isEmpty) {
+            throw Exception('응답에 parts가 없습니다');
+          }
+
+          final String generatedText = parts[0]['text'] ?? '';
+
+          // 코드 블록 제거
+          String cleanedText = generatedText;
+          if (cleanedText.contains('```')) {
+            cleanedText =
+                cleanedText
+                    .replaceAll('```json', '')
+                    .replaceAll('```', '')
+                    .trim();
+          }
+
+          debugPrint('정제된 텍스트: $cleanedText');
+
+          // JSON 객체 찾기
+          final jsonStart = cleanedText.indexOf('{');
+          final jsonEnd = cleanedText.lastIndexOf('}') + 1;
+
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            final jsonString = cleanedText.substring(jsonStart, jsonEnd);
+            try {
+              return jsonDecode(jsonString);
+            } catch (e) {
+              debugPrint('JSON 객체 파싱 오류: $e');
+              throw Exception('JSON 객체 파싱 오류: $e');
+            }
+          } else {
+            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $cleanedText');
+            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+          }
+        } catch (e) {
+          debugPrint('응답 처리 오류: $e');
+          debugPrint('원본 응답: ${response.body}');
+          throw Exception('응답 처리 중 오류: $e');
+        }
+      } else {
+        debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
+        throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Vertex AI API 호출 실패: $e');
+      rethrow;
+    }
+  }
+
+  /// 스킬 기반 퀴즈 생성 - 개선된 버전
   /// 스킬 기반 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
     List<String> skills,
@@ -159,14 +286,14 @@ class VertexAIClient {
     JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
     """;
 
-      return await _callVertexAI(prompt);
+      return await _callVertexAIForQuiz(prompt);
     } catch (e) {
       debugPrint('스킬 기반 퀴즈 생성 실패: $e');
       rethrow;
     }
   }
 
-  /// 일반 컴퓨터 지식 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
+  /// 일반 컴퓨터 지식 퀴즈 생성 - 개선된 버전
   Future<List<Map<String, dynamic>>> generateGeneralQuiz(
     int questionCount, {
     String difficultyLevel = '중간',
@@ -201,7 +328,7 @@ class VertexAIClient {
       JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
       """;
 
-      return await _callVertexAI(prompt);
+      return await _callVertexAIForQuiz(prompt);
     } catch (e) {
       debugPrint('일반 퀴즈 생성 실패: $e');
       rethrow;
@@ -346,7 +473,7 @@ class VertexAIClient {
         body: jsonEncode(payload),
       );
 
-      // 응답 처리 - 코드는 기존과 동일하게 유지
+      // 응답 처리 - 개선된 오류 처리
       if (response.statusCode == 200) {
         debugPrint('API 응답 상태: ${response.statusCode}');
 
@@ -443,7 +570,11 @@ class VertexAIClient {
   // 인스턴스 소멸 시 리소스 정리
   void dispose() {
     if (_initialized) {
+      _httpClient.close();
       _authClient.close();
+      _initialized = false;
+      _initializing = false;
+      _initializeCompleter = null;
     }
   }
 }
