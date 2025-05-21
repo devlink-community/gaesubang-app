@@ -1,27 +1,29 @@
+// lib/group/presentation/group_detail/group_detail_screen.dart
 import 'package:devlink_mobile_app/core/component/app_image.dart';
+import 'package:devlink_mobile_app/core/component/error_view.dart';
+import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
-import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
-import 'package:devlink_mobile_app/group/presentation/component/slide_to_map_gesture.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/gradient_wave_animation.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_grid.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_section_header.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_skeleton.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/timer_display.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   const GroupDetailScreen({
     super.key,
     required this.state,
     required this.onAction,
+    this.isLoading = false,
   });
 
   final GroupDetailState state;
   final void Function(GroupDetailAction action) onAction;
+  final bool isLoading;
 
   @override
   State<GroupDetailScreen> createState() => _GroupDetailScreenState();
@@ -45,9 +47,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
     // 멤버 이미지 URLs 수집
     final List<String> imageUrls = [];
-    for (final member in widget.state.memberTimers) {
-      if (member.imageUrl.isNotEmpty) {
-        imageUrls.add(member.imageUrl);
+
+    // 멤버가 있으면 이미지 URL 추출
+    if (widget.state.groupMembersResult case AsyncData(:final value)) {
+      for (final member in value) {
+        if (member.profileUrl != null && member.profileUrl!.isNotEmpty) {
+          imageUrls.add(member.profileUrl!);
+        }
       }
     }
 
@@ -78,6 +84,37 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 로딩 중이면 로딩 인디케이터 표시
+    if (widget.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('그룹 정보 불러오는 중...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // 그룹 정보와 멤버 정보가 로드되었는지 확인
+    final group =
+        widget.state.groupDetailResult is AsyncData
+            ? (widget.state.groupDetailResult as AsyncData).value
+            : null;
+
+    final members =
+        widget.state.groupMembersResult is AsyncData
+            ? (widget.state.groupMembersResult as AsyncData).value
+            : <GroupMember>[];
+
+    // 그룹 정보가 없으면 에러 표시
+    if (group == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('그룹 정보')),
+        body: ErrorView(
+          error: '그룹 정보를 불러올 수 없습니다.',
+          onRetry:
+              () => widget.onAction(const GroupDetailAction.refreshSessions()),
+        ),
+      );
+    }
+
     final isRunning = widget.state.timerStatus == TimerStatus.running;
 
     // 상태에 따른 배경색 결정
@@ -86,10 +123,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final Color secondaryBgColor =
         isRunning ? const Color(0xFF7070EE) : const Color(0xFFE6E6FA);
 
+    // 활성/비활성 멤버 분류
+    final activeMembers = members.where((m) => m.isActive).toList();
+    final inactiveMembers = members.where((m) => !m.isActive).toList();
+    final activeCount = activeMembers.length;
+    final totalCount = members.length;
+
     return Scaffold(
       backgroundColor: Colors.white,
       // 앱바를 포함한 상단 영역을 집중시간 배경으로 통일
-      appBar: _buildAppBar(primaryBgColor),
+      appBar: _buildAppBar(primaryBgColor, group.name),
       body: Stack(
         children: [
           // 메인 콘텐츠
@@ -118,7 +161,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       // 타이머 콘텐츠
                       Column(
                         children: [
-                          _buildHeader(), // 상단 정보 영역
+                          _buildHeader(activeCount, totalCount), // 상단 정보 영역
                           // 타이머 영역 - 분리된 컴포넌트 사용
                           TimerDisplay(
                             elapsedSeconds: widget.state.elapsedSeconds,
@@ -136,23 +179,22 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               ),
 
               // 메시지 영역 (해시태그 포함)
-              SliverToBoxAdapter(child: _buildMessage()),
+              SliverToBoxAdapter(
+                child: _buildMessage(group.description, group.hashTags),
+              ),
 
               // 멤버 섹션 헤더
-              SliverToBoxAdapter(child: _buildMemberSectionHeader()),
+              SliverToBoxAdapter(
+                child: _buildMemberSectionHeader(activeCount, totalCount),
+              ),
 
               // 활성 멤버 섹션
               _buildMemberSection(
                 title: '활성 멤버',
                 color: const Color(0xFF4CAF50),
                 icon: Icons.check_circle,
-                members: _getActiveMembers(),
-                isLoading:
-                    //widget.state.isLoading ||
-                    widget
-                        .state
-                        .memberTimers
-                        .isEmpty, // 로딩 상태 또는 멤버가 없을 때 로딩 표시
+                members: activeMembers,
+                isLoading: members.isEmpty, // 멤버가 없을 때 로딩 표시
               ),
 
               // 휴식 중인 멤버 섹션
@@ -160,13 +202,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 title: '휴식 중인 멤버',
                 color: Colors.grey,
                 icon: Icons.nightlight,
-                members: _getInactiveMembers(),
-                isLoading:
-                    // widget.state.isLoading ||
-                    widget
-                        .state
-                        .memberTimers
-                        .isEmpty, // 로딩 상태 또는 멤버가 없을 때 로딩 표시
+                members: inactiveMembers,
+                isLoading: members.isEmpty, // 멤버가 없을 때 로딩 표시
               ),
 
               // 바닥 여백
@@ -182,10 +219,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 앱바 위젯
-  PreferredSizeWidget _buildAppBar(Color backgroundColor) {
+  PreferredSizeWidget _buildAppBar(Color backgroundColor, String title) {
     return AppBar(
       title: Text(
-        widget.state.groupName,
+        title,
         style: AppTextStyles.heading6Bold.copyWith(color: Colors.white),
       ),
       centerTitle: true,
@@ -204,7 +241,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 멤버 섹션 헤더 위젯
-  Widget _buildMemberSectionHeader() {
+  Widget _buildMemberSectionHeader(int activeCount, int totalCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Row(
@@ -219,7 +256,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            '함께 공부 중인 멤버 (${widget.state.participantCount}/${widget.state.totalMemberCount})',
+            '함께 공부 중인 멤버 ($activeCount/$totalCount)',
             style: AppTextStyles.subtitle1Bold.copyWith(
               color: AppColorStyles.textPrimary,
             ),
@@ -258,7 +295,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     required String title,
     required Color color,
     required IconData icon,
-    required List<MemberTimer> members,
+    required List<GroupMember> members,
     bool isLoading = false, // 로딩 상태 파라미터 추가
   }) {
     // 로딩 중이면서 멤버가 없는 경우 스켈레톤 UI 표시
@@ -273,7 +310,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               MemberSectionHeader(title: title, color: color, icon: icon),
 
               // 스켈레톤 UI 표시
-              const MemberSkeleton(count: 3),
+              const ListSkeleton(itemCount: 3),
             ],
           ),
         ),
@@ -294,13 +331,144 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             // 섹션 헤더 - 분리된 컴포넌트 사용
             MemberSectionHeader(title: title, color: color, icon: icon),
 
-            // 멤버 그리드 - 분리된 컴포넌트 사용
-            MemberGrid(
-              members: members,
-              onMemberTap:
-                  (memberId) => widget.onAction(
-                    GroupDetailAction.navigateToUserProfile(memberId),
+            // 멤버 그리드
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.8,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 14,
+              ),
+              itemCount: members.length,
+              itemBuilder: (context, index) {
+                final member = members[index];
+                return GestureDetector(
+                  onTap:
+                      () => widget.onAction(
+                        GroupDetailAction.navigateToUserProfile(member.userId),
+                      ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // 프로필 이미지
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color:
+                                    member.isActive
+                                        ? AppColorStyles.primary100
+                                        : AppColorStyles.gray40,
+                                width: 2,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(30),
+                              child:
+                                  member.profileUrl != null &&
+                                          member.profileUrl!.isNotEmpty
+                                      ? Image.network(
+                                        member.profileUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (_, __, ___) => const Icon(
+                                              Icons.person,
+                                              size: 30,
+                                            ),
+                                      )
+                                      : const Icon(Icons.person, size: 30),
+                            ),
+                          ),
+
+                          // 상태 표시
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color:
+                                    member.isActive
+                                        ? AppColorStyles.success
+                                        : AppColorStyles.gray80,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // 타이머 표시
+                      member.isActive
+                          ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColorStyles.primary60.withValues(
+                                alpha: 0.2,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              member.elapsedTimeFormat,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColorStyles.primary100,
+                              ),
+                            ),
+                          )
+                          : Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '휴식중',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                      const SizedBox(height: 4),
+
+                      // 이름
+                      Text(
+                        member.userName,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              member.isActive
+                                  ? AppColorStyles.primary100
+                                  : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
                   ),
+                );
+              },
             ),
           ],
         ),
@@ -308,22 +476,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 활성 멤버 가져오기
-  List<MemberTimer> _getActiveMembers() {
-    return widget.state.memberTimers
-        .where((m) => m.status == MemberTimerStatus.active)
-        .toList();
-  }
-
-  // 비활성 멤버 가져오기
-  List<MemberTimer> _getInactiveMembers() {
-    return widget.state.memberTimers
-        .where((m) => m.status != MemberTimerStatus.active)
-        .toList();
-  }
-
   // 상단 정보 영역 (참여자 수, 날짜)
-  Widget _buildHeader() {
+  Widget _buildHeader(int activeCount, int totalCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
@@ -331,7 +485,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withAlpha(30),
+              color: Colors.white.withValues(alpha: 30),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -339,7 +493,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 const Icon(Icons.people, size: 14, color: Colors.white),
                 const SizedBox(width: 4),
                 Text(
-                  '${widget.state.participantCount} / ${widget.state.totalMemberCount}',
+                  '$activeCount / $totalCount',
                   style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
               ],
@@ -354,7 +508,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(30),
+                color: Colors.white.withValues(alpha: 30),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -371,7 +525,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(30),
+                color: Colors.white.withValues(alpha: 30),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.map, size: 14, color: Colors.white),
@@ -382,7 +536,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  Widget _buildMessage() {
+  Widget _buildMessage(String description, List<String> hashTags) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.all(16),
@@ -435,40 +589,40 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           if (_isMessageExpanded) ...[
             const SizedBox(height: 8),
             Text(
-              '안녕하세요. 저희는 소금빵을 먹으며 공부하는 소막입니다.\n'
-              '다들 소금빵 좋아하시나요?\n'
-              '한 줄이라도 코드를 나가주세요.',
+              description.isNotEmpty ? description : '그룹 설명이 없습니다.',
               style: AppTextStyles.body1Regular.copyWith(
                 height: 1.4,
                 color: AppColorStyles.textPrimary,
               ),
             ),
-            const SizedBox(height: 12),
-            // 해시태그
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children:
-                  widget.state.hashTags.map((tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColorStyles.primary60.withAlpha(20),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        '#$tag',
-                        style: AppTextStyles.captionRegular.copyWith(
-                          color: AppColorStyles.primary100,
-                          fontWeight: FontWeight.w500,
+            if (hashTags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              // 해시태그
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    hashTags.map((tag) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                      ),
-                    );
-                  }).toList(),
-            ),
+                        decoration: BoxDecoration(
+                          color: AppColorStyles.primary60.withValues(alpha: 20),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          '#$tag',
+                          style: AppTextStyles.captionRegular.copyWith(
+                            color: AppColorStyles.primary100,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ],
           ],
         ],
       ),

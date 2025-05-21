@@ -1,4 +1,6 @@
+// lib/group/presentation/group_detail/group_detail_screen_root.dart
 import 'package:devlink_mobile_app/core/component/custom_alert_dialog.dart';
+import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_notifier.dart';
@@ -83,8 +85,11 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
 
           // 타이머가 실행 중이면 종료
           if (mounted) {
-            final notifier = ref.read(groupDetailNotifierProvider.notifier);
-            notifier.onAction(const GroupDetailAction.stopTimer());
+            final currentState = ref.read(groupDetailNotifierProvider);
+            if (currentState.timerStatus == TimerStatus.running) {
+              final notifier = ref.read(groupDetailNotifierProvider.notifier);
+              notifier.onAction(const GroupDetailAction.stopTimer());
+            }
           }
         }
         break;
@@ -156,7 +161,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       if (mounted) {
         final currentState = ref.read(groupDetailNotifierProvider);
         // 타이머가 초기 상태가 되었다면 백그라운드에서 중지되었다는 뜻
-        if (currentState.timerStatus == TimerStatus.initial) {
+        if (currentState.timerStatus == TimerStatus.stop) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('앱이 백그라운드에 있는 동안 타이머가 중지되었습니다.'),
@@ -231,6 +236,31 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     final state = ref.watch(groupDetailNotifierProvider);
     final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
+    // 로딩 상태 확인
+    final isGroupLoading = state.groupDetailResult is AsyncLoading;
+    final isMembersLoading = state.groupMembersResult is AsyncLoading;
+
+    // 에러 상태 확인
+    final hasGroupError = state.groupDetailResult is AsyncError;
+
+    // 에러 상태일 때 에러 메시지와 함께 에러 화면 표시
+    if (hasGroupError) {
+      final error = (state.groupDetailResult as AsyncError).error;
+      return Scaffold(
+        appBar: AppBar(title: const Text('그룹 정보')),
+        body: ErrorView(
+          error: error,
+          onRetry:
+              () =>
+                  notifier.onAction(const GroupDetailAction.refreshSessions()),
+        ),
+      );
+    }
+
+    // 로딩 상태가 끝났는지 확인 - 둘 다 로딩 중이 아니면 화면 표시
+    final isLoading = isGroupLoading || isMembersLoading;
+
+    // 메인 UI 로직 계속 진행
     return PopScope(
       canPop: state.timerStatus != TimerStatus.running,
       onPopInvokedWithResult: (didPop, result) {
@@ -253,6 +283,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       },
       child: GroupDetailScreen(
         state: state,
+        isLoading: isLoading,
         onAction: (action) async {
           if (!mounted) return;
 
@@ -283,8 +314,6 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
             case NavigateToMap():
               await _handleNavigation(() async {
                 await context.push('/group/${widget.groupId}/map');
-                print('야 지도가  클릭이 되었냐~');
-
                 // 화면에서 돌아왔을 때 데이터 갱신
                 _handleScreenReturn();
               });
