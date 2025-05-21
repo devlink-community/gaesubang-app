@@ -11,6 +11,7 @@ sealed class AppEvent with _$AppEvent {
   // 커뮤니티 관련 이벤트
   const factory AppEvent.postCreated(String postId) = PostCreated;
   const factory AppEvent.postUpdated(String postId) = PostUpdated;
+  const factory AppEvent.postDeleted(String postId) = PostDeleted;
   const factory AppEvent.postLiked(String postId) = PostLiked;
   const factory AppEvent.postBookmarked(String postId) = PostBookmarked;
   const factory AppEvent.commentAdded(String postId, String commentId) =

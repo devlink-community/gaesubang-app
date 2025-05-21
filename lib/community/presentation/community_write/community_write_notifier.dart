@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
+import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_state.dart';
@@ -12,6 +13,7 @@ import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
 import 'package:devlink_mobile_app/storage/module/storage_di.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_write_notifier.g.dart';
@@ -75,13 +77,57 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
         state = state.copyWith(images: newImages);
 
       case Submit():
-        await _submit();
+        // 수정 모드에 따라 다른 메서드 호출
+        if (state.isEditMode) {
+          await _update(); // 게시글 수정
+        } else {
+          await _submit(); // 게시글 생성
+        }
 
       case NavigateBack(:final postId):
         // Root에서 처리하므로 여기서는 아무 것도 하지 않음
         break;
     }
   }
+
+  void initWithPost(Post post) {
+    if (state.isEditMode) return; // 이미 초기화된 경우 중복 방지
+
+    state = state.copyWith(
+      isEditMode: true,
+      originalPostId: post.id,
+      title: post.title,
+      content: post.content,
+      hashTags: post.hashTags,
+      // 이미지는 별도 처리 필요 (URL → Uint8List 변환이 필요)
+    );
+
+    // 기존 이미지 로드 (이미지가 있는 경우)
+    if (post.imageUrls.isNotEmpty) {
+      _loadExistingImages(post.imageUrls);
+    }
+  }
+
+  // 기존 이미지 로드 (URL → Uint8List)
+  Future<void> _loadExistingImages(List<String> imageUrls) async {
+    // 편의상 첫 번째 이미지만 로드 (필요시 여러 이미지 로드로 확장)
+    if (imageUrls.isEmpty) return;
+    
+    try {
+      final imageUrl = imageUrls.first;
+      
+      // 네트워크 이미지 로드 (http 패키지 사용)
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode == 200) {
+        final imageBytes = response.bodyBytes;
+        state = state.copyWith(images: [imageBytes]);
+      }
+    } catch (e) {
+      debugPrint('❌ 기존 이미지 로드 실패: $e');
+      // 실패해도 계속 진행 (이미지 없이)
+    }
+  }
+  
 
   Future<void> _submit() async {
     // 유효성 검사
@@ -206,6 +252,88 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
       // 에러 처리
       print('이미지 업로드 실패: $e');
       throw Exception('이미지 업로드에 실패했습니다: $e');
+    }
+  }
+
+   // 게시글 수정 메서드 추가
+  Future<void> _update() async {
+    // 유효성 검사 (기존 코드 재사용)
+    if (state.title.trim().isEmpty) {
+      state = state.copyWith(
+        errorMessage: CommunityErrorMessages.titleRequired,
+      );
+      return;
+    }
+
+    if (state.content.trim().isEmpty) {
+      state = state.copyWith(
+        errorMessage: CommunityErrorMessages.contentRequired,
+      );
+      return;
+    }
+    
+    // 원본 게시글 ID 확인
+    final originalPostId = state.originalPostId;
+    if (originalPostId == null) {
+      state = state.copyWith(
+        errorMessage: CommunityErrorMessages.postUpdateFailed,
+      );
+      return;
+    }
+
+    // 제출 시작
+    state = state.copyWith(submitting: true, errorMessage: null);
+
+    try {
+      // 최신 사용자 정보 가져오기
+      final userProfileResult = await _getCurrentUserUseCase.execute();
+      final Member author;
+      if (userProfileResult case AsyncData(:final value)) {
+        author = value;
+      } else {
+        throw Exception('사용자 정보를 가져오는데 실패했습니다');
+      }
+      
+      // 이미지 처리 (기존 이미지 교체 또는 유지)
+      List<Uri> imageUris = [];
+      if (state.images.isNotEmpty) {
+        // 새 이미지 업로드
+        imageUris = await _uploadImages(originalPostId);
+      } else {
+        // 기존 이미지 URL 그대로 유지하는 로직 (필요시)
+      }
+      
+      // 게시글 업데이트
+      final usecase = ref.read(updatePostUseCaseProvider);
+      final updatedPostId = await usecase.execute(
+        postId: originalPostId,
+        title: state.title.trim(),
+        content: state.content.trim(),
+        hashTags: state.hashTags,
+        imageUris: imageUris,
+        author: author,
+      );
+      
+      // 이벤트 발행
+      if (updatedPostId.value != null) {
+        ref.read(appEventNotifierProvider.notifier)
+          .emit(AppEvent.postUpdated(updatedPostId.value!));
+      } else {
+        throw Exception('업데이트된 게시글 ID가 null입니다');
+      }
+      
+      // 성공 상태 업데이트
+      state = state.copyWith(
+        submitting: false,
+        updatedPostId: updatedPostId.value,
+      );
+    } catch (e) {
+      debugPrint('❌ CommunityWriteNotifier: 게시글 수정 실패 - $e');
+      // 실패 처리
+      state = state.copyWith(
+        submitting: false,
+        errorMessage: CommunityErrorMessages.postUpdateFailed,
+      );
     }
   }
 }
