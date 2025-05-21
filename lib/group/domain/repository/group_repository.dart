@@ -12,9 +12,6 @@ abstract interface class GroupRepository {
   Future<Result<void>> leaveGroup(String groupId);
   Future<Result<List<Group>>> searchGroups(String query);
 
-  /// 특정 사용자가 가입한 그룹 목록 조회
-  Future<Result<List<Group>>> getUserJoinedGroups(String userId);
-
   /// 그룹 멤버 목록과 해당 타이머 상태 조회
   Future<Result<List<GroupMember>>> getGroupMembersWithTimerStatus(
     String groupId,
