@@ -1,636 +1,201 @@
-// lib/quiz/presentation/quiz_banner.dart
-
-import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
-import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_notifier.dart';
-import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_state.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../core/styles/app_color_styles.dart';
-import '../../../core/styles/app_text_styles.dart';
+import '../../core/styles/app_text_styles.dart';
 import '../domain/model/quiz.dart';
+import '../module/quiz_di.dart';
 
-class DailyQuizBanner extends ConsumerStatefulWidget {
+final quizProvider = FutureProvider.autoDispose.family<Quiz?, String?>((
+  ref,
+  skills,
+) async {
+  // 퀴즈 생성
+  final generateQuizUseCase = ref.watch(generateQuizUseCaseProvider);
+  final skillArea =
+      skills
+          ?.split(',')
+          .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '컴퓨터 기초')
+          .trim() ??
+      '컴퓨터 기초';
+
+  try {
+    final asyncValue = await generateQuizUseCase.execute(skillArea);
+    return asyncValue.value;
+  } catch (e) {
+    print('퀴즈 생성 중 오류: $e');
+    return null;
+  }
+});
+
+class DailyQuizBanner extends ConsumerWidget {
   final String? skills;
 
-  const DailyQuizBanner({Key? key, this.skills}) : super(key: key);
-
-  @override
-  ConsumerState<DailyQuizBanner> createState() => _DailyQuizBannerState();
-}
-
-class _DailyQuizBannerState extends ConsumerState<DailyQuizBanner>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  String? _currentSkills;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeInOut,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
-
-    _currentSkills = widget.skills;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadQuiz();
-      _animController.forward();
-    });
-  }
-
-  @override
-  void didUpdateWidget(DailyQuizBanner oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // 스킬 정보가 변경되었다면 퀴즈 새로 로드
-    if (oldWidget.skills != widget.skills) {
-      debugPrint(
-        'DailyQuizBanner - 스킬 변경 감지: ${oldWidget.skills} -> ${widget.skills}',
-      );
-      _currentSkills = widget.skills;
-
-      // 스킬이 변경될 때마다 강제로 새 퀴즈 로드
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadQuizWithClearCache();
-      });
-    }
-  }
-
-  // 캐시를 무시하고 퀴즈 로드 메서드 추가
-  void _loadQuizWithClearCache() {
-    debugPrint('DailyQuizBanner - 캐시 무시하고 새 퀴즈 로드, 스킬: $_currentSkills');
-
-    // 강제로 캐시 클리어 후 로드 (이 부분은 QuizNotifier에 새 메서드 필요)
-    // 현재는 없으므로 일반 로드 호출
-    _loadQuiz();
-  }
-
-  void _loadQuiz() {
-    debugPrint('DailyQuizBanner - 퀴즈 로드 시작, 스킬 정보: $_currentSkills');
-    ref
-        .read(quizNotifierProvider.notifier)
-        .onAction(QuizAction.loadQuiz(skills: _currentSkills));
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final quizState = ref.watch(quizNotifierProvider);
-
-    if (!quizState.showBanner) {
-      return const SizedBox.shrink();
-    }
-
-    final bool hasCompletedQuiz = quizState.isAnswered;
-
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: GestureDetector(
-          onTap: () => _showQuizPopup(context),
-          child: Container(
-            width: 280,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.purple.shade400, Colors.purple.shade800],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '오늘의 개발 퀴즈',
-                        style: AppTextStyles.body1Regular.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        // 강제로 새 퀴즈 로드 요청
-                        ref
-                            .read(quizNotifierProvider.notifier)
-                            .resetQuiz(); // 상태 초기화 먼저 수행
-                        _loadQuiz(); // 새 퀴즈 로드
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('새로운 퀴즈를 생성했습니다'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.refresh,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Quiz icon
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.quiz,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                const Icon(Icons.psychology, color: Colors.white, size: 32),
-                const SizedBox(height: 12),
-                Text(
-                  '개발 지식을 테스트해보세요',
-                  style: AppTextStyles.subtitle1Bold.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () => _showQuizPopup(context),
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.purple.shade700,
-                    backgroundColor: Colors.white,
-                    elevation: 0,
-                    minimumSize: const Size(double.infinity, 40),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    hasCompletedQuiz ? '참여 완료' : '퀴즈 풀기',
-                    style: AppTextStyles.button2Regular.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showQuizPopup(BuildContext context) {
-    // 선택한 답변 초기화
-    ref.read(quizNotifierProvider.notifier).updateSelectedAnswer(null);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _QuizBottomSheet(skills: _currentSkills),
-    );
-  }
-}
-
-class _QuizBottomSheet extends ConsumerWidget {
-  final String? skills;
-
-  const _QuizBottomSheet({Key? key, this.skills}) : super(key: key);
+  const DailyQuizBanner({super.key, this.skills});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      maxChildSize: 0.95,
-      minChildSize: 0.5,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: _QuizContent(
-                  scrollController: scrollController,
-                  skills: skills,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _QuizContent extends ConsumerWidget {
-  final ScrollController scrollController;
-  final String? skills;
-
-  const _QuizContent({Key? key, required this.scrollController, this.skills})
-    : super(key: key);
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final quizState = ref.watch(quizNotifierProvider);
-
-    if (quizState.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('잠시만 기다려주세요...'),
-          ],
-        ),
-      );
-    }
-
-    if (quizState.hasError) {
-      return _buildErrorContent(
-        context,
-        quizState.quizData.error?.toString() ?? '알 수 없는 오류',
-        ref,
-      );
-    }
-
-    if (quizState.quiz == null) {
-      return _buildErrorContent(context, '퀴즈 데이터를 불러올 수 없습니다', ref);
-    }
-
-    return _buildQuizDetails(context, quizState, ref);
-  }
-
-  Widget _buildErrorContent(
-    BuildContext context,
-    String errorMessage,
-    WidgetRef ref,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: AppColorStyles.error, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              '퀴즈를 불러오는 데 실패했습니다',
-              style: AppTextStyles.subtitle1Bold.copyWith(
-                color: AppColorStyles.error,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            if (errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  errorMessage,
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.error.withValues(alpha: 0.8),
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                ref
-                    .read(quizNotifierProvider.notifier)
-                    .onAction(QuizAction.loadQuiz(skills: skills));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorStyles.primary100,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('다시 시도'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuizDetails(
-    BuildContext context,
-    QuizState state,
-    WidgetRef ref,
-  ) {
-    final Quiz quiz = state.quiz!;
-    final isAnswered = state.isAnswered;
-    final selectedIndex = state.selectedAnswerIndex;
-    final notifier = ref.read(quizNotifierProvider.notifier);
-
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.all(20),
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColorStyles.primary100.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                quiz.category,
-                style: AppTextStyles.button2Regular.copyWith(
-                  color: AppColorStyles.primary100,
-                ),
-              ),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.refresh, size: 24),
-              onPressed: () {
-                // 상태 초기화 후 새 퀴즈 로드
-                ref.read(quizNotifierProvider.notifier).resetQuiz();
-                ref
-                    .read(quizNotifierProvider.notifier)
-                    .onAction(QuizAction.loadQuiz(skills: skills));
-
-                // 피드백 제공
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('새로운 퀴즈를 생성했습니다'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
-              color: AppColorStyles.primary100,
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 24),
-              onPressed: () => Navigator.of(context).pop(),
-              color: AppColorStyles.gray80,
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Text(quiz.question, style: AppTextStyles.heading6Bold),
-        const SizedBox(height: 24),
-        ...List.generate(quiz.options.length, (index) {
-          final option = quiz.options[index];
-          final isSelected = selectedIndex == index;
-          final isCorrect = quiz.correctAnswerIndex == index;
-          final userAnswered = quiz.attemptedAnswerIndex == index;
-
-          Color backgroundColor = Colors.grey.shade100;
-          Color borderColor = Colors.grey.shade300;
-          Color textColor = AppColorStyles.textPrimary;
-
-          if (isAnswered) {
-            if (isCorrect) {
-              backgroundColor = Colors.green.withValues(alpha: 0.15);
-              borderColor = Colors.green.withValues(alpha: 0.5);
-              textColor = Colors.green.shade800;
-            } else if (userAnswered) {
-              backgroundColor = Colors.red.withValues(alpha: 0.15);
-              borderColor = Colors.red.withValues(alpha: 0.5);
-              textColor = Colors.red.shade800;
-            }
-          } else if (isSelected) {
-            backgroundColor = AppColorStyles.primary100.withValues(alpha: 0.15);
-            borderColor = AppColorStyles.primary100.withValues(alpha: 0.5);
-            textColor = AppColorStyles.primary100;
-          }
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap:
-                    isAnswered || state.isSubmitting
-                        ? null
-                        : () {
-                          notifier.updateSelectedAnswer(index);
-                        },
-                borderRadius: BorderRadius.circular(12),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          '${String.fromCharCode(65 + index)}.',
-                          style: AppTextStyles.subtitle1Bold.copyWith(
-                            color: textColor,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            option,
-                            style: AppTextStyles.body1Regular.copyWith(
-                              color: textColor,
-                            ),
-                          ),
-                        ),
-                        if (isAnswered && isCorrect)
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 24,
-                          ),
-                        if (isAnswered && userAnswered && !isCorrect)
-                          const Icon(Icons.cancel, color: Colors.red, size: 24),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-        if (!isAnswered)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: ElevatedButton(
-              onPressed:
-                  state.isSubmitting || selectedIndex == null
-                      ? null
-                      : () async {
-                        await notifier.onAction(SubmitAnswer(selectedIndex!));
-                      },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorStyles.primary100,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                minimumSize: const Size(double.infinity, 48),
-                disabledBackgroundColor: AppColorStyles.gray40,
-              ),
-              child: Text(
-                state.isSubmitting ? '제출 중...' : '정답 제출하기',
-                style: AppTextStyles.button1Medium.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        if (isAnswered)
-          Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: _buildExplanation(quiz, state),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildExplanation(Quiz quiz, QuizState state) {
-    final isCorrect = state.isCorrectAnswer;
+    final asyncQuiz = ref.watch(quizProvider(skills));
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: 280,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color:
-            isCorrect
-                ? Colors.green.withValues(alpha: 0.1)
-                : Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              isCorrect
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : Colors.red.withValues(alpha: 0.3),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.teal.shade400, Colors.teal.shade800],
         ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                isCorrect ? Icons.check_circle : Icons.cancel,
-                color: isCorrect ? Colors.green : Colors.red,
-                size: 24,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '오늘의 퀴즈',
+                  style: AppTextStyles.body1Regular.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                isCorrect ? '정답입니다!' : '틀렸습니다!',
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color:
-                      isCorrect ? Colors.green.shade800 : Colors.red.shade800,
-                  fontSize: 16,
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.quiz_outlined,
+                  color: Colors.white,
+                  size: 18,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            '정답: ${String.fromCharCode(65 + quiz.correctAnswerIndex)}. ${quiz.options[quiz.correctAnswerIndex]}',
-            style: AppTextStyles.body1Regular.copyWith(
+          const SizedBox(height: 16),
+          _buildQuizContent(asyncQuiz),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizContent(AsyncValue<Quiz?> asyncQuiz) {
+    return Expanded(
+      child: asyncQuiz.when(
+        data: (quiz) {
+          if (quiz == null) {
+            return _buildErrorState('퀴즈를 불러올 수 없습니다');
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                quiz.question,
+                style: AppTextStyles.subtitle1Bold.copyWith(
+                  color: Colors.white,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const Spacer(),
+              Text(
+                '답을 확인하려면 클릭하세요',
+                style: AppTextStyles.button2Regular.copyWith(
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: 퀴즈 상세 페이지로 이동
+                },
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.teal.shade700,
+                  backgroundColor: Colors.white,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  '퀴즈 풀기',
+                  style: AppTextStyles.button2Regular.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+        loading:
+            () => const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+        error: (error, stack) => _buildErrorState('오류: $error'),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.error_outline,
+          color: Colors.white.withValues(alpha: 0.7),
+          size: 32,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          message,
+          style: AppTextStyles.body2Regular.copyWith(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const Spacer(),
+        ElevatedButton(
+          onPressed: () {
+            // TODO: 재시도 기능
+          },
+          style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.teal.shade700,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            minimumSize: const Size(double.infinity, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            '다시 시도',
+            style: AppTextStyles.button2Regular.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 16),
-          Text('설명: ${quiz.explanation}', style: AppTextStyles.body1Regular),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '카테고리: ${quiz.category}',
-                  style: AppTextStyles.body2Regular,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '사용자 스킬: ${skills ?? "없음"}',
-                  style: AppTextStyles.body2Regular,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

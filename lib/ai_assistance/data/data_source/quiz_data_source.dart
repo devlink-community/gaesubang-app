@@ -1,156 +1,103 @@
-import 'dart:math';
+import 'dart:convert';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:http/http.dart' as http;
 
-import 'package:flutter/foundation.dart';
-
-import '../../module/vertax_client.dart';
-
-abstract interface class QuizDataSource {
-  Future<Map<String, dynamic>> generateQuiz({String? skills});
+abstract interface class VertexAiDataSource {
+  Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt);
 }
 
-class VertexAIQuizDataSourceImpl implements QuizDataSource {
-  final VertexAIClient _vertexAIClient = VertexAIClient();
+class VertexAiDataSourceImpl implements VertexAiDataSource {
+  final FirebaseRemoteConfig _remoteConfig;
+  final http.Client _httpClient;
+
+  VertexAiDataSourceImpl({
+    required FirebaseRemoteConfig remoteConfig,
+    http.Client? httpClient,
+  }) : _remoteConfig = remoteConfig,
+       _httpClient = httpClient ?? http.Client();
 
   @override
-  Future<Map<String, dynamic>> generateQuiz({String? skills}) async {
+  Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt) async {
     try {
-      debugPrint('QuizDataSource: 퀴즈 생성 시작, 스킬 정보: $skills');
-
-      // VertexAI 클라이언트 초기화 확인
-      await _vertexAIClient.initialize();
-      debugPrint('VertexAI 클라이언트 초기화 완료');
-
-      // 스킬 파싱 - skills가 문자열로 제공되면 리스트로 변환
-      List<String> skillList = [];
-      if (skills != null && skills.isNotEmpty) {
-        skillList = skills.split(',').map((s) => s.trim()).toList();
+      // 1. Remote Config에서 Vertex AI 키 정보 가져오기
+      final vertexAiKeyJson = _remoteConfig.getString('vertex_ai_key');
+      if (vertexAiKeyJson.isEmpty) {
+        throw Exception('Vertex AI 키를 찾을 수 없습니다');
       }
 
-      List<Map<String, dynamic>> quizzes;
+      final keyConfig = json.decode(vertexAiKeyJson) as Map<String, dynamic>;
+      final projectId = keyConfig['project_id'] as String?;
+      final location = keyConfig['location'] as String? ?? 'us-central1';
+      final apiKey = keyConfig['api_key'] as String?;
 
-      // 스킬 기반 또는 일반 퀴즈 생성
-      if (skillList.isNotEmpty) {
-        debugPrint('스킬(${skillList.join(", ")}) 기반으로 퀴즈 생성');
-        quizzes = await _vertexAIClient.generateQuizBySkills(skillList, 1);
-      } else {
-        debugPrint('일반 퀴즈 생성');
-        quizzes = await _vertexAIClient.generateGeneralQuiz(1);
+      if (projectId == null || apiKey == null) {
+        throw Exception('Vertex AI 설정이 올바르지 않습니다');
       }
 
-      // 생성된 퀴즈가 없으면 예외 처리
-      if (quizzes.isEmpty) {
-        debugPrint('생성된 퀴즈가 없음, 기본 퀴즈 사용');
-        return _getFallbackQuiz(skills);
-      }
+      // 2. Vertex AI API 호출 URL 구성
+      final url = Uri.parse(
+        'https://$location-aiplatform.googleapis.com/v1/projects/$projectId/locations/$location/publishers/google/models/gemini-2.0-flash:generateContent',
+      );
 
-      // 첫 번째 퀴즈 가져오기
-      final quizData = quizzes.first;
-
-      // 퀴즈 데이터 유효성 검사
-      if (!_validateQuizData(quizData)) {
-        debugPrint('퀴즈 데이터 형식 오류, 기본 퀴즈 사용');
-        return _getFallbackQuiz(skills);
-      }
-
-      // 필드명 호환성 처리 (VertexAI의 필드명을 우리 모델에 맞게 변환)
-      final processedQuiz = {
-        'question': quizData['question'],
-        'options': quizData['options'],
-        'correctAnswerIndex': quizData['correctOptionIndex'] ?? 0, // 기본값 제공
-        'explanation': quizData['explanation'],
-        'category': quizData['relatedSkill'] ?? skills ?? '프로그래밍',
+      // 3. API 요청 본문 구성
+      final requestBody = {
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {
+          'temperature': 0.4,
+          'topP': 0.8,
+          'topK': 40,
+          'maxOutputTokens': 1024,
+        },
       };
 
-      // 디버그 로그
-      debugPrint('퀴즈 생성 성공: ${processedQuiz['question']}');
+      // 4. API 호출
+      final response = await _httpClient.post(
+        url,
+        headers: {'Content-Type': 'application/json', 'x-goog-api-key': apiKey},
+        body: json.encode(requestBody),
+      );
 
-      return processedQuiz;
+      // 5. 응답 처리
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body) as Map<String, dynamic>;
+        final candidates = jsonResponse['candidates'] as List<dynamic>?;
+
+        if (candidates != null && candidates.isNotEmpty) {
+          final content = candidates[0]['content'] as Map<String, dynamic>?;
+          final parts = content?['parts'] as List<dynamic>?;
+          if (parts != null && parts.isNotEmpty) {
+            final text = parts[0]['text'] as String?;
+            if (text != null) {
+              // JSON 형태로 반환된 텍스트 파싱
+              try {
+                return json.decode(text) as Map<String, dynamic>;
+              } catch (e) {
+                // JSON 파싱이 실패한 경우 텍스트를 question 필드에 넣어 반환
+                return {
+                  'question': text,
+                  'options': [],
+                  'answer': '',
+                  'explanation': '',
+                };
+              }
+            }
+          }
+        }
+      }
+
+      // 오류 응답 로깅
+      print('Vertex AI API 오류: ${response.statusCode} - ${response.body}');
+      throw Exception('퀴즈 생성에 실패했습니다 (${response.statusCode})');
     } catch (e) {
-      debugPrint('퀴즈 생성 실패 (상세 에러): $e');
-
-      // 오류 발생 시 기본 퀴즈 반환 (API 오류에도 앱이 동작하도록)
-      return _getFallbackQuiz(skills);
+      print('Vertex AI 호출 중 예외 발생: $e');
+      throw Exception('퀴즈 생성 중 오류가 발생했습니다: $e');
     }
-  }
-
-  // 퀴즈 데이터 구조 검증 헬퍼 메서드 추가
-  bool _validateQuizData(Map<String, dynamic> data) {
-    // 필수 필드 확인
-    final requiredFields = ['question', 'options', 'explanation'];
-    for (final field in requiredFields) {
-      if (!data.containsKey(field) || data[field] == null) {
-        debugPrint('필수 필드 누락: $field');
-        return false;
-      }
-    }
-
-    // options 배열 검증
-    if (data['options'] is! List || (data['options'] as List).isEmpty) {
-      debugPrint('options 필드 오류: 배열이 아니거나 비어있음');
-      return false;
-    }
-
-    // correctOptionIndex 검증
-    final correctIndex =
-        data['correctOptionIndex'] ?? data['correctAnswerIndex'];
-    if (correctIndex == null || correctIndex is! int) {
-      debugPrint('correctOptionIndex 필드 오류: 정수가 아니거나 없음');
-      return false;
-    }
-
-    // correctOptionIndex가 options 범위 내에 있는지 확인
-    if (correctIndex < 0 || correctIndex >= (data['options'] as List).length) {
-      debugPrint('correctOptionIndex 범위 오류: $correctIndex는 유효한 인덱스가 아님');
-      return false;
-    }
-
-    return true;
-  }
-
-  // API 오류 시 사용할 기본 퀴즈 목록
-  Map<String, dynamic> _getFallbackQuiz(String? skills) {
-    final defaultQuizzes = [
-      {
-        "question": "Flutter 앱에서 상태 관리를 위해 사용되지 않는 패키지는?",
-        "options": ["Provider", "Riverpod", "MobX", "Django"],
-        "correctAnswerIndex": 3,
-        "explanation":
-            "Django는 Python 웹 프레임워크로, Flutter 상태 관리에 사용되지 않습니다. Provider, Riverpod, MobX는 모두 Flutter에서 상태 관리에 사용되는 패키지입니다.",
-        "category": "Flutter",
-      },
-      {
-        "question": "다음 중 시간 복잡도가 O(n log n)인 정렬 알고리즘은?",
-        "options": ["버블 정렬", "퀵 정렬", "삽입 정렬", "선택 정렬"],
-        "correctAnswerIndex": 1,
-        "explanation":
-            "퀵 정렬의 평균 시간 복잡도는 O(n log n)입니다. 버블 정렬, 삽입 정렬, 선택 정렬은 모두 O(n²) 시간 복잡도를 가집니다.",
-        "category": "알고리즘",
-      },
-      {
-        "question": "Dart에서 불변 객체를 생성하기 위해 주로 사용되는 패키지는?",
-        "options": ["immutable.js", "freezed", "immutable", "const_builder"],
-        "correctAnswerIndex": 1,
-        "explanation": "freezed는 Dart에서 불변 객체를 쉽게 생성할 수 있게 해주는 코드 생성 패키지입니다.",
-        "category": "Dart",
-      },
-    ];
-
-    // 스킬에 따라 관련 퀴즈 선택 또는 랜덤 선택
-    if (skills != null && skills.isNotEmpty) {
-      final lowercaseSkills = skills.toLowerCase();
-      final matchingQuizzes =
-          defaultQuizzes.where((quiz) {
-            return lowercaseSkills.contains(
-              quiz["category"].toString().toLowerCase(),
-            );
-          }).toList();
-
-      if (matchingQuizzes.isNotEmpty) {
-        return matchingQuizzes[Random().nextInt(matchingQuizzes.length)];
-      }
-    }
-
-    // 관련 퀴즈가 없으면 랜덤 선택
-    return defaultQuizzes[Random().nextInt(defaultQuizzes.length)];
   }
 }
