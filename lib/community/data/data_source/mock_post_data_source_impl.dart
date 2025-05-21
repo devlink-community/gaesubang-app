@@ -491,4 +491,85 @@ class MockPostDataSourceImpl implements PostDataSource {
       params: {'postIds': postIds.length, 'userId': userId},
     );
   }
+
+  @override
+  Future<String> updatePost({
+    required String postId,
+    required String authorId,
+    required String authorNickname,
+    required String authorPosition,
+    required String userProfileImage,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) async {
+    return ApiCallDecorator.wrap('MockPost.updatePost', () async {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 게시글 존재 확인
+      final postIndex = _mockPosts.indexWhere((post) => post.id == postId);
+      if (postIndex < 0) {
+        throw Exception(CommunityErrorMessages.postNotFound);
+      }
+
+      // 권한 확인 (작성자만 수정 가능)
+      final post = _mockPosts[postIndex];
+      if (post.authorId != authorId) {
+        throw Exception(CommunityErrorMessages.noPermissionEdit);
+      }
+
+      // 기존 게시글 복사 후 업데이트
+      final updatedPost = post.copyWith(
+        title: title,
+        content: content,
+        authorNickname: authorNickname,
+        authorPosition: authorPosition,
+        userProfileImage: userProfileImage,
+        hashTags: hashTags,
+        mediaUrls: imageUris.map((uri) => uri.toString()).toList(),
+        // likeCount, commentCount 등 기존 값은 유지
+      );
+
+      // 목록에서 업데이트
+      _mockPosts[postIndex] = updatedPost;
+
+      return postId;
+    }, params: {'postId': postId, 'authorId': authorId});
+  }
+
+  @override
+  Future<bool> deletePost(String postId, String userId) async {
+    return ApiCallDecorator.wrap('MockPost.deletePost', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // 게시글 존재 확인
+      final postIndex = _mockPosts.indexWhere((post) => post.id == postId);
+      if (postIndex < 0) {
+        throw Exception(CommunityErrorMessages.postNotFound);
+      }
+
+      // 권한 확인 (작성자만 삭제 가능)
+      final post = _mockPosts[postIndex];
+      if (post.authorId != userId) {
+        throw Exception(CommunityErrorMessages.noPermissionDelete);
+      }
+
+      // 게시글 삭제
+      _mockPosts.removeAt(postIndex);
+
+      // 관련 댓글 삭제
+      _mockComments.remove(postId);
+
+      // 관련 좋아요 삭제
+      _likedPosts.remove(postId);
+
+      // 북마크에서도 제거
+      _bookmarkedPosts.forEach((user, posts) {
+        posts.remove(postId);
+      });
+
+      return true;
+    }, params: {'postId': postId, 'userId': userId});
+  }
 }
