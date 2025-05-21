@@ -26,6 +26,9 @@ class GroupChatState with _$GroupChatState {
     
     // 그룹 멤버 목록 추가
     this.groupMembersResult = const AsyncValue.loading(),
+
+    // 현재 사용자 ID 추가
+    this.currentUserId = '', // 기본값은 빈 문자열로 설정
   });
 
   final String groupId;
@@ -34,4 +37,5 @@ class GroupChatState with _$GroupChatState {
   final String currentMessage;
   final String? errorMessage;
   final AsyncValue<List<GroupMember>> groupMembersResult;
+  final String currentUserId;
 }
