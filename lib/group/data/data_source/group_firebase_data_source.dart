@@ -731,6 +731,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
+  // startMemberTimer, pauseMemberTimer, stopMemberTimer 메서드를 단순화
+
   @override
   Future<Map<String, dynamic>> startMemberTimer(
     String groupId,
@@ -741,57 +743,23 @@ class GroupFirebaseDataSource implements GroupDataSource {
       'GroupFirebase.startMemberTimer',
       () async {
         try {
-          // 그룹 존재 확인
+          // 그룹 존재 확인만 하고 바로 활동 기록
           final groupDoc = await _groupsCollection.doc(groupId).get();
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 이미 활성 타이머가 있는지 확인
-          final activeTimerQuery =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1)
-                  .get();
-
-          // 활성 타이머 세션이 있고, 종료되지 않은 경우 경고
-          if (activeTimerQuery.docs.isNotEmpty) {
-            final lastEndQuery =
-                await _groupsCollection
-                    .doc(groupId)
-                    .collection('timerActivities')
-                    .where('memberId', isEqualTo: memberId)
-                    .where('type', isEqualTo: 'end')
-                    .orderBy('timestamp', descending: true)
-                    .limit(1)
-                    .get();
-
-            if (lastEndQuery.docs.isEmpty ||
-                (activeTimerQuery.docs[0].data()['timestamp'] as Timestamp)
-                    .toDate()
-                    .isAfter(
-                      (lastEndQuery.docs[0].data()['timestamp'] as Timestamp)
-                          .toDate(),
-                    )) {
-              throw Exception('이미 진행 중인 타이머 세션이 있습니다.');
-            }
-          }
-
           // 타임스탬프 생성
           final now = FieldValue.serverTimestamp();
 
-          // 새 타이머 활동 데이터 준비 (중복 타임스탬프 제거)
+          // 새 타이머 활동 데이터 준비
           final activityData = {
             'memberId': memberId,
             'memberName': memberName,
             'type': 'start',
             'timestamp': now,
             'groupId': groupId,
-            'metadata': {}, // 필요한 추가 정보만 포함
+            'metadata': {},
           };
 
           // Firestore에 타이머 활동 문서 추가
@@ -803,88 +771,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 생성된 문서 ID와 함께 데이터 반환
           final result = {...activityData};
           result['id'] = docRef.id;
-
-          // 서버 타임스탬프는 클라이언트에서 바로 확인할 수 없으므로 현재 시간 사용
           result['timestamp'] = Timestamp.now();
 
           return result;
         } catch (e) {
           print('타이머 시작 오류: $e');
-          if (e.toString().contains('이미 진행 중인 타이머 세션이 있습니다')) {
-            throw Exception(e.toString());
-          }
-          throw Exception(GroupErrorMessages.operationFailed);
-        }
-      },
-      params: {'groupId': groupId, 'memberId': memberId},
-    );
-  }
-
-  @override
-  Future<Map<String, dynamic>> stopMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.stopMemberTimer',
-      () async {
-        try {
-          // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-          if (!groupDoc.exists) {
-            throw Exception(GroupErrorMessages.notFound);
-          }
-
-          // 현재 진행 중인 타이머 세션이 있는지 확인
-          final activeTimerQuery =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1)
-                  .get();
-
-          // 활성화된 타이머가 없는 경우 에러
-          if (activeTimerQuery.docs.isEmpty) {
-            throw Exception(GroupErrorMessages.timerNotActive);
-          }
-
-          // 타임스탬프 생성
-          final now = FieldValue.serverTimestamp();
-
-          // 새 타이머 종료 활동 데이터 준비 (불필요한 중복 타임스탬프 제거)
-          final activityData = {
-            'memberId': memberId,
-            'memberName': memberName,
-            'type': 'end',
-            'timestamp': now,
-            'groupId': groupId,
-            'metadata': {}, // 필요한 추가 정보만 포함
-          };
-
-          // Firestore에 타이머 활동 문서 추가
-          final docRef = await _groupsCollection
-              .doc(groupId)
-              .collection('timerActivities')
-              .add(activityData);
-
-          // 생성된 문서 ID와 함께 데이터 반환
-          final result = {...activityData};
-          result['id'] = docRef.id;
-
-          // 서버 타임스탬프는 클라이언트에서 바로 확인할 수 없으므로 현재 시간 사용
-          result['timestamp'] = Timestamp.now();
-
-          return result;
-        } catch (e) {
-          print('타이머 정지 오류: $e');
-          // 구체적인 오류 메시지 전달
-          if (e.toString().contains(GroupErrorMessages.timerNotActive)) {
-            throw Exception(GroupErrorMessages.timerNotActive);
-          }
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -902,39 +793,23 @@ class GroupFirebaseDataSource implements GroupDataSource {
       'GroupFirebase.pauseMemberTimer',
       () async {
         try {
-          // 그룹 존재 확인
+          // 그룹 존재 확인만 하고 바로 활동 기록
           final groupDoc = await _groupsCollection.doc(groupId).get();
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 현재 진행 중인 타이머 세션이 있는지 확인
-          final activeTimerQuery =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .where('memberId', isEqualTo: memberId)
-                  .where('type', isEqualTo: 'start')
-                  .orderBy('timestamp', descending: true)
-                  .limit(1)
-                  .get();
-
-          // 활성화된 타이머가 없는 경우 에러
-          if (activeTimerQuery.docs.isEmpty) {
-            throw Exception(GroupErrorMessages.timerNotActive);
-          }
-
           // 타임스탬프 생성
           final now = FieldValue.serverTimestamp();
 
-          // 새 타이머 일시정지 활동 데이터 준비 (불필요한 중복 타임스탬프 제거)
+          // 새 타이머 활동 데이터 준비
           final activityData = {
             'memberId': memberId,
             'memberName': memberName,
             'type': 'pause',
             'timestamp': now,
             'groupId': groupId,
-            'metadata': {}, // 필요한 추가 정보만 포함
+            'metadata': {},
           };
 
           // Firestore에 타이머 활동 문서 추가
@@ -946,17 +821,61 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 생성된 문서 ID와 함께 데이터 반환
           final result = {...activityData};
           result['id'] = docRef.id;
-
-          // 서버 타임스탬프는 클라이언트에서 바로 확인할 수 없으므로 현재 시간 사용
           result['timestamp'] = Timestamp.now();
 
           return result;
         } catch (e) {
           print('타이머 일시정지 오류: $e');
-          // 구체적인 오류 메시지 전달
-          if (e.toString().contains(GroupErrorMessages.timerNotActive)) {
-            throw Exception(GroupErrorMessages.timerNotActive);
+          throw Exception(GroupErrorMessages.operationFailed);
+        }
+      },
+      params: {'groupId': groupId, 'memberId': memberId},
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> stopMemberTimer(
+    String groupId,
+    String memberId,
+    String memberName,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'GroupFirebase.stopMemberTimer',
+      () async {
+        try {
+          // 그룹 존재 확인만 하고 바로 활동 기록
+          final groupDoc = await _groupsCollection.doc(groupId).get();
+          if (!groupDoc.exists) {
+            throw Exception(GroupErrorMessages.notFound);
           }
+
+          // 타임스탬프 생성
+          final now = FieldValue.serverTimestamp();
+
+          // 새 타이머 활동 데이터 준비
+          final activityData = {
+            'memberId': memberId,
+            'memberName': memberName,
+            'type': 'end',
+            'timestamp': now,
+            'groupId': groupId,
+            'metadata': {},
+          };
+
+          // Firestore에 타이머 활동 문서 추가
+          final docRef = await _groupsCollection
+              .doc(groupId)
+              .collection('timerActivities')
+              .add(activityData);
+
+          // 생성된 문서 ID와 함께 데이터 반환
+          final result = {...activityData};
+          result['id'] = docRef.id;
+          result['timestamp'] = Timestamp.now();
+
+          return result;
+        } catch (e) {
+          print('타이머 정지 오류: $e');
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },

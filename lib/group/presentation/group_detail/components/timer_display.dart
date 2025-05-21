@@ -92,7 +92,7 @@ class TimerDisplay extends StatelessWidget {
     // 배경색 결정
     final backgroundColor =
         isStopped
-            ? const Color(0xFF9E9E9E) // 회색 (정지 상태)
+            ? const Color(0xFFCDCDFF) // 회색 (정지 상태)
             : isRunning
             ? const Color(0xFF8080FF) // 파란색 (실행 중)
             : const Color(0xFFCDCDFF); // 연한 파란색 (일시 정지)
