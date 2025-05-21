@@ -373,4 +373,67 @@ class PostRepositoryImpl implements PostRepository {
       params: {'postId': postId, 'commentCount': commentIds.length},
     );
   }
+
+  /* Update */
+  @override
+  Future<Result<String>> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+    Member? author,
+  }) async {
+    return ApiCallDecorator.wrap('PostRepository.updatePost', () async {
+      try {
+        // 1. 현재 사용자 정보 확인
+        final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+
+        // 2. 작성자 정보: 전달받은 author 또는 현재 사용자
+        final authorNickname = author?.nickname ?? currentUser.nickname;
+        final authorPosition = author?.position ?? currentUser.position ?? '';
+        final userProfileImage = author?.image ?? currentUser.image;
+
+        // 3. DataSource 호출
+        final updatedPostId = await _dataSource.updatePost(
+          postId: postId,
+          authorId: currentUser.uid, // 권한 확인용
+          authorNickname: authorNickname,
+          authorPosition: authorPosition,
+          userProfileImage: userProfileImage,
+          title: title,
+          content: content,
+          hashTags: hashTags,
+          imageUris: imageUris,
+        );
+
+        return Result.success(updatedPostId);
+      } catch (e, st) {
+        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+      }
+    }, params: {'postId': postId});
+  }
+
+  /* Delete */
+  @override
+  Future<Result<bool>> deletePost(String postId) async {
+    return ApiCallDecorator.wrap('PostRepository.deletePost', () async {
+      try {
+        // 1. 현재 사용자 정보 확인
+        final currentUser = _ref.read(currentUserProvider);
+        if (currentUser == null) {
+          throw Exception(CommunityErrorMessages.loginRequired);
+        }
+
+        // 2. DataSource 호출
+        final success = await _dataSource.deletePost(postId, currentUser.uid);
+        return Result.success(success);
+      } catch (e, st) {
+        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+      }
+    }, params: {'postId': postId});
+  }
 }

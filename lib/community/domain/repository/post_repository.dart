@@ -41,4 +41,17 @@ abstract interface class PostRepository {
     required List<Uri> imageUris,
     Member? author,
   });
+
+  /* Update */
+  Future<Result<String>> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+    Member? author,
+  });
+
+  /* Delete */
+  Future<Result<bool>> deletePost(String postId);
 }
