@@ -1,8 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'dart:async'; // Completer 사용을 위해 추가
 =======
 import 'dart:async';
 >>>>>>> 22afa4f8 (fix: 프롬프트 수정)
+=======
+import 'dart:async';
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
 import 'dart:convert';
 import 'dart:math';
 
@@ -12,6 +16,8 @@ import 'package:googleapis/aiplatform/v1.dart' as vertex_ai;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 
+/// Vertex AI와의 통신을 담당하는 클라이언트 클래스
+/// API 호출과 응답 처리에만 집중하도록 리팩토링
 class VertexAIClient {
   // 싱글톤 패턴
   static final VertexAIClient _instance = VertexAIClient._internal();
@@ -26,16 +32,19 @@ class VertexAIClient {
   final String _modelId = 'gemini-2.0-flash';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // 초기화 상태 관리 개선
 =======
   // Random 객체 추가
   final Random _random = Random();
 
+=======
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
   // 초기화 상태
 >>>>>>> 22afa4f8 (fix: 프롬프트 수정)
   bool _initialized = false;
-  bool _initializing = false; // 초기화 진행 중 여부를 추적하는 플래그 추가
-  Completer<void>? _initializeCompleter; // 초기화 작업 Completer 추가
+  bool _initializing = false;
+  Completer<void>? _initializeCompleter;
 
   late http.Client _httpClient;
   late AutoRefreshingAuthClient _authClient;
@@ -130,6 +139,7 @@ class VertexAIClient {
     }
   }
 
+  /// 대체 방법으로 서비스 계정 정보 로드
   Future<Map<String, dynamic>> _loadServiceAccountFromAssets() async {
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
@@ -142,27 +152,39 @@ class VertexAIClient {
       return jsonMap;
     } catch (e) {
       debugPrint('Remote Config에서 service_account 로드 실패: $e');
-      // 👉 실패 시 {} 반환. 더 이상 폴백 없음.
       return {};
     }
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   /// LLM API 호출을 위한 통합 메서드 - 새로 추가
+=======
+  /// 텍스트 생성 API 호출 메서드 - 프롬프트를 받아 JSON 응답 반환
+  /// 이 메서드는 프롬프트 내용에 관여하지 않고 API 호출과 응답 처리에만 집중
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
       if (!_initialized) await initialize();
 
+<<<<<<< HEAD
       // 기존 엔드포인트 로직 유지
       final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+=======
+      final endpoint =
+          'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
 
-      // generateContent API에 맞는 페이로드 구성
+      // 캐시 방지를 위한 고유 ID 추가
+      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+
+      // 생성 구성 - 낮은 temperature로 설정 (JSON 형식 응답에 적합)
       final payload = {
         'contents': [
           {
             'role': 'user',
             'parts': [
-              {'text': prompt},
+              {'text': '$prompt\n\n요청 ID: $uniqueId'},
             ],
           },
         ],
@@ -174,14 +196,20 @@ class VertexAIClient {
         },
       };
 
-      // API 호출
-      final response = await _authClient.post(
-        Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      );
+      // API 호출 (최대 15초 타임아웃)
+      final response = await _authClient
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 15));
 
       // 응답 처리
+<<<<<<< HEAD
       if (response.statusCode == 200) {
         debugPrint('API 응답 상태: ${response.statusCode}');
 
@@ -239,12 +267,16 @@ class VertexAIClient {
         debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
         throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
       }
+=======
+      return _processResponse(response);
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
     } catch (e) {
       debugPrint('Vertex AI API 호출 실패: $e');
       rethrow;
     }
   }
 
+<<<<<<< HEAD
   /// 스킬 기반 퀴즈 생성 - 개선된 버전
 =======
   /// 스킬 기반 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
@@ -327,29 +359,80 @@ class VertexAIClient {
           "correctOptionIndex": 0,
           "explanation": "정답에 대한 설명",
           "relatedSkill": "관련 분야"
-        }
-      ]
-      
-      - 응답은 반드시 올바른 JSON 배열 형식이어야 합니다.
-      - 배열의 각 요소는 위에 제시된 모든 키를 포함해야 합니다.
-      - 질문들은 $questionCount개 정확히 생성해주세요.
-      - 출제 문제는 개발자로서 알아야 할 중요한 내용으로 구성해주세요.
-      
-      JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
-      """;
+=======
+  /// 응답 처리 메서드 (응답에서 JSON 추출)
+  Future<Map<String, dynamic>> _processResponse(http.Response response) async {
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
 
-      return await _callVertexAIForQuiz(prompt);
-    } catch (e) {
-      debugPrint('일반 퀴즈 생성 실패: $e');
-      rethrow;
+      try {
+        // 응답 구조 확인 및 안전하게 처리
+        final candidates = data['candidates'];
+        if (candidates == null || candidates.isEmpty) {
+          throw Exception('응답에 candidates가 없습니다');
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
+        }
+
+        final content = candidates[0]['content'];
+        if (content == null) {
+          throw Exception('응답에 content가 없습니다');
+        }
+
+        final parts = content['parts'];
+        if (parts == null || parts.isEmpty) {
+          throw Exception('응답에 parts가 없습니다');
+        }
+
+        final String generatedText = parts[0]['text'] ?? '';
+
+        // 코드 블록 제거
+        String cleanedText = generatedText;
+        if (cleanedText.contains('```')) {
+          cleanedText =
+              cleanedText
+                  .replaceAll('```json', '')
+                  .replaceAll('```', '')
+                  .trim();
+        }
+
+        // JSON 객체 찾기
+        return _extractJsonFromText(cleanedText);
+      } catch (e) {
+        debugPrint('응답 처리 오류: $e');
+        debugPrint('원본 응답: ${response.body}');
+        throw Exception('응답 처리 중 오류: $e');
+      }
+    } else {
+      debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
+      throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
     }
   }
 
-  /// 단일 퀴즈 생성 (기존 메서드와의 호환성을 위한 메서드)
-  Future<Map<String, dynamic>> generateQuiz(String skillArea) async {
+  /// 텍스트에서 JSON 추출 메서드
+  Map<String, dynamic> _extractJsonFromText(String text) {
+    final jsonStart = text.indexOf('{');
+    final jsonEnd = text.lastIndexOf('}') + 1;
+
+    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+      final jsonString = text.substring(jsonStart, jsonEnd);
+      try {
+        return jsonDecode(jsonString);
+      } catch (e) {
+        debugPrint('JSON 객체 파싱 오류: $e');
+        throw Exception('JSON 객체 파싱 오류: $e');
+      }
+    } else {
+      debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $text');
+      throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+    }
+  }
+
+  /// 리스트 형태의 JSON 텍스트에서 JSON 배열 추출
+  Future<List<Map<String, dynamic>>> callTextModelForList(String prompt) async {
     try {
       if (!_initialized) await initialize();
 
+<<<<<<< HEAD
       // 스킬 확인 및 기본값 설정
       final skill = skillArea.isNotEmpty ? skillArea : '컴퓨터 기초';
 
@@ -444,6 +527,10 @@ class VertexAIClient {
     try {
       // 기존 엔드포인트 로직 유지
       final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+=======
+      final endpoint =
+          'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
 
       // 각 요청마다 다른 temperature 값 사용하여 다양성 증가
       final random = Random();
@@ -452,7 +539,7 @@ class VertexAIClient {
       // 요청마다 고유한 ID 추가 (캐시 방지)
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
 
-      // generateContent API에 맞는 페이로드 구성
+      // 페이로드 구성
       final payload = {
         'contents': [
           {
@@ -468,30 +555,19 @@ class VertexAIClient {
           'topK': 40,
           'topP': 0.95,
         },
-        // 캐싱 방지를 위한 속성 추가
-        'safetySettings': [
-          {
-            'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            'threshold': 'BLOCK_NONE',
-          },
-        ],
       };
-
-      debugPrint(
-        'Vertex AI API 요청: temperature=${temperature.toStringAsFixed(2)}, uniqueId=$uniqueId',
-      );
 
       // API 호출
       final response = await _authClient.post(
         Uri.parse(endpoint),
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': '', // 필요한 경우 API 키 추가
           'Cache-Control': 'no-cache',
         },
         body: jsonEncode(payload),
       );
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       // 응답 처리
 =======
@@ -619,12 +695,17 @@ class VertexAIClient {
         debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
         throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
       }
+=======
+      // 응답 처리
+      return _processListResponse(response);
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
     } catch (e) {
-      debugPrint('Vertex AI API 호출 실패: $e');
+      debugPrint('Vertex AI API 리스트 호출 실패: $e');
       rethrow;
     }
   }
 
+<<<<<<< HEAD
   // 객체 파싱 시도 헬퍼 메서드 - 수정됨
   List<Map<String, dynamic>> _tryParseAsObject(String text) {
     final objectStart = text.indexOf('{');
@@ -687,6 +768,111 @@ class VertexAIClient {
       "explanation": "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
       "relatedSkill": "컴퓨터 기초",
     };
+=======
+  /// 리스트 응답 처리 메서드
+  Future<List<Map<String, dynamic>>> _processListResponse(
+    http.Response response,
+  ) async {
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      try {
+        // 응답 구조 확인
+        final candidates = data['candidates'];
+        if (candidates == null || candidates.isEmpty) {
+          throw Exception('응답에 candidates가 없습니다');
+        }
+
+        final content = candidates[0]['content'];
+        if (content == null) {
+          throw Exception('응답에 content가 없습니다');
+        }
+
+        final parts = content['parts'];
+        if (parts == null || parts.isEmpty) {
+          throw Exception('응답에 parts가 없습니다');
+        }
+
+        final String generatedText = parts[0]['text'] ?? '';
+
+        // 코드 블록 제거
+        String cleanedText = generatedText;
+        if (cleanedText.contains('```')) {
+          cleanedText =
+              cleanedText
+                  .replaceAll('```json', '')
+                  .replaceAll('```', '')
+                  .trim();
+        }
+
+        // JSON 배열 추출
+        return _extractJsonArrayFromText(cleanedText);
+      } catch (e) {
+        debugPrint('응답 처리 오류: $e');
+        debugPrint('원본 응답: ${response.body}');
+        throw Exception('응답 처리 중 오류: $e');
+      }
+    } else {
+      debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
+      throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  /// 텍스트에서 JSON 배열 추출 메서드
+  List<Map<String, dynamic>> _extractJsonArrayFromText(String text) {
+    // 먼저 배열 형태 확인
+    final arrayStart = text.indexOf('[');
+    final arrayEnd = text.lastIndexOf(']') + 1;
+
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      try {
+        final List<dynamic> parsedArray = jsonDecode(
+          text.substring(arrayStart, arrayEnd),
+        );
+        return parsedArray
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      } catch (e) {
+        debugPrint('JSON 배열 파싱 오류: $e');
+        // 배열 파싱 실패 시, 단일 객체 확인
+        final jsonStart = text.indexOf('{');
+        final jsonEnd = text.lastIndexOf('}') + 1;
+
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+          try {
+            final Map<String, dynamic> parsedJson = jsonDecode(
+              text.substring(jsonStart, jsonEnd),
+            );
+            return [parsedJson]; // 단일 객체를 리스트로 반환
+          } catch (e) {
+            debugPrint('단일 JSON 객체 파싱도 실패: $e');
+            throw Exception('JSON 객체 파싱 오류: $e');
+          }
+        } else {
+          throw Exception('JSON 배열 파싱 오류: $e');
+        }
+      }
+    } else {
+      // 배열을 찾을 수 없는 경우, 단일 객체 확인
+      final jsonStart = text.indexOf('{');
+      final jsonEnd = text.lastIndexOf('}') + 1;
+
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        try {
+          final Map<String, dynamic> parsedJson = jsonDecode(
+            text.substring(jsonStart, jsonEnd),
+          );
+          return [parsedJson]; // 단일 객체를 리스트로 반환
+        } catch (e) {
+          debugPrint('JSON 객체 파싱 오류: $e');
+          throw Exception('JSON 객체 파싱 오류: $e');
+        }
+      } else {
+        debugPrint('JSON 형식을 찾을 수 없음: $text');
+        throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+      }
+    }
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
   }
 
   // 인스턴스 소멸 시 리소스 정리 개선

@@ -1,37 +1,56 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 
+import '../../module/quiz_prompt.dart';
 import '../../module/vertex_client.dart';
+import 'fallback_service.dart';
 
+/// Vertex AI 데이터 소스 인터페이스
 abstract interface class VertexAiDataSource {
+  /// 단일 퀴즈 생성
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt);
 
+  /// 스킬 기반 퀴즈 목록 생성
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
     List<String> skills,
     int count,
   );
 
+  /// 일반 컴퓨터 지식 퀴즈 목록 생성
   Future<List<Map<String, dynamic>>> generateGeneralQuiz(int count);
+
+  /// 학습 팁 생성
+  Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt);
 }
 
+/// Vertex AI 데이터 소스 구현
 class VertexAiDataSourceImpl implements VertexAiDataSource {
   final VertexAIClient _vertexClient;
-  final Random _random = Random();
+  final FallbackService _fallbackService;
+  final PromptService _promptService; // PromptService 추가
 
-  VertexAiDataSourceImpl({required VertexAIClient vertexClient})
-    : _vertexClient = vertexClient;
+  VertexAiDataSourceImpl({
+    required VertexAIClient vertexClient,
+    required FallbackService fallbackService,
+    required PromptService promptService, // 생성자에 추가
+  }) : _vertexClient = vertexClient,
+       _fallbackService = fallbackService,
+       _promptService = promptService;
 
   @override
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt) async {
     try {
-      // 스킬 영역 추출 (프롬프트에서 추출)
-      final String skillArea = _extractSkillAreaFromPrompt(prompt);
-
-      // 단일 퀴즈 생성 메서드 호출
-      return await _vertexClient.generateQuiz(skillArea);
+      // 직접 호출만 담당 (프롬프트 구성에 관여하지 않음)
+      final result = await _vertexClient.callTextModel(prompt);
+      debugPrint(
+        '퀴즈 생성 성공: ${result["question"]?.toString().substring(0, min(20, result["question"]?.toString().length ?? 0))}...',
+      );
+      return result;
     } catch (e) {
       debugPrint('퀴즈 생성 API 호출 실패: $e');
-      return _generateFallbackQuiz(prompt);
+      // 폴백 서비스 활용
+      final skill = _extractSkillFromPrompt(prompt);
+      return _fallbackService.getFallbackQuiz(skill);
     }
   }
 
@@ -41,40 +60,30 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
     int count,
   ) async {
     try {
-      // 스킬 목록 확인
-      if (skills.isEmpty) {
-        skills = ['컴퓨터 기초'];
-      }
+      // 프롬프트 생성 서비스 활용
+      final prompt = _promptService.createMultipleQuizPrompt(skills, count);
 
-      // 각 스킬에 대해 퀴즈 생성하고 결합
-      final allQuizzes = <Map<String, dynamic>>[];
-
-      // 퀴즈 생성 요청 (스킬 목록 전달)
-      final quizzes = await _vertexClient.generateQuizBySkills(skills, count);
-      allQuizzes.addAll(quizzes);
-
-      // 목표 개수에 도달하지 못했다면 일반 퀴즈로 보충
-      if (allQuizzes.length < count) {
-        final generalQuizzes = await generateGeneralQuiz(
-          count - allQuizzes.length,
-        );
-        allQuizzes.addAll(generalQuizzes);
-      }
-
-      // 필요한 개수만큼 반환
-      return allQuizzes.take(count).toList();
+      // 리스트 형태의 결과를 기대하는 호출
+      final results = await _vertexClient.callTextModelForList(prompt);
+      debugPrint('스킬 기반 퀴즈 생성 성공: ${results.length}개');
+      return results;
     } catch (e) {
       debugPrint('스킬 기반 퀴즈 생성 실패: $e');
-      // 폴백: 단일 퀴즈를 여러 개 생성하여 리스트로 반환
+
+      // 폴백: 각 스킬에 대해 하나씩 생성
       final fallbackQuizzes = <Map<String, dynamic>>[];
-      for (int i = 0; i < count; i++) {
-        // 스킬 목록이 있으면 스킬 목록에서 랜덤으로 선택, 없으면 기본 스킬 사용
-        final skill =
-            skills.isNotEmpty
-                ? skills[_random.nextInt(skills.length)]
-                : '컴퓨터 기초';
-        fallbackQuizzes.add(_generateFallbackQuiz(skill));
+      final targetSkills = skills.isEmpty ? ['컴퓨터 기초'] : skills;
+
+      // 최대 요청 개수만큼 폴백 퀴즈 생성
+      for (int i = 0; i < count && i < targetSkills.length; i++) {
+        fallbackQuizzes.add(_fallbackService.getFallbackQuiz(targetSkills[i]));
       }
+
+      // 부족한 경우 일반 퀴즈로 채움
+      while (fallbackQuizzes.length < count) {
+        fallbackQuizzes.add(_fallbackService.getFallbackQuiz('컴퓨터 기초'));
+      }
+
       return fallbackQuizzes;
     }
   }
@@ -82,21 +91,43 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
   @override
   Future<List<Map<String, dynamic>>> generateGeneralQuiz(int count) async {
     try {
-      return await _vertexClient.generateGeneralQuiz(count);
+      // 프롬프트 생성 서비스 활용
+      final prompt = _promptService.createGeneralQuizPrompt(count);
+
+      // 리스트 형태의 결과를 기대하는 호출
+      final results = await _vertexClient.callTextModelForList(prompt);
+      debugPrint('일반 퀴즈 생성 성공: ${results.length}개');
+      return results;
     } catch (e) {
       debugPrint('일반 퀴즈 생성 실패: $e');
+
       // 폴백: 기본 컴퓨터 지식 퀴즈 여러 개 반환
       final fallbackQuizzes = <Map<String, dynamic>>[];
       for (int i = 0; i < count; i++) {
-        fallbackQuizzes.add(_generateFallbackQuiz('컴퓨터 기초'));
+        fallbackQuizzes.add(_fallbackService.getFallbackQuiz('컴퓨터 기초'));
       }
       return fallbackQuizzes;
     }
   }
 
+  @override
+  Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt) async {
+    try {
+      // 직접 호출만 담당
+      final result = await _vertexClient.callTextModel(prompt);
+      debugPrint('학습 팁 생성 성공: ${result["title"]}');
+      return result;
+    } catch (e) {
+      debugPrint('학습 팁 생성 API 호출 실패: $e');
+      // 폴백 서비스 활용
+      final skill = _extractSkillFromPrompt(prompt);
+      return _fallbackService.getFallbackStudyTip(skill);
+    }
+  }
+
   /// 프롬프트에서 스킬 영역 추출
-  String _extractSkillAreaFromPrompt(String prompt) {
-    // 타임스탬프 제거 (형식: "스킬-12345678901234")
+  String _extractSkillFromPrompt(String prompt) {
+    // 타임스탬프 제거 후 스킬 추출
     final timestampSeparatorIndex = prompt.lastIndexOf('-');
     if (timestampSeparatorIndex > 0) {
       final possibleTimestamp = prompt.substring(timestampSeparatorIndex + 1);
@@ -107,189 +138,27 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
       }
     }
 
-    // 이 부분에서 여러 스킬이 콤마로 구분되어 있다면 하나를 랜덤으로 선택
-    if (prompt.contains(',')) {
-      final skills =
-          prompt
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList();
-      if (skills.isNotEmpty) {
-        return skills[_random.nextInt(skills.length)];
-      }
-    }
-
-    // 정규식에서 대소문자 구분 없이 검색
-    final skillPattern = RegExp(r'지식 영역: ?([\w\s]+)', caseSensitive: false);
+    // 주제: 스킬명 형태로 되어 있는지 확인
+    final skillPattern = RegExp(r'주제:\s*([^()\n]+)');
     final match = skillPattern.firstMatch(prompt);
-
     if (match != null && match.groupCount >= 1) {
-      return match.group(1)?.trim() ?? '';
+      return match.group(1)?.trim() ?? '컴퓨터 기초';
     }
 
-    // 1. 완전 일치 검사 (대소문자 구분 없이)
-    final promptLower = prompt.toLowerCase().trim();
-
-    // 완전히 정확한 매칭을 위한 기술 목록 (소문자로 통일)
-    final exactSkills = {
-      'python': 'Python',
-      'javascript': 'JavaScript',
-      'js': 'JavaScript',
-      'java': 'Java',
-      'flutter': 'Flutter',
-      'dart': 'Dart',
-      'html': 'HTML',
-      'css': 'CSS',
-      'c++': 'C++',
-      'c#': 'C#',
-      'ruby': 'Ruby',
-      'php': 'PHP',
-      'swift': 'Swift',
-      'kotlin': 'Kotlin',
-      'go': 'Go',
-      'golang': 'Go',
-      'rust': 'Rust',
-      'typescript': 'TypeScript',
-      'ts': 'TypeScript',
-      'react': 'React',
-      'angular': 'Angular',
-      'vue': 'Vue',
-      'node.js': 'Node.js',
-      'nodejs': 'Node.js',
-      'django': 'Django',
-      'spring': 'Spring',
-      'spring boot': 'Spring Boot',
-      'flask': 'Flask',
-      'laravel': 'Laravel',
-      'express': 'Express',
-      'mysql': 'MySQL',
-      'postgresql': 'PostgreSQL',
-      'mongodb': 'MongoDB',
-      'redis': 'Redis',
-      'aws': 'AWS',
-      'azure': 'Azure',
-      'docker': 'Docker',
-      'kubernetes': 'Kubernetes',
-      'k8s': 'Kubernetes',
-      'devops': 'DevOps',
-      'git': 'Git',
-      'tensorflow': 'TensorFlow',
-      'pytorch': 'PyTorch',
-      'machine learning': 'Machine Learning',
-      'ml': 'Machine Learning',
-      'deep learning': 'Deep Learning',
-      'dl': 'Deep Learning',
-      'ai': 'AI',
-      'artificial intelligence': 'AI',
-      'data science': 'Data Science',
-      'blockchain': 'Blockchain',
-      'ios': 'iOS',
-      'android': 'Android',
-      'web development': 'Web Development',
-      'web dev': 'Web Development',
-      'frontend': 'Frontend',
-      'front-end': 'Frontend',
-      'backend': 'Backend',
-      'back-end': 'Backend',
-      'full stack': 'Full Stack',
-      'fullstack': 'Full Stack',
-      'ui/ux': 'UI/UX',
-      'ui': 'UI/UX',
-      'ux': 'UI/UX',
-      'unity': 'Unity',
-      'unreal engine': 'Unreal Engine',
-      'game development': 'Game Development',
-      'game dev': 'Game Development',
-      'computer science': 'Computer Science',
-      'cs': 'Computer Science',
-      'algorithm': 'Algorithms',
-      'algorithms': 'Algorithms',
-      'data structure': 'Data Structures',
-      'data structures': 'Data Structures',
-    };
-
-    // 완전 일치 검사
-    if (exactSkills.containsKey(promptLower)) {
-      return exactSkills[promptLower]!;
+    // 기술 분야: 스킬명 형태로 되어 있는지 확인
+    final fieldPattern = RegExp(r'기술 분야:\s*([^,\n]+)');
+    final fieldMatch = fieldPattern.firstMatch(prompt);
+    if (fieldMatch != null && fieldMatch.groupCount >= 1) {
+      return fieldMatch.group(1)?.trim() ?? '컴퓨터 기초';
     }
 
-    // 2. 입력 문자열이 그대로 스킬명인지 확인
-    // 외래어/영어인 경우 첫 글자 대문자로 변환
-    if (promptLower.isNotEmpty &&
-        RegExp(r'^[a-z0-9\s\-\+\/]+$').hasMatch(promptLower)) {
-      // 공백으로 구분된 단어들의 첫 글자를 대문자로 변환
-      final capitalizedWords = promptLower
-          .split(' ')
-          .map((word) {
-            if (word.isEmpty) return word;
-            return word[0].toUpperCase() + word.substring(1);
-          })
-          .join(' ');
-
-      return capitalizedWords;
+    // 위 패턴이 모두 없으면 첫 줄을 사용
+    final firstLine = prompt.split('\n').first.trim();
+    if (firstLine.isNotEmpty) {
+      return firstLine;
     }
 
-    // 3. 사용자 입력이 한글이거나 복합어인 경우 그대로 사용
-    return prompt.trim();
-  }
-
-  /// 폴백 퀴즈 데이터 생성 메서드
-  Map<String, dynamic> _generateFallbackQuiz(String prompt) {
-    // prompt에서 언급된 스킬에 따라 다른 퀴즈 반환
-    if (prompt.toLowerCase().contains('python')) {
-      return {
-        "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
-        "options": [
-          "메모리 사용량 증가",
-          "코드가 더 간결하고 가독성이 좋아짐",
-          "항상 더 빠른 실행 속도",
-          "버그 방지 기능",
-        ],
-        "correctOptionIndex": 1,
-        "explanation":
-            "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
-        "relatedSkill": "Python",
-      };
-    } else if (prompt.toLowerCase().contains('flutter') ||
-        prompt.toLowerCase().contains('dart')) {
-      return {
-        "question": "Flutter에서 StatefulWidget과 StatelessWidget의 주요 차이점은 무엇인가요?",
-        "options": [
-          "StatefulWidget만 빌드 메서드를 가짐",
-          "StatelessWidget이 더 성능이 좋음",
-          "StatefulWidget은 내부 상태를 가질 수 있음",
-          "StatelessWidget은 항상 더 적은 메모리를 사용함",
-        ],
-        "correctOptionIndex": 2,
-        "explanation":
-            "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
-        "relatedSkill": "Flutter",
-      };
-    } else if (prompt.toLowerCase().contains('javascript') ||
-        prompt.toLowerCase().contains('js')) {
-      return {
-        "question": "JavaScript에서 const와 let의 주요 차이점은 무엇인가요?",
-        "options": [
-          "const는 객체를 불변으로 만들지만, let은 가변 객체를 선언합니다.",
-          "const로 선언된 변수는 재할당할 수 없지만, let은 가능합니다.",
-          "const는 함수 스코프, let은 블록 스코프를 가집니다.",
-          "const는 호이스팅되지 않지만, let은 호이스팅됩니다.",
-        ],
-        "correctOptionIndex": 1,
-        "explanation":
-            "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
-        "relatedSkill": "JavaScript",
-      };
-    }
-
-    // 기본 컴퓨터 기초 퀴즈
-    return {
-      "question": "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
-      "options": ["4비트", "8비트", "16비트", "32비트"],
-      "correctOptionIndex": 1,
-      "explanation": "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
-      "relatedSkill": "컴퓨터 기초",
-    };
+    // 기본값
+    return '컴퓨터 기초';
   }
 }

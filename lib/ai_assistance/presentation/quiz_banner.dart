@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
 import '../domain/model/quiz.dart';
+<<<<<<< HEAD
 import '../module/quiz_di.dart';
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -81,6 +82,9 @@ import 'quiz_action.dart';
 import 'quiz_notifier.dart';
 =======
 >>>>>>> 22afa4f8 (fix: 프롬프트 수정)
+=======
+import '../module/ai_client_di.dart';
+>>>>>>> cc1d0ed3 (충돌 상황 해결)
 import 'quiz_screen.dart';
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
 
