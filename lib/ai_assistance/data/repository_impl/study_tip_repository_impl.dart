@@ -16,8 +16,8 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
   @override
   Future<Result<StudyTip>> generateStudyTip(String skillArea) async {
     try {
-      final prompt = _buildPrompt(skillArea);
-      final response = await _dataSource.generateStudyTipWithPrompt(prompt);
+      // DataSource의 generateStudyTipBySkill 메서드 직접 호출
+      final response = await _dataSource.generateStudyTipBySkill(skillArea);
 
       // DTO로 변환
       final studyTipDto = StudyTipDto.fromJson(response);
@@ -27,30 +27,5 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
-  }
-
-  String _buildPrompt(String skillArea) {
-    final targetSkill = skillArea.isEmpty ? '프로그래밍 기초' : skillArea;
-
-    return '''
-당신은 개발자를 위한 학습 팁 생성 전문가입니다. $targetSkill 분야에 관한 학습 팁과 실무 영어 표현을 생성해주세요.
-
-- 팁: 개발자 학습에 도움되는 구체적 내용 (120-150자)
-- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다.
-- 영어: 해당 분야 개발자들이 실제 사용하는 표현 (15단어 이내)
-- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다. 
-
-결과는 다음 JSON 형식으로 제공:
-{
-  "title": "짧은 팁 제목",
-  "content": "구체적인 학습 팁 내용",
-  "relatedSkill": "$targetSkill",
-  "englishPhrase": "개발자가 자주 사용하는 영어 표현",
-  "translation": "한국어 해석",
-  "source": "선택적 출처"
-}
-
-JSON 형식으로만 응답해주세요.
-'''.trim();
   }
 }

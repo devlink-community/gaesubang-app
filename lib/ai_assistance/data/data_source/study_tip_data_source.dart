@@ -28,14 +28,41 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
   @override
   Future<Map<String, dynamic>> generateStudyTipBySkill(String skill) async {
     try {
-      // Repository에서 skill 기반으로 프롬프트 생성하므로
-      // 이 메서드는 사용하지 않지만 인터페이스 구현을 위해 유지
-      // 실제로는 generateStudyTipWithPrompt가 사용됨
-      return await _generateFallbackStudyTip(skill);
+      // 스킬 기반으로 프롬프트 생성
+      final prompt = _buildPrompt(skill);
+
+      // 생성된 프롬프트로 API 호출
+      return await _vertexClient.callTextModel(prompt);
     } catch (e) {
       debugPrint('스킬 기반 학습 팁 생성 실패: $e');
       return _generateFallbackStudyTip(skill);
     }
+  }
+
+  /// 스킬 영역에 맞는 프롬프트 생성 메서드 추가
+  String _buildPrompt(String skillArea) {
+    final targetSkill = skillArea.isEmpty ? '프로그래밍 기초' : skillArea;
+
+    return '''
+당신은 개발자를 위한 학습 팁 생성 전문가입니다. $targetSkill 분야에 관한 학습 팁과 실무 영어 표현을 생성해주세요.
+
+- 팁: 개발자 학습에 도움되는 구체적 내용 (120-150자)
+- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다.
+- 영어: 해당 분야 개발자들이 실제 사용하는 표현 (15단어 이내)
+- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다. 
+
+결과는 다음 JSON 형식으로 제공:
+{
+  "title": "짧은 팁 제목",
+  "content": "구체적인 학습 팁 내용",
+  "relatedSkill": "$targetSkill",
+  "englishPhrase": "개발자가 자주 사용하는 영어 표현",
+  "translation": "한국어 해석",
+  "source": "선택적 출처"
+}
+
+JSON 형식으로만 응답해주세요.
+'''.trim();
   }
 
   /// 폴백 학습 팁 데이터 생성 메서드
