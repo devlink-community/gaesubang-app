@@ -25,8 +25,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
-  // lib/group/data/data_source/group_firebase_data_source.dart 파일의 fetchGroupList 메서드 수정
-
   @override
   Future<List<Map<String, dynamic>>> fetchGroupList({
     Set<String>? joinedGroupIds,
@@ -409,6 +407,36 @@ class GroupFirebaseDataSource implements GroupDataSource {
         throw Exception(GroupErrorMessages.leaveFailed);
       }
     }, params: {'groupId': groupId, 'userId': userId});
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
+    return ApiCallDecorator.wrap('GroupFirebase.fetchGroupMembers', () async {
+      try {
+        // 그룹 존재 확인
+        final groupDoc = await _groupsCollection.doc(groupId).get();
+        if (!groupDoc.exists) {
+          throw Exception(GroupErrorMessages.notFound);
+        }
+
+        // 멤버 컬렉션 조회
+        final membersSnapshot =
+            await _groupsCollection.doc(groupId).collection('members').get();
+
+        // 멤버 데이터 변환
+        final members =
+            membersSnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList();
+
+        return members;
+      } catch (e) {
+        print('그룹 멤버 조회 오류: $e');
+        throw Exception(GroupErrorMessages.loadFailed);
+      }
+    }, params: {'groupId': groupId});
   }
 
   @override
