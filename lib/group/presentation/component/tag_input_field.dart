@@ -132,7 +132,7 @@ class _TagInputFieldState extends State<TagInputField> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColorStyles.primary60.withOpacity(0.1),
+                      color: AppColorStyles.primary60.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -152,7 +152,9 @@ class _TagInputFieldState extends State<TagInputField> {
                             width: 16,
                             height: 16,
                             decoration: BoxDecoration(
-                              color: AppColorStyles.primary100.withOpacity(0.2),
+                              color: AppColorStyles.primary100.withValues(
+                                alpha: 0.2,
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
