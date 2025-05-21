@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../auth/auth_provider.dart';
-import '../component/navigation_bar.dart';
+import '../component/nav_bar/navigation_bar.dart';
 
 /// 메인 레이아웃을 관리하는 Shell 위젯
 /// 하단 네비게이션 바와 콘텐츠 영역을 포함
@@ -16,10 +15,6 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 현재 사용자 정보 구독 (라우터 대신 여기서 처리)
-    final currentUser = ref.watch(currentUserProvider);
-    final profileImageUrl = currentUser?.image;
-
     // 현재 경로 가져오기
     final String currentPath = GoRouterState.of(context).matchedLocation;
 
@@ -38,7 +33,6 @@ class MainShell extends ConsumerWidget {
       body: child,
       bottomNavigationBar: AppBottomNavigationBar(
         currentIndex: currentIndex,
-        profileImageUrl: profileImageUrl,
         onTap: (index) {
           switch (index) {
             case 0:
