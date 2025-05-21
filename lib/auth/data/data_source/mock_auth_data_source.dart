@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/api_call_logger.dart';
 import 'auth_data_source.dart';
@@ -14,7 +15,7 @@ class MockAuthDataSource implements AuthDataSource {
   static final Map<String, Map<String, dynamic>> _termsAgreements = {};
   static String? _currentUserId;
 
-  // 인증 상태 스트림용 컨트롤러
+  // 인증 상태 스트림 컨트롤러 (추가)
   static final StreamController<Map<String, dynamic>?> _authStateController =
       StreamController<Map<String, dynamic>?>.broadcast();
 
@@ -188,6 +189,23 @@ class MockAuthDataSource implements AuthDataSource {
     return activities;
   }
 
+  // 인증 상태 변경 통지 (새로 추가)
+  void _notifyAuthStateChanged() {
+    if (_currentUserId == null) {
+      _authStateController.add(null);
+      return;
+    }
+
+    _fetchUserWithTimerActivities(_currentUserId!)
+        .then((userData) {
+          _authStateController.add(userData);
+        })
+        .catchError((error) {
+          debugPrint('인증 상태 변경 통지 에러: $error');
+          _authStateController.add(null);
+        });
+  }
+
   /// Firebase와 동일하게 사용자 정보와 타이머 활동을 함께 반환하는 메서드
   Future<Map<String, dynamic>?> _fetchUserWithTimerActivities(
     String userId,
@@ -205,7 +223,6 @@ class MockAuthDataSource implements AuthDataSource {
     );
   }
 
-  // fetchLogin 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<Map<String, dynamic>> fetchLogin({
     required String email,
@@ -239,14 +256,13 @@ class MockAuthDataSource implements AuthDataSource {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
 
-      // 인증 상태 변경 발행
-      _authStateController.add(userWithActivities);
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
 
       return userWithActivities;
     }, params: {'email': email});
   }
 
-  // createUser 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<Map<String, dynamic>> createUser({
     required String email,
@@ -305,11 +321,11 @@ class MockAuthDataSource implements AuthDataSource {
       _passwords[userId] = password;
       _timerActivities[userId] = [];
 
-      // 회원가입 완료 후
+      // 회원가입 후 자동 로그인 상태로 설정
       _currentUserId = userId;
 
-      // 인증 상태 변경 발행
-      _authStateController.add(newUserData);
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
 
       // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
       return {...newUserData, 'timerActivities': []};
@@ -329,15 +345,14 @@ class MockAuthDataSource implements AuthDataSource {
     });
   }
 
-  // signOut 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<void> signOut() async {
     return ApiCallDecorator.wrap('MockAuth.signOut', () async {
       await Future.delayed(const Duration(milliseconds: 300));
       _currentUserId = null;
 
-      // 인증 상태 변경 발행
-      _authStateController.add(null);
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
     });
   }
 
@@ -385,7 +400,6 @@ class MockAuthDataSource implements AuthDataSource {
     }, params: {'email': email});
   }
 
-  // deleteAccount 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<void> deleteAccount(String email) async {
     return ApiCallDecorator.wrap('MockAuth.deleteAccount', () async {
@@ -411,12 +425,10 @@ class MockAuthDataSource implements AuthDataSource {
       _users.remove(userId);
       _passwords.remove(userId);
       _timerActivities.remove(userId);
-
-      // 계정 삭제 후 로그아웃
       _currentUserId = null;
 
-      // 인증 상태 변경 발행
-      _authStateController.add(null);
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
     }, params: {'email': email});
   }
 
@@ -549,6 +561,10 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       return userWithActivities;
     }, params: {'nickname': nickname});
   }
@@ -581,19 +597,45 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       return userWithActivities;
     }, params: {'imagePath': imagePath});
   }
 
+  // 인증 상태 변화 스트림 (추가)
   @override
-  Stream<Map<String, dynamic>?> authStateChanges() {
-    // 초기 상태 방출
+  Stream<Map<String, dynamic>?> get authStateChanges {
+    _initializeDefaultUsers();
+
+    // 최초 호출 시 현재 상태 통지
     if (_currentUserId != null) {
-      _authStateController.add(_users[_currentUserId]);
+      // 비동기적으로 현재 상태 통지
+      Future.microtask(() async {
+        final userData = await _fetchUserWithTimerActivities(_currentUserId!);
+        _authStateController.add(userData);
+      });
     } else {
-      _authStateController.add(null);
+      // 로그아웃 상태 통지
+      Future.microtask(() {
+        _authStateController.add(null);
+      });
     }
 
     return _authStateController.stream;
+  }
+
+  // 현재 인증 상태 확인 (추가)
+  @override
+  Future<Map<String, dynamic>?> getCurrentAuthState() async {
+    _initializeDefaultUsers();
+
+    if (_currentUserId == null) {
+      return null;
+    }
+
+    return await _fetchUserWithTimerActivities(_currentUserId!);
   }
 }

@@ -1,29 +1,28 @@
-// lib/core/auth/auth_provider.dart 수정
-import 'package:firebase_auth/firebase_auth.dart';
+// lib/core/auth/auth_provider.dart
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../auth/data/mapper/user_mapper.dart';
 import '../../auth/domain/model/member.dart';
 import '../../auth/module/auth_di.dart';
 import 'auth_state.dart';
 
 part 'auth_provider.g.dart';
 
-/// Firebase Auth Provider (기본 인증 소스)
-@riverpod
-FirebaseAuth firebaseAuth(Ref ref) {
-  return FirebaseAuth.instance;
-}
-
 /// 인증 상태 스트림 Provider
 /// 앱 전체에서 실시간 인증 상태 변화를 감지
 @riverpod
 Stream<AuthState> authState(Ref ref) {
-  final repository = ref.watch(authRepositoryProvider);
+  final authDataSource = ref.watch(authDataSourceProvider);
 
-  // 디버그 로그 추가
-  print('authStateProvider: 스트림 생성 또는 갱신');
-  return repository.authStateChanges;
+  return authDataSource.authStateChanges.map((userData) {
+    if (userData == null) {
+      return const AuthState.unauthenticated();
+    }
+
+    final member = userData.toMemberWithCalculatedStats();
+    return AuthState.authenticated(member);
+  });
 }
 
 /// 현재 인증 여부 Provider (편의용)
@@ -39,25 +38,33 @@ bool isAuthenticated(Ref ref) {
 }
 
 /// 현재 사용자 정보 Provider (편의용)
+/// UI에서 사용자 정보가 필요할 때 사용
 @riverpod
 Member? currentUser(Ref ref) {
   final authState = ref.watch(authStateProvider);
-
-  final user = authState.when(
+  return authState.when(
     data: (state) => state.user,
     loading: () => null,
     error: (_, __) => null,
   );
-
-  // 디버그 로그 추가
-  print('currentUserProvider: user=${user?.nickname}, image=${user?.image}');
-
-  return user;
 }
 
 /// 인증 상태 동기 확인 Provider
+/// 라우터에서 리다이렉트 시 사용 (스트림이 아닌 한 번만 확인)
 @riverpod
-Future<AuthState> currentAuthState(Ref ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return repository.getCurrentAuthState();
+Future<AuthState> currentAuthState(Ref ref) async {
+  final authDataSource = ref.watch(authDataSourceProvider);
+
+  try {
+    final userData = await authDataSource.getCurrentAuthState();
+
+    if (userData == null) {
+      return const AuthState.unauthenticated();
+    }
+
+    final member = userData.toMemberWithCalculatedStats();
+    return AuthState.authenticated(member);
+  } catch (e) {
+    return const AuthState.unauthenticated();
+  }
 }

@@ -4,7 +4,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'auth_data_source.dart';
 
@@ -155,6 +155,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
       if (user == null) {
         throw Exception(AuthErrorMessages.accountCreationFailed);
       }
+
+      // Firebase Auth 프로필 정보 설정 (displayName)
+      await user.updateDisplayName(nickname);
 
       // Firestore에 완전한 사용자 정보 저장
       final now = Timestamp.now();
@@ -406,6 +409,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
         }
       }
 
+      // Firebase Auth 사용자 프로필 업데이트 (displayName)
+      await user.updateDisplayName(nickname);
+
       // Firestore에 사용자 정보 업데이트
       final updateData = {
         'nickname': nickname,
@@ -415,6 +421,12 @@ class AuthFirebaseDataSource implements AuthDataSource {
       };
 
       await _usersCollection.doc(user.uid).update(updateData);
+
+      // Firebase Auth 프로필 변경이 되었음을 확실히 하기 위해 재인증 트리거
+      // 이는 authStateChanges 이벤트를 강제로 발생시킵니다
+      await user.reload();
+
+      debugPrint('Firebase 프로필 정보 업데이트 완료: $nickname');
 
       // 업데이트된 완전한 사용자 정보 반환 (병렬 처리 활용)
       final updatedUserData = await fetchCurrentUserWithTimerActivities();
@@ -434,9 +446,17 @@ class AuthFirebaseDataSource implements AuthDataSource {
         throw Exception(AuthErrorMessages.noLoggedInUser);
       }
 
-      // Firebase Storage에 이미지 업로드 로직은 현재 미구현
-      // 임시로 로컬 파일 경로를 저장
+      // Firebase Auth 사용자 프로필 이미지 업데이트 (photoURL)
+      await user.updatePhotoURL(imagePath);
+
+      // Firestore에 이미지 경로 업데이트
       await _usersCollection.doc(user.uid).update({'image': imagePath});
+
+      // Firebase Auth 프로필 변경이 되었음을 확실히 하기 위해 재인증 트리거
+      // 이는 authStateChanges 이벤트를 강제로 발생시킵니다
+      await user.reload();
+
+      debugPrint('Firebase 프로필 이미지 업데이트 완료: $imagePath');
 
       // 업데이트된 완전한 사용자 정보 반환 (병렬 처리 활용)
       final updatedUserData = await fetchCurrentUserWithTimerActivities();
@@ -448,39 +468,39 @@ class AuthFirebaseDataSource implements AuthDataSource {
     }, params: {'imagePath': imagePath});
   }
 
+  // 인증 상태 변화 스트림 (Firebase userChanges() 사용)
   @override
-  Stream<Map<String, dynamic>?> authStateChanges() {
-    return _auth.authStateChanges().asyncMap((user) async {
-      if (user == null) return null;
-
-      try {
-        // 사용자 정보와 타이머 활동 조회
-        return await fetchCurrentUserWithTimerActivities();
-      } catch (e) {
-        debugPrint('Firebase auth state stream error: $e');
+  Stream<Map<String, dynamic>?> get authStateChanges {
+    // Firebase Auth의 userChanges() 사용 - 프로필 정보 변경도 감지
+    return _auth.userChanges().asyncMap((firebaseUser) async {
+      if (firebaseUser == null) {
+        debugPrint('Firebase 인증 상태 변경: 로그아웃됨');
         return null;
       }
-    });
+
+      debugPrint('Firebase 인증 상태 변경: 로그인됨 또는 프로필 변경 (${firebaseUser.uid})');
+      debugPrint(
+        'Firebase 사용자 프로필: displayName=${firebaseUser.displayName}, photoURL=${firebaseUser.photoURL}',
+      );
+
+      try {
+        // 사용자 정보 가져오기
+        return await fetchCurrentUserWithTimerActivities();
+      } catch (e) {
+        debugPrint('인증 상태 변화 스트림 에러: $e');
+        return null;
+      }
+    }).distinct(); // 중복 이벤트 방지
   }
 
-  // @override
-  // Future<AuthState> getCurrentAuthState() async {
-  //   return ApiCallDecorator.wrap(
-  //     'AuthRepository.getCurrentAuthState',
-  //         () async {
-  //       try {
-  //         final result = await getCurrentUser();
-  //         switch (result) {
-  //           case Success(data: final member):
-  //             return AuthState.authenticated(member);
-  //           case Error():
-  //             return const AuthState.unauthenticated();
-  //         }
-  //       } catch (e) {
-  //         debugPrint('Get current auth state error: $e');
-  //         return const AuthState.unauthenticated();
-  //       }
-  //     },
-  //   );
-  // }
+  // 현재 인증 상태 확인 (추가)
+  @override
+  Future<Map<String, dynamic>?> getCurrentAuthState() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    return await fetchCurrentUserWithTimerActivities();
+  }
 }
