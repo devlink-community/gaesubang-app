@@ -11,7 +11,9 @@ class Group with _$Group {
     required this.description,
     this.imageUrl,
     required this.createdAt,
-    required this.createdBy,
+    required this.ownerId, // createdBy를 ownerId로 변경
+    this.ownerNickname, // 추가: 방장 닉네임
+    this.ownerProfileImage, // 추가: 방장 프로필 이미지
     required this.maxMemberCount,
     required this.hashTags,
     required this.memberCount,
@@ -23,7 +25,9 @@ class Group with _$Group {
   final String description;
   final String? imageUrl;
   final DateTime createdAt;
-  final String createdBy;
+  final String ownerId; // 필드명 변경
+  final String? ownerNickname; // 추가
+  final String? ownerProfileImage; // 추가
   final int maxMemberCount;
   final List<String> hashTags;
   final int memberCount;
@@ -31,4 +35,7 @@ class Group with _$Group {
 
   // 멤버 수 제한 도달 여부 헬퍼 메서드
   bool get isOpen => memberCount < maxMemberCount;
+
+  // 현재 사용자가 방장인지 확인하는 헬퍼 메서드 추가
+  bool isOwner(String userId) => ownerId == userId;
 }

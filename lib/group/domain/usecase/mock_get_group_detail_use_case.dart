@@ -16,7 +16,7 @@ class MockGetGroupDetailUseCase {
       description: '출석부 Mock 데이터용 그룹입니다.',
       imageUrl: null,
       createdAt: DateTime.now(),
-      createdBy: 'user1', // 생성자 ID
+      ownerId: 'user1', // 생성자 ID
       maxMemberCount: 10,
       hashTags: ['출석', '테스트'], // 해시태그는 이제 String 리스트
       memberCount: 3,
