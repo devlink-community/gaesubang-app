@@ -14,6 +14,10 @@ class MockAuthDataSource implements AuthDataSource {
   static final Map<String, Map<String, dynamic>> _termsAgreements = {};
   static String? _currentUserId;
 
+  // 인증 상태 스트림용 컨트롤러
+  static final StreamController<Map<String, dynamic>?> _authStateController =
+      StreamController<Map<String, dynamic>?>.broadcast();
+
   // 기본 사용자 7명 초기화
   static void _initializeDefaultUsers() {
     if (_users.isNotEmpty) return;
@@ -201,6 +205,7 @@ class MockAuthDataSource implements AuthDataSource {
     );
   }
 
+  // fetchLogin 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<Map<String, dynamic>> fetchLogin({
     required String email,
@@ -233,10 +238,15 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 발행
+      _authStateController.add(userWithActivities);
+
       return userWithActivities;
     }, params: {'email': email});
   }
 
+  // createUser 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<Map<String, dynamic>> createUser({
     required String email,
@@ -295,6 +305,12 @@ class MockAuthDataSource implements AuthDataSource {
       _passwords[userId] = password;
       _timerActivities[userId] = [];
 
+      // 회원가입 완료 후
+      _currentUserId = userId;
+
+      // 인증 상태 변경 발행
+      _authStateController.add(newUserData);
+
       // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
       return {...newUserData, 'timerActivities': []};
     }, params: {'email': email, 'nickname': nickname});
@@ -313,11 +329,15 @@ class MockAuthDataSource implements AuthDataSource {
     });
   }
 
+  // signOut 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<void> signOut() async {
     return ApiCallDecorator.wrap('MockAuth.signOut', () async {
       await Future.delayed(const Duration(milliseconds: 300));
       _currentUserId = null;
+
+      // 인증 상태 변경 발행
+      _authStateController.add(null);
     });
   }
 
@@ -365,6 +385,7 @@ class MockAuthDataSource implements AuthDataSource {
     }, params: {'email': email});
   }
 
+  // deleteAccount 메서드 수정 - 인증 상태 변경 발행
   @override
   Future<void> deleteAccount(String email) async {
     return ApiCallDecorator.wrap('MockAuth.deleteAccount', () async {
@@ -390,7 +411,12 @@ class MockAuthDataSource implements AuthDataSource {
       _users.remove(userId);
       _passwords.remove(userId);
       _timerActivities.remove(userId);
+
+      // 계정 삭제 후 로그아웃
       _currentUserId = null;
+
+      // 인증 상태 변경 발행
+      _authStateController.add(null);
     }, params: {'email': email});
   }
 
@@ -557,5 +583,17 @@ class MockAuthDataSource implements AuthDataSource {
       }
       return userWithActivities;
     }, params: {'imagePath': imagePath});
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> authStateChanges() {
+    // 초기 상태 방출
+    if (_currentUserId != null) {
+      _authStateController.add(_users[_currentUserId]);
+    } else {
+      _authStateController.add(null);
+    }
+
+    return _authStateController.stream;
   }
 }

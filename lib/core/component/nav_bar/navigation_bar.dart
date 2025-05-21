@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
@@ -167,6 +168,11 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) {
+      print(
+        'AppBottomNavigationBar 리빌드: profileImageUrl=${widget.profileImageUrl}',
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

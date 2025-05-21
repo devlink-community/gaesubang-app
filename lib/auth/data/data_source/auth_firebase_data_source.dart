@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 import 'auth_data_source.dart';
 
@@ -446,4 +447,40 @@ class AuthFirebaseDataSource implements AuthDataSource {
       return updatedUserData;
     }, params: {'imagePath': imagePath});
   }
+
+  @override
+  Stream<Map<String, dynamic>?> authStateChanges() {
+    return _auth.authStateChanges().asyncMap((user) async {
+      if (user == null) return null;
+
+      try {
+        // 사용자 정보와 타이머 활동 조회
+        return await fetchCurrentUserWithTimerActivities();
+      } catch (e) {
+        debugPrint('Firebase auth state stream error: $e');
+        return null;
+      }
+    });
+  }
+
+  // @override
+  // Future<AuthState> getCurrentAuthState() async {
+  //   return ApiCallDecorator.wrap(
+  //     'AuthRepository.getCurrentAuthState',
+  //         () async {
+  //       try {
+  //         final result = await getCurrentUser();
+  //         switch (result) {
+  //           case Success(data: final member):
+  //             return AuthState.authenticated(member);
+  //           case Error():
+  //             return const AuthState.unauthenticated();
+  //         }
+  //       } catch (e) {
+  //         debugPrint('Get current auth state error: $e');
+  //         return const AuthState.unauthenticated();
+  //       }
+  //     },
+  //   );
+  // }
 }

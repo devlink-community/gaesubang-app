@@ -10,6 +10,7 @@ import 'package:devlink_mobile_app/community/presentation/community_detail/commu
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_screen_root.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
+import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/layout/main_shell.dart';
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
@@ -22,7 +23,6 @@ import 'package:devlink_mobile_app/group/presentation/group_search/group_search_
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_screen_root.dart';
-import 'package:devlink_mobile_app/map/presentation/map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
 import 'package:devlink_mobile_app/onboarding/module.dart/onboarding_completion_status.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/onboarding_screen_root.dart';
@@ -59,9 +59,9 @@ class _OnboardingShellState extends State<OnboardingShell> {
 // GoRouter Provider
 @riverpod
 GoRouter appRouter(Ref ref) {
-  // 인증 상태 스트림을 직접 가져와서 Listenable로 변환
+  // 인증 상태 스트림을 Listenable로 변환
   final authRepo = ref.watch(authRepositoryProvider);
-  final authStateListenable = AuthStateListenable(authRepo.authStateChanges);
+  final authStateListenable = StreamListenable(authRepo.authStateChanges);
 
   // 온보딩 상태 구독
   final onboardingCompleted = ref.watch(onboardingCompletionStatusProvider);
@@ -230,7 +230,11 @@ GoRouter appRouter(Ref ref) {
     redirect: (context, state) {
       // 현재 경로 및 인증 상태
       final currentPath = state.matchedLocation;
-      final isAuthenticated = authStateListenable.isAuthenticated;
+
+      // StreamListenable에서 인증 상태 확인
+      final authState = authStateListenable.currentValue;
+      final isAuthenticated =
+          authState is AuthState && authState.isAuthenticated;
 
       // 디버깅용 정보 출력(개발자 모드에서만)
       if (kDebugMode) {
