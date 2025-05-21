@@ -481,7 +481,7 @@ class VertexAIClient {
     }
   }
 
-  // 객체 파싱 시도 헬퍼 메서드
+  // 객체 파싱 시도 헬퍼 메서드 - 수정됨
   List<Map<String, dynamic>> _tryParseAsObject(String text) {
     final objectStart = text.indexOf('{');
     final objectEnd = text.lastIndexOf('}') + 1;
@@ -493,11 +493,11 @@ class VertexAIClient {
         return [parsedObject]; // 단일 객체를 리스트로 반환
       } catch (e) {
         debugPrint('JSON 객체 파싱 오류: $e');
-        throw Exception('JSON 객체 파싱 오류: $e');
+        return [_generateFallbackQuiz('')]; // 폴백 퀴즈 반환
       }
     } else {
       debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $text');
-      throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+      return [_generateFallbackQuiz('')]; // 폴백 퀴즈 반환
     }
   }
 
