@@ -120,8 +120,15 @@ class HomeScreen extends StatelessWidget {
 
                     // 퀴즈 배너 - ValueKey로 변경
                     DailyQuizBanner(
+<<<<<<< HEAD
                       skills: skills,
                       key: skills != null ? ValueKey('quiz_banner_${skills!}') : const ValueKey('quiz_banner'),
+=======
+                      skills: userSkills,
+                      key: ValueKey(
+                        userSkills ?? 'default',
+                      ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
+>>>>>>> 65e0a3e8 (quiz: banner 수정:)
                     ),
                   ],
                 ),

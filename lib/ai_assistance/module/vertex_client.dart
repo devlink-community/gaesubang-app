@@ -32,6 +32,7 @@ class VertexAIClient {
   Future<void> initialize() async {
     // 이미 초기화 완료된 경우 즉시 반환
     if (_initialized) return;
+<<<<<<< HEAD
 
     // 초기화가 진행 중인 경우 해당 작업이 완료될 때까지 대기
     if (_initializing) {
@@ -43,6 +44,8 @@ class VertexAIClient {
     _initializing = true;
     _initializeCompleter = Completer<void>();
 
+=======
+>>>>>>> 65e0a3e8 (quiz: banner 수정:)
     try {
       debugPrint('Vertex AI 클라이언트 초기화 시작');
 
@@ -132,6 +135,7 @@ class VertexAIClient {
     }
   }
 
+<<<<<<< HEAD
   /// LLM API 호출을 위한 통합 메서드 - 새로 추가
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
@@ -230,6 +234,9 @@ class VertexAIClient {
   }
 
   /// 스킬 기반 퀴즈 생성 - 개선된 버전
+=======
+  /// 스킬 기반 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
+>>>>>>> 65e0a3e8 (quiz: banner 수정:)
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
       List<String> skills,
       int questionCount, {

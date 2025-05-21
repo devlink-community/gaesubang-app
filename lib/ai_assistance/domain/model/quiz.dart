@@ -10,7 +10,7 @@ class Quiz with _$Quiz {
     required this.explanation,
     this.correctOptionIndex = 0,
     this.relatedSkill = '',
-    this.answer = '', // 이전 호환성을 위해 유지
+    this.answer = '',
   });
 
   final String question;
