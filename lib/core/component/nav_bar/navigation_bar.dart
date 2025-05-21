@@ -1,13 +1,14 @@
+import 'package:devlink_mobile_app/core/component/nav_bar/navigation_bar_notifier.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:line_icons/line_icons.dart';
 
-import '../styles/app_color_styles.dart';
-import 'profile_tab_button.dart';
+import '../../styles/app_color_styles.dart';
+import '../profile_tab_button.dart';
 
-class AppBottomNavigationBar extends StatefulWidget {
+class AppBottomNavigationBar extends ConsumerStatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final String? profileImageUrl;
   final Function()? onCreatePost;
   final Function()? onCreateGroup;
 
@@ -15,16 +16,16 @@ class AppBottomNavigationBar extends StatefulWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
-    this.profileImageUrl,
     this.onCreatePost,
     this.onCreateGroup,
   });
 
   @override
-  State<AppBottomNavigationBar> createState() => _AppBottomNavigationBarState();
+  ConsumerState<AppBottomNavigationBar> createState() =>
+      _AppBottomNavigationBarState();
 }
 
-class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
+class _AppBottomNavigationBarState extends ConsumerState<AppBottomNavigationBar>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -167,6 +168,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
 
   @override
   Widget build(BuildContext context) {
+    final profileImageUrl = ref.watch(navigationBarNotifierProvider);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -208,7 +210,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                   // ProfileTabButton 사용 (수정된 부분)
                   ProfileTabButton(
                     isSelected: widget.currentIndex == 4,
-                    profileImageUrl: widget.profileImageUrl,
+                    profileImageUrl: profileImageUrl,
                     onTap: () => widget.onTap(4),
                   ),
                 ],
