@@ -142,3 +142,13 @@ ios/Runner/GoogleService-Info.plist
 .firebase/
 .firebaserc
 firebase-debug.log
+
+# Firebase Functions
+functions/node_modules/
+functions/.env
+functions/.runtimeconfig.json
+functions/lib/
+functions/.log
+functions/firebase-debug.log
+functions/ui-debug.log
+functions/.firebase/
