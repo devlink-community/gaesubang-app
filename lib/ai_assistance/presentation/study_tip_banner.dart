@@ -8,12 +8,8 @@ import '../../core/styles/app_color_styles.dart';
 import '../domain/model/study_tip.dart';
 import '../module/study_tip_di.dart';
 
-// 캐시 키 기반 FutureProvider 개선
-final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
-    ref,
-    skills,
-    ) async {
-  // 캐시 키 - 오늘 날짜 + 스킬 (첫 3글자만)
+// 캐시 키 생성 헬퍼 함수 추가 - 일관성을 위해
+String _generateCacheKey(String? skills) {
   final today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
   final skillArea = skills?.split(',')
       .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
@@ -22,7 +18,16 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
 
   // 스킬 첫 3글자만 사용하여 잦은 캐시 미스 방지
   final skillPrefix = skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
-  final cacheKey = '$today-$skillPrefix';
+  return '$today-$skillPrefix';
+}
+
+// 캐시 키 기반 FutureProvider 개선
+final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
+    ref,
+    skills,
+    ) async {
+  // 캐시 키 생성 - 헬퍼 함수 사용
+  final cacheKey = _generateCacheKey(skills);
 
   // 디버그 정보
   debugPrint('StudyTip 캐시 키: $cacheKey 확인 중');
@@ -39,6 +44,12 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
   try {
     // 캐시 없으면 새로 생성
     final getStudyTipUseCase = ref.watch(getStudyTipUseCaseProvider);
+    // 스킬 영역 추출 - 일관성을 위해 동일한 추출 로직 유지
+    final skillArea = skills?.split(',')
+        .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
+        .trim() ??
+        '프로그래밍 기초';
+
     final asyncValue = await getStudyTipUseCase.execute(skillArea);
 
     // 값이 있으면 캐시에 저장
@@ -467,12 +478,8 @@ class StudyTipBanner extends ConsumerWidget {
                           onPressed: () {
                             // 현재 선택된 팁이 있으면 캐시 업데이트
                             if (_currentSelectedTip != null) {
-                              final today = DateTime.now().toString().split(' ')[0];
-                              final skillArea = skills?.split(',')
-                                  .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
-                                  .trim() ??
-                                  '프로그래밍 기초';
-                              final cacheKey = '$today-$skillArea';
+                              // 캐시 키 생성 - 동일한 헬퍼 함수 사용
+                              final cacheKey = _generateCacheKey(skills);
 
                               // 캐시 업데이트
                               ref.read(studyTipCacheProvider.notifier).update((state) => {
