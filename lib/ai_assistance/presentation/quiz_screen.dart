@@ -313,18 +313,8 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
               // 새로운 퀴즈 로드 액션 트리거
               if (widget.onAction != null) {
-                widget.onAction!(
-                  QuizAction.loadQuiz(
-                    skills: '${widget.skills ?? ""}-$currentTime',
-                  ),
-                );
+                widget.onAction!(QuizAction.loadQuiz(skills: widget.skills));
               }
-
-              // 상태 초기화 - 이 부분은 실행될 필요가 없음 (다이얼로그가 완전히 닫히기 때문)
-              // setState(() {
-              //   selectedAnswerIndex = null;
-              //   hasAnswered = false;
-              // });
             },
             style: ElevatedButton.styleFrom(
               foregroundColor: Colors.white,

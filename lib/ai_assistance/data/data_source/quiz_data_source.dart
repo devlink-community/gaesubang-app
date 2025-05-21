@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../../module/vertex_client.dart';
@@ -15,6 +16,7 @@ abstract interface class VertexAiDataSource {
 
 class VertexAiDataSourceImpl implements VertexAiDataSource {
   final VertexAIClient _vertexClient;
+  final Random _random = Random();
 
   VertexAiDataSourceImpl({required VertexAIClient vertexClient})
     : _vertexClient = vertexClient;
@@ -39,14 +41,38 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
     int count,
   ) async {
     try {
-      return await _vertexClient.generateQuizBySkills(skills, count);
+      // 스킬 목록 확인
+      if (skills.isEmpty) {
+        skills = ['컴퓨터 기초'];
+      }
+
+      // 각 스킬에 대해 퀴즈 생성하고 결합
+      final allQuizzes = <Map<String, dynamic>>[];
+
+      // 퀴즈 생성 요청 (스킬 목록 전달)
+      final quizzes = await _vertexClient.generateQuizBySkills(skills, count);
+      allQuizzes.addAll(quizzes);
+
+      // 목표 개수에 도달하지 못했다면 일반 퀴즈로 보충
+      if (allQuizzes.length < count) {
+        final generalQuizzes = await generateGeneralQuiz(
+          count - allQuizzes.length,
+        );
+        allQuizzes.addAll(generalQuizzes);
+      }
+
+      // 필요한 개수만큼 반환
+      return allQuizzes.take(count).toList();
     } catch (e) {
       debugPrint('스킬 기반 퀴즈 생성 실패: $e');
       // 폴백: 단일 퀴즈를 여러 개 생성하여 리스트로 반환
       final fallbackQuizzes = <Map<String, dynamic>>[];
       for (int i = 0; i < count; i++) {
         // 스킬 목록이 있으면 스킬 목록에서 랜덤으로 선택, 없으면 기본 스킬 사용
-        final skill = skills.isNotEmpty ? skills[i % skills.length] : '컴퓨터 기초';
+        final skill =
+            skills.isNotEmpty
+                ? skills[_random.nextInt(skills.length)]
+                : '컴퓨터 기초';
         fallbackQuizzes.add(_generateFallbackQuiz(skill));
       }
       return fallbackQuizzes;
@@ -78,6 +104,19 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
       if (RegExp(r'^\d+$').hasMatch(possibleTimestamp)) {
         // 타임스탬프 제거 후 스킬만 추출
         prompt = prompt.substring(0, timestampSeparatorIndex).trim();
+      }
+    }
+
+    // 이 부분에서 여러 스킬이 콤마로 구분되어 있다면 하나를 랜덤으로 선택
+    if (prompt.contains(',')) {
+      final skills =
+          prompt
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+      if (skills.isNotEmpty) {
+        return skills[_random.nextInt(skills.length)];
       }
     }
 
@@ -226,6 +265,21 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
         "explanation":
             "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
         "relatedSkill": "Flutter",
+      };
+    } else if (prompt.toLowerCase().contains('javascript') ||
+        prompt.toLowerCase().contains('js')) {
+      return {
+        "question": "JavaScript에서 const와 let의 주요 차이점은 무엇인가요?",
+        "options": [
+          "const는 객체를 불변으로 만들지만, let은 가변 객체를 선언합니다.",
+          "const로 선언된 변수는 재할당할 수 없지만, let은 가능합니다.",
+          "const는 함수 스코프, let은 블록 스코프를 가집니다.",
+          "const는 호이스팅되지 않지만, let은 호이스팅됩니다.",
+        ],
+        "correctOptionIndex": 1,
+        "explanation":
+            "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
+        "relatedSkill": "JavaScript",
       };
     }
 

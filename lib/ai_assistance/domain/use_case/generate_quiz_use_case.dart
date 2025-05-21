@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
@@ -6,14 +7,19 @@ import '../repository/quiz_repository.dart';
 
 class GenerateQuizUseCase {
   final QuizRepository _repository;
+  final Random _random = Random();
 
   GenerateQuizUseCase({required QuizRepository repository})
     : _repository = repository;
 
   Future<AsyncValue<Quiz>> execute(String skillArea) async {
-    // 타임스탬프가 포함된 스킬 영역에서 실제 스킬만 추출
-    final cleanSkillArea = _cleanSkillArea(skillArea);
+    // 여러 스킬이 있는지 확인하고 있다면 랜덤하게 선택
+    final skills = _parseSkills(skillArea);
+    final selectedSkill =
+        skills.isEmpty ? '컴퓨터 기초' : skills[_random.nextInt(skills.length)];
 
+    // 선택된 스킬로 퀴즈 생성 요청
+    final cleanSkillArea = _cleanSkillArea(selectedSkill);
     final result = await _repository.generateQuiz(cleanSkillArea);
 
     return switch (result) {
@@ -23,6 +29,23 @@ class GenerateQuizUseCase {
         failure.stackTrace ?? StackTrace.current,
       ),
     };
+  }
+
+  // 스킬 문자열을 목록으로 파싱
+  List<String> _parseSkills(String skillArea) {
+    if (skillArea.isEmpty) {
+      return ['컴퓨터 기초'];
+    }
+
+    // 콤마로 구분된 스킬 목록 파싱
+    final skills =
+        skillArea
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+
+    return skills.isEmpty ? ['컴퓨터 기초'] : skills;
   }
 
   // 스킬 영역에서 타임스탬프 제거
