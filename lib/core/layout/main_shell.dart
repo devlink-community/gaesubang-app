@@ -18,6 +18,8 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
 
+    print("감지했음 currentUser: $currentUser.nickname");
+
     // 현재 경로 가져오기
     final String currentPath = GoRouterState.of(context).matchedLocation;
 
@@ -55,6 +57,7 @@ class MainShell extends ConsumerWidget {
               break;
           }
         },
+        profileImageUrl: currentUser?.image, // 현재 사용자의 이미지 URL 직접 전달
         onCreatePost: () {
           context.push('/community/write');
         },

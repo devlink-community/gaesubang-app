@@ -40,12 +40,12 @@ class CommunityListNotifier extends _$CommunityListNotifier {
       if (previous != current) {
         final eventNotifier = ref.read(appEventNotifierProvider.notifier);
 
-        // 프로필 변경 이벤트가 있으면 - 작성자 정보 관련이므로 목록 갱신
-        if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
-          debugPrint('🔄 CommunityListNotifier: 프로필 업데이트 감지, 목록 갱신');
-          Future.microtask(() => _fetch());
-          return;
-        }
+        // // 프로필 변경 이벤트가 있으면 - 작성자 정보 관련이므로 목록 갱신
+        // if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
+        //   debugPrint('🔄 CommunityListNotifier: 프로필 업데이트 감지, 목록 갱신');
+        //   Future.microtask(() => _fetch());
+        //   return;
+        // }
 
         // 게시글 관련 이벤트가 있으면 목록 갱신
         final hasPostEvents = current.any(
