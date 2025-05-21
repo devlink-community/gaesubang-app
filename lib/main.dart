@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/styles/app_theme.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -23,6 +24,36 @@ void main() async {
   print('Firebase App Name: ${Firebase.app().name}');
   print('Firebase Project ID: ${Firebase.app().options.projectId}');
   AppConfig.printConfig(); // 설정 정보 출력
+
+  // Firebase Remote Config 초기화 추가
+  try {
+    final remoteConfig = FirebaseRemoteConfig.instance;
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(minutes: 1),
+        minimumFetchInterval: const Duration(hours: 1),
+      ),
+    );
+
+    // 기본값 설정 - 값을 찾지 못할 경우 사용
+    await remoteConfig.setDefaults({
+      'vertex_ai_key': '', // 비어있는 기본값
+    });
+
+    // 설정 가져오기
+    final fetchSuccess = await remoteConfig.fetchAndActivate();
+
+    if (fetchSuccess) {
+      print('Remote Config 가져오기 성공!');
+    } else {
+      print('Remote Config 가져오기 실패!');
+    }
+
+    final vertexKey = remoteConfig.getString('vertex_ai_key');
+    print('Vertex AI 키 존재 여부: ${vertexKey.isNotEmpty ? '있음' : '없음'}');
+  } catch (e) {
+    print('Remote Config 초기화 중 오류 발생: $e');
+  }
 
   // API 로깅 초기화 및 주기적 통계 출력 설정
   _initializeApiLogging();
@@ -129,8 +160,10 @@ class MyApp extends ConsumerWidget {
       title: 'Flutter Demo',
       routerConfig: router,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme, // 라이트 테마 적용
-      darkTheme: AppTheme.darkTheme, // 다크 테마 적용
+      theme: AppTheme.lightTheme,
+      // 라이트 테마 적용
+      darkTheme: AppTheme.darkTheme,
+      // 다크 테마 적용
       themeMode: ThemeMode.system, // 시스템 설정에 따라 테마 변경
     );
   }

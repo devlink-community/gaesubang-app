@@ -6,11 +6,13 @@ abstract interface class QuizRepository {
   Future<Result<Quiz>> generateDailyQuiz({String? skills});
 
   /// 로컬에 저장된 오늘의 퀴즈를 가져옵니다
-  Future<Result<Quiz?>> getTodayQuiz();
+  Future<Result<Quiz?>> getTodayQuiz({String? skills});
 
   /// 사용자가 퀴즈에 답변한 결과를 저장합니다
   Future<Result<Quiz>> saveQuizAnswer({
     required Quiz quiz,
     required int answerIndex,
   });
+
+  Future<String> getQuizStorageKey();
 }
