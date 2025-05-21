@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
 import 'package:flutter/material.dart';
@@ -86,8 +87,9 @@ import 'quiz_screen.dart';
 
 class DailyQuizBanner extends ConsumerWidget {
   final String? skills;
+  final Random _random = Random();
 
-  const DailyQuizBanner({super.key, this.skills});
+  DailyQuizBanner({super.key, this.skills});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -207,7 +209,7 @@ class DailyQuizBanner extends ConsumerWidget {
       return '${skillList[0]} 관련 지식을 테스트해보세요.';
     }
 
-    return '${skillList[0]}와 관련 기술에 대한 지식을 테스트해보세요.';
+    return '${skillList.join(", ")} 관련 지식을 테스트해보세요.';
   }
 
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
@@ -279,12 +281,13 @@ class DailyQuizBanner extends ConsumerWidget {
     try {
       // 퀴즈 생성 UseCase 직접 사용
       final generateQuizUseCase = ref.read(generateQuizUseCaseProvider);
+
+      // 스킬 목록 파싱 및 무작위 선택
+      final skillList = _parseSkillList(skills);
       final selectedSkill =
-          skills
-              ?.split(',')
-              .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '컴퓨터 기초')
-              .trim() ??
-          '컴퓨터 기초';
+          skillList.isEmpty
+              ? '컴퓨터 기초'
+              : skillList[_random.nextInt(skillList.length)];
 
       // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
       final asyncQuizResult = await generateQuizUseCase.execute(selectedSkill);
@@ -346,6 +349,22 @@ class DailyQuizBanner extends ConsumerWidget {
     }
   }
 
+  // 스킬 목록 파싱 메서드 추가
+  List<String> _parseSkillList(String? skills) {
+    if (skills == null || skills.isEmpty) {
+      return ['컴퓨터 기초'];
+    }
+
+    final skillList =
+        skills
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+
+    return skillList.isEmpty ? ['컴퓨터 기초'] : skillList;
+  }
+
   // 로딩 다이얼로그 닫기 유틸리티 메서드
   void _closeLoadingDialog(BuildContext? dialogContext) {
     if (dialogContext != null && Navigator.of(dialogContext).canPop()) {
@@ -353,7 +372,7 @@ class DailyQuizBanner extends ConsumerWidget {
     }
   }
 
-  // 퀴즈 표시 메서드 - 이 부분이 변경됨
+  // 퀴즈 표시 메서드
   void _showQuizDialog(BuildContext context, WidgetRef ref, Quiz quiz) {
     // StatefulWidget의 상태를 초기화하기 위한 키 생성
     final uniqueKey = UniqueKey();
@@ -418,6 +437,14 @@ class DailyQuizBanner extends ConsumerWidget {
 
   // 백업 퀴즈 표시 메서드
   void _showBackupQuiz(BuildContext context, WidgetRef ref) {
+    // 스킬 목록 파싱
+    final skillList = _parseSkillList(skills);
+    // 랜덤 스킬 선택
+    final selectedSkill =
+        skillList.isEmpty
+            ? '프로그래밍 기초'
+            : skillList[_random.nextInt(skillList.length)];
+
     final fallbackQuiz = Quiz(
       question: "프로그래밍에서 변수명 작성 규칙으로 올바른 것은?",
       options: [
@@ -429,14 +456,7 @@ class DailyQuizBanner extends ConsumerWidget {
       explanation:
           "대부분의 프로그래밍 언어에서 변수명은 대소문자를 구분합니다. 예를 들어 'name'과 'Name'은 서로 다른 변수로 취급됩니다.",
       correctOptionIndex: 2,
-      relatedSkill:
-          skills
-              ?.split(',')
-              .firstWhere(
-                (s) => s.trim().isNotEmpty,
-                orElse: () => '프로그래밍 기초',
-              ) ??
-          '프로그래밍 기초',
+      relatedSkill: selectedSkill,
     );
 
     _showQuizDialog(context, ref, fallbackQuiz);

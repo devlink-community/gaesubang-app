@@ -19,7 +19,23 @@ class QuizRepositoryImpl implements QuizRepository {
   Future<Result<Quiz>> generateQuiz(String skillArea) async {
     try {
       debugPrint('퀴즈 생성 시작: 스킬=$skillArea');
-      final prompt = _buildPrompt(skillArea);
+
+      // 스킬 영역에 콤마가 있는지 확인하고 있다면 하나를 선택
+      final String finalSkill;
+      if (skillArea.contains(',')) {
+        final skills =
+            skillArea
+                .split(',')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+        finalSkill =
+            skills.isEmpty ? '컴퓨터 기초' : skills[_random.nextInt(skills.length)];
+      } else {
+        finalSkill = skillArea.isEmpty ? '컴퓨터 기초' : skillArea;
+      }
+
+      final prompt = _buildPrompt(finalSkill);
       final response = await _dataSource.generateQuizWithPrompt(prompt);
 
       debugPrint('퀴즈 생성 응답 수신: ${response.keys.toList()}');

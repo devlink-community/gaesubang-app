@@ -269,31 +269,32 @@ class VertexAIClient {
 
       // 개선된 프롬프트 구성
       final prompt = """
-      당신은 프로그래밍 퀴즈 생성 전문가입니다. 다음 조건에 맞는 퀴즈를 정확히 JSON 형식으로 생성해주세요:
-      
-      기술 분야: ${skills.join(', ')}
-      문제 개수: $questionCount
-      난이도: $difficultyLevel
-      
-      각 질문은 다음 정확한 JSON 구조를 따라야 합니다:
-      [
-        {
-          "question": "문제 내용을 여기에 작성",
-          "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
-          "correctOptionIndex": 0,
-          "explanation": "정답에 대한 설명",
-          "relatedSkill": "${skills.first}"
-        }
-      ]
-      
-      - 응답은 반드시 올바른 JSON 배열 형식이어야 합니다.
-      - 배열의 각 요소는 위에 제시된 모든 키를 포함해야 합니다.
-      - 질문들은 $questionCount개 정확히 생성해주세요.
-      - 주어진 기술 분야(${skills.join(', ')})에 관련된 문제만 출제해주세요.
-      - 출제 문제는 실무에서 도움이 될 수 있는 실질적인 내용으로 구성해주세요.
-      
-      JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
-      """;
+    당신은 프로그래밍 퀴즈 생성 전문가입니다. 다음 조건에 맞는 퀴즈를 정확히 JSON 형식으로 생성해주세요:
+    
+    기술 분야: ${skills.join(', ')}
+    문제 개수: $questionCount
+    난이도: $difficultyLevel
+    
+    각 질문은 다음 정확한 JSON 구조를 따라야 합니다:
+    [
+      {
+        "question": "문제 내용을 여기에 작성",
+        "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
+        "correctOptionIndex": 0,
+        "explanation": "정답에 대한 설명",
+        "relatedSkill": "관련된 기술 영역 (위 기술 분야 중 하나)"
+      }
+    ]
+    
+    - 응답은 반드시 올바른 JSON 배열 형식이어야 합니다.
+    - 배열의 각 요소는 위에 제시된 모든 키를 포함해야 합니다.
+    - 질문들은 $questionCount개 정확히 생성해주세요.
+    - 주어진 기술 분야(${skills.join(', ')})에 관련된 문제만 출제해주세요.
+    - relatedSkill 필드는 주어진 기술 분야 중 하나여야 합니다.
+    - 출제 문제는 실무에서 도움이 될 수 있는 실질적인 내용으로 구성해주세요.
+    
+    JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요.
+    """;
 
       return await _callVertexAIForQuiz(prompt);
     } catch (e) {
