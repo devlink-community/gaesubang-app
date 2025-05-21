@@ -1,28 +1,23 @@
+// lib/group/domain/usecase/start_timer_use_case.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/group/domain/model/timer_session.dart';
-import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
+import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class StartTimerUseCase {
-  final TimerRepository _repository;
+  final GroupRepository _repository;
 
-  StartTimerUseCase({required TimerRepository repository})
+  StartTimerUseCase({required GroupRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<TimerSession>> execute({
-    required String groupId,
-    required String userId,
-  }) async {
-    final result = await _repository.startTimer(
-      groupId: groupId,
-      userId: userId,
-    );
+  Future<AsyncValue<void>> execute(String groupId) async {
+    final result = await _repository.startMemberTimer(groupId);
 
-    switch (result) {
-      case Success(:final data):
-        return AsyncData(data);
-      case Error(failure: final failure):
-        return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
-    }
+    return switch (result) {
+      Success() => const AsyncData(null),
+      Error(failure: final failure) => AsyncError(
+        failure,
+        failure.stackTrace ?? StackTrace.current,
+      ),
+    };
   }
 }
