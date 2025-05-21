@@ -11,7 +11,10 @@ import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 import 'package:devlink_mobile_app/notification/module/notification_di.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
+<<<<<<< HEAD
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+=======
+>>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -67,6 +70,7 @@ class NotificationNotifier extends _$NotificationNotifier {
     );
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
     _fcmService = ref.watch(fcmServiceProvider);
+<<<<<<< HEAD
 
     print('의존성 주입 완료');
 
@@ -163,6 +167,23 @@ class NotificationNotifier extends _$NotificationNotifier {
     });
   }
 
+=======
+
+    // FCM 알림 클릭 이벤트 구독
+    _subscribeToFCMEvents();
+
+    // 초기 로딩은 별도 메서드로 처리하고, 초기 상태만 반환
+    Future.microtask(() => onAction(const NotificationAction.refresh()));
+
+    // ref가 dispose될 때 구독 해제
+    ref.onDispose(() {
+      _fcmSubscription?.cancel();
+    });
+
+    return const NotificationState();
+  }
+
+>>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
   /// FCM 이벤트 구독
   void _subscribeToFCMEvents() {
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
