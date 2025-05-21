@@ -849,40 +849,30 @@ class PostFirebaseDataSource implements PostDataSource {
           throw Exception(CommunityErrorMessages.noPermissionDelete);
         }
 
-        // 트랜잭션으로 게시글 및 관련 데이터 일괄 삭제
-        await _firestore.runTransaction((transaction) async {
-          // 1. 댓글 컬렉션 내 문서들 삭제
-          final commentsSnapshot = await postRef.collection('comments').get();
-          for (final commentDoc in commentsSnapshot.docs) {
-            // 댓글 내 좋아요 컬렉션도 삭제
-            final likesSnapshot =
-                await commentDoc.reference.collection('likes').get();
-            for (final likeDoc in likesSnapshot.docs) {
-              transaction.delete(likeDoc.reference);
-            }
-            transaction.delete(commentDoc.reference);
-          }
-
-          // 2. 좋아요 컬렉션 내 문서들 삭제
-          final likesSnapshot = await postRef.collection('likes').get();
+        // 단계별로 삭제 (트랜잭션 없이)
+        // 1. 댓글 컬렉션 내 문서들 삭제
+        final commentsSnapshot = await postRef.collection('comments').get();
+        for (final commentDoc in commentsSnapshot.docs) {
+          // 댓글 내 좋아요 컬렉션도 삭제
+          final likesSnapshot =
+              await commentDoc.reference.collection('likes').get();
           for (final likeDoc in likesSnapshot.docs) {
-            transaction.delete(likeDoc.reference);
+            await likeDoc.reference.delete();
           }
+          await commentDoc.reference.delete();
+        }
 
-          // 3. 북마크에서 제거 (모든 사용자의 북마크에서 해당 게시글 참조 제거)
-          final bookmarksQuery =
-              await _firestore
-                  .collectionGroup('bookmarks')
-                  .where(FieldPath.documentId, isEqualTo: postId)
-                  .get();
+        // 2. 좋아요 컬렉션 내 문서들 삭제
+        final likesSnapshot = await postRef.collection('likes').get();
+        for (final likeDoc in likesSnapshot.docs) {
+          await likeDoc.reference.delete();
+        }
 
-          for (final bookmarkDoc in bookmarksQuery.docs) {
-            transaction.delete(bookmarkDoc.reference);
-          }
+        // 3. 북마크 관련 코드 완전히 제거
+        // 해당 부분 삭제
 
-          // 4. 게시글 문서 자체 삭제
-          transaction.delete(postRef);
-        });
+        // 4. 게시글 문서 자체 삭제
+        await postRef.delete();
 
         return true;
       } catch (e) {

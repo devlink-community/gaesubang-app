@@ -401,60 +401,147 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     );
   }
 
-  // 작성자 전용 액션 버튼 (수정/삭제)
+  // 작성자 전용 액션 버튼 (수정/삭제) - 깔끔한 팝업 메뉴 버전
   Widget _buildAuthorActions() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // 수정 버튼
-        IconButton(
-          icon: const Icon(Icons.edit, color: AppColorStyles.primary100),
-          onPressed:
-              () => widget.onAction(const CommunityDetailAction.editPost()),
-          tooltip: '수정하기',
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColorStyles.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: PopupMenuButton<String>(
+        icon: Icon(Icons.more_vert, color: AppColorStyles.gray80, size: 20),
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+        offset: const Offset(0, 8),
+        // 팝업 메뉴 색상을 흰색으로 설정
+        color: Colors.white,
+        itemBuilder:
+            (context) => [
+              // 수정 메뉴 아이템
+              PopupMenuItem<String>(
+                value: 'edit',
+                height: 42,
 
-        // 삭제 버튼
-        IconButton(
-          icon: const Icon(Icons.delete, color: AppColorStyles.error),
-          onPressed: () => _showDeleteConfirmDialog(),
-          tooltip: '삭제하기',
-        ),
-      ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      color: AppColorStyles.primary100,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '수정',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: AppColorStyles.gray100,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 삭제 메뉴 아이템
+              PopupMenuItem<String>(
+                value: 'delete',
+                height: 42,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: AppColorStyles.error,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '삭제',
+                      style: AppTextStyles.body2Regular.copyWith(
+                        color: AppColorStyles.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+        onSelected: (value) {
+          switch (value) {
+            case 'edit':
+              widget.onAction(const CommunityDetailAction.editPost());
+              break;
+            case 'delete':
+              _showDeleteConfirmDialog();
+              break;
+          }
+        },
+      ),
     );
   }
 
-  // 삭제 확인 다이얼로그
+  // 삭제 확인 다이얼로그 - 깔끔한 버전
   void _showDeleteConfirmDialog() {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('게시글 삭제'),
-            content: const Text('정말 이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  '취소',
-                  style: AppTextStyles.button2Regular.copyWith(
-                    color: AppColorStyles.gray100,
-                  ),
-                ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            title: Text('게시글 삭제', style: AppTextStyles.subtitle1Bold),
+            content: Text(
+              '이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.',
+              style: AppTextStyles.body2Regular.copyWith(
+                color: AppColorStyles.gray80,
+                height: 1.5,
               ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // 다이얼로그 닫기
-                  widget.onAction(
-                    const CommunityDetailAction.deletePost(),
-                  ); // 삭제 액션 호출
-                },
-                child: Text(
-                  '삭제',
-                  style: AppTextStyles.button2Regular.copyWith(
-                    color: AppColorStyles.error,
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // 취소 버튼
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColorStyles.gray80,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text('취소', style: AppTextStyles.button2Regular),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  // 삭제 버튼
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onAction(const CommunityDetailAction.deletePost());
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: AppColorStyles.error,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      '삭제',
+                      style: AppTextStyles.button2Regular.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
