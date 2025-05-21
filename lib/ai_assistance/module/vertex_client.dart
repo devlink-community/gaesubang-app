@@ -27,7 +27,6 @@ class VertexAIClient {
   /// 초기화 메서드
   Future<void> initialize() async {
     if (_initialized) return;
-
     try {
       // Remote Config에서 Base64로 인코딩된 서비스 계정 키 가져오기
       final Map<String, dynamic> serviceAccountJson =
@@ -106,23 +105,6 @@ class VertexAIClient {
       return {};
     }
   }
-
-  // /// 로컬 assets에서 서비스 계정 키를 가져오는 폴백 메서드
-  // Future<Map<String, dynamic>> _loadServiceAccountFromAssets() async {
-  //   try {
-  //     // 로컬 assets에서 서비스 계정 JSON 파일 로드
-  //     final String jsonString = await rootBundle.loadString(
-  //       'assets/service_account.json',
-  //     );
-  //     final Map<String, dynamic> jsonMap = jsonDecode(jsonString);
-  //
-  //     debugPrint('로컬 assets에서 서비스 계정 정보 로드 완료');
-  //     return jsonMap;
-  //   } catch (e) {
-  //     debugPrint('로컬 assets에서 서비스 계정 정보 로드 실패: $e');
-  //     return {};
-  //   }
-  // }
 
   /// 스킬 기반 퀴즈 생성 - 개선된 버전 (기존 코드 유지)
   Future<List<Map<String, dynamic>>> generateQuizBySkills(

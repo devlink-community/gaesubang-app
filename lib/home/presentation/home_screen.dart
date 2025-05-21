@@ -114,7 +114,9 @@ class HomeScreen extends StatelessWidget {
                     // 퀴즈 배너
                     DailyQuizBanner(
                       skills: userSkills,
-                      key: ObjectKey(userSkills), // 스킬 변경시 새로고침을 위한 키 추가
+                      key: ValueKey(
+                        userSkills ?? 'default',
+                      ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
                     ),
                   ],
                 ),
