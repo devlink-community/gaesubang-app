@@ -296,6 +296,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               onPressed: () {
                 // 그룹 채팅방 초대 기능 (미구현)
                 _scaffoldKey.currentState?.closeEndDrawer();
+                // TODO: 초대 기능 구현
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('멤버 초대 기능은 개발 예정입니다. 개발 해줘?'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               },
               icon: const Icon(Icons.person_add),
               label: const Text('멤버 초대하기'),
