@@ -114,7 +114,9 @@ class StudyTipBanner extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Expanded(child: _buildStudyTipContent(asyncStudyTip, context)),
+          Expanded(
+            child: _buildStudyTipContent(asyncStudyTip, context),
+          ),
         ],
       ),
     );
@@ -130,7 +132,8 @@ class StudyTipBanner extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            // Expanded 대신 Flexible 사용
+            Flexible(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,6 +143,8 @@ class StudyTipBanner extends ConsumerWidget {
                       style: AppTextStyles.subtitle1Bold.copyWith(
                         color: Colors.white,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -148,6 +153,8 @@ class StudyTipBanner extends ConsumerWidget {
                         color: Colors.white.withOpacity(0.9),
                         fontStyle: FontStyle.italic,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -200,7 +207,8 @@ class StudyTipBanner extends ConsumerWidget {
           size: 32,
         ),
         const SizedBox(height: 8),
-        Expanded(
+        // Expanded 대신 Flexible 사용
+        Flexible(
           child: SingleChildScrollView(
             child: Text(
               message,
@@ -252,7 +260,7 @@ class StudyTipBanner extends ConsumerWidget {
               const Divider(),
 
               // 영어 한 마디 섹션
-              Text('오늘의 개발자 영어', style: AppTextStyles.body2Bold),
+              Text('오늘의 개발자 영어', style: AppTextStyles.body2Regular),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -265,7 +273,7 @@ class StudyTipBanner extends ConsumerWidget {
                   children: [
                     Text(
                       tip.englishPhrase,
-                      style: AppTextStyles.body1Bold.copyWith(
+                      style: AppTextStyles.body2Regular.copyWith(
                           color: AppColorStyles.secondary01
                       ),
                     ),

@@ -112,7 +112,7 @@ class HomeScreen extends StatelessWidget {
                     // 학습 팁 배너 (새로 추가)
                     StudyTipBanner(
                       skills: skills,
-                      key: ObjectKey(skills), // 스킬 변경시 새로고침을 위한 키 추가
+                      key: ObjectKey('study_tip_banner'), // 스킬 변경시 새로고침을 위한 키 추가
                     ),
 
                     const SizedBox(width: 12),
@@ -120,7 +120,7 @@ class HomeScreen extends StatelessWidget {
                     // 퀴즈 배너 (기존)
                     DailyQuizBanner(
                       skills: skills,
-                      key: ObjectKey(skills), // 스킬 변경시 새로고침을 위한 키 추가
+                      key: ObjectKey('quiz_banner'), // 스킬 변경시 새로고침을 위한 키 추가
                     ),
                   ],
                 ),
