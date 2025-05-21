@@ -1,6 +1,7 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/focus_stats_calculator.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
@@ -199,11 +200,11 @@ class GroupRepositoryImpl implements GroupRepository {
       final groupDto = group.toDto();
       final groupData = groupDto.toJson();
 
-      // 사용자 정보 전달
+      // 사용자 정보 전달 (ownerNickname, ownerProfileImage 추가)
       final createdGroupData = await _dataSource.fetchCreateGroup(
         groupData,
         ownerId: currentUser.id,
-        ownerName: currentUser.nickname,
+        ownerNickname: currentUser.nickname,
         ownerProfileUrl: currentUser.image,
       );
 
@@ -581,116 +582,16 @@ class GroupRepositoryImpl implements GroupRepository {
         month,
       );
 
-      // 2. 조회한 타이머 활동 데이터를 GroupTimerActivityDto로 변환
-      final activityDtos =
-          activitiesData
-              .map((data) => GroupTimerActivityDto.fromJson(data))
-              .toList();
-
-      // 3. 활동 데이터로부터 출석 기록을 계산
-      final attendances = _calculateAttendancesFromActivities(
-        groupId,
-        activityDtos,
-      );
+      // 2. 유틸리티를 사용하여 출석 기록 계산
+      final attendances =
+          FocusStatsCalculator.calculateAttendancesFromActivities(
+            groupId,
+            activitiesData,
+          );
 
       return Result.success(attendances);
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
-  }
-
-  // 타이머 활동 데이터로부터 출석 기록을 계산하는 헬퍼 메소드
-  List<Attendance> _calculateAttendancesFromActivities(
-    String groupId,
-    List<GroupTimerActivityDto> activities,
-  ) {
-    // 날짜별, 멤버별 활동 시간을 집계할 맵
-    final Map<String, Map<String, int>> memberDailyMinutes = {};
-
-    // 멤버 정보를 저장할 맵 (memberId -> (name, profileUrl))
-    final Map<String, (String, String?)> memberInfoMap = {};
-
-    // 시작 시간을 저장할 임시 맵 (memberId -> 시작 시간)
-    final Map<String, DateTime> memberStartTimes = {};
-
-    // 활동 시간 계산: 각 시작-종료 쌍에 대해 시간 차이 계산
-    for (final activity in activities) {
-      final memberId = activity.memberId;
-      final timestamp = activity.timestamp;
-
-      if (memberId == null || timestamp == null) continue;
-
-      // 멤버 정보 저장 (이름, 프로필 이미지 URL)
-      if (activity.memberName != null) {
-        memberInfoMap[memberId] = (activity.memberName!, null);
-      }
-
-      // 날짜(YYYY-MM-DD) 추출
-      final dateKey =
-          '${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')}';
-
-      if (activity.type == 'start') {
-        // 시작 시간 저장
-        memberStartTimes[memberId] = timestamp;
-      } else if (activity.type == 'end' &&
-          memberStartTimes.containsKey(memberId)) {
-        // 종료 활동이 있고, 시작 시간이 있으면 시간 차이 계산
-        final startTime = memberStartTimes[memberId]!;
-        final durationMinutes = timestamp.difference(startTime).inMinutes;
-
-        // 시간이 0 이상인 경우에만 기록
-        if (durationMinutes > 0) {
-          // 멤버별 날짜별 맵 초기화
-          memberDailyMinutes[memberId] ??= {};
-          memberDailyMinutes[memberId]![dateKey] ??= 0;
-
-          // 해당 날짜에 시간 추가
-          memberDailyMinutes[memberId]![dateKey] =
-              memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
-        }
-
-        // 시작 시간 제거 (다음 계산을 위해)
-        memberStartTimes.remove(memberId);
-      }
-    }
-
-    // 집계된 시간 데이터를 Attendance 모델로 변환
-    final List<Attendance> attendances = [];
-
-    memberDailyMinutes.forEach((memberId, dailyMinutes) {
-      final memberInfo = memberInfoMap[memberId] ?? ('Unknown', null);
-
-      dailyMinutes.forEach((dateKey, minutes) {
-        final dateParts = dateKey.split('-');
-        if (dateParts.length == 3) {
-          try {
-            final date = DateTime(
-              int.parse(dateParts[0]),
-              int.parse(dateParts[1]),
-              int.parse(dateParts[2]),
-            );
-
-            attendances.add(
-              Attendance(
-                groupId: groupId,
-                memberId: memberId,
-                memberName: memberInfo.$1,
-                profileUrl: memberInfo.$2,
-                date: date,
-                timeInMinutes: minutes,
-              ),
-            );
-          } catch (e) {
-            // 날짜 파싱 오류 시 스킵
-            print('날짜 파싱 오류: $dateKey - $e');
-          }
-        }
-      });
-    });
-
-    // 날짜별로 정렬
-    attendances.sort((a, b) => a.date.compareTo(b.date));
-
-    return attendances;
   }
 }
