@@ -247,30 +247,7 @@ class StudyTipBanner extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              // 재시도 로직
-            },
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.indigo.shade700,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              '다시 시도',
-              style: AppTextStyles.button2Regular.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+
       ],
     );
   }
