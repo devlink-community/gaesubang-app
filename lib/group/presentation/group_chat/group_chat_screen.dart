@@ -593,7 +593,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       itemBuilder: (context, index) {
         final message = messages[index];
         final bool isMe =
-            message.senderId == 'currentUserId'; // 실제 사용자 ID로 대체 필요
+            message.senderId == widget.state.currentUserId; // 실제 사용자 ID로 대체 필요
 
         // 날짜 구분선 표시 로직
         final showDateDivider =
