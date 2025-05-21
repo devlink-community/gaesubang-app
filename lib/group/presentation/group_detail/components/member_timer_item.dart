@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/group/domain/model/member_timer_status.dart';
+// lib/group/presentation/group_detail/components/member_timer_item.dart
 import 'package:flutter/material.dart';
 
 import '../../../../core/styles/app_color_styles.dart';
@@ -8,12 +8,12 @@ class MemberTimerItem extends StatelessWidget {
   const MemberTimerItem({
     super.key,
     required this.imageUrl,
-    required this.status,
+    required this.isActive,
     required this.timeDisplay,
   });
 
   final String imageUrl;
-  final MemberTimerStatus status;
+  final bool isActive; // 단순화: MemberTimerStatus 대신 Boolean 사용
   final String timeDisplay;
 
   @override
@@ -31,13 +31,13 @@ class MemberTimerItem extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color:
-                      status == MemberTimerStatus.active
+                      isActive
                           ? AppColorStyles.primary100
                           : AppColorStyles.gray40,
                   width: 2,
                 ),
                 boxShadow:
-                    status == MemberTimerStatus.active
+                    isActive
                         ? [
                           BoxShadow(
                             color: AppColorStyles.primary80.withValues(
@@ -72,8 +72,8 @@ class MemberTimerItem extends StatelessWidget {
               ),
             ),
 
-            // 상태 표시 아이콘 (활성 상태인 경우)
-            if (status == MemberTimerStatus.active)
+            // 상태 표시 아이콘
+            if (isActive)
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -95,7 +95,7 @@ class MemberTimerItem extends StatelessWidget {
                 ),
               ),
 
-            if (status == MemberTimerStatus.sleeping)
+            if (!isActive)
               Positioned(
                 bottom: 0,
                 right: 0,
@@ -113,7 +113,7 @@ class MemberTimerItem extends StatelessWidget {
         ),
 
         // 타이머 표시 - 상태에 따라 다른 위젯 표시
-        status == MemberTimerStatus.sleeping
+        !isActive
             ? Container(
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -148,7 +148,7 @@ class MemberTimerItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                timeDisplay.toString(),
+                timeDisplay,
                 style: AppTextStyles.captionRegular.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColorStyles.primary100,

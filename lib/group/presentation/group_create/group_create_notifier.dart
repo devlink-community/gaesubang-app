@@ -1,6 +1,7 @@
 // lib/group/presentation/group_create/group_create_notifier.dart
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -79,6 +80,10 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
       case Cancel():
         // Root에서 처리
         break;
+
+      case SelectImage():
+        // Root에서 처리
+        break;
     }
   }
 
@@ -96,29 +101,33 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
     state = state.copyWith(isSubmitting: true, errorMessage: null);
 
     try {
-      // 현재 로그인한 사용자를 오너로 설정 (실제 구현 필요)
-      // -> 이 부분은 실제 로그인된 사용자 정보를 가져오는 로직으로 대체해야 함
-      // 예시로 현재 사용자의 정보를 하드코딩
-      // -> 실제로는 AuthProvider 등을 통해 현재 사용자 정보를 가져와야 함
-      final owner = Member(
-        id: 'current_user_id',
-        email: 'current_user@example.com',
-        nickname: '현재 사용자',
-        uid: 'current_user_uid',
-      );
+      // 현재 로그인한 사용자 정보 가져오기
+      final currentUser = ref.read(currentUserProvider);
+      if (currentUser == null) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: '로그인 정보를 찾을 수 없습니다',
+        );
+        return;
+      }
 
-      // 그룹 객체 생성
+      // 그룹 객체 생성 - 최신 Group 모델 구조에 맞게 수정
       final group = Group(
         id: 'temp_id', // 서버에서 생성될 ID
         name: state.name.trim(),
         description: state.description.trim(),
-        members: [owner, ...state.invitedMembers],
-        hashTags: state.hashTags,
-        limitMemberCount: state.limitMemberCount,
-        owner: owner,
+        ownerId: currentUser.id, // owner 객체 대신 ownerId 문자열 사용
+        ownerNickname: currentUser.nickname, // 방장 닉네임 추가
+        ownerProfileImage: currentUser.image, // 방장 프로필 이미지 추가
+        hashTags:
+            state.hashTags
+                .map((tag) => tag.content)
+                .toList(), // HashTag 객체 리스트 → 문자열 리스트로 변환
+        maxMemberCount: state.limitMemberCount,
         imageUrl: state.imageUrl,
         createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        memberCount: 1 + state.invitedMembers.length, // 방장 + 초대된 멤버 수
+        isJoinedByCurrentUser: true, // 생성자는 자동으로 그룹에 가입됨
       );
 
       // UseCase 호출하여 그룹 생성

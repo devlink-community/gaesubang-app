@@ -1,4 +1,3 @@
-import 'package:devlink_mobile_app/group/domain/model/member_timer.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_timer_item.dart';
 import 'package:flutter/material.dart';
 
