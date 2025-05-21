@@ -82,10 +82,11 @@ abstract interface class GroupDataSource {
     String memberName,
   );
 
-  /// 월별 출석 데이터 조회
+  /// 월별 출석 데이터 조회 (이전 월 데이터도 선택적으로 함께 조회)
   Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
     String groupId,
     int year,
-    int month,
-  );
+    int month, {
+    int preloadMonths = 0, // 이전 몇 개월의 데이터를 함께 가져올지
+  });
 }
