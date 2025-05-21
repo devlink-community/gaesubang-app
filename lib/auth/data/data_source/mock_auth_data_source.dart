@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/api_call_logger.dart';
 import 'auth_data_source.dart';
@@ -13,6 +14,10 @@ class MockAuthDataSource implements AuthDataSource {
   static final Map<String, List<Map<String, dynamic>>> _timerActivities = {};
   static final Map<String, Map<String, dynamic>> _termsAgreements = {};
   static String? _currentUserId;
+
+  // 인증 상태 스트림 컨트롤러 (추가)
+  static final StreamController<Map<String, dynamic>?> _authStateController =
+      StreamController<Map<String, dynamic>?>.broadcast();
 
   // 기본 사용자 7명 초기화
   static void _initializeDefaultUsers() {
@@ -184,6 +189,23 @@ class MockAuthDataSource implements AuthDataSource {
     return activities;
   }
 
+  // 인증 상태 변경 통지 (새로 추가)
+  void _notifyAuthStateChanged() {
+    if (_currentUserId == null) {
+      _authStateController.add(null);
+      return;
+    }
+
+    _fetchUserWithTimerActivities(_currentUserId!)
+        .then((userData) {
+          _authStateController.add(userData);
+        })
+        .catchError((error) {
+          debugPrint('인증 상태 변경 통지 에러: $error');
+          _authStateController.add(null);
+        });
+  }
+
   /// Firebase와 동일하게 사용자 정보와 타이머 활동을 함께 반환하는 메서드
   Future<Map<String, dynamic>?> _fetchUserWithTimerActivities(
     String userId,
@@ -233,6 +255,10 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       return userWithActivities;
     }, params: {'email': email});
   }
@@ -295,6 +321,12 @@ class MockAuthDataSource implements AuthDataSource {
       _passwords[userId] = password;
       _timerActivities[userId] = [];
 
+      // 회원가입 후 자동 로그인 상태로 설정
+      _currentUserId = userId;
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
       return {...newUserData, 'timerActivities': []};
     }, params: {'email': email, 'nickname': nickname});
@@ -318,6 +350,9 @@ class MockAuthDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap('MockAuth.signOut', () async {
       await Future.delayed(const Duration(milliseconds: 300));
       _currentUserId = null;
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
     });
   }
 
@@ -391,6 +426,9 @@ class MockAuthDataSource implements AuthDataSource {
       _passwords.remove(userId);
       _timerActivities.remove(userId);
       _currentUserId = null;
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
     }, params: {'email': email});
   }
 
@@ -523,6 +561,10 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       return userWithActivities;
     }, params: {'nickname': nickname});
   }
@@ -555,7 +597,45 @@ class MockAuthDataSource implements AuthDataSource {
       if (userWithActivities == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
+
+      // 인증 상태 변경 통지 (추가)
+      _notifyAuthStateChanged();
+
       return userWithActivities;
     }, params: {'imagePath': imagePath});
+  }
+
+  // 인증 상태 변화 스트림 (추가)
+  @override
+  Stream<Map<String, dynamic>?> get authStateChanges {
+    _initializeDefaultUsers();
+
+    // 최초 호출 시 현재 상태 통지
+    if (_currentUserId != null) {
+      // 비동기적으로 현재 상태 통지
+      Future.microtask(() async {
+        final userData = await _fetchUserWithTimerActivities(_currentUserId!);
+        _authStateController.add(userData);
+      });
+    } else {
+      // 로그아웃 상태 통지
+      Future.microtask(() {
+        _authStateController.add(null);
+      });
+    }
+
+    return _authStateController.stream;
+  }
+
+  // 현재 인증 상태 확인 (추가)
+  @override
+  Future<Map<String, dynamic>?> getCurrentAuthState() async {
+    _initializeDefaultUsers();
+
+    if (_currentUserId == null) {
+      return null;
+    }
+
+    return await _fetchUserWithTimerActivities(_currentUserId!);
   }
 }
