@@ -107,6 +107,103 @@ class VertexAIClient {
     }
   }
 
+  /// LLM API 호출을 위한 통합 메서드 - 새로 추가
+  Future<Map<String, dynamic>> callTextModel(String prompt) async {
+    try {
+      if (!_initialized) await initialize();
+
+      // 기존 엔드포인트 로직 유지
+      final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
+
+      // generateContent API에 맞는 페이로드 구성
+      final payload = {
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {
+          'temperature': 0.2,
+          'maxOutputTokens': 1024,
+          'topK': 40,
+          'topP': 0.95,
+        },
+      };
+
+      // API 호출
+      final response = await _authClient.post(
+        Uri.parse(endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      // 응답 처리
+      if (response.statusCode == 200) {
+        debugPrint('API 응답 상태: ${response.statusCode}');
+
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        try {
+          // 응답 구조 확인 및 안전하게 처리
+          final candidates = data['candidates'];
+          if (candidates == null || candidates.isEmpty) {
+            throw Exception('응답에 candidates가 없습니다');
+          }
+
+          final content = candidates[0]['content'];
+          if (content == null) {
+            throw Exception('응답에 content가 없습니다');
+          }
+
+          final parts = content['parts'];
+          if (parts == null || parts.isEmpty) {
+            throw Exception('응답에 parts가 없습니다');
+          }
+
+          final String generatedText = parts[0]['text'] ?? '';
+
+          // 코드 블록 제거
+          String cleanedText = generatedText;
+          if (cleanedText.contains('```')) {
+            cleanedText = cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
+          }
+
+          debugPrint('정제된 텍스트: $cleanedText');
+
+          // JSON 객체 찾기
+          final jsonStart = cleanedText.indexOf('{');
+          final jsonEnd = cleanedText.lastIndexOf('}') + 1;
+
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            final jsonString = cleanedText.substring(jsonStart, jsonEnd);
+            try {
+              return jsonDecode(jsonString);
+            } catch (e) {
+              debugPrint('JSON 객체 파싱 오류: $e');
+              throw Exception('JSON 객체 파싱 오류: $e');
+            }
+          } else {
+            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $cleanedText');
+            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
+          }
+        } catch (e) {
+          debugPrint('응답 처리 오류: $e');
+          debugPrint('원본 응답: ${response.body}');
+          throw Exception('응답 처리 중 오류: $e');
+        }
+      } else {
+        debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
+        throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Vertex AI API 호출 실패: $e');
+      rethrow;
+    }
+  }
+
   /// 스킬 기반 퀴즈 생성 - 개선된 버전
   Future<List<Map<String, dynamic>>> generateQuizBySkills(
       List<String> skills,
@@ -246,43 +343,16 @@ class VertexAIClient {
     }
   }
 
-  /// 학습 팁 생성 메서드
+  /// 이 메서드는 더 이상 사용하지 않음
+  /// callTextModel() 메서드를 대신 사용할 것
+  /// 이전 호환성을 위해 남겨둠 (deprecated)
   Future<Map<String, dynamic>> generateStudyTip(String skillArea) async {
     try {
-      if (!_initialized) await initialize();
-
-      // 스킬 확인 및 기본값 설정
-      final skill = skillArea.isNotEmpty ? skillArea : '프로그래밍 기초';
-
-      // 학습 팁 생성을 위한 프롬프트 구성
-      final prompt = """
-      당신은 개발자를 위한 학습 팁 생성 전문가입니다. 다음 기술 분야에 관한 유익한 학습 팁과 생존을 위한 영어회화 한 문장을 생성해주세요: $skill
-
-      팁은 실제 개발자가 해당 기술을 효과적으로 학습하는데 도움이 되는 구체적인 내용이어야 합니다.
-      요청이 있을 때마다 새로운 내용을 제공해야 합니다.
-      
-      영어 회화 한문장은 해당 기술 분야에서  개발자들 소통에 자주 사용 되는 영어 문장, 용어, 그 한국어 해석을 포함해야 합니다.
-      요청이 있을 때마다 새로운 내용을 제공해야 합니다.
-
-      결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
-      {
-        "title": "짧은 팁 제목",
-        "content": "구체적인 학습 팁 내용 (120자 이상 150자 이하)",
-        "relatedSkill": "$skill",
-        "englishPhrase": "오늘 학습팁과 관련된 실전에서 많이 쓰이는 실리콘 개발자가 사용하는 심플한 대화체 15단어 이하 영어 한문장",
-        "translation": "한국어 해석 및 용어 설명",
-        "source": "선택적 출처 (책, 웹사이트 등)"
-      }
-
-      직접적인 설명 없이 JSON 형식으로만 응답해주세요.
-      """;
-
-      // 학습 팁 호출 - 새 메서드 사용
-      return await _callVertexAIForStudyTip(prompt);
+      // Repository에서 프롬프트를 생성하므로 더 이상 사용할 필요 없음
+      // 인라인 프롬프트 제거
+      return await callTextModel("$skillArea 관련 짧은 학습 팁을 주세요");
     } catch (e) {
       debugPrint('학습 팁 생성 실패: $e');
-
-      // 폴백 학습 팁 반환
       return _generateFallbackStudyTip(skillArea);
     }
   }
@@ -400,110 +470,6 @@ class VertexAIClient {
     }
   }
 
-  /// StudyTip용 API 호출 메서드
-  Future<Map<String, dynamic>> _callVertexAIForStudyTip(String prompt) async {
-    try {
-      // 기존 엔드포인트 로직 유지
-      final endpoint = 'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
-
-      // generateContent API에 맞는 페이로드 구성
-      final payload = {
-        'contents': [
-          {
-            'role': 'user',
-            'parts': [
-              {'text': prompt},
-            ],
-          },
-        ],
-        'generationConfig': {
-          'temperature': 0.2,
-          'maxOutputTokens': 1024,
-          'topK': 40,
-          'topP': 0.95,
-        },
-      };
-
-      // API 호출
-      final response = await _authClient.post(
-        Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      );
-
-      // 응답 처리
-      if (response.statusCode == 200) {
-        debugPrint('API 응답 상태: ${response.statusCode}');
-
-        final Map<String, dynamic> data = jsonDecode(response.body);
-
-        try {
-          // 응답 구조 확인 및 안전하게 처리
-          final candidates = data['candidates'];
-          if (candidates == null || candidates.isEmpty) {
-            throw Exception('응답에 candidates가 없습니다');
-          }
-
-          final content = candidates[0]['content'];
-          if (content == null) {
-            throw Exception('응답에 content가 없습니다');
-          }
-
-          final parts = content['parts'];
-          if (parts == null || parts.isEmpty) {
-            throw Exception('응답에 parts가 없습니다');
-          }
-
-          final String generatedText = parts[0]['text'] ?? '';
-
-          // 코드 블록 제거
-          String cleanedText = generatedText;
-          if (cleanedText.contains('```')) {
-            cleanedText = cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
-          }
-
-          debugPrint('정제된 텍스트: $cleanedText');
-
-          // JSON 객체 찾기 (StudyTip은 주로 객체 형태)
-          final jsonStart = cleanedText.indexOf('{');
-          final jsonEnd = cleanedText.lastIndexOf('}') + 1;
-
-          if (jsonStart >= 0 && jsonEnd > jsonStart) {
-            final jsonString = cleanedText.substring(jsonStart, jsonEnd);
-            try {
-              return jsonDecode(jsonString);
-            } catch (e) {
-              debugPrint('JSON 객체 파싱 오류: $e');
-              throw Exception('JSON 객체 파싱 오류: $e');
-            }
-          } else {
-            debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $cleanedText');
-            throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
-          }
-        } catch (e) {
-          debugPrint('응답 처리 오류: $e');
-          debugPrint('원본 응답: ${response.body}');
-
-          // 폴백 반환
-          return {
-            "title": "API 응답 처리 중 오류가 발생했습니다",
-            "content": "학습 팁을 가져오는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
-            "relatedSkill": "프로그래밍 기초",
-            "englishPhrase": "Expect the unexpected.",
-            "translation": "예상치 못한 일을 예상하라.",
-            "source": "개발자의 지혜"
-          };
-        }
-      } else {
-        debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
-        throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('Vertex AI API 호출 실패: $e');
-      rethrow;
-    }
-  }
-
   // 객체 파싱 시도 헬퍼 메서드
   List<Map<String, dynamic>> _tryParseAsObject(String text) {
     final objectStart = text.indexOf('{');
@@ -529,13 +495,13 @@ class VertexAIClient {
     // prompt에서 언급된 스킬에 따라 다른 퀴즈 반환
     if (prompt.toLowerCase().contains('python')) {
       return {
-        "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
-        "options": [
-          "메모리 사용량 증가",
-          "코드가 더 간결하고 가독성이 좋아짐",
-          "항상 더 빠른 실행 속도",
-          "버그 방지 기능",
-        ],
+      "question": "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
+      "options": [
+      "메모리 사용량 증가",
+      "코드가 더 간결하고 가독성이 좋아짐",
+      "항상 더 빠른 실행 속도",
+      "버그 방지 기능",
+      ],
         "correctOptionIndex": 1,
         "explanation":
         "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",

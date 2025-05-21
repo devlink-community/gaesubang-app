@@ -17,11 +17,8 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
   @override
   Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt) async {
     try {
-      // 스킬 영역 추출 (프롬프트에서 추출)
-      final String skillArea = _extractSkillAreaFromPrompt(prompt);
-
-      // 단일 학습 팁 생성 메서드 호출
-      return await _vertexClient.generateStudyTip(skillArea);
+      // 프롬프트를 직접 VertexAIClient에 전달
+      return await _vertexClient.callTextModel(prompt);
     } catch (e) {
       debugPrint('학습 팁 생성 API 호출 실패: $e');
       return _generateFallbackStudyTip(prompt);
@@ -31,44 +28,14 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
   @override
   Future<Map<String, dynamic>> generateStudyTipBySkill(String skill) async {
     try {
-      return await _vertexClient.generateStudyTip(skill);
+      // Repository에서 skill 기반으로 프롬프트 생성하므로
+      // 이 메서드는 사용하지 않지만 인터페이스 구현을 위해 유지
+      // 실제로는 generateStudyTipWithPrompt가 사용됨
+      return await _generateFallbackStudyTip(skill);
     } catch (e) {
       debugPrint('스킬 기반 학습 팁 생성 실패: $e');
-      // 폴백: 기본 학습 팁 반환
       return _generateFallbackStudyTip(skill);
     }
-  }
-
-  /// 프롬프트에서 스킬 영역 추출
-  String _extractSkillAreaFromPrompt(String prompt) {
-    // 간단한 방법: 프롬프트에서 "스킬 영역: [영역명]" 패턴 찾기
-    final skillPattern = RegExp(r'스킬 영역: ?([\w\s]+)');
-    final match = skillPattern.firstMatch(prompt);
-
-    if (match != null && match.groupCount >= 1) {
-      return match.group(1)?.trim() ?? '';
-    }
-
-    // 프롬프트에서 직접 영역 단어 추출 시도
-    final commonSkills = [
-      'Python',
-      'JavaScript',
-      'Java',
-      'Flutter',
-      'Dart',
-      'HTML',
-      'CSS',
-      'C++',
-      'Algorithm',
-    ];
-    for (final skill in commonSkills) {
-      if (prompt.contains(skill)) {
-        return skill;
-      }
-    }
-
-    // 기본값 반환
-    return '프로그래밍 기초';
   }
 
   /// 폴백 학습 팁 데이터 생성 메서드
