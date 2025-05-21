@@ -37,8 +37,8 @@ abstract interface class GroupDataSource {
   /// 그룹 탈퇴 처리
   Future<void> fetchLeaveGroup(String groupId, String userId);
 
-  /// 특정 사용자가 가입한 그룹 목록 조회
-  Future<List<Map<String, dynamic>>> fetchUserJoinedGroups(String userId);
+  // /// 특정 사용자가 가입한 그룹 목록 조회
+  // Future<List<Map<String, dynamic>>> fetchUserJoinedGroups(String userId);
 
   /// 그룹의 모든 멤버 조회
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId);
@@ -49,16 +49,14 @@ abstract interface class GroupDataSource {
   /// 그룹 이미지 업데이트
   Future<String> updateGroupImage(String groupId, String localImagePath);
 
-  /// 해시태그로 그룹 검색
-  Future<List<Map<String, dynamic>>> searchGroupsByTags(
-    List<String> tags, {
-    String? currentUserId,
-  });
-
-  /// 키워드로 그룹 검색 (이름, 설명)
-  Future<List<Map<String, dynamic>>> searchGroupsByKeyword(
-    String keyword, {
-    String? currentUserId,
+  /// 통합 그룹 검색 (키워드, 태그 통합)
+  Future<List<Map<String, dynamic>>> searchGroups(
+    String query, {
+    bool searchKeywords = true,
+    bool searchTags = true,
+    Set<String>? joinedGroupIds, // currentUserId 대신 joinedGroupIds 사용
+    int? limit,
+    String? sortBy,
   });
 
   /// 멤버 타이머 시작

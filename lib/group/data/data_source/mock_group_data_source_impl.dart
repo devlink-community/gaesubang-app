@@ -418,30 +418,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> fetchUserJoinedGroups(
-    String userId,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _initializeIfNeeded();
-
-    // 사용자가 가입한 그룹 ID 목록
-    final userGroupIds = _userGroups[userId] ?? [];
-
-    // 가입한 그룹 데이터 필터링
-    final userGroups =
-        _groups
-            .where((group) => userGroupIds.contains(group['id']))
-            .map(
-              (group) =>
-                  Map<String, dynamic>.from(group)
-                    ..['isJoinedByCurrentUser'] = true,
-            )
-            .toList();
-
-    return userGroups;
-  }
-
-  @override
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 400));
     await _initializeIfNeeded();
@@ -455,30 +431,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 그룹 멤버 목록 복사
     final members = _memberships[groupId] ?? [];
     return members.map((m) => Map<String, dynamic>.from(m)).toList();
-  }
-
-  @override
-  Future<Map<String, dynamic>?> checkUserMembershipStatus(
-    String groupId,
-    String userId,
-  ) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _initializeIfNeeded();
-
-    // 그룹 존재 확인
-    final groupExists = _groups.any((g) => g['id'] == groupId);
-    if (!groupExists) {
-      throw Exception('그룹을 찾을 수 없습니다: $groupId');
-    }
-
-    // 멤버십 확인
-    final members = _memberships[groupId] ?? [];
-    final memberData = members.firstWhere(
-      (m) => m['userId'] == userId,
-      orElse: () => <String, dynamic>{},
-    );
-
-    return memberData.isEmpty ? null : Map<String, dynamic>.from(memberData);
   }
 
   @override
@@ -503,70 +455,99 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     return newImageUrl;
   }
+  // lib/group/data/data_source/mock_group_data_source_impl.dart
 
   @override
-  Future<List<Map<String, dynamic>>> searchGroupsByTags(
-    List<String> tags, {
-    String? currentUserId,
+  Future<List<Map<String, dynamic>>> searchGroups(
+    String query, {
+    bool searchKeywords = true,
+    bool searchTags = true,
+    Set<String>? joinedGroupIds, // currentUserId 대신 joinedGroupIds 사용
+    int? limit,
+    String? sortBy,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     await _initializeIfNeeded();
 
-    if (tags.isEmpty) {
+    if (query.isEmpty) {
       return [];
     }
 
-    // 태그를 포함하는 그룹 필터링 (하나라도 일치하면 포함)
-    final filteredGroups =
-        _groups.where((group) {
-          final groupTags = (group['hashTags'] as List<dynamic>).cast<String>();
-          return tags.any((tag) => groupTags.contains(tag));
-        }).toList();
+    final lowercaseQuery = query.toLowerCase();
+    final Set<Map<String, dynamic>> resultSet = {};
 
-    // 현재 사용자의 그룹 가입 여부 정보 추가
-    if (currentUserId != null) {
-      final userGroupIds = _userGroups[currentUserId] ?? [];
-      for (final group in filteredGroups) {
-        group['isJoinedByCurrentUser'] = userGroupIds.contains(group['id']);
+    // 키워드 검색 (이름, 설명)
+    if (searchKeywords) {
+      final keywordResults = _groups.where((group) {
+        final name = (group['name'] as String).toLowerCase();
+        final description = (group['description'] as String).toLowerCase();
+        return name.contains(lowercaseQuery) ||
+            description.contains(lowercaseQuery);
+      });
+
+      resultSet.addAll(keywordResults);
+    }
+
+    // 태그 검색
+    if (searchTags) {
+      final tagResults = _groups.where((group) {
+        final tags = (group['hashTags'] as List<dynamic>).cast<String>();
+        return tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+      });
+
+      resultSet.addAll(tagResults);
+    }
+
+    // 결과를 리스트로 변환
+    final results = resultSet.map((g) => Map<String, dynamic>.from(g)).toList();
+
+    // 가입 그룹 정보를 이용하여 isJoinedByCurrentUser 설정
+    if (joinedGroupIds != null) {
+      for (final group in results) {
+        final groupId = group['id'] as String;
+        group['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
       }
     }
 
-    return filteredGroups.map((g) => Map<String, dynamic>.from(g)).toList();
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> searchGroupsByKeyword(
-    String keyword, {
-    String? currentUserId,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    await _initializeIfNeeded();
-
-    if (keyword.isEmpty) {
-      return [];
-    }
-
-    final lowercaseKeyword = keyword.toLowerCase();
-
-    // 이름 또는 설명에 키워드가 포함된 그룹 필터링
-    final filteredGroups =
-        _groups.where((group) {
-          final name = (group['name'] as String).toLowerCase();
-          final description = (group['description'] as String).toLowerCase();
-
-          return name.contains(lowercaseKeyword) ||
-              description.contains(lowercaseKeyword);
-        }).toList();
-
-    // 현재 사용자의 그룹 가입 여부 정보 추가
-    if (currentUserId != null) {
-      final userGroupIds = _userGroups[currentUserId] ?? [];
-      for (final group in filteredGroups) {
-        group['isJoinedByCurrentUser'] = userGroupIds.contains(group['id']);
+    // 정렬 적용
+    if (sortBy != null) {
+      switch (sortBy) {
+        case 'name':
+          results.sort(
+            (a, b) => (a['name'] as String).compareTo(b['name'] as String),
+          );
+          break;
+        case 'createdAt':
+          results.sort((a, b) {
+            try {
+              final dateA = _dateFormat.parse(a['createdAt'] as String);
+              final dateB = _dateFormat.parse(b['createdAt'] as String);
+              return dateB.compareTo(dateA); // 최신순
+            } catch (e) {
+              return 0;
+            }
+          });
+          break;
+        case 'memberCount':
+          results.sort(
+            (a, b) =>
+                (b['memberCount'] as int).compareTo(a['memberCount'] as int),
+          );
+          break;
       }
+    } else {
+      // 기본 정렬: 이름순
+      results.sort(
+        (a, b) => (a['name'] as String).compareTo(b['name'] as String),
+      );
     }
 
-    return filteredGroups.map((g) => Map<String, dynamic>.from(g)).toList();
+    // 결과 개수 제한
+    if (limit != null && limit > 0 && results.length > limit) {
+      return results.sublist(0, limit);
+    }
+
+    return results;
   }
 
   // fetchGroupTimerActivities 메서드에서 수정

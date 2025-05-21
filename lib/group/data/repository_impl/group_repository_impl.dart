@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
+import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
@@ -53,29 +54,6 @@ class GroupRepositoryImpl implements GroupRepository {
         Failure(
           FailureType.unknown,
           '그룹 목록을 불러오는데 실패했습니다.',
-          cause: e,
-          stackTrace: st,
-        ),
-      );
-    }
-  }
-
-  @override
-  Future<Result<List<Group>>> getUserJoinedGroups(String userId) async {
-    try {
-      final groupsData = await _dataSource.fetchUserJoinedGroups(userId);
-
-      // Map<String, dynamic> → GroupDto → Group 변환
-      final groupDtos =
-          groupsData.map((data) => GroupDto.fromJson(data)).toList();
-      final groups = groupDtos.toModelList();
-
-      return Result.success(groups);
-    } catch (e, st) {
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '사용자 가입 그룹 목록을 불러오는데 실패했습니다.',
           cause: e,
           stackTrace: st,
         ),
@@ -368,36 +346,49 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<List<Group>>> searchGroups(String query) async {
     try {
-      final keywordResults = await _dataSource.searchGroupsByKeyword(query);
+      // 현재 사용자 정보 가져오기
+      final currentUser = _ref.read(currentUserProvider);
 
-      // 키워드가 해시태그일 수 있으므로 태그 검색도 시도
-      final tagResults = await _dataSource.searchGroupsByTags([query]);
-
-      // 두 결과 합치기 (중복 제거)
-      final Map<String, Map<String, dynamic>> uniqueResults = {};
-
-      // 키워드 검색 결과 추가
-      for (final data in keywordResults) {
-        final id = data['id'] as String;
-        uniqueResults[id] = data;
-      }
-
-      // 태그 검색 결과 추가 (중복 없이)
-      for (final data in tagResults) {
-        final id = data['id'] as String;
-        if (!uniqueResults.containsKey(id)) {
-          uniqueResults[id] = data;
+      // 사용자가 가입한 그룹 ID 집합을 생성합니다.
+      Set<String> joinedGroupIds = {};
+      if (currentUser != null) {
+        // currentUser.joinedGroups에서 그룹 ID 추출
+        for (final joinedGroup in currentUser.joinedGroups) {
+          if (joinedGroup.groupId != null) {
+            joinedGroupIds.add(joinedGroup.groupId!);
+          }
         }
       }
 
+      // 통합 검색 API 사용 - currentUserId 대신 joinedGroupIds 전달
+      final groupsData = await _dataSource.searchGroups(
+        query,
+        searchKeywords: true,
+        searchTags: true,
+        joinedGroupIds: joinedGroupIds.isNotEmpty ? joinedGroupIds : null,
+        sortBy: 'name', // 기본 정렬 기준 설정
+        // limit: 20, // 필요시 결과 제한
+      );
+
       // Map<String, dynamic> → GroupDto → Group 변환
       final groupDtos =
-          uniqueResults.values.map((data) => GroupDto.fromJson(data)).toList();
-
+          groupsData.map((data) => GroupDto.fromJson(data)).toList();
       final groups = groupDtos.toModelList();
 
       return Result.success(groups);
     } catch (e, st) {
+      // 구체적인 에러 유형에 따라 다른 Failure 반환
+      if (e.toString().contains('검색 오류')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '검색 서비스에 문제가 발생했습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
       return Result.error(
         Failure(
           FailureType.unknown,
@@ -410,9 +401,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<List<GroupMember>>> getGroupMembersWithTimerStatus(
-    String groupId,
-  ) async {
+  Future<Result<List<GroupMember>>> getGroupMembers(String groupId) async {
     try {
       // 1. 그룹 멤버 정보 조회
       final membersData = await _dataSource.fetchGroupMembers(groupId);
@@ -435,5 +424,132 @@ class GroupRepositoryImpl implements GroupRepository {
     } catch (e, st) {
       return Result.error(mapExceptionToFailure(e, st));
     }
+  }
+
+  @override
+  Future<Result<List<Attendance>>> getAttendancesByMonth(
+    String groupId,
+    int year,
+    int month,
+  ) async {
+    try {
+      // 1. 월간 타이머 활동 데이터 조회
+      final activitiesData = await _dataSource.fetchMonthlyAttendances(
+        groupId,
+        year,
+        month,
+      );
+
+      // 2. 조회한 타이머 활동 데이터를 GroupTimerActivityDto로 변환
+      final activityDtos =
+          activitiesData
+              .map((data) => GroupTimerActivityDto.fromJson(data))
+              .toList();
+
+      // 3. 활동 데이터로부터 출석 기록을 계산
+      final attendances = _calculateAttendancesFromActivities(
+        groupId,
+        activityDtos,
+      );
+
+      return Result.success(attendances);
+    } catch (e, st) {
+      return Result.error(mapExceptionToFailure(e, st));
+    }
+  }
+
+  // 타이머 활동 데이터로부터 출석 기록을 계산하는 헬퍼 메소드
+  List<Attendance> _calculateAttendancesFromActivities(
+    String groupId,
+    List<GroupTimerActivityDto> activities,
+  ) {
+    // 날짜별, 멤버별 활동 시간을 집계할 맵
+    final Map<String, Map<String, int>> memberDailyMinutes = {};
+
+    // 멤버 정보를 저장할 맵 (memberId -> (name, profileUrl))
+    final Map<String, (String, String?)> memberInfoMap = {};
+
+    // 시작 시간을 저장할 임시 맵 (memberId -> 시작 시간)
+    final Map<String, DateTime> memberStartTimes = {};
+
+    // 활동 시간 계산: 각 시작-종료 쌍에 대해 시간 차이 계산
+    for (final activity in activities) {
+      final memberId = activity.memberId;
+      final timestamp = activity.timestamp;
+
+      if (memberId == null || timestamp == null) continue;
+
+      // 멤버 정보 저장 (이름, 프로필 이미지 URL)
+      if (activity.memberName != null) {
+        memberInfoMap[memberId] = (activity.memberName!, null);
+      }
+
+      // 날짜(YYYY-MM-DD) 추출
+      final dateKey =
+          '${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')}';
+
+      if (activity.type == 'start') {
+        // 시작 시간 저장
+        memberStartTimes[memberId] = timestamp;
+      } else if (activity.type == 'end' &&
+          memberStartTimes.containsKey(memberId)) {
+        // 종료 활동이 있고, 시작 시간이 있으면 시간 차이 계산
+        final startTime = memberStartTimes[memberId]!;
+        final durationMinutes = timestamp.difference(startTime).inMinutes;
+
+        // 시간이 0 이상인 경우에만 기록
+        if (durationMinutes > 0) {
+          // 멤버별 날짜별 맵 초기화
+          memberDailyMinutes[memberId] ??= {};
+          memberDailyMinutes[memberId]![dateKey] ??= 0;
+
+          // 해당 날짜에 시간 추가
+          memberDailyMinutes[memberId]![dateKey] =
+              memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
+        }
+
+        // 시작 시간 제거 (다음 계산을 위해)
+        memberStartTimes.remove(memberId);
+      }
+    }
+
+    // 집계된 시간 데이터를 Attendance 모델로 변환
+    final List<Attendance> attendances = [];
+
+    memberDailyMinutes.forEach((memberId, dailyMinutes) {
+      final memberInfo = memberInfoMap[memberId] ?? ('Unknown', null);
+
+      dailyMinutes.forEach((dateKey, minutes) {
+        final dateParts = dateKey.split('-');
+        if (dateParts.length == 3) {
+          try {
+            final date = DateTime(
+              int.parse(dateParts[0]),
+              int.parse(dateParts[1]),
+              int.parse(dateParts[2]),
+            );
+
+            attendances.add(
+              Attendance(
+                groupId: groupId,
+                memberId: memberId,
+                memberName: memberInfo.$1,
+                profileUrl: memberInfo.$2,
+                date: date,
+                timeInMinutes: minutes,
+              ),
+            );
+          } catch (e) {
+            // 날짜 파싱 오류 시 스킵
+            print('날짜 파싱 오류: $dateKey - $e');
+          }
+        }
+      });
+    });
+
+    // 날짜별로 정렬
+    attendances.sort((a, b) => a.date.compareTo(b.date));
+
+    return attendances;
   }
 }

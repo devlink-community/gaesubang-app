@@ -412,109 +412,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> fetchUserJoinedGroups(
-    String userId,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.fetchUserJoinedGroups',
-      () async {
-        try {
-          // 1. 사용자 문서에서 가입한 그룹 정보 가져오기
-          final userDoc = await _usersCollection.doc(userId).get();
-
-          if (!userDoc.exists) {
-            throw Exception(GroupErrorMessages.userNotFound);
-          }
-
-          final userData = userDoc.data()!;
-          if (!userData.containsKey('joingroup')) {
-            return [];
-          }
-
-          final joingroups = userData['joingroup'] as List<dynamic>;
-          if (joingroups.isEmpty) {
-            return [];
-          }
-
-          // 2. 가입한 그룹 이름 목록 추출
-          final groupNames =
-              joingroups
-                  .map((joingroup) => joingroup['group_name'] as String?)
-                  .where((name) => name != null && name.isNotEmpty)
-                  .toList();
-
-          if (groupNames.isEmpty) {
-            return [];
-          }
-
-          // 3. 그룹 이름으로 그룹 문서 조회
-          final results = <Map<String, dynamic>>[];
-
-          // 여러 쿼리를 병렬 처리 (이름이 일치하는 그룹 검색)
-          final futures = groupNames.map((groupName) async {
-            final querySnapshot =
-                await _groupsCollection
-                    .where('name', isEqualTo: groupName)
-                    .limit(1)
-                    .get();
-
-            return querySnapshot.docs;
-          });
-
-          // 모든 쿼리 결과 수집
-          final allResults = await Future.wait(futures);
-
-          // 모든 문서를 결과 리스트에 추가
-          for (final docs in allResults) {
-            for (final doc in docs) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              data['isJoinedByCurrentUser'] = true; // 이미 가입된 그룹
-              results.add(data);
-            }
-          }
-
-          return results;
-        } catch (e) {
-          print('사용자 가입 그룹 조회 오류: $e');
-          throw Exception(GroupErrorMessages.loadFailed);
-        }
-      },
-      params: {'userId': userId},
-    );
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
-    return ApiCallDecorator.wrap('GroupFirebase.fetchGroupMembers', () async {
-      try {
-        // 그룹 존재 확인
-        final groupDoc = await _groupsCollection.doc(groupId).get();
-        if (!groupDoc.exists) {
-          throw Exception(GroupErrorMessages.notFound);
-        }
-
-        // 멤버 컬렉션 조회
-        final membersSnapshot =
-            await _groupsCollection.doc(groupId).collection('members').get();
-
-        // 멤버 데이터 변환
-        final members =
-            membersSnapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList();
-
-        return members;
-      } catch (e) {
-        print('그룹 멤버 조회 오류: $e');
-        throw Exception(GroupErrorMessages.loadFailed);
-      }
-    }, params: {'groupId': groupId});
-  }
-
-  @override
   Future<String> updateGroupImage(String groupId, String localImagePath) async {
     return ApiCallDecorator.wrap('GroupFirebase.updateGroupImage', () async {
       try {
@@ -603,116 +500,60 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> searchGroupsByTags(
-    List<String> tags, {
-    String? currentUserId,
-  }) async {
-    return ApiCallDecorator.wrap('GroupFirebase.searchGroupsByTags', () async {
-      try {
-        if (tags.isEmpty) {
-          return [];
-        }
-
-        // 검색 결과 저장 (중복 방지용 Set)
-        final Set<DocumentSnapshot<Map<String, dynamic>>> resultDocs = {};
-
-        // 태그별로 검색 (array-contains 쿼리는 배열 내 하나의 요소만 확인 가능)
-        for (final tag in tags) {
-          final querySnapshot =
-              await _groupsCollection
-                  .where('hashTags', arrayContains: tag)
-                  .get();
-
-          resultDocs.addAll(querySnapshot.docs);
-        }
-
-        // 검색 결과가 없으면 빈 리스트 반환
-        if (resultDocs.isEmpty) {
-          return [];
-        }
-
-        // 현재 사용자의 가입 그룹 정보 한 번에 가져오기 (로그인한 경우만)
-        Set<String> userJoinedGroupIds = {};
-
-        if (currentUserId != null && currentUserId.isNotEmpty) {
-          // 1. 사용자 문서에서 가입 그룹 정보 가져오기
-          final userDoc = await _usersCollection.doc(currentUserId).get();
-
-          if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
-            final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
-
-            // 가입한 그룹 ID 추출
-            for (final group in joingroups) {
-              final groupId = group['group_id'] as String?;
-              if (groupId != null) {
-                userJoinedGroupIds.add(groupId);
-              }
-            }
-          }
-        }
-
-        // 검색 결과 변환
-        final results =
-            resultDocs.map((doc) {
-              final data = doc.data()!;
-              data['id'] = doc.id;
-
-              // 현재 사용자 가입 여부 설정 (메모리에서 확인)
-              if (currentUserId != null) {
-                data['isJoinedByCurrentUser'] = userJoinedGroupIds.contains(
-                  doc.id,
-                );
-              }
-
-              return data;
-            }).toList();
-
-        return results;
-      } catch (e) {
-        print('태그 기반 그룹 검색 오류: $e');
-        throw Exception(GroupErrorMessages.searchFailed);
-      }
-    }, params: {'tags': tags.join(', ')});
-  }
-
   @override
-  Future<List<Map<String, dynamic>>> searchGroupsByKeyword(
-    String keyword, {
-    String? currentUserId,
+  Future<List<Map<String, dynamic>>> searchGroups(
+    String query, {
+    bool searchKeywords = true,
+    bool searchTags = true,
+    Set<String>? joinedGroupIds, // currentUserId 대신 joinedGroupIds 사용
+    int? limit,
+    String? sortBy,
   }) async {
     return ApiCallDecorator.wrap(
-      'GroupFirebase.searchGroupsByKeyword',
+      'GroupFirebase.searchGroups',
       () async {
         try {
-          if (keyword.isEmpty) {
+          if (query.isEmpty) {
             return [];
           }
 
-          final keywordLower = keyword.toLowerCase();
+          final lowercaseQuery = query.toLowerCase();
           final Set<DocumentSnapshot<Map<String, dynamic>>> resultDocs = {};
 
-          // Firestore는 대소문자 구분 없이 시작하는 문자열 검색 제한적 지원
-          // name 필드 기반 검색 (시작 문자열만 가능)
-          final nameSnapshot =
-              await _groupsCollection
-                  .orderBy('name')
-                  .startAt([keywordLower])
-                  .endAt([keywordLower + '\uf8ff'])
-                  .get();
+          // 키워드 검색 (이름, 설명)
+          if (searchKeywords) {
+            // 이름 기반 검색 (시작하는 문자열)
+            final nameSnapshot =
+                await _groupsCollection
+                    .orderBy('name')
+                    .startAt([lowercaseQuery])
+                    .endAt([lowercaseQuery + '\uf8ff'])
+                    .get();
 
-          resultDocs.addAll(nameSnapshot.docs);
+            resultDocs.addAll(nameSnapshot.docs);
 
-          // description 필드 기반 검색 (시작 문자열만 가능)
-          final descSnapshot =
-              await _groupsCollection
-                  .orderBy('description')
-                  .startAt([keywordLower])
-                  .endAt([keywordLower + '\uf8ff'])
-                  .get();
+            // 설명 기반 검색 (시작하는 문자열)
+            final descSnapshot =
+                await _groupsCollection
+                    .orderBy('description')
+                    .startAt([lowercaseQuery])
+                    .endAt([lowercaseQuery + '\uf8ff'])
+                    .get();
 
-          resultDocs.addAll(descSnapshot.docs);
+            resultDocs.addAll(descSnapshot.docs);
+          }
 
-          // 결과가 충분하지 않으면 모든 그룹을 가져와 클라이언트 측에서 필터링
+          // 태그 검색
+          if (searchTags) {
+            final tagSnapshot =
+                await _groupsCollection
+                    .where('hashTags', arrayContains: lowercaseQuery)
+                    .get();
+
+            resultDocs.addAll(tagSnapshot.docs);
+          }
+
+          // 결과가 충분하지 않으면 추가 확장 검색
           if (resultDocs.length < 10) {
             final allGroups =
                 await _groupsCollection
@@ -720,7 +561,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                     .limit(50)
                     .get();
 
-            // 클라이언트 측 필터링
+            // 클라이언트 측 추가 필터링
             for (final doc in allGroups.docs) {
               if (resultDocs.contains(doc)) continue;
 
@@ -728,33 +569,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
               final name = (data['name'] as String? ?? '').toLowerCase();
               final description =
                   (data['description'] as String? ?? '').toLowerCase();
+              final hashTags =
+                  (data['hashTags'] as List<dynamic>? ?? [])
+                      .map((tag) => (tag as String).toLowerCase())
+                      .toList();
 
               // 부분 일치 검색
-              if (name.contains(keywordLower) ||
-                  description.contains(keywordLower)) {
+              if ((searchKeywords &&
+                      (name.contains(lowercaseQuery) ||
+                          description.contains(lowercaseQuery))) ||
+                  (searchTags &&
+                      hashTags.any((tag) => tag.contains(lowercaseQuery)))) {
                 resultDocs.add(doc);
-              }
-            }
-          }
-
-          // 현재 사용자의 가입 그룹 정보 한 번에 가져오기 (로그인한 경우만)
-          Set<String> userJoinedGroupIds = {};
-
-          if (currentUserId != null &&
-              currentUserId.isNotEmpty &&
-              resultDocs.isNotEmpty) {
-            // 사용자 문서에서 가입 그룹 정보 가져오기
-            final userDoc = await _usersCollection.doc(currentUserId).get();
-
-            if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
-              final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
-
-              // 가입한 그룹 ID 추출
-              for (final group in joingroups) {
-                final groupId = group['group_id'] as String?;
-                if (groupId != null) {
-                  userJoinedGroupIds.add(groupId);
-                }
               }
             }
           }
@@ -765,27 +591,69 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 final data = doc.data()!;
                 data['id'] = doc.id;
 
-                // 현재 사용자 가입 여부 설정 (메모리에서 확인)
-                if (currentUserId != null) {
-                  data['isJoinedByCurrentUser'] = userJoinedGroupIds.contains(
+                // 가입 그룹 정보를 이용하여 isJoinedByCurrentUser 설정
+                if (joinedGroupIds != null) {
+                  data['isJoinedByCurrentUser'] = joinedGroupIds.contains(
                     doc.id,
                   );
+                } else {
+                  data['isJoinedByCurrentUser'] = false; // 기본값 설정
                 }
 
                 return data;
               }).toList();
 
+          // 정렬 적용
+          if (sortBy != null) {
+            switch (sortBy) {
+              case 'name':
+                results.sort(
+                  (a, b) => (a['name'] as String? ?? '').compareTo(
+                    b['name'] as String? ?? '',
+                  ),
+                );
+                break;
+              case 'createdAt':
+                results.sort((a, b) {
+                  final timestampA = a['createdAt'] as Timestamp?;
+                  final timestampB = b['createdAt'] as Timestamp?;
+                  if (timestampA == null || timestampB == null) return 0;
+                  return timestampB.compareTo(timestampA); // 최신순
+                });
+                break;
+              case 'memberCount':
+                results.sort(
+                  (a, b) => ((b['memberCount'] as int?) ?? 0).compareTo(
+                    (a['memberCount'] as int?) ?? 0,
+                  ),
+                );
+                break;
+            }
+          } else {
+            // 기본 정렬: 최신순
+            results.sort((a, b) {
+              final timestampA = a['createdAt'] as Timestamp?;
+              final timestampB = b['createdAt'] as Timestamp?;
+              if (timestampA == null || timestampB == null) return 0;
+              return timestampB.compareTo(timestampA);
+            });
+          }
+
+          // 결과 개수 제한
+          if (limit != null && limit > 0 && results.length > limit) {
+            return results.sublist(0, limit);
+          }
+
           return results;
         } catch (e) {
-          print('키워드 기반 그룹 검색 오류: $e');
-          throw Exception(GroupErrorMessages.searchFailed);
+          print('통합 그룹 검색 오류: $e');
+          throw Exception('그룹 검색 중 오류가 발생했습니다');
         }
       },
-      params: {'keyword': keyword},
+      params: {'query': query, 'joinedGroupIds': joinedGroupIds?.length ?? 0},
     );
   }
 
-  // 2. 그룹 타이머 활동 조회
   @override
   Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
     String groupId,
