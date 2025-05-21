@@ -6,9 +6,10 @@ extension QuizDtoMapper on QuizDto {
     return Quiz(
       question: question ?? '정보를 불러올 수 없습니다',
       options: options?.map((e) => e.toString()).toList() ?? [],
-      answer: answer ?? '',
       explanation: explanation ?? '',
-      skillArea: skillArea ?? '컴퓨터 기초',
+      correctOptionIndex: correctOptionIndex ?? 0,
+      relatedSkill: skillArea ?? '컴퓨터 기초',
+      answer: answer ?? '', // 이전 호환성을 위해 유지
     );
   }
 }
@@ -18,9 +19,10 @@ extension QuizModelMapper on Quiz {
     return QuizDto(
       question: question,
       options: options,
-      answer: answer,
       explanation: explanation,
-      skillArea: skillArea,
+      correctOptionIndex: correctOptionIndex,
+      skillArea: relatedSkill,
+      answer: answer,
     );
   }
 }
