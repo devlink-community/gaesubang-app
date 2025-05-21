@@ -1,16 +1,16 @@
-// lib/group/domain/usecase/start_timer_use_case.dart
+// lib/group/domain/usecase/resume_timer_use_case.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class StartTimerUseCase {
+class PauseTimerUseCase {
   final GroupRepository _repository;
 
-  StartTimerUseCase({required GroupRepository repository})
+  PauseTimerUseCase({required GroupRepository repository})
     : _repository = repository;
 
   Future<AsyncValue<void>> execute(String groupId) async {
-    final result = await _repository.startMemberTimer(groupId);
+    final result = await _repository.pauseMemberTimer(groupId);
 
     return switch (result) {
       Success() => const AsyncData(null),

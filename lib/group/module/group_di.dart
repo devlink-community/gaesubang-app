@@ -1,38 +1,52 @@
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
+import 'package:devlink_mobile_app/group/data/data_source/group_firebase_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source_impl.dart';
-import 'package:devlink_mobile_app/group/data/data_source/mock_timer_data_source_impl.dart';
-import 'package:devlink_mobile_app/group/data/data_source/timer_data_source.dart';
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
-import 'package:devlink_mobile_app/group/data/repository_impl/timer_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
-import 'package:devlink_mobile_app/group/domain/repository/timer_repository.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_current_member_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_di.g.dart';
 
-// DataSource 프로바이더
+// ==================== 그룹 관련 DI ====================
+
+// DataSource 프로바이더 - AppConfig에 따라 Firebase 또는 Mock 구현체 제공
 @Riverpod(keepAlive: true)
-GroupDataSource groupDataSource(Ref ref) => MockGroupDataSourceImpl();
+GroupDataSource groupDataSource(Ref ref) {
+  // AppConfig 설정에 따라 Firebase 또는 Mock 구현체 제공
+  if (AppConfig.useMockGroup) {
+    if (kDebugMode) {
+      print('GroupDataSource: MockGroupDataSourceImpl 사용');
+    }
+    return MockGroupDataSourceImpl();
+  } else {
+    if (kDebugMode) {
+      print('GroupDataSource: GroupFirebaseDataSource 사용');
+    }
+    return GroupFirebaseDataSource();
+  }
+}
 
 // Repository 프로바이더
 @riverpod
-GroupRepository groupRepository(Ref ref) =>
-    GroupRepositoryImpl(dataSource: ref.watch(groupDataSourceProvider));
-
+GroupRepository groupRepository(Ref ref) => GroupRepositoryImpl(
+  dataSource: ref.watch(groupDataSourceProvider),
+  ref: ref,
+);
 // UseCase 프로바이더들
 @riverpod
 GetGroupListUseCase getGroupListUseCase(Ref ref) =>
@@ -62,39 +76,25 @@ LeaveGroupUseCase leaveGroupUseCase(Ref ref) =>
 SearchGroupsUseCase searchGroupsUseCase(Ref ref) =>
     SearchGroupsUseCase(repository: ref.watch(groupRepositoryProvider));
 
-// ==================== 그룹 타이머 관련 DI ====================
-
-// TimerDataSource 프로바이더
+// 새로 추가된 UseCase 프로바이더들
 @riverpod
-TimerDataSource timerDataSource(Ref ref) => MockTimerDataSourceImpl();
+GetGroupMembersUseCase getGroupMembersUseCase(Ref ref) =>
+    GetGroupMembersUseCase(repository: ref.watch(groupRepositoryProvider));
 
-// TimerRepository 프로바이더
 @riverpod
-TimerRepository timerRepository(Ref ref) =>
-    TimerRepositoryImpl(dataSource: ref.watch(timerDataSourceProvider));
+GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) =>
+    GetAttendancesByMonthUseCase(
+      repository: ref.watch(groupRepositoryProvider),
+    );
 
-// Timer UseCase 프로바이더들
 @riverpod
 StartTimerUseCase startTimerUseCase(Ref ref) =>
-    StartTimerUseCase(repository: ref.watch(timerRepositoryProvider));
+    StartTimerUseCase(repository: ref.watch(groupRepositoryProvider));
 
 @riverpod
 StopTimerUseCase stopTimerUseCase(Ref ref) =>
-    StopTimerUseCase(repository: ref.watch(timerRepositoryProvider));
+    StopTimerUseCase(repository: ref.watch(groupRepositoryProvider));
 
 @riverpod
-ResumeTimerUseCase resumeTimerUseCase(Ref ref) =>
-    ResumeTimerUseCase(repository: ref.watch(timerRepositoryProvider));
-
-@riverpod
-GetTimerSessionsUseCase getTimerSessionsUseCase(Ref ref) =>
-    GetTimerSessionsUseCase(repository: ref.watch(timerRepositoryProvider));
-
-@riverpod
-GetMemberTimersUseCase getMemberTimersUseCase(Ref ref) =>
-    GetMemberTimersUseCase(repository: ref.watch(timerRepositoryProvider));
-
-// mock임
-@riverpod
-GetCurrentMemberUseCase getCurrentMemberUseCase(Ref ref) =>
-    GetCurrentMemberUseCase();
+PauseTimerUseCase pauseTimerUseCase(Ref ref) =>
+    PauseTimerUseCase(repository: ref.watch(groupRepositoryProvider));
