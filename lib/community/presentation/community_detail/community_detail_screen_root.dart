@@ -35,8 +35,13 @@ class CommunityDetailScreenRoot extends ConsumerWidget {
               context,
             ).showSnackBar(const SnackBar(content: Text('게시글이 삭제되었습니다')));
 
-            // 목록 화면으로 이동 (새로고침 플래그 전달)
-            context.go('/community', extra: {'refresh': true});
+            // 목록 화면으로 이동하며 refresh 플래그 직접 전달
+            context.go('/community');
+
+            // 이벤트 발행 (모든 관련 컴포넌트에게 알림)
+            ref
+                .read(appEventNotifierProvider.notifier)
+                .emit(const AppEvent.refreshCommunity());
           }
         }
       }

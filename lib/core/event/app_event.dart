@@ -18,4 +18,5 @@ sealed class AppEvent with _$AppEvent {
       CommentAdded;
   const factory AppEvent.commentLiked(String postId, String commentId) =
       CommentLiked;
+  const factory AppEvent.refreshCommunity() = RefreshCommunity;
 }
