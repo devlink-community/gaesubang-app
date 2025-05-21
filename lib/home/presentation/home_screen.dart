@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 
 import '../../ai_assistance/presentation/quiz_banner.dart';
-import '../../ai_assistance/presentation/study_tip_banner.dart'; // 추가됨
+import '../../ai_assistance/presentation/study_tip_banner.dart';
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
@@ -108,23 +108,19 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // 학습 팁 배너 - ValueKey로 변경
-                    StudyTipBanner(
-                      skills: skills,
-                      key:
-                          skills != null
-                              ? ValueKey('study_tip_banner_${skills!}')
-                              : const ValueKey('study_tip_banner'),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // 퀴즈 배너 - ValueKey로 변경
+                    // 퀴즈 배너 - 위젯으로 올바르게 사용
                     DailyQuizBanner(
                       skills: userSkills,
+                      key: ValueKey('quiz_banner_${userSkills ?? "default"}'),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // 학습 팁 배너 - 위젯으로 올바르게 사용
+                    StudyTipBanner(
+                      skills: userSkills,
                       key: ValueKey(
-                        userSkills ?? 'default',
-                      ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
+                        'study_tip_banner_${userSkills ?? "default"}',
+                      ),
                     ),
                   ],
                 ),
