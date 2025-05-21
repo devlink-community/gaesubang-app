@@ -3,19 +3,11 @@ import '../data/data_source/quiz_data_source.dart';
 import '../data/repository_impl/quiz_data_repository_impl.dart';
 import '../domain/repository/quiz_repository.dart';
 import '../domain/use_case/generate_quiz_use_case.dart';
-import '../module/vertex_client.dart';
-
-// Vertex AI 클라이언트 프로바이더 (초기화 포함)
-final vertexAIClientProvider = Provider<VertexAIClient>((ref) {
-  final client = VertexAIClient();
-  // 비동기 메서드를 직접 호출하지 않고 초기화 트리거
-  Future.microtask(() => client.initialize());
-  return client;
-});
+import 'ai_client_di.dart'; // 새로운 중앙 Provider import
 
 // 데이터 소스 프로바이더
 final vertexAiDataSourceProvider = Provider<VertexAiDataSource>((ref) {
-  final vertexClient = ref.watch(vertexAIClientProvider);
+  final vertexClient = ref.watch(vertexAIClientProvider); // 중앙 Provider 사용
   return VertexAiDataSourceImpl(vertexClient: vertexClient);
 });
 
