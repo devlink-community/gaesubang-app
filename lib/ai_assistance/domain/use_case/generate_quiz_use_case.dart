@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
@@ -15,11 +16,21 @@ class GenerateQuizUseCase {
   Future<AsyncValue<Quiz>> execute(String skillArea) async {
     // 여러 스킬이 있는지 확인하고 있다면 랜덤하게 선택
     final skills = _parseSkills(skillArea);
+
+    // 최대 3개 스킬로 제한
+    final limitedSkills = skills.length > 3 ? skills.sublist(0, 3) : skills;
+
+    debugPrint('사용 가능한 스킬 (최대 3개): ${limitedSkills.join(", ")}');
+
     final selectedSkill =
-        skills.isEmpty ? '컴퓨터 기초' : skills[_random.nextInt(skills.length)];
+        limitedSkills.isEmpty
+            ? '컴퓨터 기초'
+            : limitedSkills[_random.nextInt(limitedSkills.length)];
 
     // 선택된 스킬로 퀴즈 생성 요청
     final cleanSkillArea = _cleanSkillArea(selectedSkill);
+    debugPrint('선택된 스킬: $cleanSkillArea');
+
     final result = await _repository.generateQuiz(cleanSkillArea);
 
     return switch (result) {

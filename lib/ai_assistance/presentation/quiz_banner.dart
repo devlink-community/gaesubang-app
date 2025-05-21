@@ -194,12 +194,7 @@ class DailyQuizBanner extends ConsumerWidget {
       return '개발자라면 알아야 할 컴퓨터 기초 지식을 테스트해보세요.';
     }
 
-    final skillList =
-        skills
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+    final skillList = _parseSkillList(skills);
 
     if (skillList.isEmpty) {
       return '개발자라면 알아야 할 컴퓨터 기초 지식을 테스트해보세요.';
@@ -212,7 +207,7 @@ class DailyQuizBanner extends ConsumerWidget {
     return '${skillList.join(", ")} 관련 지식을 테스트해보세요.';
   }
 
-  // 스킬 목록 파싱 메서드 추가
+  // _parseSkillList 메서드 수정
   List<String> _parseSkillList(String? skills) {
     if (skills == null || skills.isEmpty) {
       return ['컴퓨터 기초'];
@@ -225,17 +220,45 @@ class DailyQuizBanner extends ConsumerWidget {
             .where((s) => s.isNotEmpty)
             .toList();
 
-    debugPrint('파싱된 스킬 목록: $skillList');
-    return skillList.isEmpty ? ['컴퓨터 기초'] : skillList;
+    // 최대 3개 스킬로 제한
+    final limitedSkills =
+        skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
+
+    debugPrint('파싱된 스킬 목록(최대 3개): $limitedSkills (${limitedSkills.length}개)');
+    return limitedSkills.isEmpty ? ['컴퓨터 기초'] : limitedSkills;
   }
 
+  // _handleQuizTap 메서드에서도 제한된 스킬 목록 사용하도록 수정
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
     // 디버그 로그 추가
     debugPrint('퀴즈 생성 시작: skills=$skills');
 
-    // 스킬 목록 파싱 및 로그 출력
+    // 원본 스킬 목록 파싱 (제한 없이)
+    final originalSkillList =
+        skills
+            ?.split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList() ??
+        [];
+
+    // 제한된 스킬 목록 생성 (최대 3개)
     final skillList = _parseSkillList(skills);
-    debugPrint('파싱된 스킬 목록: $skillList (${skillList.length}개)');
+
+    // 원본 스킬이 3개를 초과하는 경우 경고 표시
+    if (originalSkillList.length > 3 && context.mounted) {
+      // 간단한 스낵바로 알림
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('최대 3개의 스킬만 사용됩니다: ${skillList.join(", ")}'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.amber.shade700,
+        ),
+      );
+    }
+
+    debugPrint('파싱된 스킬 목록(최대 3개): $skillList (${skillList.length}개)');
 
     // 무작위 스킬 선택
     String selectedSkill;
