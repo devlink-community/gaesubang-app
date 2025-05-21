@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/styles/app_theme.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/firebase_options.dart';
+import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
@@ -17,6 +18,11 @@ void main() async {
 
   // Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // FCM 서비스 초기화
+  final fcmService = FCMService();
+  await fcmService.initialize();
+  await fcmService.requestPermission();
 
   // Firebase 연결 확인 로그 추가
   print('=== Firebase 초기화 완료 ===');
