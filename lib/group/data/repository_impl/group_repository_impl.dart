@@ -426,16 +426,8 @@ class GroupRepositoryImpl implements GroupRepository {
     }
   }
 
-  // lib/group/data/repository_impl/group_repository_impl.dart 파일 수정
-
-  // 기존 코드에서 startMemberTimer, stopMemberTimer, pauseMemberTimer 메서드를 수정합니다.
-
   @override
-  Future<Result<void>> startMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Result<void>> startMemberTimer(String groupId) async {
     try {
       // Auth에서 현재 사용자 정보 가져오기
       final currentUser = _ref.read(currentUserProvider);
@@ -450,7 +442,11 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 시작 처리
-      await _dataSource.startMemberTimer(groupId, memberId, memberName);
+      await _dataSource.startMemberTimer(
+        groupId,
+        currentUser.id,
+        currentUser.nickname,
+      );
 
       return const Result.success(null);
     } catch (e, st) {
@@ -478,11 +474,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<void>> stopMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Result<void>> stopMemberTimer(String groupId) async {
     try {
       // Auth에서 현재 사용자 정보 가져오기
       final currentUser = _ref.read(currentUserProvider);
@@ -497,7 +489,11 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 정지 처리
-      await _dataSource.stopMemberTimer(groupId, memberId, memberName);
+      await _dataSource.stopMemberTimer(
+        groupId,
+        currentUser.id,
+        currentUser.nickname,
+      );
 
       return const Result.success(null);
     } catch (e, st) {
@@ -525,11 +521,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<void>> pauseMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Result<void>> pauseMemberTimer(String groupId) async {
     try {
       // Auth에서 현재 사용자 정보 가져오기
       final currentUser = _ref.read(currentUserProvider);
@@ -544,7 +536,11 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 일시정지 처리
-      await _dataSource.pauseMemberTimer(groupId, memberId, memberName);
+      await _dataSource.pauseMemberTimer(
+        groupId,
+        currentUser.id,
+        currentUser.nickname,
+      );
 
       return const Result.success(null);
     } catch (e, st) {
