@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_comment_use_case.dart';
+import 'package:devlink_mobile_app/community/domain/usecase/delete_post_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_comments_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_post_detail_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_bookmark_use_case.dart';
@@ -27,6 +28,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   late final FetchCommentsUseCase _fetchComments;
   late final CreateCommentUseCase _createComment;
   late final ToggleCommentLikeUseCase _toggleCommentLike;
+  late final DeletePostUseCase _deletePostUseCase;
 
   /* ---------- build ---------- */
   @override
@@ -40,6 +42,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     _fetchComments = ref.watch(fetchCommentsUseCaseProvider);
     _createComment = ref.watch(createCommentUseCaseProvider);
     _toggleCommentLike = ref.watch(toggleCommentLikeUseCaseProvider);
+    _deletePostUseCase = ref.watch(deletePostUseCaseProvider);
 
     // 이벤트 리스너로 프로필 업데이트를 감지하여 화면 새로고침
     ref.listen(appEventNotifierProvider, (previous, current) {
@@ -79,6 +82,41 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
       // 댓글 좋아요 액션 처리
       case ToggleCommentLike(:final commentId):
         await _handleCommentLike(commentId);
+
+      case DeletePost():
+        await _handleDeletePost();
+
+      case EditPost():
+        debugPrint('📝 CommunityDetailNotifier: EditPost action received');
+    }
+  }
+
+  Future<bool> _handleDeletePost() async {
+    debugPrint('🔄 CommunityDetailNotifier: 게시글 삭제 시작');
+
+    try {
+      final result = await _deletePostUseCase.execute(_postId);
+
+      switch (result) {
+        case AsyncData(:final value) when value:
+          // 삭제 성공 시 이벤트 발행
+          ref
+              .read(appEventNotifierProvider.notifier)
+              .emit(AppEvent.postDeleted(_postId));
+          debugPrint('✅ CommunityDetailNotifier: 게시글 삭제 성공 및 이벤트 발행');
+          return true;
+
+        case AsyncError(:final error):
+          debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 오류: $error');
+          return false;
+
+        default:
+          debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 실패');
+          return false;
+      }
+    } catch (e) {
+      debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 중 예외 발생: $e');
+      return false;
     }
   }
 
