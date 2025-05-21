@@ -330,9 +330,9 @@ class StudyTipBanner extends ConsumerWidget {
 
                       // 영어 한마디 섹션
                       Text(
-                        '개발자 영어 한마디',
-                        style: AppTextStyles.body2Regular.copyWith(
-                          color: AppColorStyles.secondary01,
+                        '✈️ 버그보다 무서운 영어, 오늘부터 한 입씩!',
+                        style: AppTextStyles.body1Regular.copyWith(
+                          color: AppColorStyles.primary80,
                         ),
                       ),
                       const SizedBox(height: 12),

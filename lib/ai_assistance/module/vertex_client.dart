@@ -266,7 +266,7 @@ class VertexAIClient {
         "title": "짧은 팁 제목",
         "content": "구체적인 학습 팁 내용 (120자 이상 150자 이하)",
         "relatedSkill": "$skill",
-        "englishPhrase": "오늘 학습팁과 관련된 실전에서 많이 쓰이는 실리콘 개발자가 사용하는 심플한 대화체 영어문장.",
+        "englishPhrase": "오늘 학습팁과 관련된 실전에서 많이 쓰이는 실리콘 개발자가 사용하는 심플한 대화체 20단어 이하 영어 한문장",
         "translation": "한국어 해석 및 용어 설명",
         "source": "선택적 출처 (책, 웹사이트 등)"
       }
