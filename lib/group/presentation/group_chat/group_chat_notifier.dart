@@ -1,6 +1,7 @@
 // lib/group/presentation/group_chat/group_chat_notifier.dart
 import 'dart:async';
 
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_stream_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_case.dart';
@@ -38,6 +39,10 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     _markMessagesAsReadUseCase = ref.watch(markMessagesAsReadUseCaseProvider);
     _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider); // 추가
 
+    // 현재 사용자 정보 가져오기
+  final currentUser = ref.read(currentUserProvider);
+  final currentUserId = currentUser?.id ?? '';
+
     // 화면 이탈 시 구독 해제
     ref.onDispose(() {
       print('🗑️ GroupChatNotifier dispose - 스트림 구독 해제');
@@ -45,7 +50,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
       _timer?.cancel(); // 타이머 해제 추가
     });
 
-    return const GroupChatState();
+    return GroupChatState(currentUserId: currentUserId);
   }
 
   // 액션 처리
