@@ -24,7 +24,7 @@ abstract interface class GroupDataSource {
   Future<Map<String, dynamic>> fetchCreateGroup(
     Map<String, dynamic> groupData, {
     required String ownerId,
-    required String ownerName,
+    required String ownerNickname,
     required String ownerProfileUrl,
   });
 

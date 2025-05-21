@@ -12,7 +12,9 @@ class GroupDto {
     this.description,
     this.imageUrl,
     this.createdAt,
-    this.createdBy,
+    this.ownerId, // createdBy를 ownerId로 변경
+    this.ownerNickname, // 추가: 방장 닉네임
+    this.ownerProfileImage, // 추가: 방장 프로필 이미지
     this.maxMemberCount,
     this.hashTags,
     this.memberCount,
@@ -28,7 +30,13 @@ class GroupDto {
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? createdAt;
-  final String? createdBy;
+
+  @JsonKey(name: 'createdBy') // Firestore 필드명은 그대로 유지
+  final String? ownerId;
+
+  final String? ownerNickname;
+  final String? ownerProfileImage;
+
   final int? maxMemberCount;
   final List<String>? hashTags;
   final int? memberCount;
@@ -48,7 +56,9 @@ class GroupDto {
     String? description,
     String? imageUrl,
     DateTime? createdAt,
-    String? createdBy,
+    String? ownerId,
+    String? ownerNickname,
+    String? ownerProfileImage,
     int? maxMemberCount,
     List<String>? hashTags,
     int? memberCount,
@@ -60,7 +70,9 @@ class GroupDto {
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
-      createdBy: createdBy ?? this.createdBy,
+      ownerId: ownerId ?? this.ownerId,
+      ownerNickname: ownerNickname ?? this.ownerNickname,
+      ownerProfileImage: ownerProfileImage ?? this.ownerProfileImage,
       maxMemberCount: maxMemberCount ?? this.maxMemberCount,
       hashTags: hashTags ?? this.hashTags,
       memberCount: memberCount ?? this.memberCount,

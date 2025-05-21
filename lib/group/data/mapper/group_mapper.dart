@@ -11,7 +11,9 @@ extension GroupDtoMapper on GroupDto {
       description: description ?? '',
       imageUrl: imageUrl,
       createdAt: createdAt ?? DateTime.now(),
-      createdBy: createdBy ?? '',
+      ownerId: ownerId ?? '', // createdBy → ownerId로 변경
+      ownerNickname: ownerNickname, // 추가 필드
+      ownerProfileImage: ownerProfileImage, // 추가 필드
       maxMemberCount: maxMemberCount ?? 10,
       hashTags: hashTags ?? [],
       memberCount: memberCount ?? 0,
@@ -29,7 +31,9 @@ extension GroupModelMapper on Group {
       description: description,
       imageUrl: imageUrl,
       createdAt: createdAt,
-      createdBy: createdBy,
+      ownerId: ownerId, // createdBy → ownerId로 변경
+      ownerNickname: ownerNickname, // 추가 필드
+      ownerProfileImage: ownerProfileImage, // 추가 필드
       maxMemberCount: maxMemberCount,
       hashTags: hashTags,
       memberCount: memberCount,

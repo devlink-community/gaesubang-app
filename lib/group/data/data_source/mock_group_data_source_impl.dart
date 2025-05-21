@@ -294,7 +294,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   Future<Map<String, dynamic>> fetchCreateGroup(
     Map<String, dynamic> groupData, {
     required String ownerId,
-    required String ownerName,
+    required String ownerNickname,
     required String ownerProfileUrl,
   }) async {
     await Future.delayed(const Duration(milliseconds: 1000));
@@ -310,7 +310,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       'id': newGroupId,
       'createdAt': _dateFormat.format(now),
       'updatedAt': _dateFormat.format(now),
-      'createdBy': ownerId,
+      'ownerId': ownerId, // 변경: createdBy → ownerId
+      'ownerNickname': ownerNickname, // 추가: 방장 닉네임
+      'ownerProfileImage': ownerProfileUrl, // 추가: 방장 프로필 이미지
       'memberCount': 1, // 처음에는 생성자만 멤버
     };
 
@@ -324,7 +326,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     final ownerData = {
       'id': ownerId,
       'userId': ownerId,
-      'userName': ownerName,
+      'userName': ownerNickname,
       'profileUrl': ownerProfileUrl,
       'role': 'owner',
       'joinedAt': _dateFormat.format(now),
