@@ -7,14 +7,16 @@ class Quiz with _$Quiz {
   const Quiz({
     required this.question,
     required this.options,
-    required this.answer,
     required this.explanation,
-    this.skillArea = '',
+    this.correctOptionIndex = 0,
+    this.relatedSkill = '',
+    this.answer = '', // 이전 호환성을 위해 유지
   });
 
   final String question;
   final List<String> options;
-  final String answer;
   final String explanation;
-  final String skillArea;
+  final int correctOptionIndex;
+  final String relatedSkill;
+  final String answer; // 이전 호환성을 위해 유지
 }
