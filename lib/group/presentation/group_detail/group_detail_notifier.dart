@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_member_timers_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_timer_sessions_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/resume_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -19,7 +19,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Timer? _timer;
   late final StartTimerUseCase _startTimerUseCase;
   late final StopTimerUseCase _stopTimerUseCase;
-  late final ResumeTimerUseCase _resumeTimerUseCase;
+  late final PauseTimerUseCase _resumeTimerUseCase;
   late final GetTimerSessionsUseCase _getTimerSessionsUseCase;
   late final GetMemberTimersUseCase _getMemberTimersUseCase;
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
