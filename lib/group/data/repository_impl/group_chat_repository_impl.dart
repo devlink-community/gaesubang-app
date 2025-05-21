@@ -1,5 +1,6 @@
 // lib/group/data/repository_impl/group_chat_repository_impl.dart
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
@@ -62,6 +63,14 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       if (currentUser == null) {
         return Result.error(
           const Failure(FailureType.unauthorized, '로그인이 필요합니다'),
+        );
+      }
+
+      // 메시지 크기 검증 (1KB 제한)
+      final bytes = utf8.encode(content);
+      if (bytes.length > 1024) {
+        return Result.error(
+          const Failure(FailureType.validation, '메시지 크기가 1KB를 초과합니다'),
         );
       }
 
