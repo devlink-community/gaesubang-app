@@ -426,8 +426,12 @@ class GroupRepositoryImpl implements GroupRepository {
     }
   }
 
+  // lib/group/data/repository_impl/group_repository_impl.dart 파일 수정
+
+  // 기존 코드에서 startMemberTimer, stopMemberTimer, pauseMemberTimer 메서드를 수정합니다.
+
   @override
-  Future<Result<Map<String, dynamic>>> startMemberTimer(
+  Future<Result<void>> startMemberTimer(
     String groupId,
     String memberId,
     String memberName,
@@ -446,13 +450,9 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 시작 처리
-      final activityData = await _dataSource.startMemberTimer(
-        groupId,
-        memberId,
-        memberName,
-      );
+      await _dataSource.startMemberTimer(groupId, memberId, memberName);
 
-      return Result.success(activityData);
+      return const Result.success(null);
     } catch (e, st) {
       // 특정 오류 타입 처리
       if (e.toString().contains('이미 진행 중인 타이머 세션이 있습니다')) {
@@ -478,7 +478,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<Map<String, dynamic>>> stopMemberTimer(
+  Future<Result<void>> stopMemberTimer(
     String groupId,
     String memberId,
     String memberName,
@@ -497,13 +497,9 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 정지 처리
-      final activityData = await _dataSource.stopMemberTimer(
-        groupId,
-        memberId,
-        memberName,
-      );
+      await _dataSource.stopMemberTimer(groupId, memberId, memberName);
 
-      return Result.success(activityData);
+      return const Result.success(null);
     } catch (e, st) {
       // 특정 오류 타입 처리
       if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
@@ -529,7 +525,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<Map<String, dynamic>>> pauseMemberTimer(
+  Future<Result<void>> pauseMemberTimer(
     String groupId,
     String memberId,
     String memberName,
@@ -548,13 +544,9 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 타이머 일시정지 처리
-      final activityData = await _dataSource.pauseMemberTimer(
-        groupId,
-        memberId,
-        memberName,
-      );
+      await _dataSource.pauseMemberTimer(groupId, memberId, memberName);
 
-      return Result.success(activityData);
+      return const Result.success(null);
     } catch (e, st) {
       // 특정 오류 타입 처리
       if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
