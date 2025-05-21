@@ -13,9 +13,7 @@ abstract interface class GroupRepository {
   Future<Result<List<Group>>> searchGroups(String query);
 
   /// 그룹 멤버 목록과 해당 타이머 상태 조회
-  Future<Result<List<GroupMember>>> getGroupMembersWithTimerStatus(
-    String groupId,
-  );
+  Future<Result<List<GroupMember>>> getGroupMembers(String groupId);
 
   /// 특정 그룹의 특정 월 출석 기록 조회
   Future<Result<List<Attendance>>> getAttendancesByMonth(
