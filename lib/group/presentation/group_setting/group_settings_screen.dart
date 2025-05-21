@@ -119,7 +119,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                   backgroundColor:
                       isEditing
                           ? AppColorStyles.primary100
-                          : AppColorStyles.primary100.withOpacity(0.1),
+                          : AppColorStyles.primary100.withValues(alpha: 0.1),
                   foregroundColor:
                       isEditing ? Colors.white : AppColorStyles.primary100,
                   padding: const EdgeInsets.symmetric(
@@ -194,7 +194,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -273,7 +275,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: counterColor.withOpacity(0.1),
+                                        color: counterColor.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
@@ -294,7 +298,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -415,7 +421,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         children: [
           Material(
             elevation: 6,
-            shadowColor: AppColorStyles.primary100.withOpacity(0.2),
+            shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
             shape: const CircleBorder(),
             child: GestureDetector(
               onTap:
@@ -435,8 +441,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppColorStyles.primary60.withOpacity(0.2),
-                              AppColorStyles.primary100.withOpacity(0.3),
+                              AppColorStyles.primary60.withValues(alpha: 0.2),
+                              AppColorStyles.primary100.withValues(alpha: 0.3),
                             ],
                           )
                           : null,
@@ -452,7 +458,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -511,7 +517,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  backgroundColor: Colors.red.withOpacity(0.1),
+                  backgroundColor: Colors.red.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -547,7 +553,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               enabledThumbRadius: 14,
               elevation: 4,
             ),
-            overlayColor: AppColorStyles.primary100.withOpacity(0.2),
+            overlayColor: AppColorStyles.primary100.withValues(alpha: 0.2),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
           ),
           child: Slider(
@@ -577,10 +583,10 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColorStyles.primary100.withOpacity(0.05),
+            color: AppColorStyles.primary100.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColorStyles.primary100.withOpacity(0.1),
+              color: AppColorStyles.primary100.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -750,12 +756,12 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         color:
             onPressed != null
                 ? AppColorStyles.primary100
-                : AppColorStyles.gray60.withOpacity(0.3),
+                : AppColorStyles.gray60.withValues(alpha: 0.3),
         boxShadow:
             onPressed != null
                 ? [
                   BoxShadow(
-                    color: AppColorStyles.primary100.withOpacity(0.3),
+                    color: AppColorStyles.primary100.withValues(alpha: 0.3),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -800,7 +806,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -842,8 +848,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColorStyles.primary60.withOpacity(
-                                    0.1,
+                                  color: AppColorStyles.primary60.withValues(
+                                    alpha: 0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
@@ -873,7 +879,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -962,6 +968,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     final group = widget.state.group.valueOrNull;
     if (group == null) return const SizedBox.shrink();
 
+    // GetGroupMembersUseCase를 사용하여 멤버 정보를 가져와야 할 수도 있지만,
+    // 현재 UI 구현에서는 간단히 접근 가능한 정보만 표시
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -979,7 +987,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -1004,11 +1012,12 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withOpacity(0.1),
+                      color: AppColorStyles.primary100.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${group.members.length}명 / ${widget.state.limitMemberCount}명',
+                      // memberCount 사용
+                      '${group.memberCount}명 / ${widget.state.limitMemberCount}명',
                       style: TextStyle(
                         color: AppColorStyles.primary100,
                         fontWeight: FontWeight.bold,
@@ -1021,122 +1030,29 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               const SizedBox(height: 16),
               const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
 
-              group.members.isEmpty
-                  ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 16,
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 40,
-                            color: AppColorStyles.gray60,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            '아직 멤버가 없습니다',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: group.members.length,
-                    separatorBuilder:
-                        (context, index) => const Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: Color(0xFFEEEEEE),
-                        ),
-                    itemBuilder: (context, index) {
-                      final member = group.members[index];
-                      final isOwner = member.id == group.owner.id;
-
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color:
-                                isOwner
-                                    ? AppColorStyles.primary60.withOpacity(0.2)
-                                    : Colors.grey.shade200,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color:
-                                  isOwner
-                                      ? AppColorStyles.primary100
-                                      : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              member.nickname.isNotEmpty
-                                  ? member.nickname.substring(0, 1)
-                                  : '?',
-                              style: TextStyle(
-                                color:
-                                    isOwner
-                                        ? AppColorStyles.primary100
-                                        : Colors.grey.shade700,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                        title: Row(
-                          children: [
-                            Text(
-                              member.nickname,
-                              style: TextStyle(
-                                fontWeight:
-                                    isOwner
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                              ),
-                            ),
-                            if (isOwner) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColorStyles.primary100,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  '방장',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        subtitle: Text(
-                          member.email,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
-                    },
+              // 멤버 정보는 현재 접근 불가능하므로 안내 메시지 표시
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 24,
+                    horizontal: 16,
                   ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 40,
+                        color: AppColorStyles.gray60,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '멤버 정보를 불러올 수 없습니다',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

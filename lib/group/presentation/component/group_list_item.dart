@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:flutter/material.dart';
 
@@ -17,7 +18,7 @@ class GroupListItem extends StatelessWidget {
   });
 
   // 최대 인원수 확인 메서드
-  bool get _isGroupFull => group.memberCount >= group.limitMemberCount;
+  bool get _isGroupFull => group.memberCount >= group.maxMemberCount;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +203,7 @@ class GroupListItem extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: AppImage.profile(
-                  imagePath: group.owner.image,
+                  imagePath: group.ownerProfileImage,
                   size: 16,
                   backgroundColor: AppColorStyles.gray40,
                   foregroundColor: AppColorStyles.gray100,
@@ -211,7 +212,7 @@ class GroupListItem extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              group.owner.nickname,
+              group.ownerNickname ?? '방장',
               style: AppTextStyles.captionRegular.copyWith(
                 color: AppColorStyles.gray80,
               ),
@@ -239,7 +240,7 @@ class GroupListItem extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              group.formattedCreatedDate,
+              TimeFormatter.formatDateKorean(group.createdAt),
               style: AppTextStyles.captionRegular.copyWith(
                 color: AppColorStyles.gray60,
               ),
@@ -338,7 +339,7 @@ class GroupListItem extends StatelessWidget {
           Icon(Icons.people, size: 14, color: AppColorStyles.primary100),
           const SizedBox(width: 4),
           Text(
-            '${group.memberCount}/${group.limitMemberCount}',
+            '${group.memberCount}/${group.maxMemberCount}명',
             style: AppTextStyles.captionRegular.copyWith(
               color: AppColorStyles.primary100,
               fontWeight: FontWeight.w600,
@@ -399,7 +400,7 @@ class GroupListItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '#${tag.content}',
+                  '#$tag',
                   style: AppTextStyles.captionRegular.copyWith(
                     color: AppColorStyles.primary100,
                     fontWeight: FontWeight.w500,

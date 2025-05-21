@@ -1,6 +1,7 @@
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_notices_use_case.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_popular_posts_use_case.dart';
-import 'package:devlink_mobile_app/home/domain/usecase/get_user_joined_groups_use_case.dart';
 import 'package:devlink_mobile_app/home/module/home_di.dart';
 import 'package:devlink_mobile_app/home/presentation/home_action.dart';
 import 'package:devlink_mobile_app/home/presentation/home_state.dart';
@@ -11,13 +12,11 @@ part 'home_notifier.g.dart';
 @riverpod
 class HomeNotifier extends _$HomeNotifier {
   late final GetNoticesUseCase _getNoticesUseCase;
-  late final GetUserJoinedGroupsUseCase _getUserJoinedGroupsUseCase;
   late final GetPopularPostsUseCase _getPopularPostsUseCase;
 
   @override
   HomeState build() {
     _getNoticesUseCase = ref.watch(getNoticesUseCaseProvider);
-    _getUserJoinedGroupsUseCase = ref.watch(getUserJoinedGroupsUseCaseProvider);
     _getPopularPostsUseCase = ref.watch(getPopularPostsUseCaseProvider);
 
     // ref.onDispose 이전에 로딩 시작 (빌드 후 바로 로딩 시작)
@@ -40,11 +39,24 @@ class HomeNotifier extends _$HomeNotifier {
 
   Future<void> _loadUserGroups() async {
     state = state.copyWith(userGroups: const AsyncLoading());
-    // 현재 로그인한 사용자 ID (임시로 하드코딩)
-    // TODO: 실제 구현에서는 AuthRepository에서 현재 사용자 ID를 가져와야 함
-    const String currentUserId = 'user1';
-    final result = await _getUserJoinedGroupsUseCase.execute(currentUserId);
-    state = state.copyWith(userGroups: result);
+
+    // AuthProvider에서 현재 사용자 정보 가져오기
+    final currentUser = ref.read(currentUserProvider);
+
+    if (currentUser == null) {
+      state = state.copyWith(
+        userGroups: AsyncError('사용자 정보를 찾을 수 없습니다', StackTrace.current),
+      );
+      return;
+    }
+
+    try {
+      // 사용자의 joinedGroups 정보를 Group 목록으로 변환 (매퍼 사용)
+      final groups = currentUser.joinedGroups.toGroupModelList();
+      state = state.copyWith(userGroups: AsyncData(groups));
+    } catch (e, stackTrace) {
+      state = state.copyWith(userGroups: AsyncError(e, stackTrace));
+    }
   }
 
   Future<void> _loadPopularPosts() async {
@@ -57,13 +69,14 @@ class HomeNotifier extends _$HomeNotifier {
     switch (action) {
       case RefreshHome():
         await _loadInitialData();
+        break;
 
       // 이 액션들은 Root에서 처리 (네비게이션)
-      case OnTapNotice():
-      case OnTapGroup():
-      case OnTapPopularPost():
-      case OnTapSettings():
-      case OnTapNotification():
+      case OnTapNotice _:
+      case OnTapGroup _:
+      case OnTapPopularPost _:
+      case OnTapSettings _:
+      case OnTapNotification _:
         break;
     }
   }

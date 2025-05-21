@@ -22,32 +22,6 @@ class GroupCreateScreen extends StatefulWidget {
   State<GroupCreateScreen> createState() => _GroupCreateScreenState();
 }
 
-// 2-50 범위의 값만 허용하는 TextInputFormatter
-class _MemberCountTextInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    // 빈 문자열은 허용
-    if (newValue.text.isEmpty) {
-      return newValue;
-    }
-
-    // 숫자로 변환
-    final int? value = int.tryParse(newValue.text);
-
-    // 2-50 범위 체크
-    if (value == null || value < 2 || value > 50) {
-      // 범위 밖이면 이전 값 유지
-      return oldValue;
-    }
-
-    // 변경 허용
-    return newValue;
-  }
-}
-
 class _GroupCreateScreenState extends State<GroupCreateScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -120,7 +94,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                 backgroundColor:
                     isLoading
                         ? Colors.grey.shade200
-                        : AppColorStyles.primary100.withOpacity(0.1),
+                        : AppColorStyles.primary100.withValues(alpha: 0.1),
                 foregroundColor:
                     isLoading ? Colors.grey : AppColorStyles.primary100,
                 padding: const EdgeInsets.symmetric(
@@ -191,7 +165,9 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -268,7 +244,9 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: counterColor.withOpacity(0.1),
+                                        color: counterColor.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
@@ -289,7 +267,9 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 2),
                                     ),
@@ -383,7 +363,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         children: [
           Material(
             elevation: 6,
-            shadowColor: AppColorStyles.primary100.withOpacity(0.2),
+            shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
             shape: const CircleBorder(),
             child: GestureDetector(
               onTap:
@@ -399,8 +379,8 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppColorStyles.primary60.withOpacity(0.2),
-                              AppColorStyles.primary100.withOpacity(0.3),
+                              AppColorStyles.primary60.withValues(alpha: 0.2),
+                              AppColorStyles.primary100.withValues(alpha: 0.3),
                             ],
                           )
                           : null,
@@ -416,7 +396,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -484,7 +464,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  backgroundColor: Colors.red.withOpacity(0.1),
+                  backgroundColor: Colors.red.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -517,7 +497,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
               enabledThumbRadius: 14,
               elevation: 4,
             ),
-            overlayColor: AppColorStyles.primary100.withOpacity(0.2),
+            overlayColor: AppColorStyles.primary100.withValues(alpha: 0.2),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
           ),
           child: Slider(
@@ -541,10 +521,10 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColorStyles.primary100.withOpacity(0.05),
+            color: AppColorStyles.primary100.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: AppColorStyles.primary100.withOpacity(0.1),
+              color: AppColorStyles.primary100.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -707,12 +687,12 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         color:
             onPressed != null
                 ? AppColorStyles.primary100
-                : AppColorStyles.gray60.withOpacity(0.3),
+                : AppColorStyles.gray60.withValues(alpha: 0.3),
         boxShadow:
             onPressed != null
                 ? [
                   BoxShadow(
-                    color: AppColorStyles.primary100.withOpacity(0.3),
+                    color: AppColorStyles.primary100.withValues(alpha: 0.3),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -750,7 +730,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -779,7 +759,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

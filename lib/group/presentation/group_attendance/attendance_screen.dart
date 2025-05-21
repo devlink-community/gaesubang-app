@@ -2,8 +2,8 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/component/calendar_grid.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/component/weekday_label.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'attendance_action.dart';
 import 'attendance_state.dart';
@@ -32,7 +32,7 @@ class AttendanceScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _buildWeekdayLabels(),
             const SizedBox(height: 10),
-            _buildCalendarBody(context),
+            _buildCalendarBody(),
             const SizedBox(height: 20),
             _buildSelectedDateInfo(),
           ],
@@ -94,78 +94,49 @@ class AttendanceScreen extends StatelessWidget {
   }
 
   // 캘린더 본문 (날짜 그리드)
-  Widget _buildCalendarBody(BuildContext context) {
-    // 그룹 로딩 실패 체크 추가
-    if (state.groupDetail case AsyncError(:final error)) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              '그룹 정보를 불러올 수 없습니다: ${error.toString()}',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('이전 화면으로'),
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _buildCalendarBody() {
+    switch (state.attendanceList) {
+      case AsyncLoading():
+        return const SizedBox(
+          height: 300,
+          child: Center(child: CircularProgressIndicator()),
+        );
 
-    // 그룹 로딩 중
-    if (state.groupDetail case AsyncLoading()) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('그룹 정보를 불러오는 중...'),
-          ],
-        ),
-      );
-    }
-
-    // 출석 데이터 상태 체크
-    return state.attendanceList.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error:
-          (error, stackTrace) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  '출석 데이터를 불러올 수 없습니다: ${error.toString()}',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed:
-                      () =>
-                          onAction(const AttendanceAction.loadAttendanceData()),
-                  child: const Text('다시 시도'),
-                ),
-              ],
-            ),
+      case AsyncError(:final error):
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                '출석 데이터를 불러올 수 없습니다: ${error.toString()}',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed:
+                    () => onAction(const AttendanceAction.loadAttendanceData()),
+                child: const Text('다시 시도'),
+              ),
+            ],
           ),
-      data: (data) => _buildCalendarGrid(),
-    );
+        );
+
+      case AsyncData():
+        return _buildCalendarGrid();
+      default:
+        return const SizedBox(
+          height: 300,
+          child: Center(child: CircularProgressIndicator()),
+        );
+    }
   }
 
   // Calendar Grid 위젯 생성
   Widget _buildCalendarGrid() {
-    // 그룹 정보가 로드된 경우에만 색상 맵 생성
-    final colorMap =
-        (state.groupDetail.valueOrNull != null)
-            ? _getAttendanceColorMap()
-            : <String, Color>{};
+    // AttendanceNotifier로부터 색상 맵을 직접 제공받는 대신 여기서 생성
+    final colorMap = _getAttendanceColorMap();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -214,17 +185,24 @@ class AttendanceScreen extends StatelessWidget {
   Widget _buildSelectedDateAttendanceInfo(DateTime selectedDate) {
     final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
 
-    return state.attendanceList.when(
-      loading:
-          () => const SizedBox(
-            height: 50,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          ),
-      error: (error, stackTrace) => const Text('데이터를 불러올 수 없습니다'),
-      data:
-          (attendances) =>
-              _buildAttendanceListForDate(attendances, selectedDateStr),
-    );
+    switch (state.attendanceList) {
+      case AsyncLoading():
+        return const SizedBox(
+          height: 50,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+
+      case AsyncError():
+        return const Text('데이터를 불러올 수 없습니다');
+
+      case AsyncData(:final value):
+        return _buildAttendanceListForDate(value, selectedDateStr);
+      default:
+        return const SizedBox(
+          height: 50,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+    }
   }
 
   // 특정 날짜의 출석 목록 표시
@@ -260,11 +238,8 @@ class AttendanceScreen extends StatelessWidget {
 
             // 해당 멤버의 총 출석 시간 계산
             final totalMinutes = memberAttendances
-                .map((a) => a.time as int)
+                .map((a) => a.timeInMinutes as int)
                 .reduce((a, b) => a + b);
-
-            // 멤버 이름 찾기
-            final memberName = _getMemberNameById(memberId);
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -272,14 +247,17 @@ class AttendanceScreen extends StatelessWidget {
                 leading: CircleAvatar(
                   backgroundColor: _getColorByTime(totalMinutes),
                   child: Text(
-                    memberName.substring(0, 1),
+                    // 멤버 이름의 첫 글자 표시 (없으면 '?')
+                    memberAttendances.first.memberName?.substring(0, 1) ?? '?',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                title: Text(memberName),
+                title: Text(
+                  memberAttendances.first.memberName ?? '멤버 $memberId',
+                ),
                 subtitle: Text('출석 시간: ${_formatMinutes(totalMinutes)}'),
                 trailing: Icon(
                   _getIconByTime(totalMinutes),
@@ -289,19 +267,6 @@ class AttendanceScreen extends StatelessWidget {
             );
           }).toList(),
     );
-  }
-
-  // 멤버 ID로 이름 찾기
-  String _getMemberNameById(String memberId) {
-    final group = state.groupDetail.valueOrNull;
-    if (group == null) {
-      return '멤버 $memberId';
-    }
-
-    // where()와 firstOrNull() 사용 (Dart 3.0+)
-    final member = group.members.where((m) => m.id == memberId).firstOrNull;
-
-    return member?.nickname ?? '멤버 $memberId';
   }
 
   // 출석 시간에 따른 색상 반환
@@ -350,17 +315,17 @@ class AttendanceScreen extends StatelessWidget {
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
 
-      if (attendance.time >= 240) {
+      if (attendance.timeInMinutes >= 240) {
         // 4시간 이상
         colorMap[dateKey] = const Color(
           0xFF5D5FEF,
         ); // #5D5FEF - AppColorStyles.primary100
-      } else if (attendance.time >= 120) {
+      } else if (attendance.timeInMinutes >= 120) {
         // 2시간 이상
         colorMap[dateKey] = const Color(
           0xFF7879F1,
         ); // #7879F1 - AppColorStyles.primary80
-      } else if (attendance.time >= 30) {
+      } else if (attendance.timeInMinutes >= 30) {
         // 30분 이상
         colorMap[dateKey] = const Color(
           0xFFA5A6F6,
