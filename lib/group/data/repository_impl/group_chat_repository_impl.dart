@@ -17,8 +17,8 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
   GroupChatRepositoryImpl({
     required GroupChatDataSource dataSource,
     required Ref ref,
-  })  : _dataSource = dataSource,
-        _ref = ref;
+  }) : _dataSource = dataSource,
+       _ref = ref;
 
   @override
   Future<Result<List<ChatMessage>>> getGroupMessages(
@@ -32,9 +32,10 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       );
 
       // Map<String, dynamic> → GroupChatMessageDto → ChatMessage 변환
-      final messageDtos = messagesData
-          .map((data) => GroupChatMessageDto.fromJson(data))
-          .toList();
+      final messageDtos =
+          messagesData
+              .map((data) => GroupChatMessageDto.fromJson(data))
+              .toList();
       final messages = messageDtos.toModelList();
 
       return Result.success(messages);
@@ -60,10 +61,7 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       final currentUser = _ref.read(currentUserProvider);
       if (currentUser == null) {
         return Result.error(
-          const Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다',
-          ),
+          const Failure(FailureType.unauthorized, '로그인이 필요합니다'),
         );
       }
 
@@ -83,50 +81,57 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       return Result.success(message);
     } catch (e, st) {
       return Result.error(
-        Failure(
-          FailureType.server,
-          '메시지 전송에 실패했습니다',
-          cause: e,
-          stackTrace: st,
-        ),
+        Failure(FailureType.server, '메시지 전송에 실패했습니다', cause: e, stackTrace: st),
       );
     }
   }
 
   @override
   Stream<Result<List<ChatMessage>>> getGroupMessagesStream(String groupId) {
-    return _dataSource.streamGroupMessages(groupId).map((messagesData) {
-      try {
-        // 데이터 변환
-        final messageDtos = messagesData
-            .map((data) => GroupChatMessageDto.fromJson(data))
-            .toList();
-        final messages = messageDtos.toModelList();
+    return _dataSource
+        .streamGroupMessages(groupId)
+        .map((messagesData) {
+          try {
+            // 데이터 변환
+            final messageDtos =
+                messagesData
+                    .map((data) => GroupChatMessageDto.fromJson(data))
+                    .toList();
+            final messages = messageDtos.toModelList();
 
-        // 스트림으로 Success 결과 반환
-        return Result<List<ChatMessage>>.success(messages);
-      } catch (e, st) {
-        // 스트림으로 Error 결과 반환
-        return Result<List<ChatMessage>>.error(
-          Failure(
-            FailureType.server,
-            '채팅 메시지 처리 중 오류가 발생했습니다',
-            cause: e,
-            stackTrace: st,
+            // 스트림으로 Success 결과 반환
+            return Result<List<ChatMessage>>.success(messages);
+          } catch (e, st) {
+            // 스트림으로 Error 결과 반환
+            return Result<List<ChatMessage>>.error(
+              Failure(
+                FailureType.server,
+                '채팅 메시지 처리 중 오류가 발생했습니다',
+                cause: e,
+                stackTrace: st,
+              ),
+            );
+          }
+        })
+        .transform(
+          StreamTransformer<
+            Result<List<ChatMessage>>,
+            Result<List<ChatMessage>>
+          >.fromHandlers(
+            handleError: (error, stackTrace, sink) {
+              sink.add(
+                Result.error(
+                  Failure(
+                    FailureType.server,
+                    '채팅 스트림 구독 중 오류가 발생했습니다',
+                    cause: error,
+                    stackTrace: stackTrace,
+                  ),
+                ),
+              );
+            },
           ),
         );
-      }
-    }).handleError((error, stackTrace) {
-      // 스트림 에러 처리
-      return Result<List<ChatMessage>>.error(
-        Failure(
-          FailureType.server,
-          '채팅 스트림 구독 중 오류가 발생했습니다',
-          cause: error,
-          stackTrace: stackTrace,
-        ),
-      );
-    });
   }
 
   @override
@@ -136,10 +141,7 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       final currentUser = _ref.read(currentUserProvider);
       if (currentUser == null) {
         return Result.error(
-          const Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다',
-          ),
+          const Failure(FailureType.unauthorized, '로그인이 필요합니다'),
         );
       }
 
