@@ -1,4 +1,5 @@
 // lib/community/domain/repository/post_repository.dart
+import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
@@ -38,5 +39,6 @@ abstract interface class PostRepository {
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
+    Member? author,
   });
 }
