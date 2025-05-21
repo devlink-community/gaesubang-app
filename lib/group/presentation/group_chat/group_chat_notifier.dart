@@ -132,7 +132,13 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
           // 디바운스 적용
           _timer?.cancel();
-          _timer = Timer(const Duration(seconds: 1), _handleMarkAsRead);
+          _timer = Timer(const Duration(seconds: 1), () async {
+            try {
+              await _handleMarkAsRead();
+            } catch (e, st) {
+              debugPrint('❌ GroupChatNotifier: 메시지 스트림 구독 오류: $e\n$st');
+            }
+          });
         }
       },
       onError: (error) {
