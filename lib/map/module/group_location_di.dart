@@ -2,7 +2,7 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 
 import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source_impl.dart';
-import 'package:devlink_mobile_app/map/data/data_source/group_loscation_data_source.dart';
+import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/data_source/mock_group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/repository_impl/group_location_repository_impl.dart';
 import 'package:devlink_mobile_app/map/domain/repository/group_location_repository.dart';
