@@ -1,6 +1,6 @@
 // lib/group/data/repository_impl/group_location_repository_impl.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/map/data/data_source/group_loscation_data_source.dart';
+import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/mapper/group_member_location_dto_mapper.dart';
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 import 'package:devlink_mobile_app/map/domain/repository/group_location_repository.dart';
