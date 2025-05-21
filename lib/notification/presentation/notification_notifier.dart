@@ -12,9 +12,12 @@ import 'package:devlink_mobile_app/notification/module/notification_di.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 =======
 >>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
+=======
+>>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -70,6 +73,7 @@ class NotificationNotifier extends _$NotificationNotifier {
     );
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
     _fcmService = ref.watch(fcmServiceProvider);
+<<<<<<< HEAD
 <<<<<<< HEAD
 
     print('의존성 주입 완료');
@@ -168,6 +172,8 @@ class NotificationNotifier extends _$NotificationNotifier {
   }
 
 =======
+=======
+>>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
 
     // FCM 알림 클릭 이벤트 구독
     _subscribeToFCMEvents();
@@ -183,7 +189,10 @@ class NotificationNotifier extends _$NotificationNotifier {
     return const NotificationState();
   }
 
+<<<<<<< HEAD
 >>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
+=======
+>>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
   /// FCM 이벤트 구독
   void _subscribeToFCMEvents() {
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
