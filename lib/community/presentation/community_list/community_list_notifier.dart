@@ -53,7 +53,8 @@ class CommunityListNotifier extends _$CommunityListNotifier {
               event is PostLiked ||
               event is PostBookmarked ||
               event is CommentAdded ||
-              event is PostUpdated,
+              event is PostUpdated ||
+              event is PostDeleted,
         );
 
         if (hasPostEvents) {

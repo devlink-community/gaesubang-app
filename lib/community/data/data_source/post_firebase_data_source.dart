@@ -537,7 +537,7 @@ class PostFirebaseDataSource implements PostDataSource {
             await _postsCollection
                 .orderBy('title')
                 .startAt([lowercaseQuery])
-                .endAt([lowercaseQuery + '\uf8ff'])
+                .endAt(['$lowercaseQuery\uf8ff'])
                 .limit(20)
                 .get();
 
@@ -546,7 +546,7 @@ class PostFirebaseDataSource implements PostDataSource {
             await _postsCollection
                 .orderBy('content')
                 .startAt([lowercaseQuery])
-                .endAt([lowercaseQuery + '\uf8ff'])
+                .endAt(['$lowercaseQuery\uf8ff'])
                 .limit(20)
                 .get();
 
@@ -776,5 +776,109 @@ class PostFirebaseDataSource implements PostDataSource {
       },
       params: {'postIds': postIds.length, 'userId': userId},
     );
+  }
+
+  @override
+  Future<String> updatePost({
+    required String postId,
+    required String authorId,
+    required String authorNickname,
+    required String authorPosition,
+    required String userProfileImage,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) async {
+    return ApiCallDecorator.wrap('PostFirebase.updatePost', () async {
+      try {
+        // 게시글 참조
+        final postRef = _postsCollection.doc(postId);
+
+        // 게시글 존재 확인
+        final doc = await postRef.get();
+        if (!doc.exists) {
+          throw Exception(CommunityErrorMessages.postNotFound);
+        }
+
+        // 권한 확인 (작성자만 수정 가능)
+        final data = doc.data()!;
+        if (data['authorId'] != authorId) {
+          throw Exception(CommunityErrorMessages.noPermissionEdit);
+        }
+
+        // 업데이트할 데이터 준비
+        final Map<String, dynamic> updateData = {
+          'title': title,
+          'content': content,
+          'authorNickname': authorNickname,
+          'authorPosition': authorPosition,
+          'userProfileImage': userProfileImage,
+          'hashTags': hashTags,
+          'mediaUrls': imageUris.map((uri) => uri.toString()).toList(),
+          // 원래 imageUrls 필드명을 mediaUrls로 통일
+        };
+
+        // 게시글 업데이트
+        await postRef.update(updateData);
+
+        return postId;
+      } catch (e) {
+        print('게시글 업데이트 오류: $e');
+        throw Exception(CommunityErrorMessages.postUpdateFailed);
+      }
+    }, params: {'postId': postId, 'authorId': authorId});
+  }
+
+  @override
+  Future<bool> deletePost(String postId, String userId) async {
+    return ApiCallDecorator.wrap('PostFirebase.deletePost', () async {
+      try {
+        // 게시글 참조
+        final postRef = _postsCollection.doc(postId);
+
+        // 게시글 존재 및 권한 확인
+        final doc = await postRef.get();
+        if (!doc.exists) {
+          throw Exception(CommunityErrorMessages.postNotFound);
+        }
+
+        // 권한 확인 (작성자만 삭제 가능)
+        final data = doc.data()!;
+        if (data['authorId'] != userId) {
+          throw Exception(CommunityErrorMessages.noPermissionDelete);
+        }
+
+        // 단계별로 삭제 (트랜잭션 없이)
+        // 1. 댓글 컬렉션 내 문서들 삭제
+        final commentsSnapshot = await postRef.collection('comments').get();
+        for (final commentDoc in commentsSnapshot.docs) {
+          // 댓글 내 좋아요 컬렉션도 삭제
+          final likesSnapshot =
+              await commentDoc.reference.collection('likes').get();
+          for (final likeDoc in likesSnapshot.docs) {
+            await likeDoc.reference.delete();
+          }
+          await commentDoc.reference.delete();
+        }
+
+        // 2. 좋아요 컬렉션 내 문서들 삭제
+        final likesSnapshot = await postRef.collection('likes').get();
+        for (final likeDoc in likesSnapshot.docs) {
+          await likeDoc.reference.delete();
+        }
+
+        // 3. 북마크 관련 코드 완전히 제거
+        // 해당 부분 삭제
+
+        // 4. 게시글 문서 자체 삭제
+        await postRef.delete();
+
+        return true;
+      } catch (e) {
+        print('게시글 삭제 오류: $e');
+        throw Exception(CommunityErrorMessages.postDeleteFailed);
+      }
+    }, params: {'postId': postId, 'userId': userId});
   }
 }
