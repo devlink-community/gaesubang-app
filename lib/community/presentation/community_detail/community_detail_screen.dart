@@ -1,4 +1,6 @@
 // lib/community/presentation/community_detail/community_detail_screen.dart
+import 'dart:async';
+
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_state.dart';
@@ -16,10 +18,12 @@ class CommunityDetailScreen extends StatefulWidget {
     super.key,
     required this.state,
     required this.onAction,
+    this.currentUserId, // nullable로 설정
   });
 
   final CommunityDetailState state;
   final void Function(CommunityDetailAction action) onAction;
+  final String? currentUserId;
 
   @override
   State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
@@ -27,15 +31,12 @@ class CommunityDetailScreen extends StatefulWidget {
 
 class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
   final _controller = TextEditingController();
-  // _isLiked, _isBookmarked 로컬 변수 제거
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
-
-  // didUpdateWidget 메서드 제거 (더 이상 필요하지 않음)
 
   // 댓글 제출 핸들러
   void _submitComment() {
@@ -213,6 +214,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
     final dateFormat = DateFormat('yyyy.MM.dd HH:mm');
     final formattedDate = dateFormat.format(post.createdAt);
 
+    // 작성자 확인 (widget.currentUserId 사용)
+    final isAuthor =
+        widget.currentUserId != null && widget.currentUserId == post.authorId;
+
     return Container(
       padding: const EdgeInsets.all(20),
       color: Colors.white,
@@ -250,6 +255,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                   ],
                 ),
               ),
+
+              // 작성자인 경우 수정/삭제 버튼 표시
+              if (isAuthor) _buildAuthorActions(),
             ],
           ),
 
@@ -390,6 +398,66 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // 작성자 전용 액션 버튼 (수정/삭제)
+  Widget _buildAuthorActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 수정 버튼
+        IconButton(
+          icon: const Icon(Icons.edit, color: AppColorStyles.primary100),
+          onPressed:
+              () => widget.onAction(const CommunityDetailAction.editPost()),
+          tooltip: '수정하기',
+        ),
+
+        // 삭제 버튼
+        IconButton(
+          icon: const Icon(Icons.delete, color: AppColorStyles.error),
+          onPressed: () => _showDeleteConfirmDialog(),
+          tooltip: '삭제하기',
+        ),
+      ],
+    );
+  }
+
+  // 삭제 확인 다이얼로그
+  void _showDeleteConfirmDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('게시글 삭제'),
+            content: const Text('정말 이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  '취소',
+                  style: AppTextStyles.button2Regular.copyWith(
+                    color: AppColorStyles.gray100,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // 다이얼로그 닫기
+                  widget.onAction(
+                    const CommunityDetailAction.deletePost(),
+                  ); // 삭제 액션 호출
+                },
+                child: Text(
+                  '삭제',
+                  style: AppTextStyles.button2Regular.copyWith(
+                    color: AppColorStyles.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
     );
   }
 
