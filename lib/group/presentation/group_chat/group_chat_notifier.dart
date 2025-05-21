@@ -150,11 +150,19 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     // 로딩 상태로 변경
     state = state.copyWith(messagesResult: const AsyncValue.loading());
 
-    // 메시지 로드
-    final result = await _getGroupMessagesUseCase.execute(groupId);
+    try {
+      // 메시지 로드
+      final result = await _getGroupMessagesUseCase.execute(groupId);
 
-    // 결과 반영
-    state = state.copyWith(messagesResult: result);
+      // 결과 반영
+      state = state.copyWith(messagesResult: result);
+    } catch (e, st) {
+      // 에러 처리 추가
+      state = state.copyWith(
+        messagesResult: AsyncError(e, st),
+        errorMessage: '메시지를 불러오는데 실패했습니다',
+      );
+    }
   }
 
   // 메시지 전송
