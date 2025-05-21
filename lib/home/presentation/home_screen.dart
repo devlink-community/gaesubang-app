@@ -101,6 +101,7 @@ class HomeScreen extends StatelessWidget {
 
             // 카드 영역 - 횡스크롤로 변경
             const SizedBox(height: 24),
+            // StudyTipBanner와 DailyQuizBanner 렌더링 부분 수정
             SizedBox(
               height: 220, // 카드 높이 고정
               child: SingleChildScrollView(
@@ -109,18 +110,18 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // 학습 팁 배너 (새로 추가)
+                    // 학습 팁 배너 - ValueKey로 변경
                     StudyTipBanner(
                       skills: skills,
-                      key: ObjectKey('study_tip_banner'), // 스킬 변경시 새로고침을 위한 키 추가
+                      key: skills != null ? ValueKey('study_tip_banner_${skills!}') : const ValueKey('study_tip_banner'),
                     ),
 
                     const SizedBox(width: 12),
 
-                    // 퀴즈 배너 (기존)
+                    // 퀴즈 배너 - ValueKey로 변경
                     DailyQuizBanner(
                       skills: skills,
-                      key: ObjectKey('quiz_banner'), // 스킬 변경시 새로고침을 위한 키 추가
+                      key: skills != null ? ValueKey('quiz_banner_${skills!}') : const ValueKey('quiz_banner'),
                     ),
                   ],
                 ),
