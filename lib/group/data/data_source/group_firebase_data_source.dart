@@ -515,50 +515,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>?> checkUserMembershipStatus(
-    String groupId,
-    String userId,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'GroupFirebase.checkUserMembershipStatus',
-      () async {
-        try {
-          // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-
-          if (!groupDoc.exists) {
-            throw Exception(GroupErrorMessages.notFound);
-          }
-
-          // 멤버십 확인
-          final memberDoc =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('members')
-                  .doc(userId)
-                  .get();
-
-          if (!memberDoc.exists) {
-            return null;
-          }
-
-          // 멤버십 데이터 반환
-          final data = memberDoc.data()!;
-          data['id'] = memberDoc.id;
-          return data;
-        } catch (e) {
-          if (e.toString().contains(GroupErrorMessages.notFound)) {
-            rethrow;
-          }
-          print('멤버십 상태 확인 오류: $e');
-          throw Exception(GroupErrorMessages.loadFailed);
-        }
-      },
-      params: {'groupId': groupId, 'userId': userId},
-    );
-  }
-
-  @override
   Future<String> updateGroupImage(String groupId, String localImagePath) async {
     return ApiCallDecorator.wrap('GroupFirebase.updateGroupImage', () async {
       try {
@@ -675,24 +631,24 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return [];
         }
 
-        // 현재 사용자의 가입 그룹 ID 목록 (로그인한 경우만)
+        // 현재 사용자의 가입 그룹 정보 한 번에 가져오기 (로그인한 경우만)
         Set<String> userJoinedGroupIds = {};
 
         if (currentUserId != null && currentUserId.isNotEmpty) {
-          final membershipFutures = resultDocs.map((doc) async {
-            final memberDoc =
-                await _groupsCollection
-                    .doc(doc.id)
-                    .collection('members')
-                    .doc(currentUserId)
-                    .get();
+          // 1. 사용자 문서에서 가입 그룹 정보 가져오기
+          final userDoc = await _usersCollection.doc(currentUserId).get();
 
-            if (memberDoc.exists) {
-              userJoinedGroupIds.add(doc.id);
+          if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
+            final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
+
+            // 가입한 그룹 ID 추출
+            for (final group in joingroups) {
+              final groupId = group['group_id'] as String?;
+              if (groupId != null) {
+                userJoinedGroupIds.add(groupId);
+              }
             }
-          });
-
-          await Future.wait(membershipFutures);
+          }
         }
 
         // 검색 결과 변환
@@ -701,7 +657,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
               final data = doc.data()!;
               data['id'] = doc.id;
 
-              // 현재 사용자 가입 여부 설정
+              // 현재 사용자 가입 여부 설정 (메모리에서 확인)
               if (currentUserId != null) {
                 data['isJoinedByCurrentUser'] = userJoinedGroupIds.contains(
                   doc.id,
@@ -781,26 +737,26 @@ class GroupFirebaseDataSource implements GroupDataSource {
             }
           }
 
-          // 현재 사용자의 가입 그룹 ID 목록 (로그인한 경우만)
+          // 현재 사용자의 가입 그룹 정보 한 번에 가져오기 (로그인한 경우만)
           Set<String> userJoinedGroupIds = {};
 
           if (currentUserId != null &&
               currentUserId.isNotEmpty &&
               resultDocs.isNotEmpty) {
-            final membershipFutures = resultDocs.map((doc) async {
-              final memberDoc =
-                  await _groupsCollection
-                      .doc(doc.id)
-                      .collection('members')
-                      .doc(currentUserId)
-                      .get();
+            // 사용자 문서에서 가입 그룹 정보 가져오기
+            final userDoc = await _usersCollection.doc(currentUserId).get();
 
-              if (memberDoc.exists) {
-                userJoinedGroupIds.add(doc.id);
+            if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
+              final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
+
+              // 가입한 그룹 ID 추출
+              for (final group in joingroups) {
+                final groupId = group['group_id'] as String?;
+                if (groupId != null) {
+                  userJoinedGroupIds.add(groupId);
+                }
               }
-            });
-
-            await Future.wait(membershipFutures);
+            }
           }
 
           // 검색 결과 변환
@@ -809,7 +765,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 final data = doc.data()!;
                 data['id'] = doc.id;
 
-                // 현재 사용자 가입 여부 설정
+                // 현재 사용자 가입 여부 설정 (메모리에서 확인)
                 if (currentUserId != null) {
                   data['isJoinedByCurrentUser'] = userJoinedGroupIds.contains(
                     doc.id,
@@ -893,17 +849,51 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
+          // 이미 활성 타이머가 있는지 확인
+          final activeTimerQuery =
+              await _groupsCollection
+                  .doc(groupId)
+                  .collection('timerActivities')
+                  .where('memberId', isEqualTo: memberId)
+                  .where('type', isEqualTo: 'start')
+                  .orderBy('timestamp', descending: true)
+                  .limit(1)
+                  .get();
+
+          // 활성 타이머 세션이 있고, 종료되지 않은 경우 경고
+          if (activeTimerQuery.docs.isNotEmpty) {
+            final lastEndQuery =
+                await _groupsCollection
+                    .doc(groupId)
+                    .collection('timerActivities')
+                    .where('memberId', isEqualTo: memberId)
+                    .where('type', isEqualTo: 'end')
+                    .orderBy('timestamp', descending: true)
+                    .limit(1)
+                    .get();
+
+            if (lastEndQuery.docs.isEmpty ||
+                (activeTimerQuery.docs[0].data()['timestamp'] as Timestamp)
+                    .toDate()
+                    .isAfter(
+                      (lastEndQuery.docs[0].data()['timestamp'] as Timestamp)
+                          .toDate(),
+                    )) {
+              throw Exception('이미 진행 중인 타이머 세션이 있습니다.');
+            }
+          }
+
           // 타임스탬프 생성
           final now = FieldValue.serverTimestamp();
 
-          // 새 타이머 활동 데이터 준비
+          // 새 타이머 활동 데이터 준비 (중복 타임스탬프 제거)
           final activityData = {
             'memberId': memberId,
             'memberName': memberName,
             'type': 'start',
             'timestamp': now,
             'groupId': groupId,
-            'metadata': {'startedAt': now},
+            'metadata': {}, // 필요한 추가 정보만 포함
           };
 
           // Firestore에 타이머 활동 문서 추가
@@ -922,6 +912,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return result;
         } catch (e) {
           print('타이머 시작 오류: $e');
+          if (e.toString().contains('이미 진행 중인 타이머 세션이 있습니다')) {
+            throw Exception(e.toString());
+          }
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -964,14 +957,14 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 타임스탬프 생성
           final now = FieldValue.serverTimestamp();
 
-          // 새 타이머 종료 활동 데이터 준비
+          // 새 타이머 종료 활동 데이터 준비 (불필요한 중복 타임스탬프 제거)
           final activityData = {
             'memberId': memberId,
             'memberName': memberName,
             'type': 'end',
             'timestamp': now,
             'groupId': groupId,
-            'metadata': {'endedAt': now},
+            'metadata': {}, // 필요한 추가 정보만 포함
           };
 
           // Firestore에 타이머 활동 문서 추가
@@ -990,6 +983,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return result;
         } catch (e) {
           print('타이머 정지 오류: $e');
+          // 구체적인 오류 메시지 전달
+          if (e.toString().contains(GroupErrorMessages.timerNotActive)) {
+            throw Exception(GroupErrorMessages.timerNotActive);
+          }
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1032,14 +1029,14 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 타임스탬프 생성
           final now = FieldValue.serverTimestamp();
 
-          // 새 타이머 일시정지 활동 데이터 준비
+          // 새 타이머 일시정지 활동 데이터 준비 (불필요한 중복 타임스탬프 제거)
           final activityData = {
             'memberId': memberId,
             'memberName': memberName,
             'type': 'pause',
             'timestamp': now,
             'groupId': groupId,
-            'metadata': {'pausedAt': now},
+            'metadata': {}, // 필요한 추가 정보만 포함
           };
 
           // Firestore에 타이머 활동 문서 추가
@@ -1058,6 +1055,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return result;
         } catch (e) {
           print('타이머 일시정지 오류: $e');
+          // 구체적인 오류 메시지 전달
+          if (e.toString().contains(GroupErrorMessages.timerNotActive)) {
+            throw Exception(GroupErrorMessages.timerNotActive);
+          }
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1069,8 +1070,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
     String groupId,
     int year,
-    int month,
-  ) async {
+    int month, {
+    int preloadMonths = 0, // 이전 몇 개월의 데이터를 함께 가져올지
+  }) async {
     return ApiCallDecorator.wrap(
       'GroupFirebase.fetchMonthlyAttendances',
       () async {
@@ -1081,12 +1083,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 시작일과 종료일 계산 (해당 월의 첫날과 다음달 첫날)
-          final startDate = DateTime(year, month, 1);
-          final endDate = DateTime(year, month + 1, 1);
+          // 시작일 계산 (요청 월에서 preloadMonths만큼 이전으로)
+          final startMonth = DateTime(year, month - preloadMonths, 1);
+          final endDate = DateTime(year, month + 1, 1); // 종료일은 요청 월의 다음 달 1일
 
           // Timestamp로 변환
-          final startTimestamp = Timestamp.fromDate(startDate);
+          final startTimestamp = Timestamp.fromDate(startMonth);
           final endTimestamp = Timestamp.fromDate(endDate);
 
           // 해당 기간의 타이머 활동 데이터 조회
@@ -1099,6 +1101,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
                   .orderBy('timestamp')
                   .get();
 
+          // 결과가 없는 경우 빈 배열 반환
+          if (activitiesSnapshot.docs.isEmpty) {
+            return [];
+          }
+
           // 타이머 활동 데이터 변환
           final activities =
               activitiesSnapshot.docs.map((doc) {
@@ -1110,10 +1117,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
           return activities;
         } catch (e) {
           print('월별 타이머 활동 데이터 조회 오류: $e');
+          if (e.toString().contains(GroupErrorMessages.notFound)) {
+            throw Exception(GroupErrorMessages.notFound);
+          }
           throw Exception(GroupErrorMessages.loadFailed);
         }
       },
-      params: {'groupId': groupId, 'year': year, 'month': month},
+      params: {
+        'groupId': groupId,
+        'year': year,
+        'month': month,
+        'preloadMonths': preloadMonths,
+      },
     );
   }
 }

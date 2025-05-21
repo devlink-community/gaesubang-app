@@ -751,8 +751,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   Future<List<Map<String, dynamic>>> fetchMonthlyAttendances(
     String groupId,
     int year,
-    int month,
-  ) async {
+    int month, {
+    int preloadMonths = 0,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 500));
     await _initializeIfNeeded();
 
@@ -765,11 +766,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 타이머 활동 컬렉션 초기화 (없으면)
     _timerActivities[groupId] ??= [];
 
-    // 해당 월의 시작일과 종료일 계산
-    final startDate = DateTime(year, month, 1);
+    // 이전 개월 수를 고려한 시작일 계산
+    final startMonth = DateTime(year, month - preloadMonths, 1);
     final endDate = DateTime(year, month + 1, 1);
 
-    // 해당 월에 속하는 타이머 활동 필터링
+    // 해당 기간에 속하는 타이머 활동 필터링
     return _timerActivities[groupId]!
         .where((activity) {
           try {
@@ -779,9 +780,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
             final activityDate = _dateFormat.parse(timestamp);
 
-            // 해당 월 범위 내에 있는지 확인
+            // 확장된 기간 범위 내에 있는지 확인
             return activityDate.isAfter(
-                  startDate.subtract(const Duration(seconds: 1)),
+                  startMonth.subtract(const Duration(seconds: 1)),
                 ) &&
                 activityDate.isBefore(endDate);
           } catch (e) {
