@@ -1,5 +1,3 @@
-// lib/ai_assistance/domain/use_case/get_study_tip_use_case.dart
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';

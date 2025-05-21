@@ -1,5 +1,3 @@
-// lib/ai_assistance/module/study_tip_di.dart
-
 import 'package:devlink_mobile_app/ai_assistance/module/quiz_di.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../data/data_source/study_tip_data_source.dart';

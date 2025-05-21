@@ -33,22 +33,24 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
     final targetSkill = skillArea.isEmpty ? '프로그래밍 기초' : skillArea;
 
     return '''
-    당신은 개발자를 위한 학습 팁 생성 전문가입니다. 다음 기술 분야에 관한 유익한 학습 팁과 영어 한 마디를 생성해주세요: $targetSkill
+당신은 개발자를 위한 학습 팁 생성 전문가입니다. $targetSkill 분야에 관한 학습 팁과 실무 영어 표현을 생성해주세요.
 
-    팁은 실제 개발자가 해당 기술을 효과적으로 학습하는데 도움이 되는 구체적인 내용이어야 합니다.
-    영어 한 마디는 해당 기술 분야에서 자주 사용되는 영어 문장이나 용어와 그 한국어 해석을 포함해야 합니다.
+- 팁: 개발자 학습에 도움되는 구체적 내용 (120-150자)
+- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다.
+- 영어: 해당 분야 개발자들이 실제 사용하는 표현 (15단어 이내)
+- 요청할 때 마다 항상 새로운 내용을 제공해야 합니다. 
 
-    결과는 반드시 다음 JSON 형식으로 제공해야 합니다:
-    {
-      "title": "짧은 팁 제목",
-      "content": "구체적인 학습 팁 내용 (100자 이상 300자 이하)",
-      "relatedSkill": "$targetSkill",
-      "englishPhrase": "기술 분야 관련 영어 문장이나 용어",
-      "translation": "한국어 해석",
-      "source": "선택적 출처 (책, 웹사이트 등)"
-    }
+결과는 다음 JSON 형식으로 제공:
+{
+  "title": "짧은 팁 제목",
+  "content": "구체적인 학습 팁 내용",
+  "relatedSkill": "$targetSkill",
+  "englishPhrase": "개발자가 자주 사용하는 영어 표현",
+  "translation": "한국어 해석",
+  "source": "선택적 출처"
+}
 
-    직접적인 설명 없이 JSON 형식으로만 응답해주세요.
-    ''';
+JSON 형식으로만 응답해주세요.
+'''.trim();
   }
 }
