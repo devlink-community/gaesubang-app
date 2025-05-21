@@ -19,4 +19,7 @@ sealed class GroupChatAction with _$GroupChatAction {
   
   // 텍스트 필드 값 변경
   const factory GroupChatAction.messageChanged(String message) = MessageChanged;
+  
+  // 그룹 멤버 목록 로드 액션 추가
+  const factory GroupChatAction.loadGroupMembers() = LoadGroupMembers;
 }
