@@ -298,7 +298,14 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return Result.success(groupMembers);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '그룹 멤버 정보를 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
     }
   }
 
@@ -418,7 +425,14 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return Result.success(attendances);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '출석 정보를 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
     }
   }
 }
