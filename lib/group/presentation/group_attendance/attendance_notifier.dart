@@ -2,6 +2,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'attendance_action.dart';
@@ -25,11 +26,14 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       displayedMonth: DateTime(now.year, now.month),
       selectedDate: now,
       attendanceList: const AsyncValue.loading(),
+      isLocaleInitialized: false, // 🔧 초기값은 false
     );
   }
 
   Future<void> onAction(AttendanceAction action) async {
     switch (action) {
+      case InitializeLocale():
+        await _handleInitializeLocale();
       case SetGroupId(:final groupId):
         await _handleSetGroupId(groupId);
       case SelectDate(:final date):
@@ -38,6 +42,24 @@ class AttendanceNotifier extends _$AttendanceNotifier {
         await _handleChangeMonth(month);
       case LoadAttendanceData():
         await _loadAttendanceData();
+      case ShowDateAttendanceBottomSheet():
+        // 이 액션은 Root에서 처리하므로 여기서는 아무것도 하지 않음
+        break;
+    }
+  }
+
+  // 🔧 새로 추가: 로케일 초기화 처리
+  Future<void> _handleInitializeLocale() async {
+    try {
+      await initializeDateFormatting('ko_KR', null);
+      print('✅ 로케일 초기화 성공');
+
+      state = state.copyWith(isLocaleInitialized: true);
+    } catch (e) {
+      print('⚠️ 로케일 초기화 실패, 기본값으로 진행: $e');
+
+      // 로케일 초기화에 실패해도 앱은 계속 동작하도록 함
+      state = state.copyWith(isLocaleInitialized: true);
     }
   }
 
@@ -102,5 +124,21 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     }
 
     return colorMap;
+  }
+
+  // 🔧 새로 추가: 안전한 한국어 날짜 포맷팅
+  String formatDateSafely(DateTime date, {String pattern = 'M월 d일 (E)'}) {
+    if (!state.isLocaleInitialized) {
+      // 로케일이 초기화되지 않은 경우 기본 포맷 사용
+      return DateFormat('M월 d일').format(date);
+    }
+
+    try {
+      return DateFormat(pattern, 'ko_KR').format(date);
+    } catch (e) {
+      print('⚠️ 한국어 날짜 포맷팅 실패, 기본 포맷 사용: $e');
+      // 한국어 포맷팅에 실패하면 기본 포맷 사용
+      return DateFormat('M월 d일').format(date);
+    }
   }
 }
