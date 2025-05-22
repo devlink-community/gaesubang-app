@@ -22,6 +22,7 @@ import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
 import '../domain/usecase/signout_use_case.dart';
 import '../domain/usecase/signup_use_case.dart';
+import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 
 part 'auth_di.g.dart';
 
@@ -42,21 +43,24 @@ AuthDataSource authDataSource(Ref ref) {
 
 // === Repository Providers ===
 
+// 리포지토리 제공 - FCMTokenService 주입 추가
 @riverpod
 AuthRepository authRepository(Ref ref) {
-  return AuthRepositoryImpl(authDataSource: ref.watch(authDataSourceProvider));
+  return AuthRepositoryImpl(
+    authDataSource: ref.watch(authDataSourceProvider),
+    fcmTokenService: ref.watch(fcmTokenServiceProvider), // FCM 서비스 주입
+  );
 }
 
 // === UseCase Providers === (나머지는 동일)
 
-/// LoginUseCase - 플래그에 따라 실제 또는 Mock 로그인
+// LoginUseCase 프로바이더 수정 - FCMTokenService 주입 추가
 @riverpod
 LoginUseCase loginUseCase(Ref ref) {
-  if (AppConfig.useMockAuth) {
-    return MockLoginUseCase();
-  } else {
-    return LoginUseCase(repository: ref.watch(authRepositoryProvider));
-  }
+  return LoginUseCase(
+    repository: ref.watch(authRepositoryProvider),
+    fcmTokenService: ref.watch(fcmTokenServiceProvider), // FCM 서비스 주입
+  );
 }
 
 @riverpod
