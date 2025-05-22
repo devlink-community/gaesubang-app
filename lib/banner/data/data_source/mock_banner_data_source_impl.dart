@@ -71,7 +71,7 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_004',
-      title: '',
+      title: ' ',
       imageUrl: 'assets/images/banner_004.png', // assets 이미지 사용
       linkUrl: 'https://example.com/inactive',
       isActive: false,
