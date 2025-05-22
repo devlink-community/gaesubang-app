@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Devlink Mobile App</string>
+	<string>개수방</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -28,26 +28,48 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	
+	<!-- 세로 모드만 지원 (타이머 앱 특성) -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	
+	<!-- 프레임률 최적화 -->
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- 위치 권한 설명 (일관성 있게 통일) -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>주변 회원을 찾기 위해 위치 정보가 필요합니다.</string>
+	<string>주변 스터디 그룹과 개발자들을 찾기 위해 위치 정보가 필요합니다.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>주변 스터디 그룹을 찾기 위해 위치 정보가 필요합니다.</string>
+	<string>주변 스터디 그룹과 개발자들을 찾기 위해 위치 정보가 필요합니다.</string>
+	
+	<!-- 알림 권한 설명 -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>타이머 알림, 그룹 활동 소식, 새로운 메시지를 받기 위해 알림 권한이 필요합니다.</string>
+	
+	<!-- 사진 라이브러리 접근 권한 -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>프로필 사진과 그룹 이미지를 업로드하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
+	
+	<!-- 카메라 접근 권한 (직접 촬영) -->
+	<key>NSCameraUsageDescription</key>
+	<string>프로필 사진과 그룹 이미지를 촬영하기 위해 카메라 접근 권한이 필요합니다.</string>
+	
+	<!-- 백그라운드 모드 (알림 및 타이머) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+		<string>background-processing</string>
+	</array>
 </dict>
 </plist>

@@ -20,7 +20,7 @@ class _SplashScreenRootState extends ConsumerState<SplashScreenRoot> {
 
   Future<void> _navigateAfterDelay() async {
     // 스플래시 화면 표시 후 2초 후에 온보딩으로 이동
-    Future.delayed(const Duration(seconds: 2), () {
+    await Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         context.go('/onboarding'); // 명시적으로 온보딩으로 이동
       }
