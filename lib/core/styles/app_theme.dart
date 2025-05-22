@@ -117,8 +117,6 @@ class AppTheme {
       //   ),
       // ),
 
-      
-
       // 리스트 타일 테마
       listTileTheme: ListTileThemeData(
         tileColor: AppColorStyles.white,
@@ -126,7 +124,6 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
 
-      
       // 하단 탐색바 테마
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColorStyles.white,
@@ -293,8 +290,6 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
-
-    
 
       // 입력 필드 테마
       inputDecorationTheme: InputDecorationTheme(
