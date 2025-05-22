@@ -15,9 +15,15 @@ class AttendanceState with _$AttendanceState {
 
     // 출석 정보 목록 (AsyncValue로 로딩/에러/데이터 상태 관리)
     this.attendanceList = const AsyncValue.loading(),
+    this.isLocaleInitialized = false,
   });
 
+  @override
   final DateTime displayedMonth;
+  @override
   final DateTime selectedDate;
+  @override
   final AsyncValue<List<Attendance>> attendanceList;
+  @override
+  final bool isLocaleInitialized;
 }
