@@ -1,3 +1,4 @@
+// lib/community/presentation/community_search/community_search_notifier.dart
 import 'package:devlink_mobile_app/community/domain/usecase/search_posts_use_case.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
@@ -7,8 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_search_notifier.g.dart';
 
-// ⭐ keepAlive: true 추가로 상태 유지!
-@Riverpod(keepAlive: true)
+@riverpod
 class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   late final SearchPostsUseCase _searchPostsUseCase;
 
@@ -16,34 +16,20 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   CommunitySearchState build() {
     _searchPostsUseCase = ref.watch(searchPostsUseCaseProvider);
 
-    // 🔄 페이지 재진입 시에도 상태 복원
-    _restoreStateIfNeeded();
+    // 앱 시작 시 최근 검색어 및 인기 검색어 로드
+    _loadSearchHistory();
 
     return const CommunitySearchState();
-  }
-
-  /// 페이지 재진입 시 상태 복원
-  Future<void> _restoreStateIfNeeded() async {
-    // 이미 데이터가 있으면 복원 안 함
-    if (state.recentSearches.isNotEmpty || state.popularSearches.isNotEmpty) {
-      return;
-    }
-
-    // 검색어 히스토리 로드
-    await _loadSearchHistory();
   }
 
   /// 검색어 히스토리 로드 (최근 + 인기)
   Future<void> _loadSearchHistory() async {
     try {
-      // 로딩 상태 표시
-      state = state.copyWith(isLoading: true);
-
       // 병렬로 최근 검색어와 인기 검색어 로드
       final results = await Future.wait([
         SearchHistoryService.getRecentSearches(
           category: SearchCategory.community,
-          filter: state.currentFilter,
+          filter: SearchFilter.recent,
           limit: 8,
         ),
         SearchHistoryService.getPopularSearches(
@@ -59,11 +45,10 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       state = state.copyWith(
         recentSearches: recentSearches,
         popularSearches: popularSearches,
-        isLoading: false,
       );
     } catch (e) {
       print('검색어 히스토리 로드 실패: $e');
-      state = state.copyWith(isLoading: false);
+      // 실패해도 앱은 정상 동작하도록 빈 리스트 유지
     }
   }
 
@@ -74,24 +59,18 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         break;
 
       case OnClearSearch():
-        // ⭐ 검색 결과만 지우고 히스토리는 유지
         state = state.copyWith(
           query: '',
           searchResults: const AsyncValue.data([]),
         );
         break;
 
-      case OnTapPost(:final postId):
+      case OnTapPost():
         // Root에서 처리할 네비게이션 액션
         break;
 
       case OnGoBack():
-        // ⭐ 뒤로가기 시에도 상태 유지 (query만 초기화)
-        state = state.copyWith(
-          query: '',
-          searchResults: const AsyncValue.data([]),
-          // recentSearches, popularSearches는 유지!
-        );
+        // Root에서 처리할 네비게이션 액션
         break;
 
       case OnRemoveRecentSearch(:final query):
@@ -141,32 +120,12 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         category: SearchCategory.community,
       );
 
-      // ⭐ 즉시 상태 업데이트 (로컬에서 빠르게 반영)
-      _updateLocalHistory(query);
-
-      // 백그라운드에서 전체 히스토리 다시 로드
-      _loadSearchHistory();
+      // 업데이트된 검색어 목록을 다시 로드하여 상태 동기화
+      await _loadSearchHistory();
     } catch (e) {
       print('검색어 히스토리 추가 실패: $e');
+      // 실패해도 검색 기능에는 영향 없음
     }
-  }
-
-  /// 로컬 상태에서 빠르게 히스토리 업데이트
-  void _updateLocalHistory(String query) {
-    final updatedRecent = [...state.recentSearches];
-
-    // 기존에 있으면 제거
-    updatedRecent.remove(query);
-
-    // 맨 앞에 추가
-    updatedRecent.insert(0, query);
-
-    // 최대 8개까지만 유지
-    if (updatedRecent.length > 8) {
-      updatedRecent.removeRange(8, updatedRecent.length);
-    }
-
-    state = state.copyWith(recentSearches: updatedRecent);
   }
 
   /// 특정 검색어 삭제
@@ -178,7 +137,7 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         category: SearchCategory.community,
       );
 
-      // 상태에서도 즉시 제거
+      // 상태에서도 제거
       final updatedRecentSearches = [...state.recentSearches]..remove(query);
       final updatedPopularSearches = [...state.popularSearches]..remove(query);
 
@@ -227,11 +186,21 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     }
   }
 
+  /// 검색 통계 조회
+  Future<Map<String, dynamic>> getSearchStatistics() async {
+    try {
+      return await SearchHistoryService.getSearchStatistics(
+        category: SearchCategory.community,
+      );
+    } catch (e) {
+      print('검색 통계 조회 실패: $e');
+      return {};
+    }
+  }
+
   /// 검색어 필터 변경 (최신순/빈도순/가나다순)
   Future<void> changeSearchFilter(SearchFilter filter) async {
     try {
-      state = state.copyWith(currentFilter: filter);
-
       final filteredSearches = await SearchHistoryService.getRecentSearches(
         category: SearchCategory.community,
         filter: filter,
@@ -244,20 +213,23 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     }
   }
 
-  /// 🔧 수동으로 상태 새로고침 (필요 시 호출)
-  Future<void> refreshSearchHistory() async {
-    await _loadSearchHistory();
+  /// 검색어 데이터 백업
+  Future<Map<String, dynamic>> backupSearchData() async {
+    try {
+      return await SearchHistoryService.exportAllData();
+    } catch (e) {
+      print('검색어 데이터 백업 실패: $e');
+      return {};
+    }
   }
 
-  /// 📊 검색 통계 조회
-  Future<Map<String, dynamic>> getSearchStatistics() async {
+  /// 검색어 데이터 복원
+  Future<void> restoreSearchData(Map<String, dynamic> backupData) async {
     try {
-      return await SearchHistoryService.getSearchStatistics(
-        category: SearchCategory.community,
-      );
+      await SearchHistoryService.importAllData(backupData);
+      await _loadSearchHistory(); // 복원 후 상태 새로고침
     } catch (e) {
-      print('검색 통계 조회 실패: $e');
-      return {};
+      print('검색어 데이터 복원 실패: $e');
     }
   }
 }
