@@ -29,6 +29,7 @@ class ProfileEditScreen extends StatefulWidget {
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   // 로컬 이미지 파일을 저장할 변수 추가
   File? _localImageFile;
+  bool _isImageUploading = false; // 이미지 업로드 상태 추가
 
   // 텍스트 컨트롤러 선언
   final _nicknameController = TextEditingController();
@@ -57,7 +58,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state != widget.state) {
       _updateTextControllersIfNeeded();
-      _updateLocalImageFile();
+      _updateLocalImageFileIfNeeded();
     }
   }
 
@@ -122,6 +123,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (_localImageFile?.path != member.image) {
         setState(() {
           _localImageFile = File(member.image);
+        });
+      }
+    }
+  }
+
+  // 개선된 이미지 파일 업데이트 - 업로드 중이 아닐 때만 업데이트
+  void _updateLocalImageFileIfNeeded() {
+    final member = widget.state.editingProfile;
+
+    // 업로드 중이면 로컬 이미지 파일을 그대로 유지
+    if (_isImageUploading) return;
+
+    if (member != null &&
+        member.image.isNotEmpty &&
+        member.image.startsWith('/')) {
+      if (_localImageFile?.path != member.image) {
+        setState(() {
+          _localImageFile = File(member.image);
+        });
+      }
+    } else if (member != null &&
+        member.image.isNotEmpty &&
+        !member.image.startsWith('/')) {
+      // 네트워크 이미지로 업데이트된 경우 로컬 파일 초기화
+      if (_localImageFile != null) {
+        setState(() {
+          _localImageFile = null;
         });
       }
     }
@@ -277,14 +305,30 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
           _buildSaveButton(),
 
-          // 이미지 업로드 상태 표시
-          if (widget.state.isSaving) ...[
+          // 이미지 업로드 상태 표시 - 개선
+          if (_isImageUploading) ...[
             const SizedBox(height: 16),
-            const Center(child: CircularProgressIndicator()),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '이미지 업로드 중...',
+                  style: AppTextStyles.body2Regular.copyWith(
+                    color: AppColorStyles.primary100,
+                  ),
+                ),
+              ],
+            ),
           ],
 
           // 이미지 업로드 오류 표시
-          if (widget.state.saveError != null) ...[
+          if (widget.state.saveError != null && !_isImageUploading) ...[
             const SizedBox(height: 16),
             Text(
               widget.state.saveError!,
@@ -309,12 +353,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             right: 0,
             child: Container(
               decoration: BoxDecoration(
-                color: AppColorStyles.primary100,
+                color:
+                    _isImageUploading
+                        ? AppColorStyles.gray60
+                        : AppColorStyles.primary100,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.camera_alt, color: Colors.white),
-                onPressed: _pickImage,
+                icon:
+                    _isImageUploading
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : const Icon(Icons.camera_alt, color: Colors.white),
+                onPressed: _isImageUploading ? null : _pickImage,
               ),
             ),
           ),
@@ -324,8 +381,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Widget _buildProfileImage(member) {
-    // 로컬 이미지 파일이 있는 경우
-    if (_localImageFile != null) {
+    // 우선순위: 로컬 이미지 파일 > 네트워크 이미지 > 기본 아이콘
+
+    // 1. 로컬 이미지 파일이 있는 경우 (최우선)
+    if (_localImageFile != null && _localImageFile!.existsSync()) {
       return CircleAvatar(
         radius: 50,
         backgroundImage: FileImage(_localImageFile!),
@@ -333,7 +392,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       );
     }
 
-    // 이미지 경로가 있는 경우
+    // 2. 기존 이미지가 있는 경우
     if (member.image.isNotEmpty) {
       if (member.image.startsWith('/')) {
         // 로컬 파일 경로
@@ -341,6 +400,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           radius: 50,
           backgroundImage: FileImage(File(member.image)),
           backgroundColor: Colors.grey.shade200,
+          onBackgroundImageError: (exception, stackTrace) {
+            // 에러 발생 시 기본 아이콘으로 폴백
+            debugPrint('로컬 이미지 로딩 오류: $exception');
+          },
         );
       } else {
         // 네트워크 이미지 URL
@@ -348,11 +411,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           radius: 50,
           backgroundImage: NetworkImage(member.image),
           backgroundColor: Colors.grey.shade200,
+          onBackgroundImageError: (exception, stackTrace) {
+            // 에러 발생 시 기본 아이콘으로 폴백
+            debugPrint('네트워크 이미지 로딩 오류: $exception');
+          },
         );
       }
     }
 
-    // 이미지가 없는 경우 기본 아이콘 표시
+    // 3. 이미지가 없는 경우 기본 아이콘 표시
     return CircleAvatar(
       radius: 50,
       backgroundColor: Colors.grey.shade100,
@@ -368,26 +435,65 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         padding: const EdgeInsets.symmetric(vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      onPressed: () => widget.onAction(const ProfileEditAction.saveProfile()),
-      child: Text(
-        '저장하기',
-        style: AppTextStyles.button1Medium.copyWith(color: Colors.white),
-      ),
+      onPressed:
+          widget.state.isSaving
+              ? null
+              : () => widget.onAction(const ProfileEditAction.saveProfile()),
+      child:
+          widget.state.isSaving
+              ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '저장 중...',
+                    style: AppTextStyles.button1Medium.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+              : Text(
+                '저장하기',
+                style: AppTextStyles.button1Medium.copyWith(
+                  color: Colors.white,
+                ),
+              ),
     );
   }
 
   Future<void> _pickImage() async {
+    if (_isImageUploading) return; // 업로드 중이면 무시
+
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      // 로컬 상태에 이미지 파일 저장하고 UI 갱신
+      // 즉시 UI 업데이트를 위해 로컬 상태 설정
       setState(() {
         _localImageFile = File(image.path);
+        _isImageUploading = true; // 업로드 시작
       });
 
-      // 액션을 통해 이미지 업로드 프로세스 시작
+      // 백그라운드에서 이미지 업로드 프로세스 시작
       widget.onAction(ProfileEditAction.onChangeImage(_localImageFile!));
+
+      // 업로드 완료를 기다리기 위한 리스너 (간단한 타이머로 대체)
+      Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _isImageUploading = false; // 업로드 완료
+          });
+        }
+      });
     }
   }
 }

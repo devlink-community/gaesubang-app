@@ -208,36 +208,58 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
   }
 
-  /// 프로필 이미지 업데이트
+  /// 프로필 이미지 업데이트 - 수정된 버전
   Future<void> _updateProfileImage(File imageFile) async {
     debugPrint('🔄 ProfileEditNotifier: 프로필 이미지 업데이트 시작: ${imageFile.path}');
 
     try {
+      // 🔥 핵심: 즉시 편집 중인 프로필에 로컬 이미지 경로 설정
+      final currentProfile = state.editingProfile;
+      if (currentProfile != null) {
+        final updatedProfile = currentProfile.copyWith(image: imageFile.path);
+        state = state.copyWith(
+          editingProfile: updatedProfile,
+        );
+        debugPrint('✅ ProfileEditNotifier: 로컬 이미지 경로 즉시 반영: ${imageFile.path}');
+      }
+
+      // 백그라운드에서 실제 이미지 업로드 진행
       final result = await _updateProfileImageUseCase.execute(imageFile.path);
 
       if (result case AsyncData(:final value)) {
-        // 성공 시 편집 중인 프로필과 로드된 프로필 모두 업데이트
+        // 업로드 성공 시 서버 이미지 URL로 업데이트
         state = state.copyWith(
           profileState: AsyncData(value),
           editingProfile: value,
         );
 
-        // ✅ 핵심: 이미지 업데이트 성공 시 프로필 갱신 상태 마크
+        // 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        // 앱 이벤트 발행 코드 제거
-        // ref
-        //     .read(appEventNotifierProvider.notifier)
-        //     .emit(const AppEvent.profileUpdated());
-
         debugPrint(
-          '✅ ProfileEditNotifier: 이미지 업데이트 성공, 갱신 상태 마크: ${value.image}',
+          '✅ ProfileEditNotifier: 서버 이미지 업데이트 성공: ${value.image}',
         );
       } else if (result case AsyncError(:final error)) {
-        debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 실패: $error');
+        debugPrint('❌ ProfileEditNotifier: 이미지 업로드 실패: $error');
+
+        // 실패 시 원본 이미지로 되돌리기
+        if (state.profileState case AsyncData(:final value)) {
+          state = state.copyWith(
+            editingProfile: value,
+            saveState: AsyncError(error, StackTrace.current),
+          );
+        }
       }
     } catch (e) {
       debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 예외: $e');
+
+      // 예외 발생 시 원본 이미지로 되돌리기
+      if (state.profileState case AsyncData(:final value)) {
+        state = state.copyWith(
+          editingProfile: value,
+          saveState: AsyncError(e, StackTrace.current),
+        );
+      }
     }
   }
 
@@ -261,28 +283,25 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
     // 닉네임 중복 확인 여부 검증
     if (state.profileState case AsyncData(:final value)) {
-      final originalProfile = value; // ✅ 올바른 문법
+      final originalProfile = value;
       final isNicknameChanged = originalProfile.nickname != profile.nickname;
 
       if (isNicknameChanged) {
         // 닉네임이 변경된 경우에만 중복 확인 필요
         if (state.nicknameCheckState case AsyncData(:final value)) {
-          final isAvailable = value; // ✅ 올바른 문법
+          final isAvailable = value;
           if (isAvailable == false) {
             errors['nickname'] = '이미 사용 중인 닉네임입니다';
           }
-          // isAvailable == true이면 통과
         } else {
           // 중복 확인을 아직 하지 않은 경우
           errors['nickname'] = '닉네임 중복 확인이 필요합니다';
         }
       }
-      // 닉네임이 변경되지 않았으면 중복 확인 생략
     }
 
     state = state.copyWith(validationErrors: errors);
 
-    // 디버깅 로그 추가
     if (errors.isNotEmpty) {
       debugPrint('❌ ProfileEditNotifier: 폼 검증 실패 - $errors');
     } else {
@@ -324,16 +343,11 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           editingProfile: value,
         );
 
-        // ✅ 핵심 1: 프로필 저장 성공 시 프로필 갱신 상태 마크
+        // 프로필 저장 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        // ✅ 핵심 2: 앱 이벤트 발행 코드 제거
-        // ref
-        //     .read(appEventNotifierProvider.notifier)
-        //     .emit(const AppEvent.profileUpdated());
-
         debugPrint(
-          '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크: ${value.nickname}',
+          '✅ ProfileEditNotifier: 프로필 저장 성공: ${value.nickname}',
         );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
         state = state.copyWith(saveState: AsyncError(error, stackTrace));
@@ -370,6 +384,21 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           value.skills != editingProfile.skills ||
           value.image != editingProfile.image;
     }
+    return false;
+  }
+
+  /// 편의 메서드: 이미지 업로드 중인지 확인
+  bool get isImageUploading {
+    final editingProfile = state.editingProfile;
+
+    if (state.profileState case AsyncData(:final value)) {
+      if (editingProfile == null) return false;
+
+      // 편집 중인 프로필의 이미지가 로컬 파일이고, 원본과 다르면 업로드 중
+      return editingProfile.image.startsWith('/') &&
+          editingProfile.image != value.image;
+    }
+
     return false;
   }
 }
