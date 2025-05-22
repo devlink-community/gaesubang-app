@@ -2,29 +2,31 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
+import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 
 import '../../core/config/app_config.dart';
+import '../../group/module/group_di.dart';
 import '../../profile/presentation/user_profile/get_user_profile_usecase.dart';
 import '../data/data_source/auth_data_source.dart';
 import '../data/data_source/auth_firebase_data_source.dart';
 import '../data/data_source/mock_auth_data_source.dart';
 import '../data/repository_impl/auth_repository_impl.dart';
 import '../domain/repository/auth_repository.dart';
+import '../domain/usecase/calculate_user_focus_stats_use_case.dart';
 import '../domain/usecase/check_email_availability_use_case.dart';
 import '../domain/usecase/check_nickname_availability_use_case.dart';
 import '../domain/usecase/delete_account_use_case.dart';
 import '../domain/usecase/get_current_user_use_case.dart';
 import '../domain/usecase/get_terms_info_use_case.dart';
 import '../domain/usecase/login_use_case.dart';
-import '../domain/usecase/mock_login_user_case.dart';
 import '../domain/usecase/reset_password_use_case.dart';
 import '../domain/usecase/save_terms_agreement_use_case.dart';
 import '../domain/usecase/signout_use_case.dart';
 import '../domain/usecase/signup_use_case.dart';
+import '../domain/usecase/update_user_stats_after_timer_use_case.dart';
 
 part 'auth_di.g.dart';
 
@@ -142,3 +144,23 @@ UpdateProfileImageUseCase updateProfileImageUseCase(
 @riverpod
 GetUserProfileUseCase getUserProfileUseCase(Ref ref) =>
     GetUserProfileUseCase(repository: ref.watch(authRepositoryProvider));
+// lib/auth/module/auth_di.dart 수정사항
+// 기존 import들에 추가할 부분:
+
+/// 사용자 집중시간 통계 계산 UseCase Provider
+@riverpod
+CalculateUserFocusStatsUseCase calculateUserFocusStatsUseCase(Ref ref) {
+  return CalculateUserFocusStatsUseCase(
+    authRepository: ref.watch(authRepositoryProvider),
+    groupRepository: ref.watch(groupRepositoryProvider),
+  );
+}
+
+/// 타이머 종료 후 사용자 통계 업데이트 UseCase Provider
+@riverpod
+UpdateUserStatsAfterTimerUseCase updateUserStatsAfterTimerUseCase(Ref ref) {
+  return UpdateUserStatsAfterTimerUseCase(
+    authRepository: ref.watch(authRepositoryProvider),
+    calculateStatsUseCase: ref.watch(calculateUserFocusStatsUseCaseProvider),
+  );
+}

@@ -4,6 +4,8 @@ import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
+import '../model/user_focus_stats.dart';
+
 abstract interface class AuthRepository {
   /// 이메일, 비밀번호로 로그인
   Future<Result<Member>> login({
@@ -90,4 +92,11 @@ abstract interface class AuthRepository {
   Future<Result<void>> removeAllFCMTokens(String userId);
 
   Future<Result<Member>> getUserProfile(String userId);
+
+  /// 사용자 집중시간 통계 업데이트
+  /// 그룹 출석부에서 계산된 시간들을 User 문서에 저장
+  Future<Result<void>> updateUserFocusStats({
+    required String userId,
+    required UserFocusStats stats,
+  });
 }

@@ -72,4 +72,6 @@ abstract interface class AuthDataSource {
   Future<Map<String, dynamic>?> getCurrentAuthState();
 
   Future<UserDto> fetchUserProfile(String userId);
+
+  Future<void> updateUserStats(String userId, Map<String, dynamic> statsData);
 }

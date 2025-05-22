@@ -611,4 +611,28 @@ class AuthFirebaseDataSource implements AuthDataSource {
       }
     }, params: {'userId': userId});
   }
+
+  @override
+  Future<void> updateUserStats(
+    String userId,
+    Map<String, dynamic> statsData,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'FirebaseAuth.updateUserStats',
+      () async {
+        try {
+          debugPrint('🔄 Firebase 사용자 통계 업데이트 시작: $userId');
+
+          // Firestore User 문서 업데이트
+          await _usersCollection.doc(userId).update(statsData);
+
+          debugPrint('✅ Firebase 사용자 통계 업데이트 완료');
+        } catch (e) {
+          debugPrint('❌ Firebase 사용자 통계 업데이트 실패: $e');
+          throw Exception('사용자 통계 업데이트에 실패했습니다: $e');
+        }
+      },
+      params: {'userId': userId, 'statsData': statsData},
+    );
+  }
 }

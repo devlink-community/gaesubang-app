@@ -665,4 +665,33 @@ class MockAuthDataSource implements AuthDataSource {
 
     return UserDto.fromJson(mockUserData);
   }
+
+  @override
+  Future<void> updateUserStats(
+    String userId,
+    Map<String, dynamic> statsData,
+  ) async {
+    return ApiCallDecorator.wrap('MockAuth.updateUserStats', () async {
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      debugPrint('🔄 Mock 사용자 통계 업데이트 시작: $userId');
+
+      final currentUser = _users[userId];
+      if (currentUser == null) {
+        throw Exception('사용자를 찾을 수 없습니다');
+      }
+
+      // 기존 사용자 데이터에 통계 업데이트
+      _users[userId] = {
+        ...currentUser,
+        ...statsData,
+      };
+
+      debugPrint('✅ Mock 사용자 통계 업데이트 완료');
+      debugPrint('📊 업데이트 데이터: $statsData');
+
+      // 인증 상태 변경 통지
+      _notifyAuthStateChanged();
+    }, params: {'userId': userId, 'statsData': statsData});
+  }
 }

@@ -22,6 +22,10 @@ class Member with _$Member {
     this.skills = "",
     this.joinedGroups = const <JoinedGroupDto>[], // 가입한 그룹 목록
     this.focusStats,
+    // 새로 추가된 통계 필드들
+    this.totalFocusMinutes = 0, // 총 집중시간 (분)
+    this.weeklyFocusMinutes = 0, // 이번 주 집중시간 (분)
+    this.lastStatsUpdated, // 마지막 통계 업데이트 시간
   });
 
   final String id;
@@ -37,4 +41,9 @@ class Member with _$Member {
   final String? skills;
   final List<JoinedGroupDto> joinedGroups; // 가입한 그룹 목록
   final FocusTimeStats? focusStats;
+
+  // 새로 추가된 통계 필드들
+  final int totalFocusMinutes; // 총 집중시간 (분)
+  final int weeklyFocusMinutes; // 이번 주 집중시간 (분)
+  final DateTime? lastStatsUpdated; // 마지막 통계 업데이트 시간
 }

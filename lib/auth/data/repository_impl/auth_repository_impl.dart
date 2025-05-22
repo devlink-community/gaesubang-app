@@ -16,6 +16,8 @@ import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../domain/model/user_focus_stats.dart';
+
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource _authDataSource;
   final FCMTokenService _fcmTokenService;
@@ -723,5 +725,64 @@ class AuthRepositoryImpl implements AuthRepository {
       final failure = AuthExceptionMapper.mapAuthException(e, st);
       return Result.error(failure);
     }
+  }
+
+  @override
+  Future<Result<void>> updateUserFocusStats({
+    required String userId,
+    required UserFocusStats stats,
+  }) async {
+    return ApiCallDecorator.wrap(
+      'AuthRepository.updateUserFocusStats',
+      () async {
+        try {
+          debugPrint('🔄 사용자 통계 업데이트 시작: $userId');
+          debugPrint(
+            '📊 통계: ${stats.formattedTotalTime}, 🔥${stats.streakDays}일',
+          );
+
+          // 통계 데이터를 Firebase 형태로 변환
+          final updateData = stats.toFirebaseMap();
+
+          // DataSource를 통해 User 문서 업데이트
+          await _authDataSource.updateUserStats(userId, updateData);
+
+          // 캐시 업데이트 (현재 로그인된 사용자인 경우)
+          if (AppConfig.useMockAuth) {
+            if (_cachedAuthState?.user?.uid == userId) {
+              // Mock 환경에서 캐시된 사용자 정보 업데이트
+              final updatedUser = _cachedAuthState!.user!.copyWith(
+                totalFocusMinutes: stats.totalFocusMinutes,
+                weeklyFocusMinutes: stats.weeklyFocusMinutes,
+                streakDays: stats.streakDays,
+                lastStatsUpdated: stats.lastUpdated ?? DateTime.now(),
+              );
+              _updateMockAuthState(AuthState.authenticated(updatedUser));
+            }
+          } else {
+            // Firebase 환경에서 캐시된 사용자 정보 업데이트
+            if (_cachedMember?.uid == userId) {
+              _cachedMember = _cachedMember!.copyWith(
+                totalFocusMinutes: stats.totalFocusMinutes,
+                weeklyFocusMinutes: stats.weeklyFocusMinutes,
+                streakDays: stats.streakDays,
+                lastStatsUpdated: stats.lastUpdated ?? DateTime.now(),
+              );
+            }
+          }
+
+          debugPrint('✅ 사용자 통계 업데이트 완료');
+
+          return const Result.success(null);
+        } catch (e, st) {
+          debugPrint('❌ 사용자 통계 업데이트 실패: $e');
+          return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        }
+      },
+      params: {
+        'userId': userId,
+        'stats': stats.toFirebaseMap(),
+      },
+    );
   }
 }
