@@ -13,11 +13,15 @@ import 'package:devlink_mobile_app/notification/presentation/notification_action
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 =======
 >>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
 =======
 >>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
+=======
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+>>>>>>> b67c10c2 (fix: currentUserId 수정 및 fcm 연동을 위한 전체 코드 수정)
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -175,24 +179,108 @@ class NotificationNotifier extends _$NotificationNotifier {
 =======
 >>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
 
+    print('의존성 주입 완료');
+
     // FCM 알림 클릭 이벤트 구독
     _subscribeToFCMEvents();
+    print('FCM 이벤트 구독 완료');
 
-    // 초기 로딩은 별도 메서드로 처리하고, 초기 상태만 반환
-    Future.microtask(() => onAction(const NotificationAction.refresh()));
+    // 초기 인증 상태 확인 및 알림 로딩
+    _checkInitialAuthStateAndLoadNotifications();
 
-    // ref가 dispose될 때 구독 해제
+    // 인증 상태 변화를 감지하여 알림 로딩
+    ref.listen(authStateProvider, (previous, next) {
+      print('=== authStateProvider 변화 감지됨 ===');
+      print('이전 상태: $previous');
+      print('현재 상태: $next');
+
+      next.when(
+        data: (authState) {
+          print('authState 데이터: $authState');
+          switch (authState) {
+            case Authenticated():
+              print('로그인 상태 감지 - 알림 로딩 트리거');
+              Future.microtask(() {
+                print('microtask에서 refresh 액션 호출');
+                onAction(const NotificationAction.refresh());
+              });
+            case Unauthenticated():
+            case Loading():
+              print('비로그인/로딩 상태 - 알림 초기화');
+              state = const NotificationState(
+                notifications: AsyncData([]),
+                unreadCount: 0,
+              );
+          }
+        },
+        loading: () {
+          print('authState 로딩 중...');
+        },
+        error: (error, stackTrace) {
+          print('authState 에러: $error');
+          state = const NotificationState(
+            notifications: AsyncData([]),
+            unreadCount: 0,
+          );
+        },
+      );
+    });
+    print('authState 리스너 등록 완료');
+
     ref.onDispose(() {
+      print('NotificationNotifier dispose됨');
       _fcmSubscription?.cancel();
     });
 
+    print('초기 상태 반환: NotificationState()');
     return const NotificationState();
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
 =======
 >>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
+=======
+  /// 초기 인증 상태를 확인하고 필요시 알림을 로딩
+  void _checkInitialAuthStateAndLoadNotifications() {
+    print('=== 초기 인증 상태 확인 시작 ===');
+
+    Future.microtask(() {
+      final authStateAsync = ref.read(authStateProvider);
+      print('현재 authState: $authStateAsync');
+
+      authStateAsync.when(
+        data: (authState) {
+          print('초기 authState 데이터: $authState');
+          switch (authState) {
+            case Authenticated(user: final member):
+              print('초기 상태에서 인증된 사용자 감지: ${member.nickname}');
+              print('초기 알림 로딩 트리거');
+              onAction(const NotificationAction.refresh());
+            case _:
+              print('초기 상태에서 비인증 상태');
+              state = const NotificationState(
+                notifications: AsyncData([]),
+                unreadCount: 0,
+              );
+          }
+        },
+        loading: () {
+          print('초기 authState 로딩 중...');
+        },
+        error: (error, stackTrace) {
+          print('초기 authState 에러: $error');
+          state = const NotificationState(
+            notifications: AsyncData([]),
+            unreadCount: 0,
+          );
+        },
+      );
+    });
+  }
+
+>>>>>>> b67c10c2 (fix: currentUserId 수정 및 fcm 연동을 위한 전체 코드 수정)
   /// FCM 이벤트 구독
   void _subscribeToFCMEvents() {
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
