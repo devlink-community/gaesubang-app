@@ -22,13 +22,13 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Timer? _timer;
   StreamSubscription? _timerStatusSubscription;
 
-  late final StartTimerUseCase _startTimerUseCase;
-  late final StopTimerUseCase _stopTimerUseCase;
-  late final PauseTimerUseCase _pauseTimerUseCase;
-  late final GetGroupDetailUseCase _getGroupDetailUseCase;
-  late final GetGroupMembersUseCase _getGroupMembersUseCase;
-  late final StreamGroupMemberTimerStatusUseCase
-  _streamGroupMemberTimerStatusUseCase;
+  // 🔧 late 필드를 nullable로 변경하여 중복 초기화 문제 해결
+  StartTimerUseCase? _startTimerUseCase;
+  StopTimerUseCase? _stopTimerUseCase;
+  PauseTimerUseCase? _pauseTimerUseCase;
+  GetGroupDetailUseCase? _getGroupDetailUseCase;
+  GetGroupMembersUseCase? _getGroupMembersUseCase;
+  StreamGroupMemberTimerStatusUseCase? _streamGroupMemberTimerStatusUseCase;
 
   String _groupId = '';
   String? _currentUserId;
@@ -38,17 +38,22 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   GroupDetailState build() {
     print('🏗️ GroupDetailNotifier build() 호출');
 
-    // 의존성 주입
-    _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
-    _stopTimerUseCase = ref.watch(stopTimerUseCaseProvider);
-    _pauseTimerUseCase = ref.watch(pauseTimerUseCaseProvider);
-    _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
-    _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
-    _streamGroupMemberTimerStatusUseCase = ref.watch(
-      streamGroupMemberTimerStatusUseCaseProvider,
-    );
+    // 🔧 이미 초기화된 경우 skip (중복 초기화 방지)
+    if (_startTimerUseCase == null) {
+      // 의존성 주입
+      _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
+      _stopTimerUseCase = ref.watch(stopTimerUseCaseProvider);
+      _pauseTimerUseCase = ref.watch(pauseTimerUseCaseProvider);
+      _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
+      _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
+      _streamGroupMemberTimerStatusUseCase = ref.watch(
+        streamGroupMemberTimerStatusUseCaseProvider,
+      );
 
-    // 🔧 현재 사용자 ID 가져오기
+      print('🔧 UseCase 의존성 주입 완료');
+    }
+
+    // 현재 사용자 ID 가져오기 (매번 업데이트될 수 있으므로 항상 확인)
     final currentUser = ref.watch(currentUserProvider);
     _currentUserId = currentUser?.uid;
 
@@ -147,7 +152,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
 
     // 새 타이머 세션 시작
-    await _startTimerUseCase.execute(_groupId);
+    await _startTimerUseCase?.execute(_groupId);
 
     // 타이머 시작
     _startTimerCountdown();
@@ -163,7 +168,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 🔧 즉시 멤버 리스트의 현재 사용자 상태 업데이트
     _updateCurrentUserInMemberList(isActive: false);
 
-    await _pauseTimerUseCase.execute(_groupId);
+    await _pauseTimerUseCase?.execute(_groupId);
   }
 
   // 🔧 타이머 재개 처리 - 멤버 리스트 즉시 업데이트 추가
@@ -194,7 +199,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _localTimerStartTime = null;
 
     // 세션 종료
-    await _stopTimerUseCase.execute(_groupId);
+    await _stopTimerUseCase?.execute(_groupId);
 
     // 상태 업데이트
     state = state.copyWith(timerStatus: TimerStatus.stop);
@@ -250,9 +255,11 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     state = state.copyWith(groupMembersResult: const AsyncValue.loading());
 
     try {
-      final result = await _getGroupMembersUseCase.execute(_groupId);
-      state = state.copyWith(groupMembersResult: result);
-      print('✅ 최초 멤버 정보 로드 완료');
+      final result = await _getGroupMembersUseCase?.execute(_groupId);
+      if (result != null) {
+        state = state.copyWith(groupMembersResult: result);
+        print('✅ 최초 멤버 정보 로드 완료');
+      }
     } catch (e) {
       print('❌ 최초 멤버 정보 로드 실패: $e');
       state = state.copyWith(
@@ -268,7 +275,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _timerStatusSubscription?.cancel();
 
     _timerStatusSubscription = _streamGroupMemberTimerStatusUseCase
-        .execute(_groupId)
+        ?.execute(_groupId)
         .listen(
           (asyncValue) {
             print('🔄 실시간 타이머 상태 업데이트 수신: ${asyncValue.runtimeType}');
@@ -302,12 +309,28 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     required bool isActive,
     DateTime? timerStartTime,
   }) {
-    if (_currentUserId == null) return;
+    if (_currentUserId == null) {
+      print('⚠️ 현재 사용자 ID가 없어서 멤버 리스트 업데이트를 건너뜁니다');
+      return;
+    }
 
     final currentMembersResult = state.groupMembersResult;
-    if (currentMembersResult is! AsyncData<List<GroupMember>>) return;
+    if (currentMembersResult is! AsyncData<List<GroupMember>>) {
+      print('⚠️ 멤버 리스트가 AsyncData 상태가 아니어서 업데이트를 건너뜁니다');
+      return;
+    }
 
     final currentMembers = currentMembersResult.value;
+    if (currentMembers.isEmpty) {
+      print('⚠️ 멤버 리스트가 null이어서 업데이트를 건너뜁니다');
+      return;
+    }
+
+    // 🔧 경과 시간을 더 정확하게 계산 (초 단위)
+    final int elapsedSeconds =
+        isActive && timerStartTime != null
+            ? DateTime.now().difference(timerStartTime).inSeconds
+            : 0;
 
     final updatedMembers =
         currentMembers.map((member) {
@@ -316,10 +339,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
             return member.copyWith(
               isActive: isActive,
               timerStartTime: timerStartTime,
-              elapsedMinutes:
-                  isActive && timerStartTime != null
-                      ? DateTime.now().difference(timerStartTime).inMinutes
-                      : 0,
+              // 🔧 elapsedMinutes 대신 실제 경과 시간을 분 단위로 정확히 계산
+              elapsedMinutes: (elapsedSeconds / 60).floor(),
             );
           }
           return member;
@@ -329,7 +350,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       groupMembersResult: AsyncData(updatedMembers),
     );
 
-    print('🔧 현재 사용자 멤버 상태 즉시 업데이트: isActive=$isActive');
+    print(
+      '🔧 현재 사용자 멤버 상태 즉시 업데이트: isActive=$isActive, elapsedSeconds=$elapsedSeconds',
+    );
   }
 
   // 🔧 로컬 타이머 상태와 원격 데이터 병합 - 타입 안전성 수정
@@ -344,14 +367,16 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     return remoteMembers.map((member) {
       if (member.userId == _currentUserId) {
-        // 현재 사용자는 로컬 상태로 덮어쓰기
+        // 🔧 현재 사용자는 로컬 상태로 덮어쓰기 (더 정확한 시간 계산)
+        final elapsedSeconds =
+            isLocalTimerActive && localStartTime != null
+                ? DateTime.now().difference(localStartTime).inSeconds
+                : 0;
+
         return member.copyWith(
           isActive: isLocalTimerActive,
           timerStartTime: localStartTime,
-          elapsedMinutes:
-              isLocalTimerActive && localStartTime != null
-                  ? DateTime.now().difference(localStartTime).inMinutes
-                  : 0,
+          elapsedMinutes: (elapsedSeconds / 60).floor(),
         );
       }
       // 다른 사용자는 원격 데이터 그대로 사용
@@ -375,7 +400,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 로컬 타이머 경과 시간 업데이트
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
 
-    // 🔧 멤버 리스트의 현재 사용자 경과 시간도 업데이트
+    // 🔧 멤버 리스트의 현재 사용자 경과 시간도 업데이트 (매초마다)
     if (_localTimerStartTime != null) {
       _updateCurrentUserInMemberList(
         isActive: true,
@@ -404,7 +429,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 그룹 세부 정보 로드
   Future<void> _loadGroupDetail() async {
     state = state.copyWith(groupDetailResult: const AsyncValue.loading());
-    final result = await _getGroupDetailUseCase.execute(_groupId);
-    state = state.copyWith(groupDetailResult: result);
+    final result = await _getGroupDetailUseCase?.execute(_groupId);
+    if (result != null) {
+      state = state.copyWith(groupDetailResult: result);
+    }
   }
 }
