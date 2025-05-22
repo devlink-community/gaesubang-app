@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/core/config/app_config.dart';
+import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_firebase_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
@@ -24,6 +25,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.da
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -45,7 +47,14 @@ GroupDataSource groupDataSource(Ref ref) {
     if (kDebugMode) {
       print('GroupDataSource: GroupFirebaseDataSource 사용');
     }
-    return GroupFirebaseDataSource();
+
+    // Firebase 인스턴스들을 주입
+    return GroupFirebaseDataSource(
+      firestore: ref.watch(firebaseFirestoreProvider),
+      storage:
+          FirebaseStorage.instance, // FirebaseStorage는 별도 Provider 없이 직접 사용
+      auth: ref.watch(firebaseAuthProvider),
+    );
   }
 }
 
@@ -55,20 +64,18 @@ GroupChatDataSource groupChatDataSource(Ref ref) {
   return GroupChatFirebaseDataSource();
 }
 
-// Repository 프로바이더
+// Repository 프로바이더 - Ref 제거, 순수 DataSource만 주입
 @riverpod
 GroupRepository groupRepository(Ref ref) => GroupRepositoryImpl(
   dataSource: ref.watch(groupDataSourceProvider),
-  ref: ref,
 );
 
 // Group chat Repository
 @riverpod
-GroupChatRepository groupChatRepository(Ref ref) => 
-  GroupChatRepositoryImpl(
-    dataSource: ref.watch(groupChatDataSourceProvider),
-    ref: ref,
-  );
+GroupChatRepository groupChatRepository(Ref ref) => GroupChatRepositoryImpl(
+  dataSource: ref.watch(groupChatDataSourceProvider),
+  ref: ref,
+);
 
 // UseCase 프로바이더들
 @riverpod
@@ -126,16 +133,20 @@ PauseTimerUseCase pauseTimerUseCase(Ref ref) =>
 
 @riverpod
 GetGroupMessagesUseCase getGroupMessagesUseCase(Ref ref) =>
-  GetGroupMessagesUseCase(repository: ref.watch(groupChatRepositoryProvider));
+    GetGroupMessagesUseCase(repository: ref.watch(groupChatRepositoryProvider));
 
 @riverpod
 SendMessageUseCase sendMessageUseCase(Ref ref) =>
-  SendMessageUseCase(repository: ref.watch(groupChatRepositoryProvider));
+    SendMessageUseCase(repository: ref.watch(groupChatRepositoryProvider));
 
 @riverpod
 GetGroupMessagesStreamUseCase getGroupMessagesStreamUseCase(Ref ref) =>
-  GetGroupMessagesStreamUseCase(repository: ref.watch(groupChatRepositoryProvider));
+    GetGroupMessagesStreamUseCase(
+      repository: ref.watch(groupChatRepositoryProvider),
+    );
 
 @riverpod
 MarkMessagesAsReadUseCase markMessagesAsReadUseCase(Ref ref) =>
-  MarkMessagesAsReadUseCase(repository: ref.watch(groupChatRepositoryProvider));
+    MarkMessagesAsReadUseCase(
+      repository: ref.watch(groupChatRepositoryProvider),
+    );
