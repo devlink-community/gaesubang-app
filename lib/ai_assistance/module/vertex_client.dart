@@ -3,6 +3,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'dart:async'; // Completer 사용을 위해 추가
 =======
 =======
@@ -18,6 +19,8 @@ import 'dart:async';
 >>>>>>> cc1d0ed3 (충돌 상황 해결)
 =======
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 import 'dart:convert';
 import 'dart:math';
 
@@ -40,6 +43,7 @@ class FirebaseAIClient {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   // 초기화 상태 관리 개선
 =======
   // Random 객체 추가
@@ -55,12 +59,16 @@ class FirebaseAIClient {
 =======
   // 초기화 상태
 >>>>>>> 59b5ad53 (feat(AI): 성능개선을 위한 정리 1)
+=======
+  // 초기화 상태
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   bool _initialized = false;
   bool _initializing = false;
 
   late GenerativeModel _generativeModel;
   late FirebaseAI _firebaseAI;
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -81,6 +89,11 @@ class FirebaseAIClient {
   Future<void> initialize() async {
     if (_initialized) return;
 <<<<<<< HEAD
+=======
+  /// 초기화 메서드
+  Future<void> initialize() async {
+    if (_initialized) return;
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
     if (_initializing) {
       // 초기화가 진행 중인 경우 완료될 때까지 대기
@@ -92,8 +105,11 @@ class FirebaseAIClient {
 
     _initializing = true;
 
+<<<<<<< HEAD
 =======
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
     try {
       debugPrint('Firebase AI 클라이언트 초기화 시작');
 
@@ -148,6 +164,7 @@ class FirebaseAIClient {
     }
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   /// 대체 방법으로 서비스 계정 정보 로드
   Future<Map<String, dynamic>> _loadServiceAccountFromAssets() async {
@@ -233,10 +250,14 @@ class FirebaseAIClient {
 =======
   /// 텍스트 생성 API 호출 - 단일 JSON 객체 반환
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+  /// 텍스트 생성 API 호출 - 단일 JSON 객체 반환
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
       if (!_initialized) await initialize();
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -258,10 +279,13 @@ class FirebaseAIClient {
 
 =======
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
       // 캐시 방지를 위한 고유 ID 추가
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       // 생성 구성 - 낮은 temperature로 설정 (JSON 형식 응답에 적합)
       final payload = {
@@ -287,12 +311,18 @@ class FirebaseAIClient {
         'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
       );
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+      debugPrint(
+        'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
+      );
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
       // Firebase AI SDK를 사용한 간단한 호출
       final response = await _generativeModel.generateContent([
         Content.text(enhancedPrompt),
       ]);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       // 응답 처리
 <<<<<<< HEAD
@@ -357,6 +387,8 @@ class FirebaseAIClient {
       return _processResponse(response);
 >>>>>>> cc1d0ed3 (충돌 상황 해결)
 =======
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
       // 응답 텍스트 추출
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
@@ -369,13 +401,17 @@ class FirebaseAIClient {
 
       // JSON 추출 및 반환
       return _extractJsonFromText(responseText);
+<<<<<<< HEAD
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
     } catch (e) {
       debugPrint('Gemini API 호출 실패: $e');
       rethrow;
     }
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   /// 스킬 기반 퀴즈 생성 - 개선된 버전
@@ -1062,6 +1098,8 @@ class FirebaseAIClient {
           throw Exception('응답에 candidates가 없습니다');
         }
 =======
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   /// 텍스트 생성 API 호출 - JSON 배열 반환
   Future<List<Map<String, dynamic>>> callTextModelForList(String prompt) async {
     try {
@@ -1070,7 +1108,10 @@ class FirebaseAIClient {
       // 다양성을 위한 랜덤 temperature 설정
       final random = Random();
       final temperature = 0.5 + random.nextDouble() * 0.4; // 0.5~0.9
+<<<<<<< HEAD
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
       // 고유 ID 추가
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
@@ -1180,11 +1221,15 @@ class FirebaseAIClient {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // 인스턴스 소멸 시 리소스 정리
 >>>>>>> 96d3ead6 ([Optimize] AI Client Provider 성능 개선)
 =======
   /// 리소스 정리
 >>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
+=======
+  /// 리소스 정리
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   void dispose() {
     _initialized = false;
     _initializing = false;

@@ -2,6 +2,9 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -138,11 +141,15 @@ async function sendFCMMessage(tokens, notification) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // 댓글 알림 함수 - 경로 수정
 <<<<<<< HEAD
 =======
 // 댓글 알림 함수 - 에러 처리 강화
 >>>>>>> c7ea5898 (fix: fcm message 전송 코드 최신화 완료)
+=======
+// 댓글 알림 함수 - 에러 처리 강화
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 exports.sendCommentNotification = functions.firestore
   .document('posts/{postId}/comments/{commentId}')
   .onCreate(async (snapshot, context) => {
@@ -351,6 +358,7 @@ exports.removeLikeNotification = functions.firestore
       console.error('좋아요 알림 삭제 오류:', error);
       return { error: error.message };
     }
+<<<<<<< HEAD
 <<<<<<< HEAD
   });
 
@@ -711,3 +719,6 @@ exports.removeLikeNotification = functions.firestore
 =======
   });
 >>>>>>> c7ea5898 (fix: fcm message 전송 코드 최신화 완료)
+=======
+  });
+>>>>>>> 93342ffe988801372968965945de141989ff1d54

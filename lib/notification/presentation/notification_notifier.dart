@@ -14,6 +14,7 @@ import 'package:devlink_mobile_app/notification/presentation/notification_state.
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 =======
 >>>>>>> 2e5e6eb3 (fix: notification notifier fcm logic 추가 완료)
@@ -22,6 +23,9 @@ import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 =======
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 >>>>>>> b67c10c2 (fix: currentUserId 수정 및 fcm 연동을 위한 전체 코드 수정)
+=======
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:flutter/foundation.dart';
@@ -89,9 +93,13 @@ class NotificationNotifier extends _$NotificationNotifier {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     _fcmTokenService = ref.watch(fcmTokenServiceProvider);
 >>>>>>> 7bb31224 (fix: notification notifier 수정 완료)
+=======
+    _fcmTokenService = ref.watch(fcmTokenServiceProvider);
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
     debugPrint('의존성 주입 완료');
 
@@ -271,6 +279,7 @@ class NotificationNotifier extends _$NotificationNotifier {
     });
   }
 
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 6e00cb03 (fix: notification notifier fcm logic 추가 완료)
@@ -377,6 +386,8 @@ class NotificationNotifier extends _$NotificationNotifier {
   }
 
 >>>>>>> b67c10c2 (fix: currentUserId 수정 및 fcm 연동을 위한 전체 코드 수정)
+=======
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   /// FCM 이벤트 구독
   void _subscribeToFCMEvents() {
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {

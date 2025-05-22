@@ -67,6 +67,7 @@ dependencies:
   google_generative_ai: ^0.4.7
   shared_preferences: ^2.5.3
 <<<<<<< HEAD
+<<<<<<< HEAD
   firebase_remote_config: ^5.4.4
 =======
   firebase_remote_config: ^5.4.3
@@ -92,6 +93,12 @@ dependencies:
 =======
   device_info_plus: ^11.4.0
 >>>>>>> 5cd6f7e2 (feat: device_info_plus package 추가 완료)
+=======
+  firebase_remote_config: ^5.4.3
+  permission_handler: ^12.0.0+1
+  firebase_ai: ^2.0.0
+  device_info_plus: ^11.4.0
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
 
 

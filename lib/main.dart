@@ -16,6 +16,7 @@ void main() async {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   // FCM 서비스 기본 초기화 (사용자별 토큰 등록은 로그인 시 처리)
   final fcmService = FCMService();
   await fcmService.initialize();
@@ -52,6 +53,11 @@ void main() async {
 >>>>>>> f2eb244b (fix: main initialization 분리 후 간소화)
   _initializeApiLogging();
 
+=======
+  // API 로깅 초기화 (필요시)
+  _initializeApiLogging();
+
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
   // 앱 실행
   runApp(const ProviderScope(child: MyApp()));
 }

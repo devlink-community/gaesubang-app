@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/styles/app_text_styles.dart';
 import '../domain/model/quiz.dart';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import '../module/quiz_di.dart';
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -88,6 +89,10 @@ import '../module/ai_client_di.dart';
 import 'quiz_screen.dart';
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
 
+=======
+import '../module/ai_client_di.dart';
+import 'quiz_screen.dart';
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
 
 class DailyQuizBanner extends ConsumerWidget {
   final String? skills;

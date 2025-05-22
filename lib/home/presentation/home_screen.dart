@@ -111,6 +111,7 @@ class HomeScreen extends StatelessWidget {
                 child: Row(
                   children: [
 <<<<<<< HEAD
+<<<<<<< HEAD
                     // 학습 팁 배너 - ValueKey로 변경
                     StudyTipBanner(
                       skills: skills,
@@ -128,6 +129,10 @@ class HomeScreen extends StatelessWidget {
                       skills: skills,
                       key: skills != null ? ValueKey('quiz_banner_${skills!}') : const ValueKey('quiz_banner'),
 =======
+=======
+                    // 퀴즈 배너 - 위젯으로 올바르게 사용
+                    DailyQuizBanner(
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
                       skills: userSkills,
                       key: ValueKey('quiz_banner_${userSkills ?? "default"}'),
                     ),
@@ -138,6 +143,7 @@ class HomeScreen extends StatelessWidget {
                       skills: userSkills,
                       key: ValueKey(
 <<<<<<< HEAD
+<<<<<<< HEAD
                         userSkills ?? 'default',
                       ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
@@ -145,6 +151,10 @@ class HomeScreen extends StatelessWidget {
                         'study_tip_banner_${userSkills ?? "default"}',
                       ),
 >>>>>>> a6313124 (fix(ai): ui 개선)
+=======
+                        'study_tip_banner_${userSkills ?? "default"}',
+                      ),
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
                     ),
                   ],
                 ),
@@ -194,7 +204,7 @@ class HomeScreen extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -229,7 +239,7 @@ class HomeScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColorStyles.primary80.withOpacity(0.05),
+          color: AppColorStyles.primary80.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -249,4 +259,8 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
