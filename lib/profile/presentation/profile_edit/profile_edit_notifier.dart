@@ -91,13 +91,29 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
   }
 
-  /// 프로필 로드
+  /// 프로필 로드 - 중복 요청 방지 적용
   Future<void> _loadProfile() async {
     debugPrint('🔄 ProfileEditNotifier: 프로필 로드 시작');
-    state = state.copyWith(profileState: const AsyncLoading());
+
+    // 중복 요청 방지를 위한 요청 ID 생성
+    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    debugPrint('🔄 ProfileEditNotifier: 로드 요청 ID 생성: $currentRequestId');
+
+    state = state.copyWith(
+      profileState: const AsyncLoading(),
+      activeLoadRequestId: currentRequestId,
+    );
 
     try {
       final result = await _getCurrentUserUseCase.execute();
+
+      // 다른 요청이 이미 시작됐다면 무시
+      if (state.activeLoadRequestId != currentRequestId) {
+        debugPrint(
+          '⚠️ ProfileEditNotifier: 다른 로드 요청이 진행 중이므로 현재 요청($currentRequestId) 무시',
+        );
+        return;
+      }
 
       if (result case AsyncData(:final value)) {
         debugPrint('✅ ProfileEditNotifier: 프로필 로드 성공: ${value.nickname}');
@@ -105,14 +121,24 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           profileState: AsyncData(value),
           editingProfile: value,
           originalProfile: value, // 원본 참조 저장
+          activeLoadRequestId: null, // 요청 완료 후 ID 초기화
         );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
         debugPrint('❌ ProfileEditNotifier: 프로필 로드 실패: $error');
-        state = state.copyWith(profileState: AsyncError(error, stackTrace));
+        state = state.copyWith(
+          profileState: AsyncError(error, stackTrace),
+          activeLoadRequestId: null, // 에러 발생 후 ID 초기화
+        );
       }
     } catch (e, st) {
       debugPrint('❌ ProfileEditNotifier: 프로필 로드 중 예외 발생: $e');
-      state = state.copyWith(profileState: AsyncError(e, st));
+      // 요청 ID가 여전히 유효한지 확인
+      if (state.activeLoadRequestId == currentRequestId) {
+        state = state.copyWith(
+          profileState: AsyncError(e, st),
+          activeLoadRequestId: null,
+        );
+      }
     }
   }
 
@@ -207,7 +233,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
   }
 
-  /// 프로필 이미지 업데이트 - 완전히 개선된 버전
+  /// 프로필 이미지 업데이트 - 중복 요청 방지 적용
   Future<void> _updateProfileImage(File imageFile) async {
     debugPrint('🔄 ProfileEditNotifier: 프로필 이미지 업데이트 시작: ${imageFile.path}');
 
@@ -217,17 +243,30 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       return;
     }
 
+    // 중복 요청 방지를 위한 요청 ID 생성
+    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    debugPrint('🔄 ProfileEditNotifier: 이미지 업로드 요청 ID 생성: $currentRequestId');
+
     try {
       // 1. 업로드 시작 상태로 변경 + 즉시 로컬 이미지 반영
       final updatedProfile = currentProfile.copyWith(image: imageFile.path);
       state = state.copyWith(
         editingProfile: updatedProfile,
         isImageUploading: true, // 명시적 업로드 상태 설정
+        activeImageUploadRequestId: currentRequestId,
       );
       debugPrint('✅ ProfileEditNotifier: 로컬 이미지 즉시 반영 + 업로드 상태 시작');
 
       // 2. 백그라운드에서 실제 이미지 업로드 진행
       final result = await _updateProfileImageUseCase.execute(imageFile.path);
+
+      // 다른 이미지 업로드 요청이 시작됐다면 무시
+      if (state.activeImageUploadRequestId != currentRequestId) {
+        debugPrint(
+          '⚠️ ProfileEditNotifier: 다른 이미지 업로드 요청이 진행 중이므로 현재 요청($currentRequestId) 무시',
+        );
+        return;
+      }
 
       if (result case AsyncData(:final value)) {
         // 업로드 성공 - 서버 이미지 URL로 업데이트
@@ -236,6 +275,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           editingProfile: value,
           originalProfile: value, // 새로운 원본으로 업데이트
           isImageUploading: false, // 업로드 완료
+          activeImageUploadRequestId: null, // 요청 완료 후 ID 초기화
         );
 
         // 프로필 갱신 상태 마크
@@ -259,6 +299,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
               skills: state.editingProfile!.skills,
             ),
             isImageUploading: false,
+            activeImageUploadRequestId: null,
             saveState: AsyncError(error, stackTrace),
           );
         }
@@ -266,20 +307,24 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     } catch (e, st) {
       debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 예외: $e');
 
-      // 예외 발생 시 원본 이미지로 되돌리기
-      final originalProfile = state.originalProfile;
-      if (originalProfile != null) {
-        state = state.copyWith(
-          editingProfile: originalProfile.copyWith(
-            // 다른 편집 내용은 유지하되, 이미지만 원본으로 복원
-            nickname: state.editingProfile!.nickname,
-            description: state.editingProfile!.description,
-            position: state.editingProfile!.position,
-            skills: state.editingProfile!.skills,
-          ),
-          isImageUploading: false,
-          saveState: AsyncError(e, st),
-        );
+      // 요청 ID가 여전히 유효한지 확인
+      if (state.activeImageUploadRequestId == currentRequestId) {
+        // 예외 발생 시 원본 이미지로 되돌리기
+        final originalProfile = state.originalProfile;
+        if (originalProfile != null) {
+          state = state.copyWith(
+            editingProfile: originalProfile.copyWith(
+              // 다른 편집 내용은 유지하되, 이미지만 원본으로 복원
+              nickname: state.editingProfile!.nickname,
+              description: state.editingProfile!.description,
+              position: state.editingProfile!.position,
+              skills: state.editingProfile!.skills,
+            ),
+            isImageUploading: false,
+            activeImageUploadRequestId: null,
+            saveState: AsyncError(e, st),
+          );
+        }
       }
     }
   }
@@ -325,7 +370,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
   }
 
-  /// 프로필 저장
+  /// 프로필 저장 - 중복 요청 방지 적용
   Future<void> _saveProfile() async {
     debugPrint('🔄 ProfileEditNotifier: 프로필 저장 시작');
 
@@ -354,7 +399,14 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       return;
     }
 
-    state = state.copyWith(saveState: const AsyncLoading());
+    // 중복 요청 방지를 위한 요청 ID 생성
+    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    debugPrint('🔄 ProfileEditNotifier: 저장 요청 ID 생성: $currentRequestId');
+
+    state = state.copyWith(
+      saveState: const AsyncLoading(),
+      activeSaveRequestId: currentRequestId,
+    );
 
     try {
       final result = await _updateProfileUseCase.execute(
@@ -364,12 +416,21 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         skills: profile.skills,
       );
 
+      // 다른 저장 요청이 시작됐다면 무시
+      if (state.activeSaveRequestId != currentRequestId) {
+        debugPrint(
+          '⚠️ ProfileEditNotifier: 다른 저장 요청이 진행 중이므로 현재 요청($currentRequestId) 무시',
+        );
+        return;
+      }
+
       if (result case AsyncData(:final value)) {
         state = state.copyWith(
           saveState: const AsyncData(true),
           profileState: AsyncData(value),
           editingProfile: value,
           originalProfile: value, // 새로운 원본으로 업데이트
+          activeSaveRequestId: null, // 요청 완료 후 ID 초기화
         );
 
         // 프로필 저장 성공 시 프로필 갱신 상태 마크
@@ -379,11 +440,20 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           '✅ ProfileEditNotifier: 프로필 저장 성공: ${value.nickname}',
         );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
-        state = state.copyWith(saveState: AsyncError(error, stackTrace));
+        state = state.copyWith(
+          saveState: AsyncError(error, stackTrace),
+          activeSaveRequestId: null,
+        );
         debugPrint('❌ ProfileEditNotifier: 프로필 저장 실패: $error');
       }
     } catch (e, st) {
-      state = state.copyWith(saveState: AsyncError(e, st));
+      // 요청 ID가 여전히 유효한지 확인
+      if (state.activeSaveRequestId == currentRequestId) {
+        state = state.copyWith(
+          saveState: AsyncError(e, st),
+          activeSaveRequestId: null,
+        );
+      }
       debugPrint('❌ ProfileEditNotifier: 프로필 저장 예외: $e');
     }
   }

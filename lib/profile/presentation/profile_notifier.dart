@@ -36,19 +36,32 @@ class ProfileNotifier extends _$ProfileNotifier {
     return const ProfileState();
   }
 
-  /// 최적화된 데이터 로드 메서드 - 단일 API 호출로 프로필 + 통계 동시 로드
+  /// 최적화된 데이터 로드 메서드 - 중복 요청 방지 로직 포함
   Future<void> loadData() async {
     try {
       debugPrint('🚀 ProfileNotifier: 최적화된 데이터 로드 시작 (단일 호출)');
 
-      // 로딩 상태로 변경
+      // 중복 요청 방지를 위한 요청 ID 생성
+      final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+      debugPrint('🔄 ProfileNotifier: 요청 ID 생성: $currentRequestId');
+
+      // 로딩 상태로 변경 + 요청 ID 저장
       state = state.copyWith(
         userProfile: const AsyncLoading(),
         focusStats: const AsyncLoading(),
+        activeRequestId: currentRequestId,
       );
 
       // ✅ 단일 호출로 사용자 정보 + 통계 모두 로드
       final userProfileResult = await _getCurrentUserUseCase.execute();
+
+      // 다른 요청이 이미 시작됐다면 무시
+      if (state.activeRequestId != currentRequestId) {
+        debugPrint(
+          '⚠️ ProfileNotifier: 다른 요청이 진행 중이므로 현재 요청($currentRequestId) 무시',
+        );
+        return;
+      }
 
       switch (userProfileResult) {
         case AsyncData(:final value):
@@ -58,21 +71,32 @@ class ProfileNotifier extends _$ProfileNotifier {
           final focusStats = value.focusStats ?? _getDefaultStats();
 
           // 최종 상태 업데이트 - 단일 호출로 두 상태 모두 업데이트
-          state = state.copyWith(
-            userProfile: userProfileResult,
-            focusStats: AsyncData(focusStats),
-          );
+          // 요청 ID가 여전히 유효한지 한 번 더 확인
+          if (state.activeRequestId == currentRequestId) {
+            state = state.copyWith(
+              userProfile: userProfileResult,
+              focusStats: AsyncData(focusStats),
+              activeRequestId: null, // 요청 완료 후 ID 초기화
+            );
 
-          debugPrint('✅ ProfileNotifier: 모든 데이터 로드 완료 (최적화됨)');
+            debugPrint('✅ ProfileNotifier: 모든 데이터 로드 완료 (최적화됨)');
+          } else {
+            debugPrint(
+              '⚠️ ProfileNotifier: 요청 완료 시점에 다른 요청이 진행 중이므로 상태 업데이트 무시',
+            );
+          }
 
         case AsyncError(:final error, :final stackTrace):
           debugPrint('❌ ProfileNotifier: 사용자 프로필 로드 실패 - $error');
 
-          // 에러 시 두 상태 모두 에러로 설정
-          state = state.copyWith(
-            userProfile: userProfileResult,
-            focusStats: AsyncError(error, stackTrace),
-          );
+          // 요청 ID가 여전히 유효한지 확인 후 에러 상태 설정
+          if (state.activeRequestId == currentRequestId) {
+            state = state.copyWith(
+              userProfile: userProfileResult,
+              focusStats: AsyncError(error, stackTrace),
+              activeRequestId: null, // 에러 발생 후 ID 초기화
+            );
+          }
 
         case AsyncLoading():
           // 이미 로딩 상태로 설정했으므로 별도 처리 불필요
@@ -80,11 +104,16 @@ class ProfileNotifier extends _$ProfileNotifier {
       }
     } catch (e, st) {
       debugPrint('❌ ProfileNotifier: 데이터 로드 중 예외 발생: $e');
-      // 예외 발생 시 두 상태 모두 에러로 설정
-      state = state.copyWith(
-        userProfile: AsyncValue.error(e, st),
-        focusStats: AsyncValue.error(e, st),
-      );
+
+      // 예외 발생 시에도 요청 ID 확인
+      final currentRequestId = state.activeRequestId;
+      if (currentRequestId != null) {
+        state = state.copyWith(
+          userProfile: AsyncValue.error(e, st),
+          focusStats: AsyncValue.error(e, st),
+          activeRequestId: null, // 예외 발생 후 ID 초기화
+        );
+      }
     }
   }
 

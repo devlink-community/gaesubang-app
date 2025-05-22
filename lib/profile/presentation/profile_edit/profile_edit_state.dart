@@ -27,6 +27,11 @@ class ProfileEditState with _$ProfileEditState {
 
     /// 에러 발생 시 복원할 원본 프로필 (불변 참조)
     this.originalProfile,
+
+    /// 중복 요청 방지를 위한 요청 ID들
+    this.activeLoadRequestId,
+    this.activeSaveRequestId,
+    this.activeImageUploadRequestId,
   });
 
   /// 프로필 로드 상태
@@ -49,6 +54,11 @@ class ProfileEditState with _$ProfileEditState {
 
   /// 원본 프로필 (에러 발생 시 복원용)
   final Member? originalProfile;
+
+  /// 중복 요청 방지를 위한 요청 ID들
+  final int? activeLoadRequestId;
+  final int? activeSaveRequestId;
+  final int? activeImageUploadRequestId;
 
   /// 편의 getter들
   bool get isLoading => profileState.isLoading;

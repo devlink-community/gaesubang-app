@@ -14,8 +14,12 @@ class ProfileState with _$ProfileState {
 
     /// 통계 정보 로딩/성공/실패 상태
     this.focusStats = const AsyncLoading(),
+
+    /// 중복 요청 방지를 위한 요청 ID
+    this.activeRequestId,
   });
 
   final AsyncValue<Member> userProfile;
   final AsyncValue<FocusTimeStats> focusStats;
+  final int? activeRequestId;
 }

@@ -511,7 +511,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             final skill = entry.value;
 
             // 스킬별로 고정된 색상 할당 (hashCode 사용으로 일관성 유지)
-            final colorIndex = skill.hashCode % colorPalettes.length;
+            final colorIndex =
+                (skill.hashCode & 0x7FFFFFFF) % colorPalettes.length;
             final colors = colorPalettes[colorIndex];
 
             return AnimatedContainer(
