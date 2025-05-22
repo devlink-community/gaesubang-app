@@ -1,4 +1,5 @@
 // lib/group/data/data_source/group_firebase_data_source.dart
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,7 +22,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
   // 🔧 멤버 정보 캐싱을 위한 변수들
   List<Map<String, dynamic>>? _cachedGroupMembers;
-  String? _lastGroupId;
+  String? _lastGroupId; // 마지막 조회한 그룹 ID (기존 변수 활용)
+
+  // 🔧 새로 추가: 멤버 변경 감지를 위한 스트림 구독
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _memberChangeSubscription;
 
   GroupFirebaseDataSource({
     required FirebaseFirestore firestore,
@@ -35,9 +40,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
       if (user?.uid != _lastUserId) {
         // 사용자가 바뀌면 모든 캐시 초기화
         _cachedJoinedGroups = null;
-        _cachedGroupMembers = null; // 🔧 멤버 캐시도 초기화
+        _cachedGroupMembers = null;
         _lastUserId = user?.uid;
-        _lastGroupId = null; // 🔧 그룹 ID도 초기화
+        _lastGroupId = null;
+
+        // 🔧 멤버 변경 감지 구독도 해제
+        _stopMemberChangeDetection();
       }
     });
   }
@@ -48,6 +56,57 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
+
+  // 🔧 새로 추가: 멤버 변경 감지 시작
+  void _startMemberChangeDetection(String groupId) {
+    // 이미 같은 그룹을 감지 중이면 무시
+    if (_lastGroupId == groupId && _memberChangeSubscription != null) {
+      print('🔍 Already detecting member changes for group: $groupId');
+      return;
+    }
+
+    // 이전 구독 해제
+    _stopMemberChangeDetection();
+
+    print('🔍 Starting member change detection for group: $groupId');
+
+    // 새 그룹의 멤버 변경 감지 시작
+    _memberChangeSubscription = _groupsCollection
+        .doc(groupId)
+        .collection('members')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            print('🔍 Member change detected in group: $groupId');
+            print('🔍 Member count: ${snapshot.docs.length}');
+
+            // 🔧 _lastGroupId가 현재 그룹과 일치할 때만 캐시 무효화
+            if (_lastGroupId == groupId && _cachedGroupMembers != null) {
+              print('🗑️ Invalidating member cache due to member change');
+              _cachedGroupMembers = null;
+              // _lastGroupId는 유지 (감지 중인 그룹 정보로 계속 사용)
+            }
+          },
+          onError: (error) {
+            print('❌ Error in member change detection: $error');
+          },
+        );
+  }
+
+  // 🔧 새로 추가: 멤버 변경 감지 중지
+  void _stopMemberChangeDetection() {
+    if (_memberChangeSubscription != null) {
+      print('🔍 Stopping member change detection for group: $_lastGroupId');
+      _memberChangeSubscription?.cancel();
+      _memberChangeSubscription = null;
+    }
+  }
+
+  // 🔧 새로 추가: 리소스 정리 메서드
+  void dispose() {
+    print('🗑️ Disposing GroupFirebaseDataSource');
+    _stopMemberChangeDetection();
+  }
 
   // 현재 사용자 확인 헬퍼 메서드
   String _getCurrentUserId() {
@@ -136,7 +195,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     }
   }
 
-  // 🔧 그룹 ID 변경 시 멤버 캐시 무효화
+  // 🔧 그룹 ID 변경 시 멤버 캐시 무효화 (기존 메서드 수정)
   void _invalidateMemberCacheIfNeeded(String newGroupId) {
     if (_lastGroupId != null && _lastGroupId != newGroupId) {
       print(
@@ -144,15 +203,19 @@ class GroupFirebaseDataSource implements GroupDataSource {
       );
       _cachedGroupMembers = null;
       _lastGroupId = null;
+      // 🔧 기존 멤버 감지도 중지
+      _stopMemberChangeDetection();
     }
   }
 
-  // 🔧 멤버 정보 캐시 무효화 (그룹 변경 작업 시 호출)
+  // 🔧 멤버 정보 캐시 무효화 (기존 메서드 수정)
   void _invalidateMemberCache(String groupId) {
     if (_lastGroupId == groupId) {
       print('🗑️ Invalidating member cache for group: $groupId');
       _cachedGroupMembers = null;
       _lastGroupId = null;
+      // 🔧 멤버 감지도 중지 (멤버 정보가 변경되었으므로)
+      _stopMemberChangeDetection();
     }
   }
 
@@ -332,7 +395,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 7. 캐시 무효화 (가입 그룹 정보와 멤버 정보가 변경되었으므로)
           _cachedJoinedGroups = null;
-          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화
+          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화 (감지도 중지됨)
         });
       } catch (e, st) {
         // ✅ 예외 구분 처리
@@ -596,7 +659,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 캐시 무효화 (가입 그룹 정보와 멤버 정보가 변경되었으므로)
           _cachedJoinedGroups = null;
-          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화
+          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화 (감지도 중지됨)
         });
       } catch (e, st) {
         // ✅ 예외 구분 처리
@@ -646,10 +709,13 @@ class GroupFirebaseDataSource implements GroupDataSource {
               return data;
             }).toList();
 
-        // 🔧 캐시 업데이트
+        // 🔧 캐시 업데이트 및 멤버 변경 감지 시작
         _cachedGroupMembers = List<Map<String, dynamic>>.from(members);
         _lastGroupId = groupId;
         print('🔍 Cached group members for groupId: $groupId');
+
+        // 🔧 멤버 변경 감지 시작
+        _startMemberChangeDetection(groupId);
 
         return members;
       } catch (e) {
@@ -957,58 +1023,89 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
-  // lib/group/data/data_source/group_firebase_data_source.dart
-
-  // 🔧 새로운 실시간 스트림 메소드 - DTO 반환 방식으로 수정
+  // 🔧 새로운 실시간 스트림 메소드 - 복합 스트림으로 수정
   @override
   Stream<List<Map<String, dynamic>>> streamGroupMemberTimerStatus(
     String groupId,
   ) {
-    return _groupsCollection
-        .doc(groupId)
-        .collection('timerActivities')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .asyncMap((activitiesSnapshot) async {
-          try {
-            print('🔴 실시간 타이머 활동 감지: ${activitiesSnapshot.docs.length}개 활동');
+    final membersStream =
+        _groupsCollection.doc(groupId).collection('members').snapshots();
 
-            // 1. 멤버 정보 조회 (캐싱 활용)
-            final members = await fetchGroupMembers(groupId);
+    final activitiesStream =
+        _groupsCollection
+            .doc(groupId)
+            .collection('timerActivities')
+            .orderBy('timestamp', descending: true)
+            .snapshots();
 
-            if (members.isEmpty) {
-              print('⚠️ 멤버가 없어서 빈 리스트 반환');
-              return <Map<String, dynamic>>[];
-            }
+    // 🔧 StreamController를 사용해서 두 스트림을 결합
+    late StreamController<List<Map<String, dynamic>>> controller;
+    late StreamSubscription membersSub;
+    late StreamSubscription activitiesSub;
 
-            // 2. 멤버별 최신 타이머 활동 추출
-            final memberLastActivities = <String, Map<String, dynamic>>{};
+    void handleUpdate() async {
+      try {
+        print('🔴 멤버 또는 타이머 활동 변경 감지');
 
-            for (final doc in activitiesSnapshot.docs) {
-              final activity = doc.data();
-              final memberId = activity['memberId'] as String?;
+        // 1. 멤버 정보 조회 (캐싱 활용)
+        final members = await fetchGroupMembers(groupId);
 
-              if (memberId != null &&
-                  !memberLastActivities.containsKey(memberId)) {
-                memberLastActivities[memberId] = {
-                  ...activity,
-                  'id': doc.id,
-                };
-              }
-            }
+        if (members.isEmpty) {
+          print('⚠️ 멤버가 없어서 빈 리스트 반환');
+          controller.add(<Map<String, dynamic>>[]);
+          return;
+        }
 
-            print('🔍 멤버별 최신 활동 추출 완료: ${memberLastActivities.length}명');
+        // 2. 최신 타이머 활동 조회
+        final activitiesSnapshot =
+            await _groupsCollection
+                .doc(groupId)
+                .collection('timerActivities')
+                .orderBy('timestamp', descending: true)
+                .get();
 
-            // 3. DTO 형태로 결합하여 반환
-            return _combineMemebersWithTimerStatusAsDto(
-              members,
-              memberLastActivities,
-            );
-          } catch (e) {
-            print('❌ 실시간 타이머 상태 스트림 오류: $e');
-            return <Map<String, dynamic>>[];
+        // 3. 멤버별 최신 타이머 활동 추출
+        final memberLastActivities = <String, Map<String, dynamic>>{};
+
+        for (final doc in activitiesSnapshot.docs) {
+          final activity = doc.data();
+          final memberId = activity['memberId'] as String?;
+
+          if (memberId != null && !memberLastActivities.containsKey(memberId)) {
+            memberLastActivities[memberId] = {
+              ...activity,
+              'id': doc.id,
+            };
           }
-        });
+        }
+
+        print('🔍 멤버별 최신 활동 추출 완료: ${memberLastActivities.length}명');
+
+        // 4. DTO 형태로 결합하여 반환
+        final result = _combineMemebersWithTimerStatusAsDto(
+          members,
+          memberLastActivities,
+        );
+
+        controller.add(result);
+      } catch (e) {
+        print('❌ 복합 스트림 처리 오류: $e');
+        controller.addError(e);
+      }
+    }
+
+    controller = StreamController<List<Map<String, dynamic>>>(
+      onListen: () {
+        membersSub = membersStream.listen((_) => handleUpdate());
+        activitiesSub = activitiesStream.listen((_) => handleUpdate());
+      },
+      onCancel: () {
+        membersSub.cancel();
+        activitiesSub.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   // 🔧 멤버 정보와 타이머 상태를 DTO 형태로 결합하는 헬퍼 메서드
@@ -1041,8 +1138,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
     return result;
   }
-
-  // 🗑️ 기존 _combineMemebersWithTimerStatus 메서드는 제거
 
   @override
   Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
