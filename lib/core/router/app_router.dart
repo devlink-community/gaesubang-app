@@ -35,7 +35,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../app_setting/presentation/forgot_password_screen_root_2.dart';
+import '../../app_setting/presentation/change_password_root.dart';
 
 part 'app_router.g.dart';
 
@@ -72,8 +72,10 @@ GoRouter appRouter(Ref ref) {
 
   return GoRouter(
     initialLocation: '/',
-    debugLogDiagnostics: true, // 디버그 모드에서 라우팅 정보 출력
-    refreshListenable: authStateListenable, // 인증 상태 변경만 감시
+    debugLogDiagnostics: true,
+    // 디버그 모드에서 라우팅 정보 출력
+    refreshListenable: authStateListenable,
+    // 인증 상태 변경만 감시
     routes: [
       // === 스플래시 라우트 ===
       GoRoute(path: '/', builder: (context, state) => const SplashScreenRoot()),
@@ -217,8 +219,8 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ProfileEditScreenRoot(),
       ),
       GoRoute(
-        path: '/forgot-password-2',
-        builder: (context, state) => const ForgotPasswordScreenRoot2(),
+        path: '/change-password',
+        builder: (context, state) => const ChangePasswordScreenRoot(),
       ),
       GoRoute(
         path: '/user/:id/profile',
@@ -268,7 +270,7 @@ GoRouter appRouter(Ref ref) {
         '/sign-up',
         '/terms',
         '/forget-password',
-        '/forgot-password-2',
+        '/change-password',
       ];
 
       // 현재 경로가 퍼블릭 경로인지 확인
