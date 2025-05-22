@@ -33,10 +33,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   String _groupId = '';
   String? _currentUserId;
   DateTime? _localTimerStartTime;
+  bool mounted = true;
 
   @override
   GroupDetailState build() {
     print('🏗️ GroupDetailNotifier build() 호출');
+    mounted = true; // 🔧 mounted 상태 설정
 
     // 🔧 이미 초기화된 경우 skip (중복 초기화 방지)
     if (_startTimerUseCase == null) {
@@ -62,6 +64,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       print('🗑️ GroupDetailNotifier dispose - 타이머 및 스트림 정리');
       _timer?.cancel();
       _timerStatusSubscription?.cancel();
+      mounted = false; // 🔧 mounted 상태 해제
     });
 
     return const GroupDetailState();
@@ -304,7 +307,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         );
   }
 
-  // 🔧 현재 사용자의 멤버 리스트 상태 즉시 업데이트 - null 안전성 추가
+  // group_detail_notifier.dart의 _updateCurrentUserInMemberList 메서드 부분만 수정
+
+  // 🔧 현재 사용자의 멤버 리스트 상태 즉시 업데이트 - elapsedSeconds 사용
   void _updateCurrentUserInMemberList({
     required bool isActive,
     DateTime? timerStartTime,
@@ -322,11 +327,11 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     final currentMembers = currentMembersResult.value;
     if (currentMembers.isEmpty) {
-      print('⚠️ 멤버 리스트가 null이어서 업데이트를 건너뜁니다');
+      print('⚠️ 멤버 리스트가 비어있어서 업데이트를 건너뜁니다');
       return;
     }
 
-    // 🔧 경과 시간을 더 정확하게 계산 (초 단위)
+    // 🔧 경과 시간을 초 단위로 정확하게 계산
     final int elapsedSeconds =
         isActive && timerStartTime != null
             ? DateTime.now().difference(timerStartTime).inSeconds
@@ -335,12 +340,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     final updatedMembers =
         currentMembers.map((member) {
           if (member.userId == _currentUserId) {
-            // 현재 사용자의 상태만 업데이트
+            // 🔧 현재 사용자의 상태만 업데이트 (초 단위 사용)
             return member.copyWith(
               isActive: isActive,
               timerStartTime: timerStartTime,
-              // 🔧 elapsedMinutes 대신 실제 경과 시간을 분 단위로 정확히 계산
-              elapsedMinutes: (elapsedSeconds / 60).floor(),
+              elapsedSeconds: elapsedSeconds, // 🔧 초 단위로 저장
+              elapsedMinutes: (elapsedSeconds / 60).floor(), // 호환성을 위해 분 단위도 저장
             );
           }
           return member;
@@ -355,7 +360,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
   }
 
-  // 🔧 로컬 타이머 상태와 원격 데이터 병합 - 타입 안전성 수정
+  // 🔧 로컬 타이머 상태와 원격 데이터 병합 + 타이머 상태 검증
   List<GroupMember> _mergeLocalTimerStateWithRemoteData(
     List<GroupMember> remoteMembers,
   ) {
@@ -367,21 +372,103 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     return remoteMembers.map((member) {
       if (member.userId == _currentUserId) {
-        // 🔧 현재 사용자는 로컬 상태로 덮어쓰기 (더 정확한 시간 계산)
+        // 🔧 현재 사용자: 서버 데이터와 로컬 상태 검증
+        final serverIsActive = member.isActive;
+        final serverStartTime = member.timerStartTime;
+
+        // 🔧 타이머 상태 검증 로직
+        if (_shouldValidateTimerState(
+          serverIsActive,
+          serverStartTime,
+          isLocalTimerActive,
+          localStartTime,
+        )) {
+          print('🔧 타이머 상태 불일치 감지 - 서버 상태로 동기화');
+
+          // 서버 상태가 비활성이고 로컬이 활성인 경우 → 로컬 타이머 중지
+          if (!serverIsActive && isLocalTimerActive) {
+            print('🔧 서버에서 타이머가 중지된 것을 감지 - 로컬 타이머 중지');
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _handleStopTimer();
+              }
+            });
+          }
+          // 서버 상태가 활성이고 로컬이 비활성인 경우 → 로컬 타이머 시작
+          else if (serverIsActive &&
+              !isLocalTimerActive &&
+              serverStartTime != null) {
+            print('🔧 서버에서 타이머가 시작된 것을 감지 - 로컬 타이머 동기화');
+            _localTimerStartTime = serverStartTime;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                state = state.copyWith(timerStatus: TimerStatus.running);
+                _startTimerCountdown();
+              }
+            });
+          }
+        }
+
+        // 🔧 로컬 상태 우선 사용 (더 정확한 시간 계산)
         final elapsedSeconds =
             isLocalTimerActive && localStartTime != null
                 ? DateTime.now().difference(localStartTime).inSeconds
-                : 0;
+                : (serverIsActive && serverStartTime != null
+                    ? DateTime.now().difference(serverStartTime).inSeconds
+                    : 0);
 
         return member.copyWith(
           isActive: isLocalTimerActive,
-          timerStartTime: localStartTime,
+          timerStartTime: localStartTime ?? serverStartTime,
+          elapsedSeconds: elapsedSeconds,
           elapsedMinutes: (elapsedSeconds / 60).floor(),
         );
       }
-      // 다른 사용자는 원격 데이터 그대로 사용
-      return member;
+      // 🔧 다른 사용자: 서버 데이터 기반으로 실시간 시간 계산
+      else {
+        final elapsedSeconds =
+            member.isActive && member.timerStartTime != null
+                ? DateTime.now().difference(member.timerStartTime!).inSeconds
+                : member.elapsedSeconds;
+
+        return member.copyWith(
+          elapsedSeconds: elapsedSeconds,
+          elapsedMinutes: (elapsedSeconds / 60).floor(),
+        );
+      }
     }).toList();
+  }
+
+  // 🔧 타이머 상태 검증 필요 여부 판단
+  bool _shouldValidateTimerState(
+    bool serverIsActive,
+    DateTime? serverStartTime,
+    bool localIsActive,
+    DateTime? localStartTime,
+  ) {
+    // 1. 활성 상태가 다른 경우
+    if (serverIsActive != localIsActive) {
+      return true;
+    }
+
+    // 2. 둘 다 활성이지만 시작 시간이 크게 다른 경우 (5초 이상 차이)
+    if (serverIsActive &&
+        localIsActive &&
+        serverStartTime != null &&
+        localStartTime != null) {
+      final timeDifference = (serverStartTime.difference(localStartTime)).abs();
+      if (timeDifference.inSeconds > 5) {
+        print('🔧 타이머 시작 시간 차이 감지: ${timeDifference.inSeconds}초');
+        return true;
+      }
+    }
+
+    // 3. 서버에는 시작 시간이 있는데 로컬에는 없는 경우
+    if (serverIsActive && serverStartTime != null && localStartTime == null) {
+      return true;
+    }
+
+    return false;
   }
 
   // 타이머 시작
