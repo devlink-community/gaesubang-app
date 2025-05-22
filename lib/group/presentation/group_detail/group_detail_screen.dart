@@ -149,10 +149,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final isRunning = timerStatus == TimerStatus.running;
 
     // 상태에 따른 배경색 결정
-    final Color primaryBgColor =
-        isRunning ? const Color(0xFF8080FF) : const Color(0xFFCDCDFF);
-    final Color secondaryBgColor =
-        isRunning ? const Color(0xFF7070EE) : const Color(0xFFE6E6FA);
+    final Color primaryBgColor = switch (timerStatus) {
+      TimerStatus.stop => const Color(0xFF9E9E9E), // 정지 상태 - 회색
+      TimerStatus.running => const Color(0xFF8080FF), // 실행 중 - 파란색
+      _ => const Color(0xFFCDCDFF), // 일시정지 - 연한 파란색
+    };
+
+    final Color secondaryBgColor = switch (timerStatus) {
+      TimerStatus.stop => const Color(0xFF8E8E8E), // 정지 상태 - 진한 회색
+      TimerStatus.running => const Color(0xFF7070EE), // 실행 중 - 진한 파란색
+      _ => const Color(0xFFE6E6FA), // 일시정지 - 연한 보라색
+    };
 
     // 🔥 순수 UI: 멤버 분류 로직
     final activeMembers = members.where((m) => m.isActive).toList();
