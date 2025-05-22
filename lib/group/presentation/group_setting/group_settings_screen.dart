@@ -169,7 +169,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                             _buildErrorMessage(),
 
                           // 썸네일 선택기
-                          _buildImageSelector(),
+                          _buildImageSelectorWithUploadStatus(),
                           const SizedBox(height: 32),
 
                           // 그룹 이름 - 트렌디한 텍스트 필드로 교체
@@ -327,7 +327,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                     ),
                                     filled: true,
                                     fillColor: Colors.white,
-                                    counterText: '', // 기본 카운터 숨김
+                                    counterText: '',
+                                    // 기본 카운터 숨김
                                     suffixIcon:
                                         isEditing &&
                                                 _descriptionController
@@ -415,90 +416,240 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     );
   }
 
-  Widget _buildImageSelector() {
+  // 업로드 상태가 포함된 이미지 선택기
+  Widget _buildImageSelectorWithUploadStatus() {
     return Center(
       child: Column(
         children: [
-          Material(
-            elevation: 6,
-            shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
-            shape: const CircleBorder(),
-            child: GestureDetector(
-              onTap:
-                  widget.state.isEditing && widget.state.isOwner
-                      ? () => widget.onAction(
-                        const GroupSettingsAction.selectImage(),
-                      )
-                      : null,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient:
-                      widget.state.imageUrl == null
-                          ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColorStyles.primary60.withValues(alpha: 0.2),
-                              AppColorStyles.primary100.withValues(alpha: 0.3),
-                            ],
+          Stack(
+            children: [
+              // 기본 이미지 컨테이너
+              Material(
+                elevation: 6,
+                shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
+                shape: const CircleBorder(),
+                child: GestureDetector(
+                  onTap:
+                      widget.state.isEditing &&
+                              widget.state.isOwner &&
+                              !widget.state.isImageProcessing
+                          ? () => widget.onAction(
+                            const GroupSettingsAction.selectImage(),
                           )
                           : null,
-                  border: Border.all(color: Colors.white, width: 4),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(80),
-                  child:
-                      widget.state.imageUrl == null
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.add_photo_alternate_rounded,
-                                  size: 36,
-                                  color: AppColorStyles.primary100,
-                                ),
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient:
+                          widget.state.displayImagePath == null
+                              ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColorStyles.primary60.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  AppColorStyles.primary100.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ],
+                              )
+                              : null,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(80),
+                      child:
+                          widget.state.displayImagePath == null
+                              ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 36,
+                                      color: AppColorStyles.primary100,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    widget.state.isEditing &&
+                                            widget.state.isOwner
+                                        ? '그룹 이미지 추가'
+                                        : '그룹 이미지',
+                                    style: TextStyle(
+                                      color: AppColorStyles.primary100,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : _buildImageBySourceType(
+                                widget.state.displayImagePath!,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                widget.state.isEditing && widget.state.isOwner
-                                    ? '그룹 이미지 추가'
-                                    : '그룹 이미지',
-                                style: TextStyle(
-                                  color: AppColorStyles.primary100,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          )
-                          : Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              _buildImageBySourceType(widget.state.imageUrl!),
-                            ],
-                          ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+
+              // 업로드 진행률 오버레이
+              if (widget.state.isImageUploading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.6),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // 원형 진행 표시기
+                        SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            value: widget.state.uploadProgress,
+                            strokeWidth: 4,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.3,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.state.imageUploadStatusMessage,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 업로드 완료 체크 아이콘
+              if (widget.state.isImageUploadCompleted)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.green.withValues(alpha: 0.9),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '업로드 완료!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 업로드 실패 아이콘
+              if (widget.state.isImageUploadFailed)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red.withValues(alpha: 0.9),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '업로드 실패',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed:
+                              () => widget.onAction(
+                                const GroupSettingsAction.selectImage(),
+                              ),
+                          child: const Text(
+                            '다시 시도',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
+
+          // 상태별 설명 텍스트
           Text(
-            '그룹을 대표하는 이미지를 선택하세요',
-            style: TextStyle(fontSize: 14, color: AppColorStyles.gray80),
+            widget.state.isImageUploading
+                ? widget.state.imageUploadStatusMessage
+                : widget.state.isImageUploadCompleted
+                ? '이미지 업로드가 완료되었습니다!'
+                : widget.state.isImageUploadFailed
+                ? '이미지 업로드에 실패했습니다'
+                : '그룹을 대표하는 이미지를 선택하세요',
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  widget.state.isImageUploadFailed
+                      ? Colors.red
+                      : widget.state.isImageUploadCompleted
+                      ? Colors.green
+                      : AppColorStyles.gray80,
+              fontWeight:
+                  widget.state.isImageProcessing
+                      ? FontWeight.w500
+                      : FontWeight.normal,
+            ),
           ),
+
           // 이미지가 있을 경우 삭제 버튼 추가
-          if (widget.state.imageUrl != null &&
+          if (widget.state.displayImagePath != null &&
               widget.state.isEditing &&
-              widget.state.isOwner)
+              widget.state.isOwner &&
+              !widget.state.isImageProcessing)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: TextButton.icon(
@@ -966,10 +1117,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
 
   Widget _buildMemberList() {
     final group = widget.state.group.valueOrNull;
-    if (group == null) return const SizedBox.shrink();
+    final members = widget.state.members;
 
-    // GetGroupMembersUseCase를 사용하여 멤버 정보를 가져와야 할 수도 있지만,
-    // 현재 UI 구현에서는 간단히 접근 가능한 정보만 표시
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1016,8 +1165,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      // memberCount 사용
-                      '${group.memberCount}명 / ${widget.state.limitMemberCount}명',
+                      '${group?.memberCount ?? 0}명 / ${widget.state.limitMemberCount}명',
                       style: TextStyle(
                         color: AppColorStyles.primary100,
                         fontWeight: FontWeight.bold,
@@ -1029,34 +1177,206 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               ),
               const SizedBox(height: 16),
               const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 16),
 
-              // 멤버 정보는 현재 접근 불가능하므로 안내 메시지 표시
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 40,
-                        color: AppColorStyles.gray60,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        '멤버 정보를 불러올 수 없습니다',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
+              // 멤버 목록 표시
+              switch (members) {
+                AsyncLoading() => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CircularProgressIndicator(),
                   ),
                 ),
-              ),
+                AsyncError(:final error) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 40,
+                          color: Colors.red[400],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '멤버 정보를 불러올 수 없습니다\n$error',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                AsyncData(:final value) =>
+                  value.isEmpty
+                      ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            '멤버가 없습니다',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      )
+                      : Column(
+                        children:
+                            value
+                                .map((member) => _buildMemberItem(member))
+                                .toList(),
+                      ),
+                _ => const SizedBox.shrink(), // Handle any other cases
+              },
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildMemberItem(dynamic member) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColorStyles.white.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColorStyles.gray40.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // 프로필 이미지
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColorStyles.primary100.withValues(alpha: 0.1),
+            ),
+            child:
+                member.profileUrl?.isNotEmpty == true
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.network(
+                        member.profileUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.person,
+                            color: AppColorStyles.primary100,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    )
+                    : Icon(
+                      Icons.person,
+                      color: AppColorStyles.primary100,
+                      size: 24,
+                    ),
+          ),
+          const SizedBox(width: 12),
+
+          // 멤버 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      member.userName ?? '알 수 없음',
+                      style: AppTextStyles.captionRegular.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (member.role == 'owner')
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColorStyles.primary100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '방장',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '가입일: ${_formatDate(member.joinedAt)}',
+                  style: TextStyle(
+                    color: AppColorStyles.gray80,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 활동 상태 표시
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color:
+                  member.isActive == true
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : AppColorStyles.gray40.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        member.isActive == true
+                            ? Colors.green
+                            : AppColorStyles.gray60,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  member.isActive == true ? '활성' : '비활성',
+                  style: TextStyle(
+                    color:
+                        member.isActive == true
+                            ? Colors.green[700]
+                            : AppColorStyles.gray80,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? dateTime) {
+    if (dateTime == null) return '알 수 없음';
+    return '${dateTime.year}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.day.toString().padLeft(2, '0')}';
   }
 }

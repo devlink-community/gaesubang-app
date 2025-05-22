@@ -152,3 +152,7 @@ functions/.log
 functions/firebase-debug.log
 functions/ui-debug.log
 functions/.firebase/
+firebase-debug.log.DS_Store
+ios/Podfile
+ios/Runner.xcodeproj/project.pbxproj
+ios/.DS_Store

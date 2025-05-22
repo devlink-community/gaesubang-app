@@ -298,8 +298,58 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return Result.success(groupMembers);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '그룹 멤버 정보를 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
     }
+  }
+
+  // 🔧 새로운 실시간 스트림 메소드 - 기존 Mapper 활용
+  @override
+  Stream<Result<List<GroupMember>>> streamGroupMemberTimerStatus(
+    String groupId,
+  ) {
+    return _dataSource.streamGroupMemberTimerStatus(groupId).map((
+      combinedData,
+    ) {
+      try {
+        // 🚀 DTO 분리
+        final memberDtos = <GroupMemberDto>[];
+        final timerActivityDtos = <GroupTimerActivityDto>[];
+
+        for (final item in combinedData) {
+          // 멤버 DTO 추출
+          final memberData = item['memberDto'] as Map<String, dynamic>;
+          memberDtos.add(GroupMemberDto.fromJson(memberData));
+
+          // 타이머 활동 DTO 추출 (있는 경우만)
+          final timerActivityData =
+              item['timerActivityDto'] as Map<String, dynamic>?;
+          if (timerActivityData != null) {
+            timerActivityDtos.add(
+              GroupTimerActivityDto.fromJson(timerActivityData),
+            );
+          }
+        }
+
+        // 🔧 기존 Mapper 사용
+        final groupMembers = memberDtos.toModelList(timerActivityDtos);
+
+        print('✅ 실시간 멤버 상태 변환 완료: ${groupMembers.length}명');
+
+        return Result<List<GroupMember>>.success(groupMembers);
+      } catch (e, st) {
+        print('❌ 실시간 멤버 상태 변환 실패: $e');
+        return Result<List<GroupMember>>.error(
+          mapExceptionToFailure(e, st),
+        );
+      }
+    });
   }
 
   @override
@@ -418,7 +468,14 @@ class GroupRepositoryImpl implements GroupRepository {
 
       return Result.success(attendances);
     } catch (e, st) {
-      return Result.error(mapExceptionToFailure(e, st));
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '출석 정보를 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
     }
   }
 }

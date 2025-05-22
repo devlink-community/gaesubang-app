@@ -24,6 +24,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.d
 import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -106,7 +107,7 @@ LeaveGroupUseCase leaveGroupUseCase(Ref ref) =>
 SearchGroupsUseCase searchGroupsUseCase(Ref ref) =>
     SearchGroupsUseCase(repository: ref.watch(groupRepositoryProvider));
 
-// 새로 추가된 UseCase 프로바이더들
+// 기존 UseCase 프로바이더들
 @riverpod
 GetGroupMembersUseCase getGroupMembersUseCase(Ref ref) =>
     GetGroupMembersUseCase(repository: ref.watch(groupRepositoryProvider));
@@ -128,6 +129,14 @@ StopTimerUseCase stopTimerUseCase(Ref ref) =>
 @riverpod
 PauseTimerUseCase pauseTimerUseCase(Ref ref) =>
     PauseTimerUseCase(repository: ref.watch(groupRepositoryProvider));
+
+// 🔧 새로운 실시간 스트림 UseCase Provider 추가
+@riverpod
+StreamGroupMemberTimerStatusUseCase streamGroupMemberTimerStatusUseCase(
+  Ref ref,
+) => StreamGroupMemberTimerStatusUseCase(
+  repository: ref.watch(groupRepositoryProvider),
+);
 
 // Group chat UseCase
 

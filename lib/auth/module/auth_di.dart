@@ -1,7 +1,8 @@
-// lib/auth/module/auth_di.dart (상단 import 부분 수정)
+// lib/auth/module/auth_di.dart
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -26,6 +27,14 @@ import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 
 part 'auth_di.g.dart';
 
+// === Firebase Providers ===
+
+/// Firebase Storage 인스턴스 Provider
+@Riverpod(keepAlive: true)
+FirebaseStorage firebaseStorage(Ref ref) {
+  return FirebaseStorage.instance;
+}
+
 // === DataSource Providers ===
 
 /// AuthDataSource - 플래그에 따라 Mock 또는 Firebase 선택
@@ -37,6 +46,7 @@ AuthDataSource authDataSource(Ref ref) {
     return AuthFirebaseDataSource(
       auth: ref.watch(firebaseAuthProvider),
       firestore: ref.watch(firebaseFirestoreProvider),
+      storage: ref.watch(firebaseStorageProvider), // FirebaseStorage 추가
     );
   }
 }
@@ -122,8 +132,8 @@ UpdateProfileUseCase updateProfileUseCase(Ref ref) {
 }
 
 @riverpod
-UpdateProfileImageUseCase updateProfileImageUseCase(Ref ref) {
-  return UpdateProfileImageUseCase(
-    repository: ref.watch(authRepositoryProvider),
-  );
+UpdateProfileImageUseCase updateProfileImageUseCase(
+  UpdateProfileImageUseCaseRef ref,
+) {
+  return UpdateProfileImageUseCase(ref.watch(authRepositoryProvider));
 }

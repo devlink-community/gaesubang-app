@@ -289,7 +289,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
   }
 
   Widget _buildProfileImage() {
-    // 이미지 URL 없는 경우 기본 아이콘
+    // 이미지 URL이 없는 경우 기본 아이콘
     if (widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty) {
       return CircleAvatar(
         radius: 11,
@@ -304,6 +304,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
         radius: 11,
         backgroundImage: FileImage(File(widget.profileImageUrl!)),
         backgroundColor: Colors.grey.shade200,
+        onBackgroundImageError: (exception, stackTrace) {
+          debugPrint('❌ 로컬 이미지 로딩 오류: $exception');
+        },
       );
     }
 
@@ -312,6 +315,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
       radius: 11,
       backgroundImage: NetworkImage(widget.profileImageUrl!),
       backgroundColor: Colors.grey.shade200,
+      onBackgroundImageError: (exception, stackTrace) {
+        debugPrint('❌ 네트워크 이미지 로딩 오류: $exception');
+      },
     );
   }
 

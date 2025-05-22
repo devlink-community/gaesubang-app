@@ -1,3 +1,4 @@
+// lib/map/data/data_source/map_data_source_impl.dart
 import 'package:devlink_mobile_app/map/data/data_source/map_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/location_dto.dart';
 import 'package:devlink_mobile_app/map/data/dto/map_marker_dto.dart';
@@ -18,19 +19,24 @@ class MapDataSourceImpl implements MapDataSource {
 
   @override
   Future<LocationDto> fetchCurrentLocation() async {
-    // 위치 권한 확인
-    bool hasPermission = await checkLocationPermission();
-    if (!hasPermission) {
-      throw Exception('위치 접근 권한이 없습니다');
-    }
-
-    // 위치 서비스 활성화 확인
-    bool serviceEnabled = await isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('위치 서비스가 비활성화되어 있습니다');
-    }
-
     try {
+      // 위치 권한 확인
+      bool hasPermission = await checkLocationPermission();
+
+      // ✅ 비즈니스 로직 검증: 권한 확인
+      if (!hasPermission) {
+        throw Exception('위치 접근 권한이 없습니다');
+      }
+
+      // 위치 서비스 활성화 확인
+      bool serviceEnabled = await isLocationServiceEnabled();
+
+      // ✅ 비즈니스 로직 검증: 서비스 활성화 확인
+      if (!serviceEnabled) {
+        throw Exception('위치 서비스가 비활성화되어 있습니다');
+      }
+
+      // Geolocator 위치 조회
       final position = await _geolocator.getCurrentPosition();
 
       return LocationDto(
@@ -38,8 +44,19 @@ class MapDataSourceImpl implements MapDataSource {
         longitude: position.longitude,
         timestamp: position.timestamp.millisecondsSinceEpoch,
       );
-    } catch (e) {
-      throw Exception('현재 위치를 가져오는데 실패했습니다: $e');
+    } catch (e, st) {
+      // ✅ 예외 구분 처리
+      if (e is Exception &&
+          (e.toString().contains('위치 접근 권한이 없습니다') ||
+              e.toString().contains('위치 서비스가 비활성화되어 있습니다'))) {
+        // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+        print('위치 조회 비즈니스 로직 오류: $e');
+        rethrow;
+      } else {
+        // Geolocator 통신 오류: 원본 예외 정보 보존
+        print('위치 조회 Geolocator 통신 오류: $e\n$st');
+        rethrow;
+      }
     }
   }
 
@@ -61,12 +78,18 @@ class MapDataSourceImpl implements MapDataSource {
     //   },
     // );
 
-    await Future.delayed(const Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
+    try {
+      await Future.delayed(const Duration(milliseconds: 300)); // 네트워크 지연 시뮬레이션
 
-    return NearByItemsDto(
-      groups: _getDummyGroups(location),
-      users: _getDummyUsers(location),
-    );
+      return NearByItemsDto(
+        groups: _getDummyGroups(location),
+        users: _getDummyUsers(location),
+      );
+    } catch (e, st) {
+      // ✅ API 통신 오류: 원본 예외 정보 보존
+      print('주변 항목 조회 API 통신 오류: $e\n$st');
+      rethrow;
+    }
   }
 
   @override
@@ -78,24 +101,42 @@ class MapDataSourceImpl implements MapDataSource {
     //   data: location.toJson(),
     // );
 
-    await Future.delayed(const Duration(milliseconds: 200)); // 네트워크 지연 시뮬레이션
+    try {
+      await Future.delayed(const Duration(milliseconds: 200)); // 네트워크 지연 시뮬레이션
+    } catch (e, st) {
+      // ✅ API 통신 오류: 원본 예외 정보 보존
+      print('위치 데이터 저장 API 통신 오류: $e\n$st');
+      rethrow;
+    }
   }
 
   @override
   Future<bool> checkLocationPermission() async {
-    LocationPermission permission = await _geolocator.checkPermission();
+    try {
+      LocationPermission permission = await _geolocator.checkPermission();
 
-    if (permission == LocationPermission.denied) {
-      permission = await _geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await _geolocator.requestPermission();
+      }
+
+      return permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+    } catch (e, st) {
+      // ✅ Geolocator 권한 확인 오류: 원본 예외 정보 보존
+      print('위치 권한 확인 오류: $e\n$st');
+      rethrow;
     }
-
-    return permission == LocationPermission.always ||
-        permission == LocationPermission.whileInUse;
   }
 
   @override
   Future<bool> isLocationServiceEnabled() {
-    return _geolocator.isLocationServiceEnabled();
+    try {
+      return _geolocator.isLocationServiceEnabled();
+    } catch (e, st) {
+      // ✅ Geolocator 서비스 확인 오류: 원본 예외 정보 보존
+      print('위치 서비스 확인 오류: $e\n$st');
+      rethrow;
+    }
   }
 
   // 더미 그룹 데이터 생성 (테스트용)

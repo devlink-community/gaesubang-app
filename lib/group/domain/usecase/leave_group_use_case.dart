@@ -15,7 +15,10 @@ class LeaveGroupUseCase {
       case Success():
         return const AsyncData(null);
       case Error(failure: final failure):
-        return AsyncError(failure, StackTrace.current);
+        return AsyncError(
+          failure,
+          failure.stackTrace ?? StackTrace.current,
+        );
     }
   }
 }
