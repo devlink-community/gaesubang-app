@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -8,6 +9,12 @@ class FCMTokenService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+
+  // 토큰 갱신 리스너 중복 방지를 위한 StreamSubscription
+  StreamSubscription<String>? _tokenRefreshSubscription;
+
+  // 리스너가 이미 설정되었는지 확인하는 플래그
+  bool _isTokenRefreshListenerSetup = false;
 
   /// 현재 디바이스의 FCM 토큰을 사용자에게 등록
   Future<void> registerDeviceToken(String userId) async {
@@ -82,8 +89,8 @@ class FCMTokenService {
         debugPrint('✅ 새 FCM 토큰 등록 완료: ${docRef.id}');
       }
 
-      // 6. 토큰 갱신 리스너 설정
-      _setupTokenRefreshListener(userId);
+      // 6. 토큰 갱신 리스너 설정 (중복 방지)
+      _setupTokenRefreshListenerIfNeeded(userId);
 
       // 7. 등록 성공 검증
       await _verifyTokenRegistration(userId, token);
@@ -93,6 +100,42 @@ class FCMTokenService {
       debugPrint('❌ FCM 토큰 등록 실패: $e');
       debugPrint('스택 트레이스: $stackTrace');
       rethrow;
+    }
+  }
+
+  /// 토큰 갱신 리스너 설정 (중복 방지)
+  void _setupTokenRefreshListenerIfNeeded(String userId) {
+    // 이미 리스너가 설정되어 있으면 스킵
+    if (_isTokenRefreshListenerSetup) {
+      debugPrint('토큰 갱신 리스너 이미 설정됨 - 스킵');
+      return;
+    }
+
+    debugPrint('=== 토큰 갱신 리스너 설정 시작 ===');
+
+    try {
+      // 기존 구독이 있다면 취소
+      _tokenRefreshSubscription?.cancel();
+
+      // 새 구독 설정
+      _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((
+        newToken,
+      ) async {
+        debugPrint('=== FCM 토큰 갱신 감지 ===');
+        debugPrint('새 토큰: ${newToken.substring(0, 20)}...');
+
+        try {
+          await registerDeviceToken(userId);
+          debugPrint('✅ 토큰 갱신 등록 완료');
+        } catch (e) {
+          debugPrint('❌ 토큰 갱신 등록 실패: $e');
+        }
+      });
+
+      _isTokenRefreshListenerSetup = true;
+      debugPrint('✅ 토큰 갱신 리스너 설정 완료');
+    } catch (e) {
+      debugPrint('❌ 토큰 갱신 리스너 설정 실패: $e');
     }
   }
 
@@ -121,21 +164,6 @@ class FCMTokenService {
     } catch (e) {
       debugPrint('토큰 등록 검증 중 오류: $e');
     }
-  }
-
-  /// 토큰 갱신 리스너 설정
-  void _setupTokenRefreshListener(String userId) {
-    _messaging.onTokenRefresh.listen((newToken) async {
-      debugPrint('=== FCM 토큰 갱신 감지 ===');
-      debugPrint('새 토큰: ${newToken.substring(0, 20)}...');
-
-      try {
-        await registerDeviceToken(userId);
-        debugPrint('✅ 토큰 갱신 등록 완료');
-      } catch (e) {
-        debugPrint('❌ 토큰 갱신 등록 실패: $e');
-      }
-    });
   }
 
   /// 디바이스 고유 ID 가져오기
@@ -502,10 +530,27 @@ class FCMTokenService {
       // 4. 활성 토큰 수
       final activeTokens = await getUserActiveTokens(userId);
       debugPrint('4. 활성 토큰 수: ${activeTokens.length}개');
+
+      // 5. 리스너 상태
+      debugPrint('5. 토큰 갱신 리스너 설정됨: $_isTokenRefreshListenerSetup');
     } catch (e) {
       debugPrint('❌ 진단 중 오류 발생: $e');
     }
 
     debugPrint('=== FCM 토큰 서비스 진단 완료 ===');
+  }
+
+  /// 서비스 정리 (메모리 누수 방지)
+  void dispose() {
+    debugPrint('=== FCMTokenService 정리 시작 ===');
+
+    // 토큰 갱신 리스너 구독 취소
+    _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+
+    // 플래그 초기화
+    _isTokenRefreshListenerSetup = false;
+
+    debugPrint('✅ FCMTokenService 정리 완료');
   }
 }
