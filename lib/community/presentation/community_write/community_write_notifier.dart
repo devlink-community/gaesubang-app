@@ -230,20 +230,7 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
 
   // 게시글 수정 메서드 추가
   Future<void> _update() async {
-    // 유효성 검사 (기존 코드 재사용)
-    if (state.title.trim().isEmpty) {
-      state = state.copyWith(
-        errorMessage: CommunityErrorMessages.titleRequired,
-      );
-      return;
-    }
-
-    if (state.content.trim().isEmpty) {
-      state = state.copyWith(
-        errorMessage: CommunityErrorMessages.contentRequired,
-      );
-      return;
-    }
+    // 유효성 검사 및 ID 확인 (동일)
 
     // 원본 게시글 ID 확인
     final originalPostId = state.originalPostId;
@@ -258,18 +245,15 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
     state = state.copyWith(submitting: true, errorMessage: null);
 
     try {
-      // 이미지 처리 (기존 이미지 교체 또는 유지)
+      // 이미지 처리
       List<Uri> imageUris = [];
       if (state.images.isNotEmpty) {
-        // 새 이미지 업로드
         imageUris = await _uploadImages(originalPostId);
-      } else {
-        // 기존 이미지 URL 그대로 유지하는 로직 (필요시)
       }
 
       // 게시글 업데이트
       final usecase = ref.read(updatePostUseCaseProvider);
-      final updatedPostId = await usecase.execute(
+      final updateResult = await usecase.execute(
         postId: originalPostId,
         title: state.title.trim(),
         content: state.content.trim(),
@@ -277,23 +261,24 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
         imageUris: imageUris,
       );
 
-      // 이벤트 발행
-      if (updatedPostId.value != null) {
+      // AsyncValue 처리
+      if (updateResult case AsyncData(:final value)) {
+        final updatedPostId = value;
+
+        // 이벤트 발행
         ref
             .read(appEventNotifierProvider.notifier)
-            .emit(AppEvent.postUpdated(updatedPostId.value!));
-      } else {
-        throw Exception('업데이트된 게시글 ID가 null입니다');
-      }
+            .emit(AppEvent.postUpdated(updatedPostId));
 
-      // 성공 상태 업데이트
-      state = state.copyWith(
-        submitting: false,
-        updatedPostId: updatedPostId.value,
-      );
+        // 성공 상태 업데이트
+        state = state.copyWith(submitting: false, updatedPostId: updatedPostId);
+      } else if (updateResult case AsyncError(:final error)) {
+        throw Exception('게시글 수정 실패: $error');
+      } else {
+        throw Exception('게시글 수정 중 예상치 못한 상태');
+      }
     } catch (e) {
       debugPrint('❌ CommunityWriteNotifier: 게시글 수정 실패 - $e');
-      // 실패 처리
       state = state.copyWith(
         submitting: false,
         errorMessage: CommunityErrorMessages.postUpdateFailed,
