@@ -159,22 +159,30 @@ class AuthRepositoryImpl implements AuthRepository {
   /// 로그인 성공 시 FCM 토큰 등록 및 상태 업데이트
   Future<void> _handleLoginSuccess(Member member) async {
     try {
-      // 1. 상태 업데이트
+      // 1. 상태 업데이트 (즉시 처리)
       if (AppConfig.useMockAuth) {
         _updateMockAuthState(AuthState.authenticated(member));
       } else {
         _updateFirebaseCache(member, member.uid);
       }
 
-      // 2. FCM 토큰 등록 (백그라운드에서 처리, 실패해도 로그인은 성공)
-      final fcmResult = await registerFCMToken(member.uid);
-      if (fcmResult is Error) {
-        debugPrint('FCM 토큰 등록 실패 (로그인은 계속 진행): ${fcmResult.failure.message}');
-      } else {
-        debugPrint('FCM 토큰 등록 성공');
-      }
+      // 2. FCM 토큰 등록 (fire-and-forget 패턴 - 로그인 완료를 지연시키지 않음)
+      registerFCMToken(member.uid)
+          .then((fcmResult) {
+            switch (fcmResult) {
+              case Success():
+                debugPrint('✅ FCM 토큰 등록 성공 (백그라운드)');
+              case Error(:final failure):
+                debugPrint('⚠️ FCM 토큰 등록 실패 (로그인은 계속 진행): ${failure.message}');
+            }
+          })
+          .catchError((e) {
+            debugPrint('⚠️ FCM 토큰 등록 중 예외 발생 (로그인은 계속 진행): $e');
+          });
+
+      debugPrint('✅ 로그인 성공 처리 완료 (FCM 등록은 백그라운드에서 진행)');
     } catch (e) {
-      debugPrint('로그인 후 처리 중 오류 발생: $e');
+      debugPrint('❌ 로그인 후 처리 중 오류 발생: $e');
       // FCM 등록 실패는 로그인 자체를 실패시키지 않음
     }
   }
