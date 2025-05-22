@@ -347,14 +347,26 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
-  // 현재 선택된 팁 추적을 위한 변수
-  StudyTip? _currentSelectedTip;
+  // 캐시 업데이트 메서드 - 홈화면에 새로운 팁 반영
+  void _updateHomeBannerCache(WidgetRef ref, StudyTip newTip, String? skills) {
+    final cacheKey = _generateCacheKey(skills);
+    ref.read(studyTipCacheProvider.notifier).update((state) => {
+      ...state,
+      cacheKey: newTip,
+    });
 
-  // 새로운 팁 로드 메서드 - 앱 스타일 로딩 UI 적용
+    // Provider 새로고침을 위해 invalidate
+    ref.invalidate(studyTipProvider(skills));
+
+    debugPrint('홈 배너 캐시 업데이트 완료: $cacheKey');
+  }
+
+  // 새로운 팁 로드 메서드 - 기존 스타일의 로딩 팝업 사용
   Future<void> _loadNewTip(
       BuildContext context,
       String? skills,
       WidgetRef ref,
+      Function(StudyTip) updateDialogContent,
       ) async {
     // 대화상자 컨텍스트 추적을 위한 변수
     BuildContext? loadingDialogContext;
@@ -365,7 +377,7 @@ class StudyTipBanner extends ConsumerWidget {
     // 로딩 다이얼로그에 고유 키 부여
     final loadingDialogKey = UniqueKey();
 
-    // 앱 스타일에 맞는 로딩 다이얼로그 표시
+    // 기존 스타일의 로딩 다이얼로그 표시
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -459,7 +471,7 @@ class StudyTipBanner extends ConsumerWidget {
       },
     );
 
-    // 타임아웃 설정 (20초) - Quiz Banner와 동일
+    // 타임아웃 설정 (20초)
     loadingTimer = Timer(const Duration(seconds: 20), () {
       _closeLoadingDialog(loadingDialogContext);
 
@@ -472,15 +484,21 @@ class StudyTipBanner extends ConsumerWidget {
           ),
         );
 
-        // 백업 스터디 팁 표시
-        _showBackupStudyTip(context, skills, ref);
+        // 백업 스터디 팁으로 업데이트
+        final backupTip = _generateBackupStudyTip(skills, ref);
+        updateDialogContent(backupTip);
       }
     });
 
     try {
       // UseCase 호출 - 전체 스킬 목록 전달 (Repository에서 랜덤 선택)
       final getStudyTipUseCase = ref.read(getStudyTipUseCaseProvider);
-      final asyncValue = await getStudyTipUseCase.execute(skills ?? '프로그래밍 기초');
+
+      // 캐시 방지를 위한 타임스탬프 추가
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final skillWithTimestamp = '${skills ?? '프로그래밍 기초'}-$timestamp';
+
+      final asyncValue = await getStudyTipUseCase.execute(skillWithTimestamp);
 
       // 타이머 취소
       loadingTimer.cancel();
@@ -490,17 +508,10 @@ class StudyTipBanner extends ConsumerWidget {
 
       // 결과 처리
       if (asyncValue.hasValue && asyncValue.value != null) {
-        debugPrint('StudyTip 생성 성공: ${asyncValue.value!.title}');
+        debugPrint('새 StudyTip 생성 성공: ${asyncValue.value!.title}');
 
-        // 캐시 무효화 - 새로운 캐시 키로 저장
-        final newCacheKey = '${_generateCacheKey(skills)}-new-${DateTime.now().millisecondsSinceEpoch}';
-        ref.read(studyTipCacheProvider.notifier).update((state) => {
-          ...state,
-          newCacheKey: asyncValue.value,
-        });
-
-        // 새 팁으로 다이얼로그 표시
-        _showStudyTipDetailsDialog(context, asyncValue.value!, skills, ref);
+        // 기존 다이얼로그 내용 업데이트
+        updateDialogContent(asyncValue.value!);
       } else if (asyncValue.hasError) {
         debugPrint('StudyTip 생성 오류: ${asyncValue.error}');
 
@@ -513,8 +524,9 @@ class StudyTipBanner extends ConsumerWidget {
             ),
           );
 
-          // 백업 스터디 팁 표시
-          _showBackupStudyTip(context, skills, ref);
+          // 백업 스터디 팁으로 업데이트
+          final backupTip = _generateBackupStudyTip(skills, ref);
+          updateDialogContent(backupTip);
         }
       }
     } catch (e) {
@@ -533,8 +545,9 @@ class StudyTipBanner extends ConsumerWidget {
           ),
         );
 
-        // 백업 스터디 팁 표시
-        _showBackupStudyTip(context, skills, ref);
+        // 백업 스터디 팁으로 업데이트
+        final backupTip = _generateBackupStudyTip(skills, ref);
+        updateDialogContent(backupTip);
       }
     }
   }
@@ -546,11 +559,8 @@ class StudyTipBanner extends ConsumerWidget {
     }
   }
 
-  // 백업 스터디 팁 표시 메서드
-  void _showBackupStudyTip(BuildContext context, String? skills, WidgetRef ref) {
-    debugPrint('백업 StudyTip 표시: 스킬=$skills');
-
-    // FallbackService를 통해 백업 팁 생성
+  // 백업 스터디 팁 생성 메서드
+  StudyTip _generateBackupStudyTip(String? skills, WidgetRef ref) {
     final fallbackService = ref.read(fallbackServiceProvider);
     final skillArea = skills?.split(',').firstWhere(
             (s) => s.trim().isNotEmpty,
@@ -559,8 +569,7 @@ class StudyTipBanner extends ConsumerWidget {
 
     final fallbackTipData = fallbackService.getFallbackStudyTip(skillArea);
 
-    // StudyTip 모델로 변환
-    final fallbackTip = StudyTip(
+    return StudyTip(
       title: fallbackTipData['title'] ?? '학습 팁',
       content: fallbackTipData['content'] ?? '꾸준한 학습이 성공의 열쇠입니다.',
       relatedSkill: fallbackTipData['relatedSkill'] ?? skillArea,
@@ -568,8 +577,6 @@ class StudyTipBanner extends ConsumerWidget {
       translation: fallbackTipData['translation'] ?? '연습이 완벽을 만든다.',
       source: fallbackTipData['source'],
     );
-
-    _showStudyTipDetailsDialog(context, fallbackTip, skills, ref);
   }
 
   void _showStudyTipDetailsDialog(
@@ -578,314 +585,371 @@ class StudyTipBanner extends ConsumerWidget {
       String? skills,
       WidgetRef ref,
       ) {
-    // 현재 팁 업데이트
-    _currentSelectedTip = tip;
-
+    // StatefulWidget으로 다이얼로그 상태 관리
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-        shape: RoundedRectangleBorder(
+      builder: (context) => _StudyTipDialog(
+        initialTip: tip,
+        skills: skills,
+        onConfirm: (StudyTip finalTip) {
+          // 확인 버튼 클릭 시 홈 배너 캐시 업데이트
+          _updateHomeBannerCache(ref, finalTip, skills);
+        },
+        onLoadNewTip: (Function(StudyTip) updateContent) {
+          // Next Insight 버튼 클릭 시 기존 로딩 팝업 스타일 사용
+          _loadNewTip(context, skills, ref, updateContent);
+        },
+      ),
+    );
+  }
+}
+
+// 다이얼로그를 위한 별도 StatefulWidget
+class _StudyTipDialog extends StatefulWidget {
+  final StudyTip initialTip;
+  final String? skills;
+  final Function(StudyTip) onConfirm;
+  final Function(Function(StudyTip)) onLoadNewTip;
+
+  const _StudyTipDialog({
+    required this.initialTip,
+    required this.skills,
+    required this.onConfirm,
+    required this.onLoadNewTip,
+  });
+
+  @override
+  State<_StudyTipDialog> createState() => _StudyTipDialogState();
+}
+
+class _StudyTipDialogState extends State<_StudyTipDialog> {
+  late StudyTip currentTip;
+
+  @override
+  void initState() {
+    super.initState();
+    currentTip = widget.initialTip;
+  }
+
+  void _updateCurrentTip(StudyTip newTip) {
+    if (mounted) {
+      setState(() {
+        currentTip = newTip;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 헤더 영역
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColorStyles.primary60,
-                      AppColorStyles.primary100,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 헤더 영역
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColorStyles.primary60,
+                    AppColorStyles.primary100,
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 제목 및 아이콘 영역
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.lightbulb_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          currentTip.title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            letterSpacing: -0.5,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
+
+                  // 스킬 영역
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      currentTip.relatedSkill,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
+
+            // 콘텐츠 영역
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 제목 및 아이콘 영역
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.lightbulb_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                    // 팁 내용
+                    Text(
+                      currentTip.content,
+                      style: TextStyle(
+                        height: 1.6,
+                        color: Colors.grey[800],
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 구분선 - 시각적으로 더 세련되게
+                    Container(
+                      height: 1,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.grey[200]!,
+                            Colors.grey[300]!,
+                            Colors.grey[200]!,
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            tip.title,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                              letterSpacing: -0.5,
-                              height: 1.3,
-                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 영어 한마디 섹션 - 더 세련되게
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.flight_takeoff_rounded,
+                          color: AppColorStyles.primary80.withValues(
+                            alpha: 0.8,
+                          ),
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          '버그보다 무서운 영어, 한 입씩!',
+                          style: TextStyle(
+                            color: AppColorStyles.primary80,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
                         ),
                       ],
                     ),
-
-                    // 스킬 영역
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Color(0xFFF5F7FF),
+                        borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Color(0xFFDCE3FF),
                           width: 1,
                         ),
                       ),
-                      child: Text(
-                        tip.relatedSkill,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColorStyles.primary80.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '"${currentTip.englishPhrase}"',
+                              style: TextStyle(
+                                color: AppColorStyles.primary80,
+                                fontWeight: FontWeight.w600,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            currentTip.translation,
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
 
-              // 콘텐츠 영역
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 팁 내용
-                      Text(
-                        tip.content,
-                        style: TextStyle(
-                          height: 1.6,
-                          color: Colors.grey[800],
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // 구분선 - 시각적으로 더 세련되게
-                      Container(
-                        height: 1,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.grey[200]!,
-                              Colors.grey[300]!,
-                              Colors.grey[200]!,
-                            ],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // 영어 한마디 섹션 - 더 세련되게
+                    // 출처 정보
+                    if (currentTip.source != null && currentTip.source!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Icon(
-                            Icons.flight_takeoff_rounded,
-                            color: AppColorStyles.primary80.withValues(
-                              alpha: 0.8,
-                            ),
-                            size: 18,
+                            Icons.source_outlined,
+                            size: 14,
+                            color: Colors.grey[500],
                           ),
-                          SizedBox(width: 8),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '출처: ${currentTip.source}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // 하단 버튼들 - 두 버튼을 나란히 배치
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Row(
+                children: [
+                  // 확인 버튼
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        // 현재 팁으로 홈 배너 업데이트
+                        widget.onConfirm(currentTip);
+                        Navigator.of(context).pop();
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Color(0xFFF5F7FF),
+                        foregroundColor: AppColorStyles.primary80,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: AppColorStyles.primary80
+                                .withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        '확인',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 간격
+                  const SizedBox(width: 12),
+
+                  // Next Insight 버튼
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () {
+                        // 기존 로딩 팝업 스타일로 새 팁 로드
+                        widget.onLoadNewTip(_updateCurrentTip);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColorStyles.primary80,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.auto_awesome, size: 16),
+                          SizedBox(width: 6),
                           Text(
-                            '버그보다 무서운 영어, 한 입씩!',
+                            '꿀팁 하나 더?',
                             style: TextStyle(
-                              color: AppColorStyles.primary80,
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF5F7FF),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Color(0xFFDCE3FF),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColorStyles.primary80.withValues(
-                                  alpha: 0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '"${tip.englishPhrase}"',
-                                style: TextStyle(
-                                  color: AppColorStyles.primary80,
-                                  fontWeight: FontWeight.w600,
-                                  fontStyle: FontStyle.italic,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              tip.translation,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w500,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 출처 정보
-                      if (tip.source != null && tip.source!.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.source_outlined,
-                              size: 14,
-                              color: Colors.grey[500],
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              '출처: ${tip.source}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-
-              // 하단 버튼들 - 두 버튼을 나란히 배치
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Row(
-                  children: [
-                    // 확인 버튼
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: Color(0xFFF5F7FF),
-                          foregroundColor: AppColorStyles.primary80,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: AppColorStyles.primary80
-                                  .withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        child: Text(
-                          '확인',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // 간격
-                    const SizedBox(width: 12),
-
-                    // Next Insight 버튼
-                    Expanded(
-                      child: TextButton(
-                        onPressed:
-                            () => _loadNewTip(context, skills, ref),
-                        style: TextButton.styleFrom(
-                          backgroundColor: AppColorStyles.primary80,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.auto_awesome, size: 16),
-                            SizedBox(width: 6),
-                            Text(
-                              'Next Insight',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
