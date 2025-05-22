@@ -28,7 +28,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   bool _wasInBackground = false;
   bool _isInitializing = false;
 
-  // 🔧 새로 추가: 상태 메시지 표시 관리
+  // 🔧 상태 메시지 표시 관리
   String? _lastShownStatusMessage;
   DateTime? _lastStatusMessageTime;
 
@@ -45,7 +45,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
 
   @override
   void dispose() {
-    // 🔧 개선: dispose 시 화면 비활성 상태 알림
+    // 🔧 dispose 시 화면 비활성 상태 알림
     if (_isInitialized) {
       print('🔄 화면 dispose - Notifier에 비활성 상태 알림');
       final notifier = ref.read(groupDetailNotifierProvider.notifier);
@@ -74,14 +74,38 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
           print('📱 앱이 백그라운드로 전환됨');
           _wasInBackground = true;
 
-          // 🔧 Notifier에 포그라운드 상태 변경 알림
           notifier.setAppForeground(false);
 
-          // 타이머 실행 중이면 중지
+          // 🔧 백그라운드 진입 시 타이머 강제 종료 처리
+          if (mounted) {
+            notifier.handleBackgroundTransition();
+          }
+        }
+        break;
+
+      case AppLifecycleState.inactive:
+        // 🔧 일시적 비활성 상태에서도 준비
+        if (_isInitialized && !_wasInBackground) {
+          print('📱 앱이 일시적으로 비활성화됨');
+          notifier.setAppForeground(false);
+        }
+        break;
+
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // 🔧 앱 종료 시에도 동일한 처리 (더 빠르게)
+        print('🔄 앱 종료 감지: $state');
+        if (_isInitialized) {
+          notifier.setAppForeground(false);
+          notifier.setScreenActive(false);
+
+          // 🔧 앱 종료 시에도 백그라운드 처리와 동일하게 타이머 종료
+          // 하지만 더 빠르게 처리해야 함
           if (mounted) {
             final currentState = ref.read(groupDetailNotifierProvider);
             if (currentState.timerStatus == TimerStatus.running) {
-              notifier.onAction(const GroupDetailAction.stopTimer());
+              print('⚡ 앱 종료 - 긴급 타이머 종료 처리');
+              notifier.handleBackgroundTransition();
             }
           }
         }
@@ -91,7 +115,6 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
         if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
           print('🔄 백그라운드에서 앱 재개 - 데이터 갱신');
 
-          // 🔧 Notifier에 포그라운드 상태 변경 알림
           notifier.setAppForeground(true);
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -102,24 +125,6 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
           });
         }
         _wasInBackground = false;
-        break;
-
-      case AppLifecycleState.inactive:
-        // 🔧 추가: 일시적 비활성 상태 (전화 수신, 알림 패널 등)
-        if (_isInitialized && !_wasInBackground) {
-          print('📱 앱이 일시적으로 비활성화됨');
-          notifier.setAppForeground(false);
-        }
-        break;
-
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        print('🔄 생명주기 상태 변경: $state');
-        // 앱이 완전히 종료되거나 숨겨진 상태
-        if (_isInitialized) {
-          notifier.setAppForeground(false);
-          notifier.setScreenActive(false);
-        }
         break;
     }
   }
@@ -146,7 +151,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     print('✅ 화면 초기화 완료');
   }
 
-  // 🔧 새로운 메서드: 상태 메시지 처리
+  // 🔧 상태 메시지 처리
   void _handleStatusMessage(String? statusMessage) {
     if (statusMessage == null || statusMessage.isEmpty) return;
 
@@ -254,24 +259,31 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     }
   }
 
-  // 🔥 Root 역할: context 기반 작업 (메시지 표시)
+  // 🔥 Root 역할: context 기반 작업 (앱 재개 메시지)
   void _showAppResumedMessage() {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
         final currentState = ref.read(groupDetailNotifierProvider);
-        if (currentState.timerStatus == TimerStatus.stop) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('앱이 백그라운드에 있는 동안 타이머가 중지되었습니다.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
+        // 🔧 실제로 타이머가 실행 중이었고 백그라운드에서 종료된 경우만 메시지 표시
+        if (currentState.timerStatus == TimerStatus.stop &&
+            currentState.elapsedSeconds == 0) {
+          // 현재 stop 상태이고 경과시간이 0이면 백그라운드에서 강제 종료된 것으로 추정
+          // 하지만 이것만으로는 정확한 판단이 어려움
+
+          // 🔧 일단 메시지 제거하고, 필요하면 별도 플래그 추가 검토
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   const SnackBar(
+          //     content: Text('앱이 백그라운드에 있는 동안 타이머가 종료되었습니다.'),
+          //     duration: Duration(seconds: 3),
+          //     backgroundColor: Colors.orange,
+          //   ),
+          // );
         }
       }
     });
   }
 
-  // 🔥 Root 역할: context 기반 작업 (경고창)
+  // 🔥 Root 역할: context 기반 작업 (네비게이션 경고창)
   Future<bool> _showNavigationWarningDialog(BuildContext context) async {
     if (mounted) {
       return await showDialog<bool>(
@@ -302,6 +314,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       final shouldNavigate = await _showNavigationWarningDialog(context);
 
       if (shouldNavigate && mounted) {
+        // 🔧 경고창에서 확인 시 타이머 종료
         await notifier.onAction(const GroupDetailAction.stopTimer());
 
         // 🔧 네비게이션 전 화면 비활성 상태 알림
@@ -364,7 +377,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     final state = ref.watch(groupDetailNotifierProvider);
     final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
-    // 🔧 새로 추가: 상태 메시지 처리
+    // 🔧 상태 메시지 처리
     final statusMessage = state.statusMessage;
     if (statusMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -414,7 +427,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       );
     }
 
-    // 🔥 Root 역할: PopScope 처리
+    // 🔥 Root 역할: PopScope 처리 (타이머 실행 중 뒤로가기 방지)
     return PopScope(
       canPop: state.timerStatus != TimerStatus.running,
       onPopInvokedWithResult: (didPop, result) {
@@ -422,9 +435,10 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
           // 🔧 실제로 pop이 발생했을 때 화면 비활성 상태 알림
           notifier.setScreenActive(false);
         } else {
-          // pop이 취소되었을 때 - 타이머 실행 중이어서 경고창 표시
+          // 🔧 pop이 취소되었을 때 - 타이머 실행 중이어서 경고창 표시
           _showNavigationWarningDialog(context).then((shouldPop) {
             if (shouldPop && mounted) {
+              // 🔧 사용자가 이동을 확인했을 때만 타이머 종료 후 pop
               notifier.onAction(const GroupDetailAction.stopTimer()).then((_) {
                 if (mounted) {
                   // 🔧 pop 전 화면 비활성 상태 알림
@@ -485,13 +499,13 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
             },
           ),
 
-          // 🔧 새로 추가: 스트림 연결 상태 표시 (상단 인디케이터)
+          // 🔧 스트림 연결 상태 표시 (상단 인디케이터)
           if (state.streamConnectionStatus == StreamConnectionStatus.connecting)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: Container(
+              child: SizedBox(
                 height: 3,
                 child: const LinearProgressIndicator(
                   backgroundColor: Colors.transparent,

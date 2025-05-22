@@ -86,22 +86,22 @@ class GroupDetailState with _$GroupDetailState {
 
     switch (streamConnectionStatus) {
       case StreamConnectionStatus.connecting:
-        return '실시간 업데이트 연결 중...';
+        return null; // 🔧 연결 중 메시지 제거 (정상적인 상황)
 
       case StreamConnectionStatus.connected:
         if (!isStreamHealthy) {
-          return '실시간 업데이트가 지연되고 있습니다.';
+          return '실시간 업데이트가 지연되고 있습니다.'; // 🔧 비정상 상황에만 표시
         }
         return null; // 정상 상태일 때는 메시지 없음
 
       case StreamConnectionStatus.disconnected:
         if (reconnectionAttempts > 0) {
-          return '실시간 업데이트 재연결 중... (${reconnectionAttempts}/3)';
+          return '연결 재시도 중... (${reconnectionAttempts}/3)'; // 🔧 재연결 중일 때만 표시
         }
-        return '실시간 업데이트 연결이 끊어졌습니다.';
+        return null; // 🔧 단순 연결 끊어짐은 메시지 제거
 
       case StreamConnectionStatus.failed:
-        return '실시간 업데이트에 문제가 발생했습니다.';
+        return '실시간 업데이트에 문제가 발생했습니다.'; // 🔧 실제 오류 상황
     }
   }
 
