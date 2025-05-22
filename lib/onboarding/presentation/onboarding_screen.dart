@@ -3,10 +3,8 @@ import 'dart:math' as math;
 import 'package:devlink_mobile_app/onboarding/domain/model/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/onboarding_action.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/onboarding_state.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final List<OnboardingPageModel> pages;

@@ -21,6 +21,12 @@ class ProfileEditState with _$ProfileEditState {
 
     /// 폼 검증 에러 메시지들
     this.validationErrors = const {},
+
+    /// 이미지 업로드 상태 - 명시적 관리
+    this.isImageUploading = false,
+
+    /// 에러 발생 시 복원할 원본 프로필 (불변 참조)
+    this.originalProfile,
   });
 
   /// 프로필 로드 상태
@@ -38,6 +44,12 @@ class ProfileEditState with _$ProfileEditState {
   /// 폼 필드별 검증 에러 메시지
   final Map<String, String> validationErrors;
 
+  /// 이미지 업로드 진행 상태
+  final bool isImageUploading;
+
+  /// 원본 프로필 (에러 발생 시 복원용)
+  final Member? originalProfile;
+
   /// 편의 getter들
   bool get isLoading => profileState.isLoading;
   bool get isSaving => saveState.isLoading;
@@ -45,4 +57,21 @@ class ProfileEditState with _$ProfileEditState {
   bool get hasValidationErrors => validationErrors.isNotEmpty;
   String? get saveError =>
       saveState.hasError ? saveState.error.toString() : null;
+
+  /// 편집된 내용이 있는지 확인
+  bool get hasChanges {
+    if (originalProfile == null || editingProfile == null) return false;
+
+    return originalProfile!.nickname != editingProfile!.nickname ||
+        originalProfile!.description != editingProfile!.description ||
+        originalProfile!.position != editingProfile!.position ||
+        originalProfile!.skills != editingProfile!.skills ||
+        originalProfile!.image != editingProfile!.image;
+  }
+
+  /// 닉네임이 변경되었는지 확인
+  bool get isNicknameChanged {
+    if (originalProfile == null || editingProfile == null) return false;
+    return originalProfile!.nickname != editingProfile!.nickname;
+  }
 }

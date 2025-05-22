@@ -2,10 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:devlink_mobile_app/onboarding/presentation/onboarding_action.dart';
-import 'package:devlink_mobile_app/onboarding/presentation/onboarding_notifier.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/splash_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreenRoot extends ConsumerStatefulWidget {
   const SplashScreenRoot({super.key});

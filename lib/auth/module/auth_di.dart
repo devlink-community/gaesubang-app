@@ -128,8 +128,8 @@ UpdateProfileUseCase updateProfileUseCase(Ref ref) {
 }
 
 @riverpod
-UpdateProfileImageUseCase updateProfileImageUseCase(Ref ref) {
-  return UpdateProfileImageUseCase(
-    repository: ref.watch(authRepositoryProvider),
-  );
+UpdateProfileImageUseCase updateProfileImageUseCase(
+  UpdateProfileImageUseCaseRef ref,
+) {
+  return UpdateProfileImageUseCase(ref.watch(authRepositoryProvider));
 }

@@ -13,7 +13,6 @@ import 'package:devlink_mobile_app/map/presentation/group_map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_map_notifier.g.dart';
