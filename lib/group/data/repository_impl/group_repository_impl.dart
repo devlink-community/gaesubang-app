@@ -24,10 +24,8 @@ class GroupRepositoryImpl implements GroupRepository {
       // DataSource에서 직접 그룹 목록 조회 (내부에서 현재 사용자의 가입 정보 처리)
       final groupsData = await _dataSource.fetchGroupList();
 
-      // Map<String, dynamic> → GroupDto → Group 변환
-      final groupDtos =
-          groupsData.map((data) => GroupDto.fromJson(data)).toList();
-      final groups = groupDtos.toModelList();
+      // 🔧 새로운 Mapper 사용: Map 리스트를 Group 리스트로 직접 변환
+      final groups = groupsData.toGroupModelList();
 
       return Result.success(groups);
     } catch (e, st) {
