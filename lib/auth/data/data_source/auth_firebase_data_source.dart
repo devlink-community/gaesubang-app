@@ -147,58 +147,138 @@ class AuthFirebaseDataSource implements AuthDataSource {
         throw Exception(AuthErrorMessages.termsNotAgreed);
       }
 
-      // 닉네임 중복 확인
+      // 🔥 닉네임 중복 확인 (Firestore에서만 확인 가능)
       final nicknameAvailable = await checkNicknameAvailability(nickname);
       if (!nicknameAvailable) {
         throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
       }
 
-      // Firebase Auth로 계정 생성
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email.toLowerCase(),
-        password: password,
-      );
-
-      final user = credential.user;
-      if (user == null) {
-        throw Exception(AuthErrorMessages.accountCreationFailed);
+      // 🔥 이메일 중복 확인은 Firestore에서만 가능 (Firebase Auth는 보안상 확인 불가)
+      final emailAvailableInFirestore = await _checkEmailInFirestore(email);
+      if (!emailAvailableInFirestore) {
+        throw Exception(AuthErrorMessages.emailAlreadyInUse);
       }
 
-      // Firebase Auth 프로필 정보 설정 (displayName)
-      await user.updateDisplayName(nickname);
+      UserCredential? credential;
+      User? user;
 
-      // Firestore에 완전한 사용자 정보 저장
-      final now = Timestamp.now();
-      final userData = {
-        'uid': user.uid,
-        'email': email.toLowerCase(),
-        'nickname': nickname,
-        'image': '',
-        'description': '',
-        'onAir': false,
-        'position': '',
-        'skills': '',
-        'streakDays': 0,
-        'agreedTermId': agreedTermsId,
-        'isServiceTermsAgreed': true,
-        'isPrivacyPolicyAgreed': true,
-        'isMarketingAgreed': false,
-        'agreedAt': now,
-        'joingroup': <Map<String, dynamic>>[],
-      };
+      try {
+        // 🔥 Firebase Auth로 계정 생성 시도 (이때 실제 중복이 감지됨)
+        credential = await _auth.createUserWithEmailAndPassword(
+          email: email.toLowerCase(),
+          password: password,
+        );
 
-      await _usersCollection.doc(user.uid).set(userData);
+        user = credential.user;
+        if (user == null) {
+          throw Exception(AuthErrorMessages.accountCreationFailed);
+        }
 
-      // 회원가입 시에도 완전한 데이터 반환 (타이머 활동은 비어있음)
-      return {...userData, 'timerActivities': <Map<String, dynamic>>[]};
+        debugPrint('✅ Firebase Auth 계정 생성 성공: ${user.uid}');
+      } catch (e) {
+        debugPrint('❌ Firebase Auth 계정 생성 실패: $e');
+
+        // Firebase Auth 에러 코드별 처리
+        if (e is FirebaseAuthException) {
+          switch (e.code) {
+            case 'email-already-in-use':
+              throw Exception(AuthErrorMessages.emailAlreadyInUse);
+            case 'weak-password':
+              throw Exception('비밀번호가 너무 약합니다');
+            case 'invalid-email':
+              throw Exception('잘못된 이메일 형식입니다');
+            case 'operation-not-allowed':
+              throw Exception('이메일/비밀번호 인증이 비활성화되어 있습니다');
+            case 'too-many-requests':
+              throw Exception('너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요');
+            default:
+              throw Exception('계정 생성에 실패했습니다: ${e.message}');
+          }
+        }
+
+        // 다른 종류의 예외
+        throw Exception('계정 생성 중 오류가 발생했습니다: $e');
+      }
+
+      try {
+        // Firebase Auth 프로필 정보 설정 (displayName)
+        await user.updateDisplayName(nickname);
+
+        // Firestore에 완전한 사용자 정보 저장
+        final now = Timestamp.now();
+        final userData = {
+          'uid': user.uid,
+          'email': email.toLowerCase(),
+          'nickname': nickname,
+          'image': '',
+          'description': '',
+          'onAir': false,
+          'position': '',
+          'skills': '',
+          'streakDays': 0,
+          'agreedTermId': agreedTermsId,
+          'isServiceTermsAgreed': true,
+          'isPrivacyPolicyAgreed': true,
+          'isMarketingAgreed': false,
+          'agreedAt': now,
+          'joingroup': <Map<String, dynamic>>[],
+        };
+
+        await _usersCollection.doc(user.uid).set(userData);
+
+        debugPrint('✅ Firestore 사용자 데이터 저장 완료');
+
+        // 회원가입 시에도 완전한 데이터 반환 (타이머 활동은 비어있음)
+        return {...userData, 'timerActivities': <Map<String, dynamic>>[]};
+      } catch (e) {
+        debugPrint('❌ Firestore 저장 실패, Firebase Auth 계정 삭제: $e');
+
+        // Firestore 저장 실패 시 생성된 Firebase Auth 계정을 삭제
+        try {
+          await user.delete();
+          debugPrint('✅ Firebase Auth 계정 롤백 완료');
+        } catch (deleteError) {
+          debugPrint('⚠️ Firebase Auth 계정 삭제 실패: $deleteError');
+        }
+
+        throw Exception('사용자 정보 저장에 실패했습니다: $e');
+      }
     }, params: {'email': email, 'nickname': nickname});
+  }
+
+  /// Firestore에서만 이메일 중복 확인 (Firebase Auth 확인은 보안상 불가능)
+  Future<bool> _checkEmailInFirestore(String email) async {
+    try {
+      final normalizedEmail = email.toLowerCase();
+
+      final query =
+          await _usersCollection
+              .where('email', isEqualTo: normalizedEmail)
+              .limit(1)
+              .get();
+
+      final isAvailable = query.docs.isEmpty;
+
+      debugPrint(
+        'Firestore 이메일 중복 확인: $normalizedEmail -> ${isAvailable ? "사용가능" : "사용불가"}',
+      );
+
+      return isAvailable;
+    } catch (e) {
+      debugPrint('Firestore 이메일 확인 중 오류: $e');
+      // 오류 발생 시 안전하게 사용 불가로 처리
+      return false;
+    }
   }
 
   @override
   Future<Map<String, dynamic>?> fetchCurrentUser() async {
     return ApiCallDecorator.wrap('FirebaseAuth.fetchCurrentUser', () async {
-      // 최적화된 병렬 처리 메서드 사용
-      return await fetchCurrentUserWithTimerActivities();
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      // 재시도 로직이 포함된 메서드 사용
+      return await _fetchUserDataWithRetry(user.uid);
     });
   }
 
@@ -238,14 +318,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
         // 유효성 검사
         AuthValidator.validateEmailFormat(email);
 
-        // Firestore에서 직접 이메일 중복 확인
-        final query =
-            await _usersCollection
-                .where('email', isEqualTo: email.toLowerCase())
-                .limit(1)
-                .get();
-
-        return query.docs.isEmpty;
+        // 🔥 Firebase Auth에서는 보안상 이메일 중복 확인이 제한됨
+        // Firestore에서만 확인 가능하며, 실제 중복은 createUser 시점에서 감지됨
+        return await _checkEmailInFirestore(email);
       },
       params: {'email': email},
     );
@@ -569,14 +644,44 @@ class AuthFirebaseDataSource implements AuthDataSource {
         'Firebase 사용자 프로필: displayName=${firebaseUser.displayName}, photoURL=${firebaseUser.photoURL}',
       );
 
-      try {
-        // 사용자 정보 가져오기
-        return await fetchCurrentUserWithTimerActivities();
-      } catch (e) {
-        debugPrint('인증 상태 변화 스트림 에러: $e');
-        return null;
-      }
+      // 재시도 로직이 포함된 사용자 정보 가져오기
+      return await _fetchUserDataWithRetry(firebaseUser.uid);
     }).distinct(); // 중복 이벤트 방지
+  }
+
+  /// 재시도 로직이 포함된 사용자 데이터 가져오기
+  Future<Map<String, dynamic>?> _fetchUserDataWithRetry(
+    String uid, {
+    int maxRetries = 5,
+  }) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // fetchCurrentUserWithTimerActivities 호출
+        final userData = await fetchCurrentUserWithTimerActivities();
+        if (userData != null) {
+          debugPrint('✅ 인증 상태 스트림: 사용자 데이터 조회 성공 (시도: $attempt/$maxRetries)');
+          return userData;
+        }
+      } catch (e) {
+        debugPrint('⚠️ 인증 상태 스트림 시도 $attempt/$maxRetries 실패: $e');
+
+        // 마지막 시도가 아니라면 재시도
+        if (attempt < maxRetries) {
+          // 점진적으로 증가하는 대기 시간 (500ms, 1s, 1.5s, 2s, 2.5s)
+          final delayMs = 500 * attempt;
+          debugPrint('⏳ ${delayMs}ms 후 재시도...');
+          await Future.delayed(Duration(milliseconds: delayMs));
+          continue;
+        }
+
+        // 최대 재시도 횟수 초과
+        debugPrint('❌ 인증 상태 스트림: 최대 재시도 횟수 초과 ($maxRetries회)');
+        debugPrint('❌ 최종 오류: $e');
+      }
+    }
+
+    // 모든 재시도가 실패한 경우 null 반환 (unauthenticated 상태로 처리)
+    return null;
   }
 
   // 현재 인증 상태 확인 (추가)
@@ -587,7 +692,8 @@ class AuthFirebaseDataSource implements AuthDataSource {
       return null;
     }
 
-    return await fetchCurrentUserWithTimerActivities();
+    // 재시도 로직이 포함된 메서드 사용
+    return await _fetchUserDataWithRetry(user.uid);
   }
 
   @override
