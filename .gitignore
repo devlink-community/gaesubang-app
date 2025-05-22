@@ -141,4 +141,7 @@ ios/Runner/GoogleService-Info.plist
 # Firebase CLI files
 .firebase/
 .firebaserc
-firebase-debug.log
+firebase-debug.log.DS_Store
+ios/Podfile
+ios/Runner.xcodeproj/project.pbxproj
+ios/.DS_Store
