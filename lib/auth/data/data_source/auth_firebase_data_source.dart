@@ -1,9 +1,12 @@
-// lib/auth/data/data_source/auth_firebase_data_source.dart
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import 'auth_data_source.dart';
@@ -11,10 +14,15 @@ import 'auth_data_source.dart';
 class AuthFirebaseDataSource implements AuthDataSource {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final FirebaseStorage _storage;
 
-  AuthFirebaseDataSource({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _firestore = firestore ?? FirebaseFirestore.instance;
+  AuthFirebaseDataSource({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    FirebaseStorage? storage,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _storage = storage ?? FirebaseStorage.instance;
 
   // Users 컬렉션 참조
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
@@ -446,26 +454,104 @@ class AuthFirebaseDataSource implements AuthDataSource {
         throw Exception(AuthErrorMessages.noLoggedInUser);
       }
 
-      // Firebase Auth 사용자 프로필 이미지 업데이트 (photoURL)
-      await user.updatePhotoURL(imagePath);
+      try {
+        debugPrint('🔄 프로필 이미지 업로드 시작: $imagePath');
 
-      // Firestore에 이미지 경로 업데이트
-      await _usersCollection.doc(user.uid).update({'image': imagePath});
+        // 1. 이미지 파일 검증 (이미 UseCase에서 압축된 파일을 받음)
+        final File imageFile = File(imagePath);
+        if (!await imageFile.exists()) {
+          throw Exception('이미지 파일을 찾을 수 없습니다');
+        }
 
-      // Firebase Auth 프로필 변경이 되었음을 확실히 하기 위해 재인증 트리거
-      // 이는 authStateChanges 이벤트를 강제로 발생시킵니다
-      await user.reload();
+        // 2. 이미지 바이트 읽기 (이미 압축된 상태)
+        final Uint8List imageBytes = await imageFile.readAsBytes();
 
-      debugPrint('Firebase 프로필 이미지 업데이트 완료: $imagePath');
+        debugPrint('📤 업로드할 이미지 크기: ${imageBytes.length ~/ 1024}KB');
 
-      // 업데이트된 완전한 사용자 정보 반환 (병렬 처리 활용)
-      final updatedUserData = await fetchCurrentUserWithTimerActivities();
-      if (updatedUserData == null) {
-        throw Exception(AuthErrorMessages.userDataNotFound);
+        // 3. Firebase Storage에 업로드
+        final String fileName =
+            'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final String storagePath = 'users/${user.uid}/$fileName';
+
+        final Reference storageRef = _storage.ref().child(storagePath);
+
+        // 기존 프로필 이미지가 있다면 삭제
+        await _deleteExistingProfileImage(user.uid);
+
+        // 4. 새 이미지 업로드
+        final UploadTask uploadTask = storageRef.putData(
+          imageBytes,
+          SettableMetadata(
+            contentType: 'image/jpeg',
+            customMetadata: {
+              'userId': user.uid,
+              'uploadedAt': DateTime.now().toIso8601String(),
+              'originalPath': imagePath,
+              'compressedByUseCase': 'true',
+            },
+          ),
+        );
+
+        final TaskSnapshot snapshot = await uploadTask;
+        final String downloadUrl = await snapshot.ref.getDownloadURL();
+
+        debugPrint('✅ Firebase Storage 이미지 업로드 완료: $downloadUrl');
+
+        // 5. Firebase Auth 프로필 이미지 업데이트 (photoURL)
+        await user.updatePhotoURL(downloadUrl);
+
+        // 6. Firestore에 이미지 URL 업데이트
+        await _usersCollection.doc(user.uid).update({'image': downloadUrl});
+
+        // 7. Firebase Auth 프로필 변경이 되었음을 확실히 하기 위해 재인증 트리거
+        await user.reload();
+
+        debugPrint('✅ Firebase 프로필 이미지 업데이트 완료: $downloadUrl');
+
+        // 8. 업데이트된 완전한 사용자 정보 반환
+        final updatedUserData = await fetchCurrentUserWithTimerActivities();
+        if (updatedUserData == null) {
+          throw Exception(AuthErrorMessages.userDataNotFound);
+        }
+
+        return updatedUserData;
+      } catch (e, stackTrace) {
+        debugPrint('❌ 프로필 이미지 업데이트 실패: $e');
+        debugPrint('StackTrace: $stackTrace');
+
+        // 사용자 친화적 에러 메시지
+        if (e.toString().contains('network')) {
+          throw Exception('네트워크 연결을 확인해주세요');
+        } else if (e.toString().contains('permission')) {
+          throw Exception('이미지 업로드 권한이 없습니다');
+        } else if (e.toString().contains('quota')) {
+          throw Exception('저장 공간이 부족합니다');
+        } else if (e.toString().contains('file_size')) {
+          throw Exception('이미지 파일이 너무 큽니다');
+        } else {
+          throw Exception('이미지 업로드에 실패했습니다');
+        }
       }
-
-      return updatedUserData;
     }, params: {'imagePath': imagePath});
+  }
+
+  /// 기존 프로필 이미지 삭제
+  Future<void> _deleteExistingProfileImage(String userId) async {
+    try {
+      final currentUserDoc = await _usersCollection.doc(userId).get();
+      final currentImageUrl = currentUserDoc.data()?['image'] as String?;
+
+      if (currentImageUrl != null &&
+          currentImageUrl.isNotEmpty &&
+          currentImageUrl.contains('firebase')) {
+        final Reference oldImageRef = _storage.refFromURL(currentImageUrl);
+        await oldImageRef.delete();
+        debugPrint('✅ 기존 프로필 이미지 삭제 완료');
+      }
+    } catch (e) {
+      debugPrint('⚠️  기존 이미지 삭제 실패 (무시함): $e');
+      // 삭제 실패는 치명적이지 않으므로 예외를 던지지 않음
+    }
   }
 
   // 인증 상태 변화 스트림 (Firebase userChanges() 사용)

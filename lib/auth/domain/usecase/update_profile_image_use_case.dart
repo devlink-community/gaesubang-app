@@ -1,23 +1,211 @@
-// lib/auth/domain/usecase/update_profile_image_use_case.dart
+import 'dart:io';
+
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/result/result.dart';
+import '../../../core/utils/image_compression.dart';
+
+/// 프로필 이미지 업데이트 UseCase
 class UpdateProfileImageUseCase {
-  final AuthRepository _repository;
+  final AuthRepository _authRepository;
 
-  UpdateProfileImageUseCase({required AuthRepository repository})
-    : _repository = repository;
+  UpdateProfileImageUseCase(this._authRepository);
 
+  /// 프로필 이미지를 업데이트합니다
+  ///
+  /// [imagePath]: 선택된 이미지의 로컬 파일 경로
+  ///
+  /// 처리 과정:
+  /// 1. 이미지 파일 유효성 검사
+  /// 2. 이미지 압축 (필요한 경우)
+  /// 3. 서버에 업로드
+  /// 4. 업데이트된 사용자 정보 반환
   Future<AsyncValue<Member>> execute(String imagePath) async {
-    final result = await _repository.updateProfileImage(imagePath);
+    try {
+      debugPrint('🔄 UpdateProfileImageUseCase: 이미지 업데이트 시작 - $imagePath');
 
-    switch (result) {
-      case Success(:final data):
-        return AsyncData(data);
-      case Error(:final failure):
-        return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
+      // 1. 이미지 파일 유효성 검사
+      final File originalImageFile = File(imagePath);
+      if (!await originalImageFile.exists()) {
+        debugPrint('❌ UpdateProfileImageUseCase: 이미지 파일이 존재하지 않음');
+        return AsyncValue.error(
+          '선택한 이미지 파일을 찾을 수 없습니다',
+          StackTrace.current,
+        );
+      }
+
+      // 2. 파일 크기 확인 및 로깅
+      final int originalSizeKB = await originalImageFile.length() ~/ 1024;
+      debugPrint(
+        '📊 UpdateProfileImageUseCase: 원본 이미지 크기 - ${originalSizeKB}KB',
+      );
+
+      // 3. 이미지 압축 처리
+      File imageFileToUpload;
+
+      // 압축이 필요한지 확인 (500KB 이상이면 압축)
+      final bool shouldCompress =
+          await ImageCompressionUtils.shouldCompressImage(
+            imagePath: imagePath,
+            maxFileSizeKB: 500,
+          );
+
+      if (shouldCompress) {
+        debugPrint(
+          '🗜️ UpdateProfileImageUseCase: 이미지 압축 시작 (${originalSizeKB}KB > 500KB)',
+        );
+
+        try {
+          // 이미지 압축 및 임시 파일 생성
+          imageFileToUpload = await ImageCompressionUtils.compressAndSaveImage(
+            originalImagePath: imagePath,
+            maxWidth: 1024,
+            maxHeight: 1024,
+            quality: 80,
+            maxFileSizeKB: 500,
+            customFileName:
+                'profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          );
+
+          final int compressedSizeKB = await imageFileToUpload.length() ~/ 1024;
+          debugPrint('✅ UpdateProfileImageUseCase: 이미지 압축 완료');
+          debugPrint(
+            '   압축 전: ${originalSizeKB}KB → 압축 후: ${compressedSizeKB}KB',
+          );
+          debugPrint(
+            '   압축률: ${((originalSizeKB - compressedSizeKB) / originalSizeKB * 100).toStringAsFixed(1)}%',
+          );
+        } catch (compressionError) {
+          debugPrint(
+            '⚠️ UpdateProfileImageUseCase: 이미지 압축 실패, 원본 사용 - $compressionError',
+          );
+          // 압축 실패 시 원본 이미지 사용
+          imageFileToUpload = originalImageFile;
+        }
+      } else {
+        debugPrint(
+          'ℹ️ UpdateProfileImageUseCase: 이미지 압축 불필요 (${originalSizeKB}KB ≤ 500KB)',
+        );
+        imageFileToUpload = originalImageFile;
+      }
+
+      // 4. 최종 업로드 파일 크기 확인
+      final int finalSizeKB = await imageFileToUpload.length() ~/ 1024;
+      debugPrint(
+        '📤 UpdateProfileImageUseCase: 업로드할 이미지 - ${imageFileToUpload.path} (${finalSizeKB}KB)',
+      );
+
+      // 5. 서버에 이미지 업로드
+      debugPrint('🚀 UpdateProfileImageUseCase: 서버 업로드 시작');
+      final result = await _authRepository.updateProfileImage(
+        imageFileToUpload.path,
+      );
+
+      // 6. Result<Member> 타입 처리 (freezed sealed class 패턴 매칭)
+      switch (result) {
+        case Success<Member>(:final data):
+          // 7. 임시 압축 파일 정리 (원본과 다른 경우)
+          if (imageFileToUpload.path != originalImageFile.path) {
+            imageFileToUpload.delete().catchError((deleteError) {
+              debugPrint(
+                '⚠️ UpdateProfileImageUseCase: 임시 파일 삭제 실패 - $deleteError',
+              );
+              // 파일 삭제 실패는 치명적이지 않으므로 계속 진행
+            });
+          }
+
+          debugPrint('✅ UpdateProfileImageUseCase: 프로필 이미지 업데이트 성공');
+          debugPrint('   새 이미지 URL: ${data.image}');
+
+          return AsyncValue.data(data);
+
+        case Error<Member>(:final failure):
+          debugPrint(
+            '❌ UpdateProfileImageUseCase: Repository 실패 - ${failure.message}',
+          );
+
+          return AsyncValue.error(failure.message, StackTrace.current);
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ UpdateProfileImageUseCase: 프로필 이미지 업데이트 실패 - $e');
+      debugPrint('스택 트레이스: $stackTrace');
+
+      // 사용자 친화적인 에러 메시지 제공
+      String userFriendlyMessage;
+      if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        userFriendlyMessage = '네트워크 연결을 확인해주세요';
+      } else if (e.toString().contains('file') ||
+          e.toString().contains('permission')) {
+        userFriendlyMessage = '이미지 파일에 접근할 수 없습니다';
+      } else if (e.toString().contains('size') ||
+          e.toString().contains('large')) {
+        userFriendlyMessage = '이미지 파일이 너무 큽니다';
+      } else if (e.toString().contains('format') ||
+          e.toString().contains('invalid')) {
+        userFriendlyMessage = '지원하지 않는 이미지 형식입니다';
+      } else {
+        userFriendlyMessage = '이미지 업로드에 실패했습니다';
+      }
+
+      return AsyncValue.error(userFriendlyMessage, stackTrace);
+    }
+  }
+
+  /// 지원되는 이미지 형식인지 확인
+  bool _isSupportedImageFormat(String imagePath) {
+    final String extension = imagePath.toLowerCase().split('.').last;
+    const List<String> supportedFormats = [
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'webp',
+    ];
+    return supportedFormats.contains(extension);
+  }
+
+  /// 이미지 파일 크기 제한 확인 (10MB)
+  Future<bool> _isWithinSizeLimit(File imageFile) async {
+    const int maxSizeBytes = 10 * 1024 * 1024; // 10MB
+    final int fileSizeBytes = await imageFile.length();
+    return fileSizeBytes <= maxSizeBytes;
+  }
+
+  /// 추가 검증을 포함한 고급 이미지 업데이트
+  Future<AsyncValue<Member>> executeWithValidation(String imagePath) async {
+    try {
+      debugPrint('🔄 UpdateProfileImageUseCase: 고급 검증과 함께 이미지 업데이트 시작');
+
+      final File imageFile = File(imagePath);
+
+      // 1. 파일 존재 확인
+      if (!await imageFile.exists()) {
+        return AsyncValue.error('이미지 파일을 찾을 수 없습니다', StackTrace.current);
+      }
+
+      // 2. 이미지 형식 검증
+      if (!_isSupportedImageFormat(imagePath)) {
+        return AsyncValue.error(
+          '지원하지 않는 이미지 형식입니다.\n지원 형식: JPG, PNG, GIF, BMP, WebP',
+          StackTrace.current,
+        );
+      }
+
+      // 3. 파일 크기 제한 확인
+      if (!await _isWithinSizeLimit(imageFile)) {
+        return AsyncValue.error('이미지 파일이 너무 큽니다 (최대 10MB)', StackTrace.current);
+      }
+
+      // 4. 일반 업데이트 프로세스 실행
+      return await execute(imagePath);
+    } catch (e, stackTrace) {
+      debugPrint('❌ UpdateProfileImageUseCase: 고급 검증 실패 - $e');
+      return AsyncValue.error('이미지 업데이트 검증에 실패했습니다', stackTrace);
     }
   }
 }
