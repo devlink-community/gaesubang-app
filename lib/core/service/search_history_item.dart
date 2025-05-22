@@ -1,18 +1,15 @@
-// lib/core/services/search_history_service.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 검색어 데이터 모델
+/// 검색어 데이터 모델 (단순화)
 class SearchHistoryItem {
   final String term;
   final DateTime createdAt;
-  final int frequency; // 검색 횟수
   final SearchCategory category;
 
   const SearchHistoryItem({
     required this.term,
     required this.createdAt,
-    this.frequency = 1,
     this.category = SearchCategory.community,
   });
 
@@ -20,7 +17,6 @@ class SearchHistoryItem {
   Map<String, dynamic> toJson() => {
     'term': term,
     'createdAt': createdAt.millisecondsSinceEpoch,
-    'frequency': frequency,
     'category': category.name,
   };
 
@@ -28,7 +24,6 @@ class SearchHistoryItem {
     return SearchHistoryItem(
       term: json['term'] as String,
       createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
-      frequency: json['frequency'] as int? ?? 1,
       category: SearchCategory.values.firstWhere(
         (e) => e.name == json['category'],
         orElse: () => SearchCategory.community,
@@ -36,18 +31,10 @@ class SearchHistoryItem {
     );
   }
 
-  /// 빈도수 증가
-  SearchHistoryItem incrementFrequency() => SearchHistoryItem(
-    term: term,
-    createdAt: createdAt,
-    frequency: frequency + 1,
-    category: category,
-  );
-
-  /// 만료 여부 확인 (7일)
+  /// 만료 여부 확인 (30일)
   bool get isExpired {
     final now = DateTime.now();
-    final expiryDuration = const Duration(days: 7);
+    final expiryDuration = const Duration(days: 30);
     return now.difference(createdAt) > expiryDuration;
   }
 }
@@ -66,12 +53,11 @@ enum SearchCategory {
 /// 검색어 필터 옵션
 enum SearchFilter {
   recent, // 최신순
-  frequency, // 빈도순
   alphabetical, // 가나다순
 }
 
 class SearchHistoryService {
-  static const int _maxHistoryCount = 20; // 최대 저장 개수 증가
+  static const int _maxHistoryCount = 20; // 최대 저장 개수
   static const int _maxDisplayCount = 10; // 화면에 표시할 최대 개수
 
   const SearchHistoryService._();
@@ -102,7 +88,7 @@ class SearchHistoryService {
     }
   }
 
-  /// 검색어 추가 (빈도수 관리 포함)
+  /// 검색어 추가 (중복 제거 및 최신순 정렬)
   static Future<void> addSearchTerm(
     String searchTerm, {
     SearchCategory category = SearchCategory.community,
@@ -113,23 +99,16 @@ class SearchHistoryService {
       final prefs = await SharedPreferences.getInstance();
       final items = await _getSearchHistoryItems(category);
 
-      // 기존 항목 찾기
-      final existingIndex = items.indexWhere((item) => item.term == searchTerm);
+      // 기존 항목 제거 (중복 방지)
+      items.removeWhere((item) => item.term == searchTerm);
 
-      if (existingIndex != -1) {
-        // 기존 항목이 있으면 빈도수 증가 및 맨 앞으로 이동
-        final existingItem = items[existingIndex];
-        items.removeAt(existingIndex);
-        items.insert(0, existingItem.incrementFrequency());
-      } else {
-        // 새 항목 추가 (맨 앞에)
-        final newItem = SearchHistoryItem(
-          term: searchTerm,
-          createdAt: DateTime.now(),
-          category: category,
-        );
-        items.insert(0, newItem);
-      }
+      // 새 항목을 맨 앞에 추가
+      final newItem = SearchHistoryItem(
+        term: searchTerm,
+        createdAt: DateTime.now(),
+        category: category,
+      );
+      items.insert(0, newItem);
 
       // 최대 개수 제한
       if (items.length > _maxHistoryCount) {
@@ -194,27 +173,6 @@ class SearchHistoryService {
     }
   }
 
-  /// 인기 검색어 조회 (빈도수 기반)
-  static Future<List<String>> getPopularSearches({
-    SearchCategory category = SearchCategory.community,
-    int limit = 5,
-  }) async {
-    try {
-      final items = await _getSearchHistoryItems(category);
-
-      // 만료되지 않은 항목만 필터링
-      final validItems = items.where((item) => !item.isExpired).toList();
-
-      // 빈도수 기준 정렬
-      validItems.sort((a, b) => b.frequency.compareTo(a.frequency));
-
-      return validItems.take(limit).map((item) => item.term).toList();
-    } catch (e) {
-      print('인기 검색어 조회 오류: $e');
-      return [];
-    }
-  }
-
   /// 검색어 통계 조회
   static Future<Map<String, dynamic>> getSearchStatistics({
     SearchCategory category = SearchCategory.community,
@@ -223,23 +181,25 @@ class SearchHistoryService {
       final items = await _getSearchHistoryItems(category);
       final validItems = items.where((item) => !item.isExpired).toList();
 
-      final totalSearches = validItems.fold<int>(
-        0,
-        (sum, item) => sum + item.frequency,
-      );
-      final uniqueTerms = validItems.length;
-      final mostSearched =
+      final totalSearches = validItems.length;
+      final oldestSearch =
           validItems.isNotEmpty
               ? validItems
-                  .reduce((a, b) => a.frequency > b.frequency ? a : b)
-                  .term
-              : '';
+                  .map((e) => e.createdAt)
+                  .reduce((a, b) => a.isBefore(b) ? a : b)
+              : null;
+      final newestSearch =
+          validItems.isNotEmpty
+              ? validItems
+                  .map((e) => e.createdAt)
+                  .reduce((a, b) => a.isAfter(b) ? a : b)
+              : null;
 
       return {
         'totalSearches': totalSearches,
-        'uniqueTerms': uniqueTerms,
-        'mostSearched': mostSearched,
-        'avgFrequency': uniqueTerms > 0 ? totalSearches / uniqueTerms : 0.0,
+        'oldestSearch': oldestSearch?.toIso8601String(),
+        'newestSearch': newestSearch?.toIso8601String(),
+        'category': category.displayName,
       };
     } catch (e) {
       print('검색어 통계 조회 오류: $e');
@@ -288,9 +248,6 @@ class SearchHistoryService {
     switch (filter) {
       case SearchFilter.recent:
         items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
-      case SearchFilter.frequency:
-        items.sort((a, b) => b.frequency.compareTo(a.frequency));
         break;
       case SearchFilter.alphabetical:
         items.sort((a, b) => a.term.compareTo(b.term));

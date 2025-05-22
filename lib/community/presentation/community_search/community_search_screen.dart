@@ -368,8 +368,6 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
     switch (filter) {
       case SearchFilter.recent:
         return '최신순';
-      case SearchFilter.frequency:
-        return '빈도순';
       case SearchFilter.alphabetical:
         return '가나다순';
     }

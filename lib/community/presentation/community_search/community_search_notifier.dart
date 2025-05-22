@@ -7,7 +7,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_search_notifier.g.dart';
 
-// ⭐ keepAlive: true 추가로 상태 유지!
 @Riverpod(keepAlive: true)
 class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   late final SearchPostsUseCase _searchPostsUseCase;
@@ -45,10 +44,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
           category: SearchCategory.community,
           filter: state.currentFilter,
           limit: 8,
-        ),
-        SearchHistoryService.getPopularSearches(
-          category: SearchCategory.community,
-          limit: 5,
         ),
       ]);
 
@@ -210,20 +205,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       print('모든 검색어 삭제 실패: $e');
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
-    }
-  }
-
-  /// 인기 검색어 새로고침
-  Future<void> refreshPopularSearches() async {
-    try {
-      final popularSearches = await SearchHistoryService.getPopularSearches(
-        category: SearchCategory.community,
-        limit: 5,
-      );
-
-      state = state.copyWith(popularSearches: popularSearches);
-    } catch (e) {
-      print('인기 검색어 새로고침 실패: $e');
     }
   }
 
