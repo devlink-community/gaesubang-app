@@ -1,6 +1,4 @@
 // lib/group/presentation/group_setting/group_settings_notifier.dart
-import 'dart:io';
-
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/image_compression.dart';
@@ -55,7 +53,6 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
     switch (result) {
       case AsyncData(:final value):
-
         // 현재 사용자가 방장인지 확인
         final isOwner = value.ownerId == currentUser?.id;
 
@@ -112,6 +109,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   /// 이미지 업로드 처리 - 세밀한 상태 관리
   Future<void> uploadGroupImage(String localImagePath) async {
     try {
+      state = state.copyWith(isSubmitting: true);
       // 업로드 시작 - 초기 상태 설정
       state = state.copyWith(
         imageUploadStatus: ImageUploadStatus.idle,
@@ -188,6 +186,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             uploadProgress: 1.0,
             successMessage: '이미지 업로드가 완료되었습니다.',
             originalImagePath: null, // 로컬 경로 초기화
+            isSubmitting: false, // 로딩 OFF
           );
 
           // 임시 압축 파일 삭제
@@ -215,6 +214,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             imageUploadStatus: ImageUploadStatus.failed,
             uploadProgress: 0.0,
             errorMessage: '이미지 업로드에 실패했습니다: $error',
+            isSubmitting: false, // 로딩 OFF
           );
 
         case AsyncLoading():
@@ -230,6 +230,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         imageUploadStatus: ImageUploadStatus.failed,
         uploadProgress: 0.0,
         errorMessage: '이미지 처리 중 오류가 발생했습니다: $e',
+        isSubmitting: false, // 로딩 OFF
       );
     }
   }
