@@ -68,17 +68,17 @@ void main() {
     test('markAsRead 성공 시 Result.success를 반환해야 함', () async {
       // 준비
       when(
-        mockDataSource.markAsRead('notification_1'),
+        mockDataSource.markAsRead('notification_1', 'user_1'),
       ).thenAnswer((_) async => true);
 
       // 실행
-      final result = await repository.markAsRead('notification_1');
+      final result = await repository.markAsRead('notification_1', 'user_1');
 
       // 검증
       expect(result, isA<Success>());
       expect((result as Success).data, true);
 
-      verify(mockDataSource.markAsRead('notification_1')).called(1);
+      verify(mockDataSource.markAsRead('notification_1', 'user_1')).called(1);
     });
   });
 }

@@ -81,7 +81,6 @@ class FCMService {
       // 7. 토큰 갱신 리스너 설정
       _firebaseMessaging.onTokenRefresh.listen((token) {
         debugPrint('FCM Token 갱신됨: ${token.substring(0, 20)}...');
-        // TODO: 새 토큰을 서버에 업데이트
       });
 
       _isInitialized = true;
