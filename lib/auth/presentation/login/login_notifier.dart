@@ -119,6 +119,7 @@ class LoginNotifier extends _$LoginNotifier {
       );
     } else {
       // 성공 시 상태 업데이트 (에러 메시지 제거)
+
       state = state.copyWith(
         loginErrorMessage: null,
         loginUserResult: asyncResult,
