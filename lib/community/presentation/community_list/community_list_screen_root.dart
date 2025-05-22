@@ -10,23 +10,34 @@ import 'community_list_action.dart';
 import 'community_list_notifier.dart';
 import 'community_list_screen.dart';
 
-class CommunityListScreenRoot extends ConsumerWidget {
+class CommunityListScreenRoot extends ConsumerStatefulWidget {
   const CommunityListScreenRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(communityListNotifierProvider);
-    final notifier = ref.watch(communityListNotifierProvider.notifier);
+  ConsumerState<CommunityListScreenRoot> createState() =>
+      _CommunityListScreenRootState();
+}
 
-    // RefreshCommunity 이벤트 감지
-    ref.listen<List<AppEvent>>(appEventNotifierProvider, (previous, current) {
-      for (final event in current) {
-        if (event is RefreshCommunity) {
-          // 목록 새로고침
-          notifier.onAction(const CommunityListAction.refresh());
-        }
+class _CommunityListScreenRootState
+    extends ConsumerState<CommunityListScreenRoot> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isInitialized) {
+        _isInitialized = true;
+        ref.read(communityListNotifierProvider.notifier).loadInitialData();
       }
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(communityListNotifierProvider);
+    final notifier = ref.watch(communityListNotifierProvider.notifier);
 
     return CommunityListScreen(
       state: state,
@@ -41,12 +52,9 @@ class CommunityListScreenRoot extends ConsumerWidget {
           case TapWrite():
             // 게시글 작성 화면으로 이동하고, 결과(생성된 게시글 ID)를 받아옴
             final result = await context.push('/community/write');
-            print('Returned from write screen with result: $result');
 
             // 결과가 Map 형태로 전달되고 refresh 플래그가 true인 경우
             if (result is Map && result['refresh'] == true) {
-              print('Post created. Triggering tab change to refresh list');
-
               // 현재 탭 상태 가져오기
               final currentTab = state.currentTab;
 
@@ -65,8 +73,6 @@ class CommunityListScreenRoot extends ConsumerWidget {
                   CommunityListAction.changeTab(CommunityTabType.newest),
                 );
               }
-            } else {
-              print('Result did not match expected format: $result');
             }
 
           default:

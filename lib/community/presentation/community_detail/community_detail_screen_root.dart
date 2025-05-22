@@ -1,4 +1,3 @@
-// lib/community/presentation/community_detail/community_detail_screen_root.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -10,39 +9,44 @@ import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/event/app_event.dart';
 import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
 
-class CommunityDetailScreenRoot extends ConsumerWidget {
+class CommunityDetailScreenRoot extends ConsumerStatefulWidget {
   const CommunityDetailScreenRoot({super.key, required this.postId});
 
   final String postId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CommunityDetailScreenRoot> createState() =>
+      _CommunityDetailScreenRootState();
+}
+
+class _CommunityDetailScreenRootState
+    extends ConsumerState<CommunityDetailScreenRoot> {
+  // 이벤트 처리 상태를 추적하여 중복 처리 방지
+  final Set<String> _processedEventIds = {};
+
+  @override
+  Widget build(BuildContext context) {
     // 상태 및 notifier 구독
-    final state = ref.watch(communityDetailNotifierProvider(postId));
-    final notifier = ref.read(communityDetailNotifierProvider(postId).notifier);
+    final state = ref.watch(communityDetailNotifierProvider(widget.postId));
+    final notifier = ref.read(
+      communityDetailNotifierProvider(widget.postId).notifier,
+    );
 
     // 현재 로그인한 사용자 정보 가져오기
     final currentUser = ref.read(currentUserProvider);
 
     // appEventNotifier 리스닝 (게시글 삭제 이벤트 감지)
-    ref.listen<List<AppEvent>>(appEventNotifierProvider, (_, events) {
-      for (final event in events) {
+    ref.listen<List<AppEvent>>(appEventNotifierProvider, (previous, current) {
+      for (final event in current) {
         // 게시글 삭제 이벤트가 발생하면 목록 화면으로 이동
-        if (event is PostDeleted && event.postId == postId) {
+        if (event is PostDeleted && event.postId == widget.postId) {
           if (context.mounted) {
-            // 성공 메시지 표시
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('게시글이 삭제되었습니다')));
-
-            // 목록 화면으로 이동하며 refresh 플래그 직접 전달
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('게시글이 삭제되었습니다')),
+            );
             context.go('/community');
-
-            // 이벤트 발행 (모든 관련 컴포넌트에게 알림)
-            ref
-                .read(appEventNotifierProvider.notifier)
-                .emit(const AppEvent.refreshCommunity());
           }
+          break; // 삭제 이벤트 처리 후 루프 종료
         }
       }
     });
@@ -75,5 +79,29 @@ class CommunityDetailScreenRoot extends ConsumerWidget {
         }
       },
     );
+  }
+
+  // 이벤트별 고유 ID 생성
+  String _getEventId(AppEvent event) {
+    return switch (event) {
+      PostCreated(:final postId) => 'post_created_$postId',
+      PostUpdated(:final postId) => 'post_updated_$postId',
+      PostDeleted(:final postId) => 'post_deleted_$postId',
+      PostLiked(:final postId) => 'post_liked_$postId',
+      PostBookmarked(:final postId) => 'post_bookmarked_$postId',
+      CommentAdded(:final postId, :final commentId) =>
+        'comment_added_${postId}_$commentId',
+      CommentLiked(:final postId, :final commentId) =>
+        'comment_liked_${postId}_$commentId',
+      RefreshCommunity() =>
+        'refresh_community_${DateTime.now().millisecondsSinceEpoch}',
+    };
+  }
+
+  @override
+  void dispose() {
+    // 메모리 누수 방지
+    _processedEventIds.clear();
+    super.dispose();
   }
 }
