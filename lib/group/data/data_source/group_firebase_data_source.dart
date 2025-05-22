@@ -74,53 +74,77 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<Set<String>> _getCurrentUserJoinedGroupIds() async {
     try {
       final userId = _getCurrentUserId();
+      print('🔍 Checking joined groups for user: $userId');
 
-      // 이미 캐시된 정보가 있고 같은 사용자라면 캐시 사용
+      // 캐시 확인
       if (_cachedJoinedGroups != null && _lastUserId == userId) {
+        print('🔍 Using cached joined groups: $_cachedJoinedGroups');
         return _cachedJoinedGroups!;
       }
 
-      // 캐시가 없으면 Firestore에서 조회
+      // Firestore에서 사용자 문서 조회
       final userDoc = await _usersCollection.doc(userId).get();
+      print('🔍 User document exists: ${userDoc.exists}');
 
-      if (!userDoc.exists || !userDoc.data()!.containsKey('joingroup')) {
+      if (!userDoc.exists) {
+        print('🔍 User document not found, returning empty set');
         _cachedJoinedGroups = {};
         _lastUserId = userId;
         return {};
       }
 
-      final joinGroups = userDoc.data()!['joingroup'] as List<dynamic>;
+      final userData = userDoc.data()!;
+      print('🔍 User document data: $userData');
+
+      if (!userData.containsKey('joingroup')) {
+        print('🔍 No joingroup field found, returning empty set');
+        _cachedJoinedGroups = {};
+        _lastUserId = userId;
+        return {};
+      }
+
+      final joinGroups = userData['joingroup'] as List<dynamic>;
+      print('🔍 Raw joingroup data: $joinGroups');
+
       final joinedGroupIds =
           joinGroups
-              .map((group) => group['group_id'] as String?)
+              .map((group) {
+                print('🔍 Processing group: $group');
+                return group['group_id'] as String?;
+              })
               .where((id) => id != null)
               .cast<String>()
               .toSet();
+
+      print('🔍 Extracted joined group IDs: $joinedGroupIds');
 
       // 캐시 업데이트
       _cachedJoinedGroups = joinedGroupIds;
       _lastUserId = userId;
 
       return joinedGroupIds;
-    } catch (e) {
-      print('사용자 가입 그룹 조회 오류: $e');
+    } catch (e, st) {
+      print('🔍 Error getting joined groups: $e');
+      print('🔍 StackTrace: $st');
       return {};
     }
   }
 
-  @override
   Future<List<Map<String, dynamic>>> fetchGroupList() async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupList', () async {
       try {
-        // 1. 그룹 목록 조회 (생성일 기준 최신순)
+        // 1. 그룹 목록 조회
         final querySnapshot =
             await _groupsCollection
                 .orderBy('createdAt', descending: true)
                 .get();
 
         if (querySnapshot.docs.isEmpty) {
+          print('🔍 No groups found in Firestore');
           return [];
         }
+
+        print('🔍 Found ${querySnapshot.docs.length} groups in Firestore');
 
         // 2. 현재 사용자의 가입 그룹 ID 목록 조회
         final joinedGroupIds = await _getCurrentUserJoinedGroupIds();
@@ -131,15 +155,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
               final data = doc.data();
               data['id'] = doc.id;
 
+              final groupId = doc.id;
+              final isJoined = joinedGroupIds.contains(groupId);
+
               // 가입 여부 설정
-              data['isJoinedByCurrentUser'] = joinedGroupIds.contains(doc.id);
+              data['isJoinedByCurrentUser'] = isJoined;
 
               return data;
             }).toList();
 
         return groups;
       } catch (e) {
-        print('그룹 목록 로드 오류: $e');
+        print('🔍 Error in fetchGroupList: $e');
         throw Exception(GroupErrorMessages.loadFailed);
       }
     });
