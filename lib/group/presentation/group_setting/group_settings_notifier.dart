@@ -1,7 +1,9 @@
+// lib/group/presentation/group_setting/group_settings_notifier.dart
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -14,19 +16,27 @@ part 'group_settings_notifier.g.dart';
 @riverpod
 class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
+  late final GetGroupMembersUseCase _getGroupMembersUseCase;
   late final UpdateGroupUseCase _updateGroupUseCase;
   late final LeaveGroupUseCase _leaveGroupUseCase;
 
   @override
   GroupSettingsState build(String groupId) {
     _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
+    _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
     _updateGroupUseCase = ref.watch(updateGroupUseCaseProvider);
     _leaveGroupUseCase = ref.watch(leaveGroupUseCaseProvider);
 
-    // 그룹 정보 로드
-    _loadGroupDetail(groupId);
+    // 초기 상태를 먼저 반환
+    const initialState = GroupSettingsState();
 
-    return const GroupSettingsState();
+    // 비동기 데이터 로드는 별도로 실행 (state 초기화 후)
+    Future.microtask(() {
+      _loadGroupDetail(groupId);
+      _loadGroupMembers(groupId);
+    });
+
+    return initialState;
   }
 
   Future<void> _loadGroupDetail(String groupId) async {
@@ -37,6 +47,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
     switch (result) {
       case AsyncData(:final value):
+
         // 현재 사용자가 방장인지 확인
         final isOwner = value.ownerId == currentUser?.id;
 
@@ -59,6 +70,34 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         );
       case AsyncLoading():
         state = state.copyWith(group: result);
+    }
+  }
+
+  Future<void> _loadGroupMembers(String groupId) async {
+    // 멤버 목록 로딩 시작
+    state = state.copyWith(members: const AsyncValue.loading());
+
+    try {
+      final result = await _getGroupMembersUseCase.execute(groupId);
+
+      switch (result) {
+        case AsyncData(:final value):
+          state = state.copyWith(members: AsyncData(value));
+
+        case AsyncError(:final error):
+          state = state.copyWith(
+            members: AsyncError(error, StackTrace.current),
+            errorMessage: '멤버 목록을 불러오는데 실패했습니다: $error',
+          );
+
+        case AsyncLoading():
+          state = state.copyWith(members: result);
+      }
+    } catch (e, st) {
+      state = state.copyWith(
+        members: AsyncError(e, st),
+        errorMessage: '멤버 목록 로드 중 오류: $e',
+      );
     }
   }
 
@@ -129,6 +168,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         final group = state.group.valueOrNull;
         if (group != null) {
           await _loadGroupDetail(group.id);
+          await _loadGroupMembers(group.id);
         }
 
       case SelectImage():
@@ -175,6 +215,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       case AsyncData():
         // 그룹 정보 다시 로드
         await _loadGroupDetail(currentGroup.id);
+        await _loadGroupMembers(currentGroup.id); // 멤버 정보도 다시 로드
         state = state.copyWith(
           isSubmitting: false,
           isEditing: false, // 편집 모드 종료
