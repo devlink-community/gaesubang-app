@@ -125,10 +125,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // 다음 필드로 포커스 이동하는 함수
   void _fieldFocusChange(
-      BuildContext context,
-      FocusNode currentFocus,
-      FocusNode nextFocus,
-      ) {
+    BuildContext context,
+    FocusNode currentFocus,
+    FocusNode nextFocus,
+  ) {
     currentFocus.unfocus();
     FocusScope.of(context).requestFocus(nextFocus);
   }
@@ -152,7 +152,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   child: SingleChildScrollView(
                     controller: _scrollController,
                     // 드래그 시 키보드 자동 숨김 설정
-                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -169,9 +170,10 @@ class _SignupScreenState extends State<SignupScreen> {
                               style: AppTextStyles.body1Regular,
                             ),
                             TextButton(
-                              onPressed: () => widget.onAction(
-                                const SignupAction.navigateToLogin(),
-                              ),
+                              onPressed:
+                                  () => widget.onAction(
+                                    const SignupAction.navigateToLogin(),
+                                  ),
                               child: Text(
                                 '로그인',
                                 style: AppTextStyles.body1Regular.copyWith(
@@ -202,7 +204,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: CustomButton(
                     text: '회원가입',
-                    onPressed: () => widget.onAction(const SignupAction.submit()),
+                    onPressed:
+                        () => widget.onAction(const SignupAction.submit()),
                     isLoading: isLoading,
                   ),
                 ),
@@ -226,13 +229,15 @@ class _SignupScreenState extends State<SignupScreen> {
           focusNode: _nicknameFocusNode,
           errorText: widget.state.nicknameError,
           successText: widget.state.nicknameSuccess,
-          onChanged: (value) => widget.onAction(SignupAction.nicknameChanged(value)),
+          onChanged:
+              (value) => widget.onAction(SignupAction.nicknameChanged(value)),
           // 닉네임 입력 후 완료 버튼 누르면 이메일 필드로 포커스 이동
-          onFieldSubmitted: (_) => _fieldFocusChange(
-            context,
-            _nicknameFocusNode,
-            _emailFocusNode,
-          ),
+          onFieldSubmitted:
+              (_) => _fieldFocusChange(
+                context,
+                _nicknameFocusNode,
+                _emailFocusNode,
+              ),
           textInputAction: TextInputAction.next,
         ),
 
@@ -247,13 +252,15 @@ class _SignupScreenState extends State<SignupScreen> {
           keyboardType: TextInputType.emailAddress,
           errorText: widget.state.emailError,
           successText: widget.state.emailSuccess,
-          onChanged: (value) => widget.onAction(SignupAction.emailChanged(value)),
+          onChanged:
+              (value) => widget.onAction(SignupAction.emailChanged(value)),
           // 이메일 입력 후 완료 버튼 누르면 비밀번호 필드로 포커스 이동
-          onFieldSubmitted: (_) => _fieldFocusChange(
-            context,
-            _emailFocusNode,
-            _passwordFocusNode,
-          ),
+          onFieldSubmitted:
+              (_) => _fieldFocusChange(
+                context,
+                _emailFocusNode,
+                _passwordFocusNode,
+              ),
           textInputAction: TextInputAction.next,
         ),
 
@@ -267,13 +274,15 @@ class _SignupScreenState extends State<SignupScreen> {
           focusNode: _passwordFocusNode,
           obscureText: true,
           errorText: widget.state.passwordError,
-          onChanged: (value) => widget.onAction(SignupAction.passwordChanged(value)),
+          onChanged:
+              (value) => widget.onAction(SignupAction.passwordChanged(value)),
           // 비밀번호 입력 후 완료 버튼 누르면 비밀번호 확인 필드로 포커스 이동
-          onFieldSubmitted: (_) => _fieldFocusChange(
-            context,
-            _passwordFocusNode,
-            _passwordConfirmFocusNode,
-          ),
+          onFieldSubmitted:
+              (_) => _fieldFocusChange(
+                context,
+                _passwordFocusNode,
+                _passwordConfirmFocusNode,
+              ),
           textInputAction: TextInputAction.next,
         ),
 
@@ -287,7 +296,9 @@ class _SignupScreenState extends State<SignupScreen> {
           focusNode: _passwordConfirmFocusNode,
           obscureText: true,
           errorText: widget.state.passwordConfirmError,
-          onChanged: (value) => widget.onAction(SignupAction.passwordConfirmChanged(value)),
+          onChanged:
+              (value) =>
+                  widget.onAction(SignupAction.passwordConfirmChanged(value)),
           // 완료 버튼을 누르면 키보드 감추기
           onFieldSubmitted: (_) {
             _passwordConfirmFocusNode.unfocus();
@@ -304,36 +315,58 @@ class _SignupScreenState extends State<SignupScreen> {
       children: [
         const SizedBox(height: 24),
 
-        // 이용약관 동의 (우측 정렬)
+        // 이용약관 링크 (우측 정렬, 테두리 없이 텍스트만)
         Row(
           mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬
           children: [
-            Checkbox(
-              value: widget.state.agreeToTerms,
-              onChanged: widget.state.isTermsAgreed
-                  ? null // 약관에 이미 동의했으면 비활성화
-                  : (value) => widget.onAction(
-                SignupAction.agreeToTermsChanged(value ?? false),
-              ),
-              activeColor: AppColorStyles.primary100,
-              // 비활성화 상태에서도 색상 유지
-              fillColor: widget.state.isTermsAgreed
-                  ? MaterialStateProperty.all(AppColorStyles.gray60)
-                  : null,
-            ),
             GestureDetector(
-              onTap: () => widget.onAction(const SignupAction.navigateToTerms()),
-              child: Text(
-                '회원가입 약관 보시겠어요?',
-                style: AppTextStyles.body2Regular.copyWith(
-                  color: AppColorStyles.gray80,
+              onTap:
+                  () => widget.onAction(const SignupAction.navigateToTerms()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8.0,
+                  horizontal: 4.0,
+                ),
+                child: Text(
+                  '이용약관 및 개인정보처리방침',
+                  style: AppTextStyles.body2Regular.copyWith(
+                    color: AppColorStyles.primary100, // 프라이머리 컬러 적용
+                    decoration: TextDecoration.underline, // 링크처럼 보이도록 밑줄 추가
+                    decorationColor: AppColorStyles.primary100, // 밑줄도 프라이머리 컬러
+                  ),
                 ),
               ),
             ),
           ],
         ),
 
-        // 약관 동의 에러 메시지 추가 (이 부분이 추가됨)
+        // 약관 동의 상태 표시 (동의한 경우에만 표시)
+        if (widget.state.isTermsAgreed)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0, right: 8.0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColorStyles.primary100,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '약관에 동의하셨습니다',
+                    style: AppTextStyles.captionRegular.copyWith(
+                      color: AppColorStyles.primary100,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // 약관 동의 에러 메시지 (동의하지 않았을 때)
         if (widget.state.termsError != null)
           Padding(
             padding: const EdgeInsets.only(top: 8.0, right: 8.0),
