@@ -3,6 +3,8 @@ import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_notices_use_case.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_popular_posts_use_case.dart';
 import 'package:devlink_mobile_app/home/module/home_di.dart';
+import 'package:devlink_mobile_app/banner/domain/usecase/get_active_banners_use_case.dart';
+import 'package:devlink_mobile_app/banner/module/banner_di.dart';
 import 'package:devlink_mobile_app/home/presentation/home_action.dart';
 import 'package:devlink_mobile_app/home/presentation/home_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -13,11 +15,13 @@ part 'home_notifier.g.dart';
 class HomeNotifier extends _$HomeNotifier {
   late final GetNoticesUseCase _getNoticesUseCase;
   late final GetPopularPostsUseCase _getPopularPostsUseCase;
+  late final GetActiveBannersUseCase _getActiveBannersUseCase;
 
   @override
   HomeState build() {
     _getNoticesUseCase = ref.watch(getNoticesUseCaseProvider);
     _getPopularPostsUseCase = ref.watch(getPopularPostsUseCaseProvider);
+    _getActiveBannersUseCase = ref.watch(getActiveBannersUseCaseProvider);
 
     // ref.onDispose 이전에 로딩 시작 (빌드 후 바로 로딩 시작)
     Future.microtask(() => _loadInitialData());
@@ -26,9 +30,12 @@ class HomeNotifier extends _$HomeNotifier {
   }
 
   Future<void> _loadInitialData() async {
-    await _loadNotices();
-    await _loadUserGroups();
-    await _loadPopularPosts();
+    await Future.wait([
+      _loadNotices(),
+      _loadUserGroups(),
+      _loadPopularPosts(),
+      _loadActiveBanner(),
+    ]);
   }
 
   Future<void> _loadNotices() async {
@@ -65,13 +72,19 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(popularPosts: result);
   }
 
+  Future<void> _loadActiveBanner() async {
+    state = state.copyWith(activeBanner: const AsyncLoading());
+    final result = await _getActiveBannersUseCase.execute();
+    state = state.copyWith(activeBanner: result);
+  }
+
   Future<void> onAction(HomeAction action) async {
     switch (action) {
       case RefreshHome():
         await _loadInitialData();
         break;
 
-      // 이 액션들은 Root에서 처리 (네비게이션)
+    // 이 액션들은 Root에서 처리 (네비게이션)
       case OnTapNotice _:
       case OnTapGroup _:
       case OnTapPopularPost _:
