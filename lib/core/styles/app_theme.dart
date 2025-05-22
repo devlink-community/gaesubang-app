@@ -117,6 +117,7 @@ class AppTheme {
       //   ),
       // ),
 
+<<<<<<< HEAD
       // // 카드 테마
       // cardTheme: CardTheme(
       //   color: AppColorStyles.white,
@@ -124,6 +125,9 @@ class AppTheme {
       //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       //   margin: const EdgeInsets.all(8),
       // ),
+=======
+      
+>>>>>>> 82b6c5c5 (feat: theme 변경 및 formatter 설정)
 
       // 리스트 타일 테마
       listTileTheme: ListTileThemeData(
@@ -132,6 +136,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
 
+<<<<<<< HEAD
       // 탭바 테마
       // tabBarTheme: TabBarTheme(
       //   labelColor: AppColorStyles.primary100,
@@ -141,6 +146,9 @@ class AppTheme {
       //   unselectedLabelStyle: AppTextStyles.button2Regular,
       // ),
 
+=======
+      
+>>>>>>> 82b6c5c5 (feat: theme 변경 및 formatter 설정)
       // 하단 탐색바 테마
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColorStyles.white,
@@ -308,6 +316,7 @@ class AppTheme {
         ),
       ),
 
+<<<<<<< HEAD
       // // 카드 테마
       // cardTheme: CardTheme(
       //   color: const Color(0xFF242424), // 어두운 서피스 색상
@@ -315,6 +324,9 @@ class AppTheme {
       //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       //   margin: const EdgeInsets.all(8),
       // ),
+=======
+    
+>>>>>>> 82b6c5c5 (feat: theme 변경 및 formatter 설정)
 
       // 입력 필드 테마
       inputDecorationTheme: InputDecorationTheme(
