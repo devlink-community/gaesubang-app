@@ -269,15 +269,13 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
             currentState.elapsedSeconds == 0) {
           // 현재 stop 상태이고 경과시간이 0이면 백그라운드에서 강제 종료된 것으로 추정
           // 하지만 이것만으로는 정확한 판단이 어려움
-
-          // 🔧 일단 메시지 제거하고, 필요하면 별도 플래그 추가 검토
-          // ScaffoldMessenger.of(context).showSnackBar(
-          //   const SnackBar(
-          //     content: Text('앱이 백그라운드에 있는 동안 타이머가 종료되었습니다.'),
-          //     duration: Duration(seconds: 3),
-          //     backgroundColor: Colors.orange,
-          //   ),
-          // );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('앱이 백그라운드에 있는 동안 타이머가 종료되었습니다.'),
+              duration: Duration(seconds: 3),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
       }
     });
