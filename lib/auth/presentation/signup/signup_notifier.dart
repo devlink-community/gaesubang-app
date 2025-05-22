@@ -222,9 +222,25 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 닉네임 중복 확인
   Future<void> _performNicknameAvailabilityCheck() async {
+    // 🔥 중복 확인 전에 먼저 닉네임 유효성 검사
+    final nicknameError = AuthValidator.validateNickname(state.nickname);
+
+    if (nicknameError != null) {
+      // 유효성 검사 실패 시 에러 메시지 설정하고 중복 확인 하지 않음
+      state = state.copyWith(
+        nicknameError: nicknameError,
+        nicknameSuccess: null,
+        nicknameAvailability: null, // 중복 확인 결과 초기화
+        formErrorMessage: null,
+      );
+      return; // 유효성 검사 실패로 중복 확인 중단
+    }
+
+    // 유효성 검사 통과 후 중복 확인 진행
     state = state.copyWith(
       nicknameAvailability: const AsyncValue.loading(),
       nicknameSuccess: null,
+      nicknameError: null, // 유효성 검사 통과했으므로 에러 초기화
       formErrorMessage: null,
     );
 
@@ -259,14 +275,25 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 이메일 중복 확인
   Future<void> _performEmailAvailabilityCheck() async {
-    // 이미 이메일 형식 검증에서 오류가 있으면 중복 확인 스킵
-    if (state.emailError != null) {
-      return;
+    // 🔥 중복 확인 전에 먼저 이메일 유효성 검사
+    final emailError = AuthValidator.validateEmail(state.email);
+
+    if (emailError != null) {
+      // 유효성 검사 실패 시 에러 메시지 설정하고 중복 확인 하지 않음
+      state = state.copyWith(
+        emailError: emailError,
+        emailSuccess: null,
+        emailAvailability: null, // 중복 확인 결과 초기화
+        formErrorMessage: null,
+      );
+      return; // 유효성 검사 실패로 중복 확인 중단
     }
 
+    // 유효성 검사 통과 후 중복 확인 진행
     state = state.copyWith(
       emailAvailability: const AsyncValue.loading(),
       emailSuccess: null,
+      emailError: null, // 유효성 검사 통과했으므로 에러 초기화
       formErrorMessage: null,
     );
 
