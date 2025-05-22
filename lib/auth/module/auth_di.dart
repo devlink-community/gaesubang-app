@@ -1,8 +1,7 @@
-// lib/auth/module/auth_di.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+// lib/auth/module/auth_di.dart (상단 import 부분 수정)
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -35,8 +34,8 @@ AuthDataSource authDataSource(Ref ref) {
     return MockAuthDataSource();
   } else {
     return AuthFirebaseDataSource(
-      auth: FirebaseAuth.instance,
-      firestore: FirebaseFirestore.instance,
+      auth: ref.watch(firebaseAuthProvider),
+      firestore: ref.watch(firebaseFirestoreProvider),
     );
   }
 }
@@ -48,7 +47,7 @@ AuthRepository authRepository(Ref ref) {
   return AuthRepositoryImpl(authDataSource: ref.watch(authDataSourceProvider));
 }
 
-// === UseCase Providers ===
+// === UseCase Providers === (나머지는 동일)
 
 /// LoginUseCase - 플래그에 따라 실제 또는 Mock 로그인
 @riverpod
