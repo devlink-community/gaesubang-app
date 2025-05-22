@@ -1,5 +1,4 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
-import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/focus_stats_calculator.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
@@ -12,42 +11,21 @@ import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;
-  final Ref _ref;
 
-  GroupRepositoryImpl({required GroupDataSource dataSource, required Ref ref})
-    : _dataSource = dataSource,
-      _ref = ref;
+  GroupRepositoryImpl({required GroupDataSource dataSource})
+    : _dataSource = dataSource;
 
   @override
   Future<Result<List<Group>>> getGroupList() async {
     try {
-      // 현재 사용자 정보 확인
-      final currentUser = _ref.read(currentUserProvider);
+      // DataSource에서 직접 그룹 목록 조회 (내부에서 현재 사용자의 가입 정보 처리)
+      final groupsData = await _dataSource.fetchGroupList();
 
-      // 사용자가 가입한 그룹 ID 목록 확인
-      Set<String> joinedGroupIds = {};
-      if (currentUser != null) {
-        // currentUser.joinedGroups에서 그룹 ID 추출
-        for (final joinedGroup in currentUser.joinedGroups) {
-          if (joinedGroup.groupId != null) {
-            joinedGroupIds.add(joinedGroup.groupId!);
-          }
-        }
-      }
-
-      // 데이터소스에 가입 그룹 ID 전달
-      final groupsData = await _dataSource.fetchGroupList(
-        joinedGroupIds: joinedGroupIds.isNotEmpty ? joinedGroupIds : null,
-      );
-
-      // Map<String, dynamic> → GroupDto → Group 변환
-      final groupDtos =
-          groupsData.map((data) => GroupDto.fromJson(data)).toList();
-      final groups = groupDtos.toModelList();
+      // 🔧 새로운 Mapper 사용: Map 리스트를 Group 리스트로 직접 변환
+      final groups = groupsData.toGroupModelList();
 
       return Result.success(groups);
     } catch (e, st) {
@@ -65,23 +43,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<Group>> getGroupDetail(String groupId) async {
     try {
-      // 현재 사용자 정보 확인
-      final currentUser = _ref.read(currentUserProvider);
-
-      // 사용자의 그룹 가입 여부 확인
-      bool? isJoined = false;
-      if (currentUser != null) {
-        // currentUser.joinedGroups에서 현재 그룹 ID 확인
-        isJoined = currentUser.joinedGroups.any(
-          (group) => group.groupId == groupId,
-        );
-      }
-
-      // 데이터소스에 가입 여부 전달
-      final groupData = await _dataSource.fetchGroupDetail(
-        groupId,
-        isJoined: isJoined,
-      );
+      // DataSource에서 직접 그룹 상세 정보 조회 (내부에서 현재 사용자의 가입 여부 처리)
+      final groupData = await _dataSource.fetchGroupDetail(groupId);
 
       // Map<String, dynamic> → GroupDto → Group 변환
       final groupDto = GroupDto.fromJson(groupData);
@@ -103,40 +66,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> joinGroup(String groupId) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 이미 가입된 그룹인지 확인 (클라이언트 측에서 확인, API 호출 없음)
-      final isAlreadyJoined = currentUser.joinedGroups.any(
-        (group) => group.groupId == groupId,
-      );
-
-      if (isAlreadyJoined) {
-        return Result.error(
-          Failure(
-            FailureType.validation,
-            '이미 가입한 그룹입니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 그룹 가입 처리
-      await _dataSource.fetchJoinGroup(
-        groupId,
-        userId: currentUser.id,
-        userName: currentUser.nickname,
-        profileUrl: currentUser.image,
-      );
+      // DataSource에서 직접 그룹 가입 처리 (내부에서 현재 사용자 정보 처리)
+      await _dataSource.fetchJoinGroup(groupId);
 
       return const Result.success(null);
     } catch (e, st) {
@@ -184,29 +115,12 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<Group>> createGroup(Group group) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
       // Group → GroupDto → Map<String, dynamic> 변환
       final groupDto = group.toDto();
       final groupData = groupDto.toJson();
 
-      // 사용자 정보 전달 (ownerNickname, ownerProfileImage 추가)
-      final createdGroupData = await _dataSource.fetchCreateGroup(
-        groupData,
-        ownerId: currentUser.id,
-        ownerNickname: currentUser.nickname,
-        ownerProfileUrl: currentUser.image,
-      );
+      // DataSource에서 직접 그룹 생성 처리 (내부에서 현재 사용자를 소유자로 설정)
+      final createdGroupData = await _dataSource.fetchCreateGroup(groupData);
 
       // Map<String, dynamic> → GroupDto → Group 변환
       final createdGroupDto = GroupDto.fromJson(createdGroupData);
@@ -240,18 +154,6 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> updateGroup(Group group) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
       // Group → GroupDto → Map<String, dynamic> 변환
       final groupDto = group.toDto();
       final groupData = groupDto.toJson();
@@ -286,20 +188,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> leaveGroup(String groupId) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 그룹 탈퇴 처리
-      await _dataSource.fetchLeaveGroup(groupId, currentUser.id);
+      // DataSource에서 직접 그룹 탈퇴 처리 (내부에서 현재 사용자 정보 처리)
+      await _dataSource.fetchLeaveGroup(groupId);
 
       return const Result.success(null);
     } catch (e, st) {
@@ -347,26 +237,11 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<List<Group>>> searchGroups(String query) async {
     try {
-      // 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-
-      // 사용자가 가입한 그룹 ID 집합을 생성합니다.
-      Set<String> joinedGroupIds = {};
-      if (currentUser != null) {
-        // currentUser.joinedGroups에서 그룹 ID 추출
-        for (final joinedGroup in currentUser.joinedGroups) {
-          if (joinedGroup.groupId != null) {
-            joinedGroupIds.add(joinedGroup.groupId!);
-          }
-        }
-      }
-
-      // 통합 검색 API 사용 - currentUserId 대신 joinedGroupIds 전달
+      // DataSource에서 직접 그룹 검색 (내부에서 현재 사용자의 가입 그룹 정보 처리)
       final groupsData = await _dataSource.searchGroups(
         query,
         searchKeywords: true,
         searchTags: true,
-        joinedGroupIds: joinedGroupIds.isNotEmpty ? joinedGroupIds : null,
         sortBy: 'name', // 기본 정렬 기준 설정
         // limit: 20, // 필요시 결과 제한
       );
@@ -430,24 +305,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> startMemberTimer(String groupId) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 타이머 시작 처리
-      await _dataSource.startMemberTimer(
-        groupId,
-        currentUser.id,
-        currentUser.nickname,
-      );
+      // DataSource에서 직접 타이머 시작 처리 (내부에서 현재 사용자 정보 처리)
+      await _dataSource.startMemberTimer(groupId);
 
       return const Result.success(null);
     } catch (e, st) {
@@ -477,24 +336,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> stopMemberTimer(String groupId) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 타이머 정지 처리
-      await _dataSource.stopMemberTimer(
-        groupId,
-        currentUser.id,
-        currentUser.nickname,
-      );
+      // DataSource에서 직접 타이머 정지 처리 (내부에서 현재 사용자 정보 처리)
+      await _dataSource.stopMemberTimer(groupId);
 
       return const Result.success(null);
     } catch (e, st) {
@@ -524,24 +367,8 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> pauseMemberTimer(String groupId) async {
     try {
-      // Auth에서 현재 사용자 정보 가져오기
-      final currentUser = _ref.read(currentUserProvider);
-      if (currentUser == null) {
-        return Result.error(
-          Failure(
-            FailureType.unauthorized,
-            '로그인이 필요합니다.',
-            stackTrace: StackTrace.current,
-          ),
-        );
-      }
-
-      // 타이머 일시정지 처리
-      await _dataSource.pauseMemberTimer(
-        groupId,
-        currentUser.id,
-        currentUser.nickname,
-      );
+      // DataSource에서 직접 타이머 일시정지 처리 (내부에서 현재 사용자 정보 처리)
+      await _dataSource.pauseMemberTimer(groupId);
 
       return const Result.success(null);
     } catch (e, st) {
