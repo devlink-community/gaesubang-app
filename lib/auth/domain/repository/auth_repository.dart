@@ -65,11 +65,29 @@ abstract interface class AuthRepository {
   /// 프로필 이미지 업데이트
   Future<Result<Member>> updateProfileImage(String imagePath);
 
+  // === 새로 추가된 인증 상태 관련 메서드 ===
+
   /// 인증 상태 변화 스트림
+  /// Firebase Auth 또는 Mock의 상태 변화를 실시간으로 감지
   Stream<AuthState> get authStateChanges;
 
   /// 현재 인증 상태 확인
+  /// 라우터에서 초기 리다이렉트 시 사용
   Future<AuthState> getCurrentAuthState();
+
+  // === FCM 토큰 관리 메서드 추가 ===
+
+  /// 로그인 성공 시 FCM 토큰 등록
+  /// 사용자 ID와 현재 디바이스의 FCM 토큰을 서버에 등록
+  Future<Result<void>> registerFCMToken(String userId);
+
+  /// 로그아웃 시 현재 디바이스의 FCM 토큰 해제
+  /// 현재 디바이스에서만 알림을 받지 않도록 설정
+  Future<Result<void>> unregisterCurrentDeviceFCMToken(String userId);
+
+  /// 계정 삭제 시 모든 FCM 토큰 제거
+  /// 해당 사용자의 모든 디바이스에서 알림을 받지 않도록 설정
+  Future<Result<void>> removeAllFCMTokens(String userId);
 
   Future<Result<Member>> getUserProfile(String userId);
 }

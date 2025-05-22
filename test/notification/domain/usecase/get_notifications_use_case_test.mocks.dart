@@ -53,13 +53,16 @@ class MockNotificationRepository extends _i1.Mock
           as _i3.Future<_i4.Result<List<_i5.AppNotification>>>);
 
   @override
-  _i3.Future<_i4.Result<bool>> markAsRead(String? notificationId) =>
+  _i3.Future<_i4.Result<bool>> markAsRead(
+    String? userId,
+    String? notificationId,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#markAsRead, [notificationId]),
+            Invocation.method(#markAsRead, [userId, notificationId]),
             returnValue: _i3.Future<_i4.Result<bool>>.value(
               _i6.dummyValue<_i4.Result<bool>>(
                 this,
-                Invocation.method(#markAsRead, [notificationId]),
+                Invocation.method(#markAsRead, [userId, notificationId]),
               ),
             ),
           )
@@ -79,13 +82,19 @@ class MockNotificationRepository extends _i1.Mock
           as _i3.Future<_i4.Result<bool>>);
 
   @override
-  _i3.Future<_i4.Result<bool>> deleteNotification(String? notificationId) =>
+  _i3.Future<_i4.Result<bool>> deleteNotification(
+    String? userId,
+    String? notificationId,
+  ) =>
       (super.noSuchMethod(
-            Invocation.method(#deleteNotification, [notificationId]),
+            Invocation.method(#deleteNotification, [userId, notificationId]),
             returnValue: _i3.Future<_i4.Result<bool>>.value(
               _i6.dummyValue<_i4.Result<bool>>(
                 this,
-                Invocation.method(#deleteNotification, [notificationId]),
+                Invocation.method(#deleteNotification, [
+                  userId,
+                  notificationId,
+                ]),
               ),
             ),
           )

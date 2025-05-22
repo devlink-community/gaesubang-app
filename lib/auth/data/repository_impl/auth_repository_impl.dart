@@ -7,17 +7,121 @@ import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
+import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource _authDataSource;
+  final FCMTokenService _fcmTokenService;
 
-  AuthRepositoryImpl({required AuthDataSource authDataSource})
-    : _authDataSource = authDataSource;
+  AuthRepositoryImpl({
+    required AuthDataSource authDataSource,
+    required FCMTokenService fcmTokenService,
+  }) : _authDataSource = authDataSource,
+       _fcmTokenService = fcmTokenService;
+
+  // === Mock 스트림 최적화를 위한 Static 변수들 ===
+  static StreamController<AuthState>? _mockController;
+  static AuthState? _cachedAuthState;
+  static bool _hasInitialized = false;
+
+  // === Firebase 스트림 최적화를 위한 Static 변수들 ===
+  static Member? _cachedMember;
+  static String? _lastFirebaseUserId;
+
+  /// Mock 스트림 컨트롤러 초기화
+  static void _initializeMockStream() {
+    if (_mockController == null || _mockController!.isClosed) {
+      _mockController = StreamController<AuthState>.broadcast();
+      _hasInitialized = false;
+
+      if (AppConfig.enableVerboseLogging) {
+        debugPrint('AuthRepository: Mock 스트림 컨트롤러 초기화됨');
+      }
+    }
+  }
+
+  /// Mock 환경에서 초기 상태 설정
+  Future<void> _setInitialMockState() async {
+    if (_hasInitialized) return;
+
+    try {
+      if (AppConfig.enableVerboseLogging) {
+        debugPrint('AuthRepository: Mock 초기 상태 설정 중...');
+      }
+
+      final result = await getCurrentUser();
+      switch (result) {
+        case Success(data: final member):
+          _cachedAuthState = AuthState.authenticated(member);
+          if (AppConfig.enableVerboseLogging) {
+            debugPrint('AuthRepository: Mock 초기 상태 - 인증됨 (${member.nickname})');
+          }
+        case Error():
+          _cachedAuthState = const AuthState.unauthenticated();
+          if (AppConfig.enableVerboseLogging) {
+            debugPrint('AuthRepository: Mock 초기 상태 - 비인증');
+          }
+      }
+
+      _hasInitialized = true;
+      _mockController?.add(_cachedAuthState!);
+    } catch (e) {
+      if (AppConfig.enableVerboseLogging) {
+        debugPrint('AuthRepository: Mock 초기 상태 설정 에러 - $e');
+      }
+      _cachedAuthState = const AuthState.unauthenticated();
+      _hasInitialized = true;
+      _mockController?.add(_cachedAuthState!);
+    }
+  }
+
+  /// Mock 환경에서 인증 상태 업데이트
+  static void _updateMockAuthState(AuthState newState) {
+    if (_mockController == null || _mockController!.isClosed) {
+      if (AppConfig.enableVerboseLogging) {
+        debugPrint('AuthRepository: Mock 컨트롤러가 닫혀있어 상태 업데이트 건너뜀');
+      }
+      return;
+    }
+
+    // 상태가 실제로 변경된 경우에만 업데이트
+    if (_cachedAuthState != newState) {
+      _cachedAuthState = newState;
+      _mockController!.add(newState);
+
+      if (AppConfig.enableVerboseLogging) {
+        final stateType = newState.isAuthenticated ? '인증됨' : '비인증';
+        debugPrint('AuthRepository: Mock 상태 업데이트됨 - $stateType');
+      }
+    }
+  }
+
+  /// Firebase 사용자 정보 캐시 업데이트
+  void _updateFirebaseCache(Member member, String userId) {
+    _cachedMember = member;
+    _lastFirebaseUserId = userId;
+
+    if (AppConfig.enableVerboseLogging) {
+      debugPrint('AuthRepository: Firebase 캐시 업데이트됨 - ${member.nickname}');
+    }
+  }
+
+  /// Firebase 캐시 초기화
+  void _clearFirebaseCache() {
+    _cachedMember = null;
+    _lastFirebaseUserId = null;
+
+    if (AppConfig.enableVerboseLogging) {
+      debugPrint('AuthRepository: Firebase 캐시 초기화됨');
+    }
+  }
 
   @override
   Future<Result<Member>> login({
@@ -33,13 +137,46 @@ class AuthRepositoryImpl implements AuthRepository {
 
         // 새로운 매퍼 사용: 타이머 활동까지 포함된 Member + FocusStats 변환
         final member = response.toMemberWithCalculatedStats();
+
+        // ✅ 로그인 성공 시 FCM 토큰 등록 추가
+        await _handleLoginSuccess(member);
+
         return Result.success(member);
       } catch (e, st) {
         debugPrint('Login error: $e');
         debugPrint('StackTrace: $st');
+
+        // ✅ 로그인 실패 시 상태 업데이트
+        if (AppConfig.useMockAuth) {
+          _updateMockAuthState(const AuthState.unauthenticated());
+        }
+
         return Result.error(AuthExceptionMapper.mapAuthException(e, st));
       }
     }, params: {'email': email});
+  }
+
+  /// 로그인 성공 시 FCM 토큰 등록 및 상태 업데이트
+  Future<void> _handleLoginSuccess(Member member) async {
+    try {
+      // 1. 상태 업데이트
+      if (AppConfig.useMockAuth) {
+        _updateMockAuthState(AuthState.authenticated(member));
+      } else {
+        _updateFirebaseCache(member, member.uid);
+      }
+
+      // 2. FCM 토큰 등록 (백그라운드에서 처리, 실패해도 로그인은 성공)
+      final fcmResult = await registerFCMToken(member.uid);
+      if (fcmResult is Error) {
+        debugPrint('FCM 토큰 등록 실패 (로그인은 계속 진행): ${fcmResult.failure.message}');
+      } else {
+        debugPrint('FCM 토큰 등록 성공');
+      }
+    } catch (e) {
+      debugPrint('로그인 후 처리 중 오류 발생: $e');
+      // FCM 등록 실패는 로그인 자체를 실패시키지 않음
+    }
   }
 
   @override
@@ -60,6 +197,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
         // 회원가입 시에도 통계까지 포함된 Member 반환
         final member = response.toMemberWithCalculatedStats();
+
+        // ✅ 회원가입 성공 시 자동 로그인 상태로 설정 및 FCM 토큰 등록
+        await _handleLoginSuccess(member);
+
         return Result.success(member);
       } catch (e, st) {
         return Result.error(AuthExceptionMapper.mapAuthException(e, st));
@@ -80,6 +221,12 @@ class AuthRepositoryImpl implements AuthRepository {
 
         // 현재 사용자 조회 시 타이머 활동까지 포함된 Member + FocusStats 변환
         final member = response.toMemberWithCalculatedStats();
+
+        // ✅ Firebase 환경에서 캐시 업데이트
+        if (!AppConfig.useMockAuth) {
+          _updateFirebaseCache(member, member.uid);
+        }
+
         return Result.success(member);
       } catch (e, st) {
         return Result.error(AuthExceptionMapper.mapAuthException(e, st));
@@ -91,7 +238,39 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Result<void>> signOut() async {
     return ApiCallDecorator.wrap('AuthRepository.signOut', () async {
       try {
+        // 1. 현재 사용자 ID 가져오기 (FCM 토큰 해제용)
+        String? currentUserId;
+        if (AppConfig.useMockAuth &&
+            _cachedAuthState?.isAuthenticated == true) {
+          currentUserId = _cachedAuthState!.user?.uid;
+        } else if (!AppConfig.useMockAuth && _cachedMember != null) {
+          currentUserId = _cachedMember!.uid;
+        }
+
+        // 2. 실제 로그아웃 처리
         await _authDataSource.signOut();
+
+        // 3. FCM 토큰 해제 (백그라운드에서 처리)
+        if (currentUserId != null) {
+          final fcmResult = await unregisterCurrentDeviceFCMToken(
+            currentUserId,
+          );
+          if (fcmResult is Error) {
+            debugPrint(
+              'FCM 토큰 해제 실패 (로그아웃은 계속 진행): ${fcmResult.failure.message}',
+            );
+          } else {
+            debugPrint('FCM 토큰 해제 성공');
+          }
+        }
+
+        // 4. 상태 업데이트
+        if (AppConfig.useMockAuth) {
+          _updateMockAuthState(const AuthState.unauthenticated());
+        } else {
+          _clearFirebaseCache();
+        }
+
         return const Result.success(null);
       } catch (e, st) {
         return Result.error(AuthExceptionMapper.mapAuthException(e, st));
@@ -151,7 +330,37 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Result<void>> deleteAccount(String email) async {
     return ApiCallDecorator.wrap('AuthRepository.deleteAccount', () async {
       try {
+        // 1. 현재 사용자 ID 가져오기 (FCM 토큰 제거용)
+        String? currentUserId;
+        if (AppConfig.useMockAuth &&
+            _cachedAuthState?.isAuthenticated == true) {
+          currentUserId = _cachedAuthState!.user?.uid;
+        } else if (!AppConfig.useMockAuth && _cachedMember != null) {
+          currentUserId = _cachedMember!.uid;
+        }
+
+        // 2. 모든 FCM 토큰 제거 (계정 삭제 전에 먼저 처리)
+        if (currentUserId != null) {
+          final fcmResult = await removeAllFCMTokens(currentUserId);
+          if (fcmResult is Error) {
+            debugPrint(
+              'FCM 토큰 제거 실패 (계정 삭제는 계속 진행): ${fcmResult.failure.message}',
+            );
+          } else {
+            debugPrint('모든 FCM 토큰 제거 성공');
+          }
+        }
+
+        // 3. 실제 계정 삭제
         await _authDataSource.deleteAccount(email);
+
+        // 4. 상태 업데이트
+        if (AppConfig.useMockAuth) {
+          _updateMockAuthState(const AuthState.unauthenticated());
+        } else {
+          _clearFirebaseCache();
+        }
+
         return const Result.success(null);
       } catch (e, st) {
         return Result.error(AuthExceptionMapper.mapAuthException(e, st));
@@ -267,6 +476,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
         // 프로필 업데이트 시에도 통계까지 포함된 Member 반환
         final member = response.toMemberWithCalculatedStats();
+
+        // ✅ 프로필 업데이트 시 캐시 및 상태 업데이트
+        if (AppConfig.useMockAuth) {
+          _updateMockAuthState(AuthState.authenticated(member));
+        } else {
+          _updateFirebaseCache(member, member.uid);
+        }
+
         return Result.success(member);
       } catch (e, st) {
         debugPrint('프로필 업데이트 에러: $e');
@@ -284,6 +501,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
         // 이미지 업데이트 시에도 통계까지 포함된 Member 반환
         final member = response.toMemberWithCalculatedStats();
+
+        // ✅ 프로필 이미지 업데이트 시 캐시 및 상태 업데이트
+        if (AppConfig.useMockAuth) {
+          _updateMockAuthState(AuthState.authenticated(member));
+        } else {
+          _updateFirebaseCache(member, member.uid);
+        }
+
         return Result.success(member);
       } catch (e, st) {
         debugPrint('프로필 이미지 업데이트 에러: $e');
@@ -293,35 +518,189 @@ class AuthRepositoryImpl implements AuthRepository {
     }, params: {'imagePath': imagePath});
   }
 
-  // === 인증 상태 관련 메서드 구현 ===
+  // === 🚀 최적화된 인증 상태 관련 메서드 구현 ===
 
   @override
   Stream<AuthState> get authStateChanges {
-    return _authDataSource.authStateChanges.map((userData) {
-      if (userData == null) {
+    // 로깅은 스트림에서 제외 (너무 빈번한 호출 방지)
+    if (AppConfig.enableVerboseLogging) {
+      debugPrint('AuthRepository.authStateChanges: Stream 구독 시작');
+    }
+
+    if (AppConfig.useMockAuth) {
+      // ✅ Mock: 최적화된 BroadcastStream 사용
+      _initializeMockStream();
+
+      // 초기 상태 설정 (한 번만)
+      if (!_hasInitialized) {
+        _setInitialMockState();
+      }
+
+      return _mockController!.stream;
+    }
+
+    // ✅ Firebase: 캐싱 최적화된 스트림
+    return FirebaseAuth.instance.authStateChanges().asyncMap((
+      firebaseUser,
+    ) async {
+      if (firebaseUser == null) {
+        if (AppConfig.enableVerboseLogging) {
+          debugPrint('AuthRepository.authStateChanges: 사용자 로그아웃됨');
+        }
+        _clearFirebaseCache();
         return const AuthState.unauthenticated();
       }
 
-      final member = userData.toMemberWithCalculatedStats();
-      return AuthState.authenticated(member);
+      try {
+        // ✅ 캐시된 사용자와 동일한 경우 API 호출 생략
+        if (_lastFirebaseUserId == firebaseUser.uid && _cachedMember != null) {
+          if (AppConfig.enableVerboseLogging) {
+            debugPrint(
+              'AuthRepository.authStateChanges: 캐시된 사용자 정보 사용 - ${_cachedMember!.nickname}',
+            );
+          }
+          return AuthState.authenticated(_cachedMember!);
+        }
+
+        if (AppConfig.enableVerboseLogging) {
+          debugPrint(
+            'AuthRepository.authStateChanges: 새로운 Firebase 사용자 감지 - ${firebaseUser.uid}',
+          );
+        }
+
+        // 새로운 사용자이거나 캐시가 없는 경우에만 API 호출
+        final userMap = await _authDataSource.fetchCurrentUser();
+        if (userMap != null) {
+          final member = userMap.toMemberWithCalculatedStats();
+          _updateFirebaseCache(member, firebaseUser.uid);
+          return AuthState.authenticated(member);
+        }
+        _clearFirebaseCache();
+        return const AuthState.unauthenticated();
+      } catch (e) {
+        debugPrint('Auth state stream error: $e');
+        _clearFirebaseCache();
+        return const AuthState.unauthenticated();
+      }
     });
   }
 
   @override
   Future<AuthState> getCurrentAuthState() async {
-    try {
-      final userData = await _authDataSource.getCurrentAuthState();
+    return ApiCallDecorator.wrap(
+      'AuthRepository.getCurrentAuthState',
+      () async {
+        // ✅ Mock 환경에서 캐시된 상태 활용
+        if (AppConfig.useMockAuth && _cachedAuthState != null) {
+          if (AppConfig.enableVerboseLogging) {
+            debugPrint('AuthRepository.getCurrentAuthState: Mock 캐시 사용');
+          }
+          return _cachedAuthState!;
+        }
 
-      if (userData == null) {
-        return const AuthState.unauthenticated();
+        // ✅ Firebase 환경에서 캐시된 상태 활용
+        if (!AppConfig.useMockAuth && _cachedMember != null) {
+          if (AppConfig.enableVerboseLogging) {
+            debugPrint('AuthRepository.getCurrentAuthState: Firebase 캐시 사용');
+          }
+          return AuthState.authenticated(_cachedMember!);
+        }
+
+        // 캐시가 없는 경우에만 API 호출
+        try {
+          final result = await getCurrentUser();
+          switch (result) {
+            case Success(data: final member):
+              return AuthState.authenticated(member);
+            case Error():
+              return const AuthState.unauthenticated();
+          }
+        } catch (e) {
+          debugPrint('Get current auth state error: $e');
+          return const AuthState.unauthenticated();
+        }
+      },
+    );
+  }
+
+  // === FCM 토큰 관리 메서드 구현 ===
+
+  @override
+  Future<Result<void>> registerFCMToken(String userId) async {
+    return ApiCallDecorator.wrap('AuthRepository.registerFCMToken', () async {
+      try {
+        await _fcmTokenService.registerDeviceToken(userId);
+        return const Result.success(null);
+      } catch (e, st) {
+        debugPrint('FCM 토큰 등록 실패: $e');
+        return Result.error(
+          Failure(
+            FailureType.network,
+            'FCM 토큰 등록에 실패했습니다',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
       }
+    }, params: {'userId': userId});
+  }
 
-      final member = userData.toMemberWithCalculatedStats();
-      return AuthState.authenticated(member);
-    } catch (e) {
-      debugPrint('Get current auth state error: $e');
-      return const AuthState.unauthenticated();
+  @override
+  Future<Result<void>> unregisterCurrentDeviceFCMToken(String userId) async {
+    return ApiCallDecorator.wrap(
+      'AuthRepository.unregisterCurrentDeviceFCMToken',
+      () async {
+        try {
+          await _fcmTokenService.removeCurrentDeviceToken(userId);
+          return const Result.success(null);
+        } catch (e, st) {
+          debugPrint('FCM 토큰 해제 실패: $e');
+          return Result.error(
+            Failure(
+              FailureType.network,
+              'FCM 토큰 해제에 실패했습니다',
+              cause: e,
+              stackTrace: st,
+            ),
+          );
+        }
+      },
+      params: {'userId': userId},
+    );
+  }
+
+  @override
+  Future<Result<void>> removeAllFCMTokens(String userId) async {
+    return ApiCallDecorator.wrap('AuthRepository.removeAllFCMTokens', () async {
+      try {
+        await _fcmTokenService.removeAllUserTokens(userId);
+        return const Result.success(null);
+      } catch (e, st) {
+        debugPrint('모든 FCM 토큰 제거 실패: $e');
+        return Result.error(
+          Failure(
+            FailureType.network,
+            '모든 FCM 토큰 제거에 실패했습니다',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+    }, params: {'userId': userId});
+  }
+
+  /// 리소스 정리 메서드 (필요시 호출)
+  static void dispose() {
+    if (AppConfig.enableVerboseLogging) {
+      debugPrint('AuthRepository: 리소스 정리 중...');
     }
+
+    _mockController?.close();
+    _mockController = null;
+    _cachedAuthState = null;
+    _hasInitialized = false;
+    _cachedMember = null;
+    _lastFirebaseUserId = null;
   }
 
   @override

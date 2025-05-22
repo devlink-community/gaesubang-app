@@ -45,9 +45,9 @@ class MockNotificationDataSource extends _i1.Mock
           as _i3.Future<List<_i4.NotificationDto>>);
 
   @override
-  _i3.Future<bool> markAsRead(String? notificationId) =>
+  _i3.Future<bool> markAsRead(String? userId, String? notificationId) =>
       (super.noSuchMethod(
-            Invocation.method(#markAsRead, [notificationId]),
+            Invocation.method(#markAsRead, [userId, notificationId]),
             returnValue: _i3.Future<bool>.value(false),
           )
           as _i3.Future<bool>);
@@ -61,9 +61,9 @@ class MockNotificationDataSource extends _i1.Mock
           as _i3.Future<bool>);
 
   @override
-  _i3.Future<bool> deleteNotification(String? notificationId) =>
+  _i3.Future<bool> deleteNotification(String? userId, String? notificationId) =>
       (super.noSuchMethod(
-            Invocation.method(#deleteNotification, [notificationId]),
+            Invocation.method(#deleteNotification, [userId, notificationId]),
             returnValue: _i3.Future<bool>.value(false),
           )
           as _i3.Future<bool>);

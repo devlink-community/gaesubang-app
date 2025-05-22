@@ -5,12 +5,12 @@ abstract interface class NotificationRepository {
   /// 알림 목록 조회
   Future<Result<List<AppNotification>>> getNotifications(String userId);
 
-  /// 특정 알림 읽음 처리
-  Future<Result<bool>> markAsRead(String notificationId);
+  /// 특정 알림 읽음 처리 - userId 추가
+  Future<Result<bool>> markAsRead(String userId, String notificationId);
 
   /// 모든 알림 읽음 처리
   Future<Result<bool>> markAllAsRead(String userId);
 
-  /// 알림 삭제
-  Future<Result<bool>> deleteNotification(String notificationId);
+  /// 특정 알림 삭제 - userId 추가
+  Future<Result<bool>> deleteNotification(String userId, String notificationId);
 }
