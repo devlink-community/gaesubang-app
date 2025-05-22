@@ -377,8 +377,17 @@ class NotificationNotifier extends _$NotificationNotifier {
   Future<void> _markAsRead(String notificationId) async {
     debugPrint('=== 단일 알림 읽음 처리: $notificationId ===');
 
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      debugPrint('사용자 ID가 null - 읽음 처리 불가');
+      return;
+    }
+
     try {
-      final result = await _markAsReadUseCase.execute(notificationId);
+      final result = await _markAsReadUseCase.execute(
+        currentUserId,
+        notificationId,
+      );
 
       switch (result) {
         case AsyncData(:final value) when value:
@@ -435,8 +444,17 @@ class NotificationNotifier extends _$NotificationNotifier {
   Future<void> _deleteNotification(String notificationId) async {
     debugPrint('=== 알림 삭제: $notificationId ===');
 
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      debugPrint('사용자 ID가 null - 삭제 불가');
+      return;
+    }
+
     try {
-      final result = await _deleteNotificationUseCase.execute(notificationId);
+      final result = await _deleteNotificationUseCase.execute(
+        currentUserId,
+        notificationId,
+      );
 
       switch (result) {
         case AsyncData(:final value) when value:
