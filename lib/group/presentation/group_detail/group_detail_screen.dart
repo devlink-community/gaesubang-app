@@ -1,9 +1,8 @@
 // lib/group/presentation/group_detail/group_detail_screen.dart
 import 'package:devlink_mobile_app/core/component/app_image.dart';
-import 'package:devlink_mobile_app/core/component/error_view.dart';
-import 'package:devlink_mobile_app/core/component/list_skeleton.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/gradient_wave_animation.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/components/member_section_header.dart';
@@ -13,17 +12,17 @@ import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+// 🔥 순수 UI: StatelessWidget, state 객체만 받음
 class GroupDetailScreen extends StatefulWidget {
   const GroupDetailScreen({
     super.key,
     required this.state,
     required this.onAction,
-    this.isLoading = false,
   });
 
+  // 🔥 개선: state 객체로 전달 (Root에서 AsyncValue 처리 완료)
   final GroupDetailState state;
   final void Function(GroupDetailAction action) onAction;
-  final bool isLoading;
 
   @override
   State<GroupDetailScreen> createState() => _GroupDetailScreenState();
@@ -32,7 +31,7 @@ class GroupDetailScreen extends StatefulWidget {
 class _GroupDetailScreenState extends State<GroupDetailScreen> {
   late ScrollController _scrollController;
   bool _isTimerVisible = true;
-  bool _isMessageExpanded = false; // 메시지 펼치기/접기 상태
+  bool _isMessageExpanded = false;
 
   @override
   void initState() {
@@ -45,15 +44,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // 멤버 이미지 URLs 수집
+    // 🔥 순수 UI: state에서 멤버 데이터 안전하게 추출
+    final members = _extractMembersData();
     final List<String> imageUrls = [];
 
-    // 멤버가 있으면 이미지 URL 추출
-    if (widget.state.groupMembersResult case AsyncData(:final value)) {
-      for (final member in value) {
-        if (member.profileUrl != null && member.profileUrl!.isNotEmpty) {
-          imageUrls.add(member.profileUrl!);
-        }
+    for (final member in members) {
+      if (member.profileUrl != null && member.profileUrl!.isNotEmpty) {
+        imageUrls.add(member.profileUrl!);
       }
     }
 
@@ -65,7 +62,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   void _onScroll() {
     // 스크롤 위치에 따라 타이머 가시성 상태 업데이트
-    final double timerThreshold = 220; // 타이머 영역 높이
+    const double timerThreshold = 220;
     final isTimerCurrentlyVisible = _scrollController.offset < timerThreshold;
 
     if (isTimerCurrentlyVisible != _isTimerVisible) {
@@ -82,40 +79,38 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     super.dispose();
   }
 
+  // 🔥 순수 UI: state에서 안전하게 그룹 데이터 추출
+  Group? _extractGroupData() {
+    return switch (widget.state.groupDetailResult) {
+      AsyncData(:final value) => value,
+      _ => null,
+    };
+  }
+
+  // 🔥 순수 UI: state에서 안전하게 멤버 데이터 추출
+  List<GroupMember> _extractMembersData() {
+    return switch (widget.state.groupMembersResult) {
+      AsyncData(:final value) => value,
+      _ => <GroupMember>[],
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 로딩 중이면 로딩 인디케이터 표시
-    if (widget.isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('그룹 정보 불러오는 중...')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
+    // 🔥 순수 UI: state에서 데이터 추출
+    final group = _extractGroupData();
+    final members = _extractMembersData();
+    final timerStatus = widget.state.timerStatus;
+    final elapsedSeconds = widget.state.elapsedSeconds;
 
-    // 그룹 정보와 멤버 정보가 로드되었는지 확인
-    final group =
-        widget.state.groupDetailResult is AsyncData
-            ? (widget.state.groupDetailResult as AsyncData).value
-            : null;
-
-    final members =
-        widget.state.groupMembersResult is AsyncData
-            ? (widget.state.groupMembersResult as AsyncData).value
-            : <GroupMember>[];
-
-    // 그룹 정보가 없으면 에러 표시
+    // 🔥 순수 UI: 그룹 데이터가 없으면 빈 화면 (Root에서 처리되어야 하는 상황)
     if (group == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('그룹 정보')),
-        body: ErrorView(
-          error: '그룹 정보를 불러올 수 없습니다.',
-          onRetry:
-              () => widget.onAction(const GroupDetailAction.refreshSessions()),
-        ),
+      return const Scaffold(
+        body: Center(child: Text('그룹 정보를 불러올 수 없습니다.')),
       );
     }
 
-    final isRunning = widget.state.timerStatus == TimerStatus.running;
+    final isRunning = timerStatus == TimerStatus.running;
 
     // 상태에 따른 배경색 결정
     final Color primaryBgColor =
@@ -123,16 +118,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final Color secondaryBgColor =
         isRunning ? const Color(0xFF7070EE) : const Color(0xFFE6E6FA);
 
-    // 활성/비활성 멤버 분류
-    final activeMembers = members.where((GroupMember m) => m.isActive).toList();
-    final inactiveMembers =
-        members.where((GroupMember m) => !m.isActive).toList();
+    // 🔥 순수 UI: 멤버 분류 로직
+    final activeMembers = members.where((m) => m.isActive).toList();
+    final inactiveMembers = members.where((m) => !m.isActive).toList();
     final activeCount = activeMembers.length;
     final totalCount = members.length;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // 앱바를 포함한 상단 영역을 집중시간 배경으로 통일
       appBar: _buildAppBar(primaryBgColor, group.name),
       body: Stack(
         children: [
@@ -162,11 +155,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       // 타이머 콘텐츠
                       Column(
                         children: [
-                          _buildHeader(activeCount, totalCount), // 상단 정보 영역
-                          // 타이머 영역 - 분리된 컴포넌트 사용
+                          _buildHeader(activeCount, totalCount),
                           TimerDisplay(
-                            elapsedSeconds: widget.state.elapsedSeconds,
-                            timerStatus: widget.state.timerStatus,
+                            elapsedSeconds: elapsedSeconds,
+                            timerStatus: timerStatus,
                             onToggle:
                                 () => widget.onAction(
                                   const GroupDetailAction.toggleTimer(),
@@ -195,7 +187,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 color: const Color(0xFF4CAF50),
                 icon: Icons.check_circle,
                 members: activeMembers,
-                isLoading: members.isEmpty, // 멤버가 없을 때 로딩 표시
               ),
 
               // 휴식 중인 멤버 섹션
@@ -204,7 +195,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 color: Colors.grey,
                 icon: Icons.nightlight,
                 members: inactiveMembers,
-                isLoading: members.isEmpty, // 멤버가 없을 때 로딩 표시
               ),
 
               // 바닥 여백
@@ -213,13 +203,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           ),
 
           // 플로팅 타이머
-          _buildFloatingTimerContainer(),
+          _buildFloatingTimerContainer(elapsedSeconds, timerStatus),
         ],
       ),
     );
   }
 
-  // 앱바 위젯
+  // 🔥 순수 UI: 앱바 위젯
   PreferredSizeWidget _buildAppBar(Color backgroundColor, String title) {
     return AppBar(
       title: Text(
@@ -231,7 +221,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       backgroundColor: backgroundColor,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
-        // 채팅 아이콘 버튼 추가
         IconButton(
           icon: const Icon(Icons.chat_bubble, color: Colors.white),
           onPressed:
@@ -247,7 +236,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 멤버 섹션 헤더 위젯
+  // 🔥 순수 UI: 멤버 섹션 헤더 위젯
   Widget _buildMemberSectionHeader(int activeCount, int totalCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -273,58 +262,39 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 플로팅 타이머 컨테이너
-  Widget _buildFloatingTimerContainer() {
+  // 🔥 순수 UI: 플로팅 타이머 컨테이너
+  Widget _buildFloatingTimerContainer(
+    int elapsedSeconds,
+    TimerStatus timerStatus,
+  ) {
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 200),
       top: _isTimerVisible ? -80 : 0,
-      // 보이지 않을 때는 위로 숨김
       left: 0,
       right: 0,
       height: 56,
-      // 높이를 명시적으로 지정
       child: Material(
         elevation: 4,
         color: Colors.transparent,
         child: TimerDisplay(
-          elapsedSeconds: widget.state.elapsedSeconds,
-          timerStatus: widget.state.timerStatus,
+          elapsedSeconds: elapsedSeconds,
+          timerStatus: timerStatus,
           onToggle:
               () => widget.onAction(const GroupDetailAction.toggleTimer()),
-          isCompact: true, // 작은 디스플레이 모드
+          isCompact: true,
         ),
       ),
     );
   }
 
-  // 멤버 섹션 (헤더 + 그리드)
+  // 🔥 순수 UI: 멤버 섹션 (헤더 + 그리드)
   Widget _buildMemberSection({
     required String title,
     required Color color,
     required IconData icon,
     required List<GroupMember> members,
-    bool isLoading = false, // 로딩 상태 파라미터 추가
   }) {
-    // 로딩 중이면서 멤버가 없는 경우 스켈레톤 UI 표시
-    if (isLoading && members.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 섹션 헤더 - 분리된 컴포넌트 사용
-              MemberSectionHeader(title: title, color: color, icon: icon),
-
-              // 스켈레톤 UI 표시
-              const ListSkeleton(itemCount: 3),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // 멤버가 없는 경우 빈 공간 반환
+    // 🔥 순수 UI: 멤버가 없는 경우 빈 공간 반환
     if (members.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -335,7 +305,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 섹션 헤더 - 분리된 컴포넌트 사용
+            // 섹션 헤더
             MemberSectionHeader(title: title, color: color, icon: icon),
 
             // 멤버 그리드
@@ -356,124 +326,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       () => widget.onAction(
                         GroupDetailAction.navigateToUserProfile(member.userId),
                       ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // 프로필 이미지
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color:
-                                    member.isActive
-                                        ? AppColorStyles.primary100
-                                        : AppColorStyles.gray40,
-                                width: 2,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(30),
-                              child:
-                                  member.profileUrl != null &&
-                                          member.profileUrl!.isNotEmpty
-                                      ? Image.network(
-                                        member.profileUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (_, __, ___) => const Icon(
-                                              Icons.person,
-                                              size: 30,
-                                            ),
-                                      )
-                                      : const Icon(Icons.person, size: 30),
-                            ),
-                          ),
-
-                          // 상태 표시
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color:
-                                    member.isActive
-                                        ? AppColorStyles.success
-                                        : AppColorStyles.gray80,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // 타이머 표시
-                      member.isActive
-                          ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColorStyles.primary60.withValues(
-                                alpha: 0.2,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              member.elapsedTimeFormat,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColorStyles.primary100,
-                              ),
-                            ),
-                          )
-                          : Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '휴식중',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                      const SizedBox(height: 4),
-
-                      // 이름
-                      Text(
-                        member.userName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              member.isActive
-                                  ? AppColorStyles.primary100
-                                  : Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: _buildMemberItem(member),
                 );
               },
             ),
@@ -483,7 +336,126 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 상단 정보 영역 (참여자 수, 날짜)
+  // 🔥 순수 UI: 개별 멤버 아이템
+  Widget _buildMemberItem(GroupMember member) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // 프로필 이미지
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color:
+                      member.isActive
+                          ? AppColorStyles.primary100
+                          : AppColorStyles.gray40,
+                  width: 2,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child:
+                    member.profileUrl != null && member.profileUrl!.isNotEmpty
+                        ? Image.network(
+                          member.profileUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => const Icon(
+                                Icons.person,
+                                size: 30,
+                              ),
+                        )
+                        : const Icon(Icons.person, size: 30),
+              ),
+            ),
+
+            // 상태 표시
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color:
+                      member.isActive
+                          ? AppColorStyles.success
+                          : AppColorStyles.gray80,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // 타이머 표시
+        member.isActive
+            ? Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary60.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                member.elapsedTimeFormat,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColorStyles.primary100,
+                ),
+              ),
+            )
+            : Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '휴식중',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+        const SizedBox(height: 4),
+
+        // 이름
+        Text(
+          member.userName,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color:
+                member.isActive
+                    ? AppColorStyles.primary100
+                    : Colors.grey.shade700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 🔥 순수 UI: 상단 정보 영역 (참여자 수, 날짜)
   Widget _buildHeader(int activeCount, int totalCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -543,6 +515,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
+  // 🔥 순수 UI: 메시지 영역
   Widget _buildMessage(String description, List<String> hashTags) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),

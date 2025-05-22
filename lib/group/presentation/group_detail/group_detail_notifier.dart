@@ -127,8 +127,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 타이머 시작
     _startTimerCountdown();
 
-    // 멤버 타이머 데이터 업데이트
-    await _updateGroupMembers();
+    // 🔥 백그라운드에서 멤버 타이머 데이터 업데이트 (로딩 상태 없이)
+    await _updateGroupMembersInBackground();
   }
 
   // 타이머 일시정지 처리
@@ -197,7 +197,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       // 모든 초기 데이터를 병렬로 로드
       await Future.wait([
         _loadGroupDetail(),
-        _updateGroupMembers(),
+        _updateGroupMembersInBackground(),
       ], eagerError: false);
       print('✅ 초기 데이터 로드 완료');
     } catch (e, s) {
@@ -221,19 +221,29 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
 
-    // 5초마다 멤버 타이머 업데이트
+    // 🔥 5초마다 백그라운드 멤버 타이머 업데이트 (깜빡임 없음)
     if (state.elapsedSeconds % 5 == 0) {
-      _updateGroupMembers();
+      _updateGroupMembersInBackground();
     }
   }
 
-  // 멤버 타이머 데이터 업데이트
-  Future<void> _updateGroupMembers() async {
+  // 🔥 백그라운드 멤버 타이머 데이터 업데이트 (로딩 상태 없이)
+  Future<void> _updateGroupMembersInBackground() async {
     if (_groupId.isEmpty) return;
 
-    state = state.copyWith(groupMembersResult: const AsyncValue.loading());
-    final result = await _getGroupMembersUseCase.execute(_groupId);
-    state = state.copyWith(groupMembersResult: result);
+    try {
+      // 🔥 로딩 상태를 거치지 않고 직접 데이터 업데이트
+      final result = await _getGroupMembersUseCase.execute(_groupId);
+
+      // 🔥 성공한 경우에만 상태 업데이트
+      if (result is AsyncData) {
+        state = state.copyWith(groupMembersResult: result);
+      }
+      // 에러가 발생해도 기존 데이터 유지 (깜빡임 방지)
+    } catch (e) {
+      print('⚠️ 백그라운드 멤버 업데이트 실패: $e');
+      // 에러가 발생해도 기존 상태 유지 (깜빡임 방지)
+    }
   }
 
   // 데이터 새로고침 메서드 - 화면 재진입 시에만 사용
@@ -245,7 +255,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     try {
       await Future.wait([
         _loadGroupDetail(),
-        _updateGroupMembers(),
+        _updateGroupMembersInBackground(),
       ], eagerError: false);
       print('✅ 데이터 새로고침 완료');
     } catch (e, s) {
