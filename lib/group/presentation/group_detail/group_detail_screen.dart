@@ -336,7 +336,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 🔥 순수 UI: 개별 멤버 아이템
+  // 🔧 개별 멤버 아이템 - 실시간 시간 표시 개선
   Widget _buildMemberItem(GroupMember member) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -399,7 +399,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ),
         const SizedBox(height: 8),
 
-        // 타이머 표시
+        // 🔧 타이머 표시 - 실시간 시간 사용
         member.isActive
             ? Container(
               padding: const EdgeInsets.symmetric(
@@ -411,7 +411,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                member.elapsedTimeFormat,
+                member.currentElapsedTimeFormat, // 🔧 실시간 시간 포맷 사용
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

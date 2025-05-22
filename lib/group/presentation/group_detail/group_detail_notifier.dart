@@ -304,7 +304,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         );
   }
 
-  // 🔧 현재 사용자의 멤버 리스트 상태 즉시 업데이트 - null 안전성 추가
+  // group_detail_notifier.dart의 _updateCurrentUserInMemberList 메서드 부분만 수정
+
+  // 🔧 현재 사용자의 멤버 리스트 상태 즉시 업데이트 - elapsedSeconds 사용
   void _updateCurrentUserInMemberList({
     required bool isActive,
     DateTime? timerStartTime,
@@ -322,11 +324,11 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     final currentMembers = currentMembersResult.value;
     if (currentMembers.isEmpty) {
-      print('⚠️ 멤버 리스트가 null이어서 업데이트를 건너뜁니다');
+      print('⚠️ 멤버 리스트가 비어있어서 업데이트를 건너뜁니다');
       return;
     }
 
-    // 🔧 경과 시간을 더 정확하게 계산 (초 단위)
+    // 🔧 경과 시간을 초 단위로 정확하게 계산
     final int elapsedSeconds =
         isActive && timerStartTime != null
             ? DateTime.now().difference(timerStartTime).inSeconds
@@ -335,12 +337,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     final updatedMembers =
         currentMembers.map((member) {
           if (member.userId == _currentUserId) {
-            // 현재 사용자의 상태만 업데이트
+            // 🔧 현재 사용자의 상태만 업데이트 (초 단위 사용)
             return member.copyWith(
               isActive: isActive,
               timerStartTime: timerStartTime,
-              // 🔧 elapsedMinutes 대신 실제 경과 시간을 분 단위로 정확히 계산
-              elapsedMinutes: (elapsedSeconds / 60).floor(),
+              elapsedSeconds: elapsedSeconds, // 🔧 초 단위로 저장
+              elapsedMinutes: (elapsedSeconds / 60).floor(), // 호환성을 위해 분 단위도 저장
             );
           }
           return member;
@@ -355,7 +357,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
   }
 
-  // 🔧 로컬 타이머 상태와 원격 데이터 병합 - 타입 안전성 수정
+  // 🔧 로컬 타이머 상태와 원격 데이터 병합 - elapsedSeconds 사용
   List<GroupMember> _mergeLocalTimerStateWithRemoteData(
     List<GroupMember> remoteMembers,
   ) {
@@ -367,7 +369,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     return remoteMembers.map((member) {
       if (member.userId == _currentUserId) {
-        // 🔧 현재 사용자는 로컬 상태로 덮어쓰기 (더 정확한 시간 계산)
+        // 🔧 현재 사용자는 로컬 상태로 덮어쓰기 (초 단위로 정확히 계산)
         final elapsedSeconds =
             isLocalTimerActive && localStartTime != null
                 ? DateTime.now().difference(localStartTime).inSeconds
@@ -376,7 +378,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         return member.copyWith(
           isActive: isLocalTimerActive,
           timerStartTime: localStartTime,
-          elapsedMinutes: (elapsedSeconds / 60).floor(),
+          elapsedSeconds: elapsedSeconds, // 🔧 초 단위로 저장
+          elapsedMinutes: (elapsedSeconds / 60).floor(), // 호환성을 위해 분 단위도 저장
         );
       }
       // 다른 사용자는 원격 데이터 그대로 사용
