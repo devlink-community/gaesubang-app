@@ -364,7 +364,7 @@ class SignupNotifier extends _$SignupNotifier {
     // 3. 회원가입 실행
     state = state.copyWith(
       signupResult: const AsyncValue.loading(),
-      formErrorMessage: null,
+      formErrorMessage: null, // 🔥 회원가입 시작 시 폼 에러 메시지 클리어
     );
 
     final result = await _signupUseCase.execute(
@@ -374,36 +374,16 @@ class SignupNotifier extends _$SignupNotifier {
       agreedTermsId: state.agreedTermsId,
     );
 
-    // 회원가입 결과 처리
+    // 🔥 회원가입 결과 처리 - formErrorMessage는 설정하지 않음 (중복 방지)
+    // signupResult에만 결과를 설정하고, UI에서 이를 기반으로 SnackBar 표시
+    state = state.copyWith(signupResult: result);
+
+    // 🔥 성공/실패 로깅만 수행, UI 메시지는 Root에서 처리
     if (result.hasError) {
       final error = result.error;
-      String errorMessage = AuthErrorMessages.accountCreationFailed;
-
-      // 에러 타입에 따른 사용자 친화적 메시지 처리
-      if (error is Failure) {
-        switch (error.type) {
-          case FailureType.validation:
-            errorMessage = error.message;
-            break;
-          case FailureType.network:
-            errorMessage = AuthErrorMessages.networkError;
-            break;
-          case FailureType.timeout:
-            errorMessage = AuthErrorMessages.timeoutError;
-            break;
-          default:
-            errorMessage = error.message;
-        }
-      }
-
       debugPrint('회원가입 에러: $error');
-
-      state = state.copyWith(
-        signupResult: result,
-        formErrorMessage: errorMessage,
-      );
     } else {
-      state = state.copyWith(signupResult: result, formErrorMessage: null);
+      debugPrint('회원가입 성공');
     }
   }
 
