@@ -64,6 +64,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       print('🗑️ GroupDetailNotifier dispose - 타이머 및 스트림 정리');
       _timer?.cancel();
       _timerStatusSubscription?.cancel();
+      mounted = false; // 🔧 mounted 상태 해제
     });
 
     return const GroupDetailState();
