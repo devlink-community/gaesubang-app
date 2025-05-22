@@ -2,27 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../../auth/presentation/component/custom_button.dart';
 import '../../auth/presentation/component/custom_text_field.dart';
-import '../../auth/presentation/forgot_password/forgot_password_action.dart';
-
-import '../../auth/presentation/forgot_password/forgot_password_state.dart';
 import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
+import 'change_password_action.dart';
+import 'change_password_state.dart';
 
-class ForgotPasswordScreen2 extends StatefulWidget {
-  final ForgotPasswordState state;
-  final void Function(ForgotPasswordAction action) onAction;
+class ChangePasswordScreen extends StatefulWidget {
+  final ChangePasswordState state;
+  final void Function(ChangePasswordAction action) onAction;
 
-  const ForgotPasswordScreen2({
+  const ChangePasswordScreen({
     super.key,
     required this.state,
     required this.onAction,
   });
 
   @override
-  State<ForgotPasswordScreen2> createState() => _ForgotPasswordScreenState();
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen2> {
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   late final TextEditingController _emailController;
   late final FocusNode _emailFocusNode;
 
@@ -35,12 +34,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen2> {
 
   void _onEmailFocusChanged() {
     widget.onAction(
-      ForgotPasswordAction.emailFocusChanged(_emailFocusNode.hasFocus),
+      ChangePasswordAction.emailFocusChanged(_emailFocusNode.hasFocus),
     );
   }
 
   @override
-  void didUpdateWidget(covariant ForgotPasswordScreen2 oldWidget) {
+  void didUpdateWidget(covariant ChangePasswordScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.state.email != _emailController.text) {
       _emailController.text = widget.state.email;
@@ -57,82 +56,76 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen2> {
 
   @override
   Widget build(BuildContext context) {
-    // 로딩 상태 확인
     final isLoading = widget.state.resetPasswordResult?.isLoading ?? false;
 
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: true),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text('비밀번호 변경', style: AppTextStyles.heading6Bold),
+        // Navigator key 충돌 방지를 위해 leading 직접 구현
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => widget.onAction(ChangePasswordAction.navigateBack()),
+        ),
+        elevation: 0,
+      ),
       backgroundColor: Colors.white,
       body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(), // 배경 터치시 키보드 내림
-        // 레이아웃 구조 변경: 스크롤 영역과 버튼 영역 분리
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              // 1. 스크롤 가능한 콘텐츠 영역 - Expanded로 확장
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      const SizedBox(height: 60),
+                      const SizedBox(height: 40),
 
-                      // 제목
                       Text(
-                        '비밀번호 재설정',
-                        style: AppTextStyles.heading2Bold.copyWith(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // 안내 텍스트
-                      Text(
-                        '입력하신 이메일로 비밀번호를 재설정할 수 있는\n링크를 전송합니다. 이메일을 작성해주세요.',
+                        '비밀번호를 변경하시려면\n등록된 이메일 주소를 입력해주세요.',
                         style: AppTextStyles.body1Regular.copyWith(
                           color: AppColorStyles.gray100,
-                          fontSize: 14,
+                          fontSize: 16,
                         ),
                         textAlign: TextAlign.center,
                       ),
 
                       const SizedBox(height: 32),
 
-                      // 이메일 입력 필드 - CustomTextField 활용
                       CustomTextField(
-                        label: '',
+                        label: '이메일',
                         hintText: 'Email address',
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         errorText: widget.state.emailError,
                         onChanged:
                             (value) => widget.onAction(
-                              ForgotPasswordAction.emailChanged(value),
+                              ChangePasswordAction.emailChanged(value),
                             ),
                         focusNode: _emailFocusNode,
-                        // 필드 완료 시 동작 추가
                         onFieldSubmitted: (_) {
                           _emailFocusNode.unfocus();
-                          // 선택적: 이메일 발송 액션 자동 호출
-                          // widget.onAction(ForgotPasswordAction.sendResetEmail());
                         },
                         textInputAction: TextInputAction.done,
                       ),
-                      const SizedBox(height: 16),
-                      CustomButton(
-                        text: '이메일 발송하기',
-                        onPressed:
-                            () => widget.onAction(
-                              ForgotPasswordAction.sendResetEmail(),
-                            ),
-                        isLoading: isLoading,
-                        backgroundColor: AppColorStyles.primary100,
-                        foregroundColor: Colors.white,
-                        height: 50,
-                        width: double.infinity,
+
+                      const SizedBox(height: 24),
+                      Column(
+                        children: [
+                          CustomButton(
+                            text: '비밀번호 재설정 이메일 발송',
+                            onPressed:
+                                () => widget.onAction(
+                                  ChangePasswordAction.sendResetEmail(),
+                                ),
+                            isLoading: isLoading,
+                            backgroundColor: AppColorStyles.primary100,
+                            foregroundColor: Colors.white,
+                            height: 52,
+                            width: double.infinity,
+                          ),
+                        ],
                       ),
                     ],
                   ),
