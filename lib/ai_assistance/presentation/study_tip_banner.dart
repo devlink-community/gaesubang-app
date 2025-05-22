@@ -1,5 +1,7 @@
 // lib/ai_assistance/presentation/study_tip_banner.dart
 
+import 'dart:async';
+
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
@@ -348,35 +350,148 @@ class StudyTipBanner extends ConsumerWidget {
   // 현재 선택된 팁 추적을 위한 변수
   StudyTip? _currentSelectedTip;
 
-  // 새로운 팁 로드 메서드 - 개선된 다양성 적용
+  // 새로운 팁 로드 메서드 - 앱 스타일 로딩 UI 적용
   Future<void> _loadNewTip(
       BuildContext context,
       String? skills,
       WidgetRef ref,
       ) async {
-    // 로딩 인디케이터 표시
+    // 대화상자 컨텍스트 추적을 위한 변수
+    BuildContext? loadingDialogContext;
+
+    // 로딩 타이머 관리를 위한 변수
+    Timer? loadingTimer;
+
+    // 로딩 다이얼로그에 고유 키 부여
+    final loadingDialogKey = UniqueKey();
+
+    // 앱 스타일에 맞는 로딩 다이얼로그 표시
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2,
-        ),
-      ),
+      builder: (dialogContext) {
+        // 다이얼로그 컨텍스트 저장
+        loadingDialogContext = dialogContext;
+
+        return Dialog(
+          key: loadingDialogKey,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColorStyles.primary60, AppColorStyles.primary100],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColorStyles.primary60.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -3,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 브랜드 아이콘
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // 로딩 스피너 (앱 컬러)
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 24),
+
+                // 메인 메시지
+                Text(
+                  '따뜻한 꿀팁을\n우려내고 있어요 ☕',
+                  style: AppTextStyles.subtitle1Bold.copyWith(
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+
+                // 부가 설명
+                Text(
+                  'AI가 당신만을 위한 특별한 팁을 준비 중이에요',
+                  style: AppTextStyles.body2Regular.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+
+                // 기술적 디테일
+                Text(
+                  '잠시만 기다려주세요...',
+                  style: AppTextStyles.captionRegular.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
+
+    // 타임아웃 설정 (20초) - Quiz Banner와 동일
+    loadingTimer = Timer(const Duration(seconds: 20), () {
+      _closeLoadingDialog(loadingDialogContext);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('인사이트 생성이 지연되고 있습니다. 기본 팁을 표시합니다.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColorStyles.primary80,
+          ),
+        );
+
+        // 백업 스터디 팁 표시
+        _showBackupStudyTip(context, skills, ref);
+      }
+    });
 
     try {
       // UseCase 호출 - 전체 스킬 목록 전달 (Repository에서 랜덤 선택)
       final getStudyTipUseCase = ref.read(getStudyTipUseCaseProvider);
       final asyncValue = await getStudyTipUseCase.execute(skills ?? '프로그래밍 기초');
 
-      // 로딩 인디케이터 닫기
-      Navigator.of(context).pop();
+      // 타이머 취소
+      loadingTimer.cancel();
+
+      // 로딩 다이얼로그 닫기
+      _closeLoadingDialog(loadingDialogContext);
 
       // 결과 처리
       if (asyncValue.hasValue && asyncValue.value != null) {
+        debugPrint('StudyTip 생성 성공: ${asyncValue.value!.title}');
+
         // 캐시 무효화 - 새로운 캐시 키로 저장
         final newCacheKey = '${_generateCacheKey(skills)}-new-${DateTime.now().millisecondsSinceEpoch}';
         ref.read(studyTipCacheProvider.notifier).update((state) => {
@@ -384,24 +499,77 @@ class StudyTipBanner extends ConsumerWidget {
           newCacheKey: asyncValue.value,
         });
 
-        // 현재 다이얼로그 닫기
-        Navigator.of(context).pop();
-
         // 새 팁으로 다이얼로그 표시
         _showStudyTipDetailsDialog(context, asyncValue.value!, skills, ref);
       } else if (asyncValue.hasError) {
-        // 오류 메시지 표시
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('새 팁을 불러오는데 실패했습니다: ${asyncValue.error}')),
-        );
+        debugPrint('StudyTip 생성 오류: ${asyncValue.error}');
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('새 팁을 불러오는데 실패했습니다: ${asyncValue.error}'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+
+          // 백업 스터디 팁 표시
+          _showBackupStudyTip(context, skills, ref);
+        }
       }
     } catch (e) {
-      // 예외 처리
-      Navigator.of(context).pop(); // 로딩 인디케이터 닫기
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('오류가 발생했습니다: $e')));
+      // 예외 발생 시 타이머 취소 및 백업 팁 표시
+      loadingTimer.cancel();
+      _closeLoadingDialog(loadingDialogContext);
+
+      debugPrint('StudyTip 생성 예외 발생: $e');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('예상치 못한 오류: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        // 백업 스터디 팁 표시
+        _showBackupStudyTip(context, skills, ref);
+      }
     }
+  }
+
+  // 로딩 다이얼로그 닫기 유틸리티 메서드
+  void _closeLoadingDialog(BuildContext? dialogContext) {
+    if (dialogContext != null && Navigator.of(dialogContext).canPop()) {
+      Navigator.of(dialogContext).pop();
+    }
+  }
+
+  // 백업 스터디 팁 표시 메서드
+  void _showBackupStudyTip(BuildContext context, String? skills, WidgetRef ref) {
+    debugPrint('백업 StudyTip 표시: 스킬=$skills');
+
+    // FallbackService를 통해 백업 팁 생성
+    final fallbackService = ref.read(fallbackServiceProvider);
+    final skillArea = skills?.split(',').firstWhere(
+            (s) => s.trim().isNotEmpty,
+        orElse: () => '프로그래밍 기초'
+    ).trim() ?? '프로그래밍 기초';
+
+    final fallbackTipData = fallbackService.getFallbackStudyTip(skillArea);
+
+    // StudyTip 모델로 변환
+    final fallbackTip = StudyTip(
+      title: fallbackTipData['title'] ?? '학습 팁',
+      content: fallbackTipData['content'] ?? '꾸준한 학습이 성공의 열쇠입니다.',
+      relatedSkill: fallbackTipData['relatedSkill'] ?? skillArea,
+      englishPhrase: fallbackTipData['englishPhrase'] ?? 'Practice makes perfect.',
+      translation: fallbackTipData['translation'] ?? '연습이 완벽을 만든다.',
+      source: fallbackTipData['source'],
+    );
+
+    _showStudyTipDetailsDialog(context, fallbackTip, skills, ref);
   }
 
   void _showStudyTipDetailsDialog(
