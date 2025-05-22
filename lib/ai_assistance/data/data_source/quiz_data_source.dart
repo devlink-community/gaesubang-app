@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../../module/quiz_prompt.dart';
@@ -6,7 +7,7 @@ import '../../module/vertex_client.dart';
 import 'fallback_service.dart';
 
 /// Firebase AI 데이터 소스 인터페이스
-abstract interface class VertexAiDataSource {
+abstract interface class FirebaseAiDataSource {
   /// 단일 퀴즈 생성
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt);
 
@@ -24,7 +25,7 @@ abstract interface class VertexAiDataSource {
 }
 
 /// Firebase AI 데이터 소스 구현
-class VertexAiDataSourceImpl implements VertexAiDataSource {
+class VertexAiDataSourceImpl implements FirebaseAiDataSource {
   final FirebaseAIClient _firebaseAIClient;
   final FallbackService _fallbackService;
   final PromptService _promptService;

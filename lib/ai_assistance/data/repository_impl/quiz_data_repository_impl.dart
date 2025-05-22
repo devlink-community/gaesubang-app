@@ -11,7 +11,7 @@ import '../dto/quiz_dto.dart';
 import '../mapper/quiz_mapper.dart';
 
 class QuizRepositoryImpl implements QuizRepository {
-  final VertexAiDataSource _dataSource;
+  final FirebaseAiDataSource _dataSource;
   final PromptService _promptService;
   final Random _random = Random();
 
@@ -291,7 +291,7 @@ class QuizRepositoryImpl implements QuizRepository {
   };
 
   QuizRepositoryImpl({
-    required VertexAiDataSource dataSource,
+    required FirebaseAiDataSource dataSource,
     required PromptService promptService,
   }) : _dataSource = dataSource,
        _promptService = promptService;

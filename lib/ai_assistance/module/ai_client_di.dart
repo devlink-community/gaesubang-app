@@ -54,7 +54,7 @@ final firebaseAIClientProvider = Provider<FirebaseAIClient>((ref) {
 // 퀴즈 관련 프로바이더
 //------------------------------------------------------------------
 /// 퀴즈 데이터 소스 프로바이더
-final vertexAiDataSourceProvider = Provider<VertexAiDataSource>((ref) {
+final vertexAiDataSourceProvider = Provider<FirebaseAiDataSource>((ref) {
   final firebaseAIClient = ref.watch(firebaseAIClientProvider);
   final fallbackService = ref.watch(fallbackServiceProvider);
   final promptService = ref.watch(promptServiceProvider);
