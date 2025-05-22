@@ -34,13 +34,20 @@ class NotificationScreenRoot extends ConsumerWidget {
 
   // 알림 타겟으로 이동하는 메서드
   void _navigateToTarget(BuildContext context, String notificationId, state) {
-    // 해당 알림 찾기
-    final notification = state.notifications.valueOrNull?.firstWhere(
-      (notification) => notification.id == notificationId,
-      orElse: () => null,
-    );
+    // AsyncData인 경우에만 처리
+    if (state.notifications is! AsyncData) return;
 
-    if (notification == null) return;
+    final notifications =
+        (state.notifications as AsyncData<List<AppNotification>>).value;
+
+    AppNotification? notification;
+    try {
+      notification = notifications.firstWhere(
+        (notification) => notification.id == notificationId,
+      );
+    } catch (e) {
+      return; // 알림을 찾지 못함
+    }
 
     // 알림 타입에 따라 다른 화면으로 이동
     switch (notification.type) {
