@@ -108,8 +108,34 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+                    // 학습 팁 배너 - ValueKey로 변경
+                    StudyTipBanner(
+                      skills: skills,
+                      key: skills != null ? ValueKey('study_tip_banner_${skills!}') : const ValueKey('study_tip_banner'),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // 퀴즈 배너 - ValueKey로 변경
+=======
+>>>>>>> 08972b3075e1330dbbff0f8ace57078a8d96729d
                     // 퀴즈 배너 - 위젯으로 올바르게 사용
                     DailyQuizBanner(
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                      skills: skills,
+                      key: skills != null ? ValueKey('quiz_banner_${skills!}') : const ValueKey('quiz_banner'),
+=======
+=======
+                    // 퀴즈 배너 - 위젯으로 올바르게 사용
+                    DailyQuizBanner(
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
+>>>>>>> 08972b3075e1330dbbff0f8ace57078a8d96729d
                       skills: userSkills,
                       key: ValueKey('quiz_banner_${userSkills ?? "default"}'),
                     ),
@@ -119,8 +145,24 @@ class HomeScreen extends StatelessWidget {
                     StudyTipBanner(
                       skills: userSkills,
                       key: ValueKey(
+<<<<<<< HEAD
                         'study_tip_banner_${userSkills ?? "default"}',
                       ),
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+                        userSkills ?? 'default',
+                      ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
+>>>>>>> 65e0a3e8 (quiz: banner 수정:)
+=======
+                        'study_tip_banner_${userSkills ?? "default"}',
+                      ),
+>>>>>>> a6313124 (fix(ai): ui 개선)
+=======
+                        'study_tip_banner_${userSkills ?? "default"}',
+                      ),
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
+>>>>>>> 08972b3075e1330dbbff0f8ace57078a8d96729d
                     ),
                   ],
                 ),
@@ -225,4 +267,12 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+<<<<<<< HEAD
+}
+=======
+}
+>>>>>>> 93342ffe988801372968965945de141989ff1d54
+>>>>>>> 08972b3075e1330dbbff0f8ace57078a8d96729d
