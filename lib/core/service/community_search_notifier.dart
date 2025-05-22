@@ -32,10 +32,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
           filter: SearchFilter.recent,
           limit: 8,
         ),
-        SearchHistoryService.getPopularSearches(
-          category: SearchCategory.community,
-          limit: 5,
-        ),
       ]);
 
       final recentSearches = results[0];
@@ -169,20 +165,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       print('모든 검색어 삭제 실패: $e');
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
-    }
-  }
-
-  /// 인기 검색어 새로고침
-  Future<void> refreshPopularSearches() async {
-    try {
-      final popularSearches = await SearchHistoryService.getPopularSearches(
-        category: SearchCategory.community,
-        limit: 5,
-      );
-
-      state = state.copyWith(popularSearches: popularSearches);
-    } catch (e) {
-      print('인기 검색어 새로고침 실패: $e');
     }
   }
 
