@@ -156,12 +156,18 @@ class PostFirebaseDataSource implements PostDataSource {
           isLikedByCurrentUser: isLikedByCurrentUser,
           isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
         );
-      } catch (e) {
-        if (e.toString().contains(CommunityErrorMessages.postNotFound)) {
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            e.toString().contains(CommunityErrorMessages.postNotFound)) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('게시글 상세 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('게시글 상세 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
-        print('게시글 상세 로드 오류: $e');
-        throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     }, params: {'postId': postId});
   }
@@ -832,9 +838,21 @@ class PostFirebaseDataSource implements PostDataSource {
         await postRef.update(updateData);
 
         return postId;
-      } catch (e) {
-        print('게시글 업데이트 오류: $e');
-        throw Exception(CommunityErrorMessages.postUpdateFailed);
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            (e.toString().contains(CommunityErrorMessages.postNotFound) ||
+                e.toString().contains(
+                  CommunityErrorMessages.noPermissionEdit,
+                ))) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('게시글 수정 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('게시글 수정 Firebase 통신 오류: $e\n$st');
+          rethrow;
+        }
       }
     }, params: {'postId': postId});
   }
@@ -884,9 +902,21 @@ class PostFirebaseDataSource implements PostDataSource {
         await postRef.delete();
 
         return true;
-      } catch (e) {
-        print('게시글 삭제 오류: $e');
-        throw Exception(CommunityErrorMessages.postDeleteFailed);
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            (e.toString().contains(CommunityErrorMessages.postNotFound) ||
+                e.toString().contains(
+                  CommunityErrorMessages.noPermissionDelete,
+                ))) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('게시글 삭제 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('게시글 삭제 Firebase 통신 오류: $e\n$st');
+          rethrow;
+        }
       }
     }, params: {'postId': postId});
   }
