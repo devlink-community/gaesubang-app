@@ -227,7 +227,7 @@ class SignupNotifier extends _$SignupNotifier {
   Future<void> _performNicknameAvailabilityCheck() async {
     // 🔥 중복 확인 전에 먼저 닉네임 유효성 검사
     final nicknameError = AuthValidator.validateNickname(state.nickname);
-    
+
     if (nicknameError != null) {
       // 유효성 검사 실패 시 에러 메시지 설정하고 중복 확인 하지 않음
       state = state.copyWith(
@@ -280,7 +280,7 @@ class SignupNotifier extends _$SignupNotifier {
   Future<void> _performEmailAvailabilityCheck() async {
     // 🔥 중복 확인 전에 먼저 이메일 유효성 검사
     final emailError = AuthValidator.validateEmail(state.email);
-    
+
     if (emailError != null) {
       // 유효성 검사 실패 시 에러 메시지 설정하고 중복 확인 하지 않음
       state = state.copyWith(
@@ -407,7 +407,7 @@ class SignupNotifier extends _$SignupNotifier {
     // 🔥 회원가입 성공 시 자동 로그인 수행
     if (signupResult.hasValue) {
       debugPrint('✅ 회원가입 성공, 자동 로그인 시작');
-      
+
       // 자동 로그인 수행
       final loginResult = await _loginUseCase.execute(
         email: state.email,
@@ -448,8 +448,8 @@ class SignupNotifier extends _$SignupNotifier {
     state = state.copyWith(
       agreedTermsId: agreedTermsId,
       isTermsAgreed: isAgreed,
-      agreeToTerms: isAgreed,
-      formErrorMessage: null,
+      termsError: null, // 약관 에러 메시지 초기화 추가
+      formErrorMessage: null, // 통합 에러 메시지도 초기화
     );
   }
 }
