@@ -502,8 +502,11 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 특정 알림의 읽음 상태 업데이트
   void _updateNotificationReadStatus(String notificationId, bool isRead) {
-    final currentNotifications = state.notifications.valueOrNull;
-    if (currentNotifications == null) return;
+    // AsyncData인 경우 직접 .value로 접근
+    if (state.notifications is! AsyncData) return;
+
+    final currentNotifications =
+        (state.notifications as AsyncData<List<AppNotification>>).value;
 
     bool wasUnread = false;
     final updatedNotifications =
@@ -540,8 +543,11 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 모든 알림의 읽음 상태 업데이트
   void _updateAllNotificationsReadStatus() {
-    final currentNotifications = state.notifications.valueOrNull;
-    if (currentNotifications == null) return;
+    // AsyncData인 경우 직접 .value로 접근
+    if (state.notifications is! AsyncData) return;
+
+    final currentNotifications =
+        (state.notifications as AsyncData<List<AppNotification>>).value;
 
     final updatedNotifications =
         currentNotifications.map((notification) {
@@ -569,8 +575,11 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 상태에서 알림 제거
   void _removeNotificationFromState(String notificationId) {
-    final currentNotifications = state.notifications.valueOrNull;
-    if (currentNotifications == null) return;
+    // AsyncData인 경우 직접 .value로 접근
+    if (state.notifications is! AsyncData) return;
+
+    final currentNotifications =
+        (state.notifications as AsyncData<List<AppNotification>>).value;
 
     // 삭제될 알림이 읽지 않은 상태였는지 확인
     final wasUnread = currentNotifications
