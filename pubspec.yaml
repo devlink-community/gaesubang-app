@@ -80,10 +80,14 @@ dependencies:
 =======
   firebase_ai: ^2.0.0
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 01a7d9ce (fix(vertex))
 =======
   device_info_plus: ^11.4.0
 >>>>>>> e7eaaf40 (feat: device_info_plus package 추가 완료)
+=======
+  device_info_plus: ^11.4.0
+>>>>>>> 51424037 (feat: device_info_plus package 추가 완료)
 
 
 
