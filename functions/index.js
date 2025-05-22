@@ -221,6 +221,150 @@ exports.sendCommentNotification = functions.firestore
     }
   });
 
+  // 댓글 좋아요 알림 함수 - 에러 처리 강화
+exports.sendCommentLikeNotification = functions.firestore
+  .document('posts/{postId}/comments/{commentId}/likes/{userId}')
+  .onCreate(async (snapshot, context) => {
+    try {
+      console.log('=== 댓글 좋아요 알림 함수 시작 ===');
+      
+      const postId = context.params.postId;
+      const commentId = context.params.commentId;
+      const likerId = context.params.userId;
+      
+      console.log('게시글 ID:', postId);
+      console.log('댓글 ID:', commentId);
+      console.log('좋아요 사용자:', likerId);
+      
+      const likeData = snapshot.data();
+      console.log('좋아요 데이터:', likeData);
+      
+      // 댓글 정보 조회
+      const commentSnapshot = await admin.firestore()
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+        
+      if (!commentSnapshot.exists) {
+        console.log('댓글을 찾을 수 없습니다:', commentId);
+        return null;
+      }
+      
+      const commentData = commentSnapshot.data();
+      const commentAuthorId = commentData.userId;
+      
+      console.log('댓글 작성자:', commentAuthorId);
+      console.log('좋아요 누른 사용자:', likerId);
+      
+      // 자기 댓글에 좋아요 누른 경우 알림 전송 안함
+      if (likerId === commentAuthorId) {
+        console.log('자기 댓글 좋아요이므로 알림 전송하지 않음');
+        return null;
+      }
+      
+      // 좋아요 누른 사용자 정보 조회
+      const likerSnapshot = await admin.firestore().collection('users').doc(likerId).get();
+      if (!likerSnapshot.exists) {
+        console.log('좋아요 누른 사용자 정보를 찾을 수 없습니다:', likerId);
+        return null;
+      }
+      
+      const likerData = likerSnapshot.data();
+      
+      // 댓글 작성자의 FCM 토큰 조회
+      const fcmTokens = await getUserFCMTokens(commentAuthorId);
+      
+      // 알림 데이터 구성
+      const notification = {
+        userId: commentAuthorId,
+        type: 'like',
+        targetId: postId, // 게시글로 이동하도록 설정
+        senderId: likerId,
+        senderName: likerData.nickname || '알 수 없는 사용자',
+        senderProfileImage: likerData.image,
+        title: '댓글 좋아요 알림',
+        body: `${likerData.nickname || '사용자'}님이 회원님의 댓글에 좋아요를 눌렀습니다: "${commentData.text?.substring(0, 30) || ''}${commentData.text?.length > 30 ? '...' : ''}"`,
+        data: {
+          postId: postId,
+          commentId: commentId,
+          commentText: commentData.text?.substring(0, 100) || ''
+        }
+      };
+      
+      console.log('댓글 좋아요 알림 데이터 구성 완료:', notification);
+      
+      // 병렬로 FCM 전송과 Firestore 저장
+      await Promise.all([
+        sendFCMMessage(fcmTokens, notification),
+        saveNotificationToFirestore(notification)
+      ]);
+      
+      console.log('=== 댓글 좋아요 알림 함수 완료 ===');
+      return { success: true, notificationType: 'comment_like' };
+      
+    } catch (error) {
+      console.error('=== 댓글 좋아요 알림 처리 오류 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message };
+    }
+  });
+
+// 댓글 좋아요 취소 시 알림 삭제
+exports.removeCommentLikeNotification = functions.firestore
+  .document('posts/{postId}/comments/{commentId}/likes/{userId}')
+  .onDelete(async (snapshot, context) => {
+    try {
+      console.log('=== 댓글 좋아요 취소 알림 삭제 시작 ===');
+      
+      const postId = context.params.postId;
+      const commentId = context.params.commentId;
+      const likerId = context.params.userId;
+      
+      // 댓글 정보 조회
+      const commentSnapshot = await admin.firestore()
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+        
+      if (!commentSnapshot.exists) {
+        return null;
+      }
+      
+      const commentData = commentSnapshot.data();
+      const commentAuthorId = commentData.userId;
+      
+      // 해당 댓글 좋아요 알림 찾아서 삭제
+      const notificationsSnapshot = await admin.firestore()
+        .collection('notifications')
+        .doc(commentAuthorId)
+        .collection('items')
+        .where('type', '==', 'like')
+        .where('targetId', '==', postId)
+        .where('senderId', '==', likerId)
+        .where('data.commentId', '==', commentId)
+        .get();
+      
+      if (!notificationsSnapshot.empty) {
+        const batch = admin.firestore().batch();
+        notificationsSnapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log('댓글 좋아요 취소로 인한 알림 삭제 완료');
+      }
+      
+      return { success: true, action: 'comment_like_notification_removed' };
+      
+    } catch (error) {
+      console.error('댓글 좋아요 알림 삭제 오류:', error);
+      return { error: error.message };
+    }
+  });
+
 // 좋아요 알림 함수 - 에러 처리 강화
 exports.sendLikeNotification = functions.firestore
   .document('posts/{postId}/likes/{userId}')
