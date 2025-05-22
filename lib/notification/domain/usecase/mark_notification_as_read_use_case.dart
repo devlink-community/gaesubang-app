@@ -8,8 +8,8 @@ class MarkNotificationAsReadUseCase {
   MarkNotificationAsReadUseCase({required NotificationRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<bool>> execute(String notificationId) async {
-    final result = await _repository.markAsRead(notificationId);
+  Future<AsyncValue<bool>> execute(String userId, String notificationId) async {
+    final result = await _repository.markAsRead(userId, notificationId);
 
     switch (result) {
       case Success(:final data):
