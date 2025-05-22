@@ -22,6 +22,12 @@ class UserProfileState with _$UserProfileState {
 
     // 성공 메시지
     this.successMessage,
+
+    // 중복 요청 방지를 위한 요청 ID
+    this.activeRequestId,
+
+    // 현재 로드된 사용자 ID
+    this.currentUserId,
   });
 
   final AsyncValue<Member> userProfile;
@@ -29,4 +35,6 @@ class UserProfileState with _$UserProfileState {
   final bool isLoading;
   final String? errorMessage;
   final String? successMessage;
+  final int? activeRequestId;
+  final String? currentUserId;
 }

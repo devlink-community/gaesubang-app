@@ -41,6 +41,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
+    // 누락된 애니메이션들 초기화
+    _fadeInAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<double>(begin: 30, end: 0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
+
     _floatingAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
       CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
     );
