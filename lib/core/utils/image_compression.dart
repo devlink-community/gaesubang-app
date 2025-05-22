@@ -144,7 +144,7 @@ class ImageCompressionUtils {
     }
 
     // 이미지 압축
-    final Uint8List compressedBytes = await compressImageWithCompute(
+    final Uint8List compressedBytes = await compressImage(
       imagePath: originalImagePath,
       maxWidth: maxWidth,
       maxHeight: maxHeight,
