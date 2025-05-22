@@ -91,19 +91,35 @@ class NotificationNotifier extends _$NotificationNotifier {
     // 초기 인증 상태 확인 및 알림 로딩
     _checkInitialAuthStateAndLoadNotifications();
 
-    // 리소스 정리
+    // 리소스 정리 (메모리 누수 방지)
     ref.onDispose(() {
-      debugPrint('NotificationNotifier dispose됨');
+      debugPrint('=== NotificationNotifier 리소스 정리 시작 ===');
+
+      // FCM 구독 취소
       _fcmSubscription?.cancel();
+      _fcmSubscription = null;
+
+      // 인증 상태 구독 취소
       _authSubscription?.close();
+      _authSubscription = null;
+
+      // 등록된 사용자 ID 초기화
+      _lastRegisteredUserId = null;
+
+      debugPrint('✅ NotificationNotifier 리소스 정리 완료');
     });
 
     debugPrint('초기 상태 반환: NotificationState()');
     return const NotificationState();
   }
 
-  /// 인증 상태 변화 리스너 설정
+  /// 인증 상태 변화 리스너 설정 (중복 방지)
   void _setupAuthStateListener() {
+    debugPrint('=== 인증 상태 리스너 설정 ===');
+
+    // 기존 구독이 있다면 취소 (중복 방지)
+    _authSubscription?.close();
+
     _authSubscription = ref.listen(authStateProvider, (previous, next) {
       debugPrint('=== authStateProvider 변화 감지됨 ===');
       debugPrint('이전 상태: $previous');
@@ -133,6 +149,8 @@ class NotificationNotifier extends _$NotificationNotifier {
         },
       );
     });
+
+    debugPrint('✅ 인증 상태 리스너 설정 완료');
   }
 
   /// 사용자 로그인 처리
@@ -256,8 +274,13 @@ class NotificationNotifier extends _$NotificationNotifier {
     });
   }
 
-  /// FCM 이벤트 구독
+  /// FCM 이벤트 구독 (중복 방지)
   void _subscribeToFCMEvents() {
+    debugPrint('=== FCM 이벤트 구독 설정 ===');
+
+    // 기존 구독이 있다면 취소 (중복 방지)
+    _fcmSubscription?.cancel();
+
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
       debugPrint('=== FCM 알림 탭 이벤트 수신 ===');
       debugPrint('알림 타입: ${payload.type}');
@@ -269,6 +292,8 @@ class NotificationNotifier extends _$NotificationNotifier {
       // 특정 알림 처리는 Root에서 처리하도록 위임
       // 여기서는 단순히 알림 목록만 새로고침
     });
+
+    debugPrint('✅ FCM 이벤트 구독 완료');
   }
 
   /// 액션 핸들러 - 모든 사용자 액션의 진입점
