@@ -966,10 +966,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
 
   Widget _buildMemberList() {
     final group = widget.state.group.valueOrNull;
-    if (group == null) return const SizedBox.shrink();
+    final members = widget.state.members;
 
-    // GetGroupMembersUseCase를 사용하여 멤버 정보를 가져와야 할 수도 있지만,
-    // 현재 UI 구현에서는 간단히 접근 가능한 정보만 표시
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1016,8 +1014,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      // memberCount 사용
-                      '${group.memberCount}명 / ${widget.state.limitMemberCount}명',
+                      '${group?.memberCount ?? 0}명 / ${widget.state.limitMemberCount}명',
                       style: TextStyle(
                         color: AppColorStyles.primary100,
                         fontWeight: FontWeight.bold,
@@ -1029,34 +1026,206 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               ),
               const SizedBox(height: 16),
               const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 16),
 
-              // 멤버 정보는 현재 접근 불가능하므로 안내 메시지 표시
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24,
-                    horizontal: 16,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 40,
-                        color: AppColorStyles.gray60,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        '멤버 정보를 불러올 수 없습니다',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
+              // 멤버 목록 표시
+              switch (members) {
+                AsyncLoading() => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CircularProgressIndicator(),
                   ),
                 ),
-              ),
+                AsyncError(:final error) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 40,
+                          color: Colors.red[400],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '멤버 정보를 불러올 수 없습니다\n$error',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                AsyncData(:final value) =>
+                  value.isEmpty
+                      ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            '멤버가 없습니다',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      )
+                      : Column(
+                        children:
+                            value
+                                .map((member) => _buildMemberItem(member))
+                                .toList(),
+                      ),
+                _ => const SizedBox.shrink(), // Handle any other cases
+              },
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildMemberItem(dynamic member) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColorStyles.white.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColorStyles.gray40.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // 프로필 이미지
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColorStyles.primary100.withValues(alpha: 0.1),
+            ),
+            child:
+                member.profileUrl?.isNotEmpty == true
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.network(
+                        member.profileUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.person,
+                            color: AppColorStyles.primary100,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    )
+                    : Icon(
+                      Icons.person,
+                      color: AppColorStyles.primary100,
+                      size: 24,
+                    ),
+          ),
+          const SizedBox(width: 12),
+
+          // 멤버 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      member.userName ?? '알 수 없음',
+                      style: AppTextStyles.captionRegular.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (member.role == 'owner')
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColorStyles.primary100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '방장',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '가입일: ${_formatDate(member.joinedAt)}',
+                  style: TextStyle(
+                    color: AppColorStyles.gray80,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 활동 상태 표시
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color:
+                  member.isActive == true
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : AppColorStyles.gray40.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        member.isActive == true
+                            ? Colors.green
+                            : AppColorStyles.gray60,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  member.isActive == true ? '활성' : '비활성',
+                  style: TextStyle(
+                    color:
+                        member.isActive == true
+                            ? Colors.green[700]
+                            : AppColorStyles.gray80,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? dateTime) {
+    if (dateTime == null) return '알 수 없음';
+    return '${dateTime.year}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.day.toString().padLeft(2, '0')}';
   }
 }

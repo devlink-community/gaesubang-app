@@ -1,6 +1,7 @@
 // ignore_for_file: annotate_overrides
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -10,6 +11,7 @@ part 'group_settings_state.freezed.dart';
 class GroupSettingsState with _$GroupSettingsState {
   const GroupSettingsState({
     this.group = const AsyncValue.loading(),
+    this.members = const AsyncValue.loading(),
     this.name = '',
     this.description = '',
     this.imageUrl,
@@ -23,6 +25,7 @@ class GroupSettingsState with _$GroupSettingsState {
   });
 
   final AsyncValue<Group> group;
+  final AsyncValue<List<GroupMember>> members;
   final String name;
   final String description;
   final String? imageUrl;
