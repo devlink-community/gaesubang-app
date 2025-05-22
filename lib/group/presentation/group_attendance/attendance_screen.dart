@@ -1,9 +1,9 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/component/calendar_grid.dart';
-import 'package:devlink_mobile_app/group/presentation/group_attendance/component/weekday_label.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'attendance_action.dart';
 import 'attendance_state.dart';
@@ -21,38 +21,87 @@ class AttendanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('출석부', style: AppTextStyles.heading3Bold),
-        elevation: 0,
+      backgroundColor: AppColorStyles.background,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                _buildCalendarContainer(),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildCalendarHeader(),
-            const SizedBox(height: 20),
-            _buildWeekdayLabels(),
-            const SizedBox(height: 10),
-            _buildCalendarBody(),
-            const SizedBox(height: 20),
-            _buildSelectedDateInfo(),
-          ],
+    );
+  }
+
+  // 세련된 SliverAppBar
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: AppColorStyles.white,
+      foregroundColor: AppColorStyles.textPrimary,
+      flexibleSpace: FlexibleSpaceBar(
+        centerTitle: true,
+        title: Text(
+          '그룹 출석부',
+          style: AppTextStyles.heading3Bold.copyWith(
+            color: AppColorStyles.textPrimary,
+          ),
+        ),
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColorStyles.primary100.withValues(alpha: 0.1),
+                AppColorStyles.white,
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: Container(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildMonthNavigation(),
         ),
       ),
     );
   }
 
-  // 캘린더 헤더 (년-월 표시 및 이전/다음 버튼)
-  Widget _buildCalendarHeader() {
+  // 월 네비게이션
+  Widget _buildMonthNavigation() {
     final displayedMonth = state.displayedMonth;
     final monthFormat = DateFormat('yyyy년 M월');
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColorStyles.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColorStyles.blackOverlay(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios),
+          _buildNavigationButton(
+            icon: Icons.chevron_left,
             onPressed: () {
               final previousMonth = DateTime(
                 displayedMonth.year,
@@ -63,10 +112,10 @@ class AttendanceScreen extends StatelessWidget {
           ),
           Text(
             monthFormat.format(displayedMonth),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: AppTextStyles.subtitle1Bold,
           ),
-          IconButton(
-            icon: const Icon(Icons.arrow_forward_ios),
+          _buildNavigationButton(
+            icon: Icons.chevron_right,
             onPressed: () {
               final nextMonth = DateTime(
                 displayedMonth.year,
@@ -80,188 +129,87 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
-  // 요일 라벨 (일~토)
-  Widget _buildWeekdayLabels() {
-    final weekdays = ['SUN', 'MON', 'TUE', 'WEN', 'THU', 'FRI', 'SAT'];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: weekdays.map((day) => WeekdayLabel(label: day)).toList(),
-      ),
-    );
-  }
-
-  // 캘린더 본문 (날짜 그리드)
-  Widget _buildCalendarBody() {
-    switch (state.attendanceList) {
-      case AsyncLoading():
-        return const SizedBox(
-          height: 300,
-          child: Center(child: CircularProgressIndicator()),
-        );
-
-      case AsyncError(:final error):
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                '출석 데이터를 불러올 수 없습니다: ${error.toString()}',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed:
-                    () => onAction(const AttendanceAction.loadAttendanceData()),
-                child: const Text('다시 시도'),
-              ),
-            ],
+  Widget _buildNavigationButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColorStyles.primary100.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
           ),
-        );
-
-      case AsyncData():
-        return _buildCalendarGrid();
-      default:
-        return const SizedBox(
-          height: 300,
-          child: Center(child: CircularProgressIndicator()),
-        );
-    }
-  }
-
-  // Calendar Grid 위젯 생성
-  Widget _buildCalendarGrid() {
-    // AttendanceNotifier로부터 색상 맵을 직접 제공받는 대신 여기서 생성
-    final colorMap = _getAttendanceColorMap();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: CalendarGrid(
-        year: state.displayedMonth.year,
-        month: state.displayedMonth.month,
-        selectedDate: state.selectedDate,
-        attendanceStatus: colorMap,
-        onDateSelected: (date) => onAction(AttendanceAction.selectDate(date)),
-      ),
-    );
-  }
-
-  // 선택된 날짜에 대한 정보 표시
-  Widget _buildSelectedDateInfo() {
-    final selectedDate = state.selectedDate;
-    final dateStr = DateFormat('yyyy년 M월 d일').format(selectedDate);
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        color: Colors.white,
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$dateStr 출석 정보',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildSelectedDateAttendanceInfo(selectedDate),
-            ],
+          child: Icon(
+            icon,
+            color: AppColorStyles.primary100,
+            size: 20,
           ),
         ),
       ),
     );
   }
 
-  // 선택된 날짜의 출석 정보 상세 표시
-  Widget _buildSelectedDateAttendanceInfo(DateTime selectedDate) {
-    final selectedDateStr = DateFormat('yyyy-MM-dd').format(selectedDate);
-
-    switch (state.attendanceList) {
-      case AsyncLoading():
-        return const SizedBox(
-          height: 50,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        );
-
-      case AsyncError():
-        return const Text('데이터를 불러올 수 없습니다');
-
-      case AsyncData(:final value):
-        return _buildAttendanceListForDate(value, selectedDateStr);
-      default:
-        return const SizedBox(
-          height: 50,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        );
-    }
+  // 캘린더 컨테이너
+  Widget _buildCalendarContainer() {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColorStyles.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColorStyles.blackOverlay(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildWeekdayLabels(),
+          const SizedBox(height: 16),
+          _buildCalendarBody(),
+        ],
+      ),
+    );
   }
 
-  // 특정 날짜의 출석 목록 표시
-  Widget _buildAttendanceListForDate(
-    List<dynamic> attendances,
-    String selectedDateStr,
-  ) {
-    final attendancesForDate =
-        attendances
-            .where(
-              (a) => DateFormat('yyyy-MM-dd').format(a.date) == selectedDateStr,
-            )
-            .toList();
+  // 세련된 요일 라벨
+  Widget _buildWeekdayLabels() {
+    final weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    final weekdayColors = [
+      AppColorStyles.error, // 일요일
+      AppColorStyles.textPrimary, // 월요일
+      AppColorStyles.textPrimary, // 화요일
+      AppColorStyles.textPrimary, // 수요일
+      AppColorStyles.textPrimary, // 목요일
+      AppColorStyles.textPrimary, // 금요일
+      AppColorStyles.primary100, // 토요일
+    ];
 
-    if (attendancesForDate.isEmpty) {
-      return const Text('이 날짜에 출석 정보가 없습니다');
-    }
-
-    // 멤버별로 그룹화하여 표시
-    final groupedByMember = <String, List<dynamic>>{};
-    for (final attendance in attendancesForDate) {
-      final memberId = attendance.memberId;
-      groupedByMember.putIfAbsent(memberId, () => []);
-      groupedByMember[memberId]!.add(attendance);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children:
-          groupedByMember.entries.map((entry) {
-            final memberId = entry.key;
-            final memberAttendances = entry.value;
+          weekdays.asMap().entries.map((entry) {
+            final index = entry.key;
+            final day = entry.value;
+            final color = weekdayColors[index];
 
-            // 해당 멤버의 총 출석 시간 계산
-            final totalMinutes = memberAttendances
-                .map((a) => a.timeInMinutes as int)
-                .reduce((a, b) => a + b);
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getColorByTime(totalMinutes),
-                  child: Text(
-                    // 멤버 이름의 첫 글자 표시 (없으면 '?')
-                    memberAttendances.first.memberName?.substring(0, 1) ?? '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                title: Text(
-                  memberAttendances.first.memberName ?? '멤버 $memberId',
-                ),
-                subtitle: Text('출석 시간: ${_formatMinutes(totalMinutes)}'),
-                trailing: Icon(
-                  _getIconByTime(totalMinutes),
-                  color: _getColorByTime(totalMinutes),
+            return Container(
+              width: 40,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                day,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.captionRegular.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             );
@@ -269,69 +217,164 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
-  // 출석 시간에 따른 색상 반환
-  Color _getColorByTime(int minutes) {
-    if (minutes >= 240) {
-      return const Color(0xFF5D5FEF); // 4시간 이상 - primary100
-    } else if (minutes >= 120) {
-      return const Color(0xFF7879F1); // 2시간 이상 - primary80
-    } else if (minutes >= 30) {
-      return const Color(0xFFA5A6F6); // 30분 이상 - primary60
-    } else {
-      return Colors.grey; // 30분 미만
+  // 캘린더 본문
+  Widget _buildCalendarBody() {
+    switch (state.attendanceList) {
+      case AsyncLoading():
+        return Container(
+          height: 300,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: CircularProgressIndicator(
+                  color: AppColorStyles.primary100,
+                  strokeWidth: 3,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '출석 데이터를 불러오는 중...',
+                style: AppTextStyles.body1Regular.copyWith(
+                  color: AppColorStyles.gray100,
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AsyncError(:final error):
+        return Container(
+          height: 300,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColorStyles.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  size: 32,
+                  color: AppColorStyles.error,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '출석 데이터를 불러올 수 없습니다',
+                style: AppTextStyles.subtitle1Bold.copyWith(
+                  color: AppColorStyles.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: AppTextStyles.body2Regular.copyWith(
+                  color: AppColorStyles.gray100,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed:
+                    () => onAction(const AttendanceAction.loadAttendanceData()),
+                icon: const Icon(Icons.refresh),
+                label: const Text('다시 시도'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColorStyles.primary100,
+                  foregroundColor: AppColorStyles.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AsyncData():
+        return _buildCalendarGrid();
+
+      default:
+        return Container(
+          height: 300,
+          alignment: Alignment.center,
+          child: CircularProgressIndicator(
+            color: AppColorStyles.primary100,
+          ),
+        );
     }
   }
 
-  // 출석 시간에 따른 아이콘 반환
-  IconData _getIconByTime(int minutes) {
-    if (minutes >= 240) {
-      return Icons.star; // 4시간 이상 - 별
-    } else if (minutes >= 120) {
-      return Icons.thumb_up; // 2시간 이상 - 좋아요
-    } else if (minutes >= 30) {
-      return Icons.check_circle; // 30분 이상 - 체크
-    } else {
-      return Icons.access_time; // 30분 미만 - 시계
-    }
-  }
+  // 향상된 캘린더 그리드
+  Widget _buildCalendarGrid() {
+    final colorMap = _getAttendanceColorMap();
 
-  // 분 단위 시간을 시간:분 형식으로 변환
-  String _formatMinutes(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-
-    if (hours > 0) {
-      return '$hours시간 ${mins > 0 ? "$mins분" : ""}';
-    } else {
-      return '$mins분';
-    }
+    return CalendarGrid(
+      year: state.displayedMonth.year,
+      month: state.displayedMonth.month,
+      selectedDate: state.selectedDate,
+      attendanceStatus: colorMap,
+      onDateSelected: (date) {
+        // 날짜 선택과 버텀 시트 표시를 동시에 요청
+        onAction(AttendanceAction.selectDate(date));
+        onAction(AttendanceAction.showDateAttendanceBottomSheet(date));
+      },
+    );
   }
 
   // 날짜별 출석 상태 색상 맵 생성
   Map<String, Color> _getAttendanceColorMap() {
     final colorMap = <String, Color>{};
-
     final attendances = state.attendanceList.valueOrNull ?? [];
+
+    // 날짜별로 그룹화하여 해당 날짜의 총 활동량 계산
+    final dateGrouped = <String, List<dynamic>>{};
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
+      dateGrouped.putIfAbsent(dateKey, () => []);
+      dateGrouped[dateKey]!.add(attendance);
+    }
 
-      if (attendance.timeInMinutes >= 240) {
-        // 4시간 이상
-        colorMap[dateKey] = const Color(
-          0xFF5D5FEF,
-        ); // #5D5FEF - AppColorStyles.primary100
-      } else if (attendance.timeInMinutes >= 120) {
-        // 2시간 이상
-        colorMap[dateKey] = const Color(
-          0xFF7879F1,
-        ); // #7879F1 - AppColorStyles.primary80
-      } else if (attendance.timeInMinutes >= 30) {
-        // 30분 이상
-        colorMap[dateKey] = const Color(
-          0xFFA5A6F6,
-        ); // #A5A6F6 - AppColorStyles.primary60
+    // 각 날짜별로 색상 결정
+    for (final entry in dateGrouped.entries) {
+      final dateKey = entry.key;
+      final dayAttendances = entry.value;
+
+      // 해당 날짜의 총 학습 시간
+      final totalMinutes = dayAttendances.fold<int>(
+        0,
+        (sum, attendance) => sum + (attendance.timeInMinutes as int),
+      );
+
+      // 참여 멤버 수
+      final memberCount = dayAttendances.map((a) => a.memberId).toSet().length;
+
+      // 멤버 수와 총 시간을 고려한 색상 결정
+      if (memberCount >= 3 && totalMinutes >= 240) {
+        colorMap[dateKey] = AppColorStyles.primary100; // 매우 활발
+      } else if (memberCount >= 2 && totalMinutes >= 120) {
+        colorMap[dateKey] = AppColorStyles.primary80; // 활발
+      } else if (memberCount >= 1 && totalMinutes >= 30) {
+        colorMap[dateKey] = AppColorStyles.primary60; // 보통
       } else {
-        colorMap[dateKey] = Colors.grey.withValues(alpha: 0.3);
+        colorMap[dateKey] = AppColorStyles.gray40.withValues(alpha: 0.5); // 낮음
       }
     }
 

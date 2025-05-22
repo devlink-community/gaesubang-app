@@ -15,4 +15,11 @@ sealed class AttendanceAction with _$AttendanceAction {
 
   // 출석 데이터 로드 요청
   const factory AttendanceAction.loadAttendanceData() = LoadAttendanceData;
+
+  // 🔧 새로 추가: 로케일 초기화
+  const factory AttendanceAction.initializeLocale() = InitializeLocale;
+
+  // 🔧 새로 추가: 날짜별 출석 정보 버텀 시트 표시
+  const factory AttendanceAction.showDateAttendanceBottomSheet(DateTime date) =
+      ShowDateAttendanceBottomSheet;
 }
