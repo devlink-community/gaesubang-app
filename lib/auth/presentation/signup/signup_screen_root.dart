@@ -29,7 +29,9 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
     if (widget.agreedTermsId != null) {
       // 다음 프레임에서 notifier 접근 (initState에서 ref.read 사용)
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(signupNotifierProvider.notifier).setAgreedTermsId(widget.agreedTermsId!);
+        ref
+            .read(signupNotifierProvider.notifier)
+            .setAgreedTermsId(widget.agreedTermsId!);
       });
     }
   }
@@ -40,18 +42,21 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
     final notifier = ref.watch(signupNotifierProvider.notifier);
 
     // 🔥 회원가입 결과 상태 감지 (성공/실패 모두 여기서 처리)
-    ref.listen(signupNotifierProvider.select((value) => value.signupResult), (previous, next) {
+    ref.listen(signupNotifierProvider.select((value) => value.signupResult), (
+      previous,
+      next,
+    ) {
       // 로딩 중이거나 결과가 없으면 무시
       if (next == null || next.isLoading) return;
-      
+
       if (next.hasValue) {
-        // ✅ 회원가입 성공 처리
+        // ✅ 회원가입 + 자동 로그인 성공 처리
         notifier.resetForm();
 
         // 성공 메시지를 SnackBar로 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('회원가입에 성공했습니다. 로그인해주세요.'),
+            content: const Text('회원가입이 완료되었습니다. 환영합니다!'),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
@@ -59,9 +64,8 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
           ),
         );
 
-        // 로그인 페이지로 이동
-        context.go('/');
-        
+        // 🔥 홈 화면으로 이동 (자동 로그인 완료)
+        context.go('/home');
       } else if (next.hasError) {
         // ❌ 회원가입 실패 처리
         final error = next.error;
@@ -89,26 +93,29 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
     });
 
     // 🔥 폼 검증 에러만 처리 (회원가입 관련 에러는 위에서 처리하므로 제외)
-    ref.listen(signupNotifierProvider.select((value) => value.formErrorMessage), (previous, next) {
-      // 폼 에러 메시지가 있고, 회원가입 진행 중이 아닌 경우에만 SnackBar 표시
-      if (next != null && !_isSignupInProgress(state)) {
-        // 🔥 회원가입 관련 에러는 signupResult 리스너에서 처리하므로 여기서는 제외
-        if (_isSignupRelatedError(next)) {
-          return; // 회원가입 관련 에러는 처리하지 않음
+    ref.listen(
+      signupNotifierProvider.select((value) => value.formErrorMessage),
+      (previous, next) {
+        // 폼 에러 메시지가 있고, 회원가입 진행 중이 아닌 경우에만 SnackBar 표시
+        if (next != null && !_isSignupInProgress(state)) {
+          // 🔥 회원가입 관련 에러는 signupResult 리스너에서 처리하므로 여기서는 제외
+          if (_isSignupRelatedError(next)) {
+            return; // 회원가입 관련 에러는 처리하지 않음
+          }
+
+          // 폼 검증 에러만 SnackBar로 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next),
+              backgroundColor: Colors.orange.shade800,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
-        
-        // 폼 검증 에러만 SnackBar로 표시
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next),
-            backgroundColor: Colors.orange.shade800,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    });
+      },
+    );
 
     return SignupScreen(
       state: state,
@@ -121,7 +128,7 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
             context.push('/terms');
 
           default:
-          // 나머지 액션은 Notifier에서 처리
+            // 나머지 액션은 Notifier에서 처리
             notifier.onAction(action);
         }
       },
@@ -137,7 +144,7 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
   bool _isSignupRelatedError(String errorMessage) {
     const signupRelatedKeywords = [
       '이미 사용 중인 이메일',
-      '이미 사용 중인 닉네임', 
+      '이미 사용 중인 닉네임',
       '계정 생성',
       '회원가입',
       '약관',
@@ -147,7 +154,9 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
       '잘못된 이메일',
       '사용자 정보 저장',
     ];
-    
-    return signupRelatedKeywords.any((keyword) => errorMessage.contains(keyword));
+
+    return signupRelatedKeywords.any(
+      (keyword) => errorMessage.contains(keyword),
+    );
   }
 }
