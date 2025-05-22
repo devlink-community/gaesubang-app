@@ -2,6 +2,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'dart:async'; // Completer 사용을 위해 추가
 =======
 =======
@@ -15,29 +16,25 @@ import 'dart:async';
 =======
 import 'dart:async';
 >>>>>>> cc1d0ed3 (충돌 상황 해결)
+=======
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
-import 'package:googleapis/aiplatform/v1.dart' as vertex_ai;
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:http/http.dart' as http;
 
-/// Vertex AI와의 통신을 담당하는 클라이언트 클래스
-/// API 호출과 응답 처리에만 집중하도록 리팩토링
-class VertexAIClient {
+/// Firebase AI를 사용한 Gemini API 클라이언트
+/// 기존 Vertex AI 클라이언트를 대체하여 더 간단하고 효율적인 구조 제공
+class FirebaseAIClient {
   // 싱글톤 패턴
-  static final VertexAIClient _instance = VertexAIClient._internal();
+  static final FirebaseAIClient _instance = FirebaseAIClient._internal();
 
-  factory VertexAIClient() => _instance;
+  factory FirebaseAIClient() => _instance;
 
-  VertexAIClient._internal();
-
-  // GCP 프로젝트 설정
-  final String _projectId = 'gaesubang-2f372';
-  final String _location = 'us-central1';
-  final String _modelId = 'gemini-2.0-flash';
+  FirebaseAIClient._internal();
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -60,10 +57,9 @@ class VertexAIClient {
 >>>>>>> 59b5ad53 (feat(AI): 성능개선을 위한 정리 1)
   bool _initialized = false;
   bool _initializing = false;
-  Completer<void>? _initializeCompleter;
 
-  late http.Client _httpClient;
-  late AutoRefreshingAuthClient _authClient;
+  late GenerativeModel _generativeModel;
+  late FirebaseAI _firebaseAI;
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -86,90 +82,73 @@ class VertexAIClient {
     if (_initialized) return;
 <<<<<<< HEAD
 
-    // 초기화가 진행 중인 경우 해당 작업이 완료될 때까지 대기
     if (_initializing) {
-      debugPrint('Vertex AI 클라이언트 초기화 진행 중... 기존 작업 완료 대기');
-      return _initializeCompleter!.future;
+      // 초기화가 진행 중인 경우 완료될 때까지 대기
+      while (_initializing && !_initialized) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return;
     }
 
-    // 초기화 진행 중 플래그 설정 및 Completer 생성
     _initializing = true;
-    _initializeCompleter = Completer<void>();
 
 =======
 >>>>>>> 65e0a3e8 (quiz: banner 수정:)
     try {
-      debugPrint('Vertex AI 클라이언트 초기화 시작');
+      debugPrint('Firebase AI 클라이언트 초기화 시작');
 
-      // Remote Config에서 Base64로 인코딩된 서비스 계정 키 가져오기
-      final Map<String, dynamic> serviceAccountJson =
-          await _loadServiceAccountFromRemoteConfig();
-
-      if (serviceAccountJson.isEmpty) {
-        throw Exception('서비스 계정 정보를 Remote Config에서 로드할 수 없습니다.');
+      // Firebase Auth 확인 (필요 시 익명 로그인)
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+        debugPrint('Firebase 익명 로그인 완료');
       }
 
-      // 서비스 계정 정보 로드 및 인증 클라이언트 생성
-      final credentials = ServiceAccountCredentials.fromJson(
-        serviceAccountJson,
-      );
+      // Google AI 인스턴스 생성 (무료 tier 사용)
+      _firebaseAI = FirebaseAI.googleAI(auth: FirebaseAuth.instance);
 
-      _httpClient = http.Client();
-      _authClient = await clientViaServiceAccount(credentials, [
-        vertex_ai.AiplatformApi.cloudPlatformScope,
-      ]);
+      // Gemini 모델 생성
+      _generativeModel = _firebaseAI.generativeModel(
+        model: 'gemini-2.0-flash',
+        generationConfig: GenerationConfig(
+          temperature: 0.2,
+          maxOutputTokens: 1024,
+          topK: 40,
+          topP: 0.95,
+        ),
+      );
 
       _initialized = true;
       _initializing = false;
-      debugPrint('Vertex AI 클라이언트 초기화 완료');
-
-      // 완료 알림
-      _initializeCompleter!.complete();
+      debugPrint('Firebase AI 클라이언트 초기화 완료');
     } catch (e) {
-      debugPrint('Vertex AI 클라이언트 초기화 실패: $e');
+      debugPrint('Firebase AI 클라이언트 초기화 실패: $e');
       _initialized = false;
       _initializing = false;
-
-      // 오류 전파
-      _initializeCompleter!.completeError(e);
       rethrow;
     }
   }
 
-  /// Remote Config에서 Base64로 인코딩된 서비스 계정 키를 가져오는 메서드
-  Future<Map<String, dynamic>> _loadServiceAccountFromRemoteConfig() async {
+  /// Remote Config에서 Gemini API 키 로드 (현재는 사용하지 않음 - Firebase Auth 사용)
+  Future<String> _loadGeminiApiKey() async {
     try {
-      // Remote Config 인스턴스 가져오기
       final remoteConfig = FirebaseRemoteConfig.instance;
-
-      // 설정 로드
       await remoteConfig.fetchAndActivate();
 
-      // Base64로 인코딩된 서비스 계정 JSON 가져오기
-      final encodedServiceAccount = remoteConfig.getString('gaesubang_api_key');
+      final apiKey = remoteConfig.getString('gemini_ai_key');
 
-      if (encodedServiceAccount.isEmpty) {
-        debugPrint('Remote Config에서 서비스 계정 정보를 찾을 수 없습니다.');
-        // 폴백: 로컬 파일에서 로드 시도
-        return await _loadServiceAccountFromAssets();
+      if (apiKey.isEmpty) {
+        throw Exception('Gemini API 키가 Remote Config에 없습니다.');
       }
 
-      // Base64 디코딩
-      final Uint8List decodedBytes = base64Decode(encodedServiceAccount);
-      final String decodedString = utf8.decode(decodedBytes);
-
-      // JSON 파싱
-      final Map<String, dynamic> serviceAccountJson = jsonDecode(decodedString);
-
-      debugPrint('Remote Config에서 서비스 계정 정보 로드 완료');
-      return serviceAccountJson;
+      debugPrint('Remote Config에서 Gemini API 키 로드 완료');
+      return apiKey;
     } catch (e) {
-      debugPrint('Remote Config에서 서비스 계정 정보 로드 실패: $e');
-      // 폴백: 로컬 파일에서 로드 시도
-      return await _loadServiceAccountFromAssets();
+      debugPrint('Remote Config에서 Gemini API 키 로드 실패: $e');
+      rethrow;
     }
   }
 
+<<<<<<< HEAD
   /// 대체 방법으로 서비스 계정 정보 로드
   Future<Map<String, dynamic>> _loadServiceAccountFromAssets() async {
     try {
@@ -251,10 +230,14 @@ class VertexAIClient {
   /// 텍스트 생성 API 호출 메서드 - 프롬프트를 받아 JSON 응답 반환
   /// 이 메서드는 프롬프트 내용에 관여하지 않고 API 호출과 응답 처리에만 집중
 >>>>>>> 59b5ad53 (feat(AI): 성능개선을 위한 정리 1)
+=======
+  /// 텍스트 생성 API 호출 - 단일 JSON 객체 반환
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
       if (!_initialized) await initialize();
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -273,9 +256,13 @@ class VertexAIClient {
           'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
 >>>>>>> 59b5ad53 (feat(AI): 성능개선을 위한 정리 1)
 
+=======
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
       // 캐시 방지를 위한 고유 ID 추가
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
+<<<<<<< HEAD
       // 생성 구성 - 낮은 temperature로 설정 (JSON 형식 응답에 적합)
       final payload = {
         'contents': [
@@ -295,19 +282,18 @@ class VertexAIClient {
           'topP': 0.95,
         },
       };
+=======
+      debugPrint(
+        'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
+      );
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
 
-      // API 호출 (최대 15초 타임아웃)
-      final response = await _authClient
-          .post(
-            Uri.parse(endpoint),
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache',
-            },
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 15));
+      // Firebase AI SDK를 사용한 간단한 호출
+      final response = await _generativeModel.generateContent([
+        Content.text(enhancedPrompt),
+      ]);
 
+<<<<<<< HEAD
       // 응답 처리
 <<<<<<< HEAD
       if (response.statusCode == 200) {
@@ -370,12 +356,27 @@ class VertexAIClient {
 =======
       return _processResponse(response);
 >>>>>>> cc1d0ed3 (충돌 상황 해결)
+=======
+      // 응답 텍스트 추출
+      final responseText = response.text;
+      if (responseText == null || responseText.isEmpty) {
+        throw Exception('응답이 비어있습니다');
+      }
+
+      debugPrint(
+        'Gemini API 응답 수신: ${responseText.substring(0, min(100, responseText.length))}...',
+      );
+
+      // JSON 추출 및 반환
+      return _extractJsonFromText(responseText);
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
     } catch (e) {
-      debugPrint('Vertex AI API 호출 실패: $e');
+      debugPrint('Gemini API 호출 실패: $e');
       rethrow;
     }
   }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   /// 스킬 기반 퀴즈 생성 - 개선된 버전
 =======
@@ -1060,49 +1061,74 @@ class VertexAIClient {
         if (candidates == null || candidates.isEmpty) {
           throw Exception('응답에 candidates가 없습니다');
         }
+=======
+  /// 텍스트 생성 API 호출 - JSON 배열 반환
+  Future<List<Map<String, dynamic>>> callTextModelForList(String prompt) async {
+    try {
+      if (!_initialized) await initialize();
 
-        final content = candidates[0]['content'];
-        if (content == null) {
-          throw Exception('응답에 content가 없습니다');
-        }
+      // 다양성을 위한 랜덤 temperature 설정
+      final random = Random();
+      final temperature = 0.5 + random.nextDouble() * 0.4; // 0.5~0.9
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
 
-        final parts = content['parts'];
-        if (parts == null || parts.isEmpty) {
-          throw Exception('응답에 parts가 없습니다');
-        }
+      // 고유 ID 추가
+      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
-        final String generatedText = parts[0]['text'] ?? '';
+      debugPrint(
+        'Gemini API 리스트 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
+      );
 
-        // 코드 블록 제거
-        String cleanedText = generatedText;
-        if (cleanedText.contains('```')) {
-          cleanedText =
-              cleanedText
-                  .replaceAll('```json', '')
-                  .replaceAll('```', '')
-                  .trim();
-        }
+      // 동적으로 temperature 조정된 모델 생성
+      final dynamicModel = _firebaseAI.generativeModel(
+        model: 'gemini-2.0-flash',
+        generationConfig: GenerationConfig(
+          temperature: temperature,
+          maxOutputTokens: 1024,
+          topK: 40,
+          topP: 0.95,
+        ),
+      );
 
-        // JSON 객체 찾기
-        return _extractJsonFromText(cleanedText);
-      } catch (e) {
-        debugPrint('응답 처리 오류: $e');
-        debugPrint('원본 응답: ${response.body}');
-        throw Exception('응답 처리 중 오류: $e');
+      // Firebase AI SDK를 사용한 호출
+      final response = await dynamicModel.generateContent([
+        Content.text(enhancedPrompt),
+      ]);
+
+      // 응답 텍스트 추출
+      final responseText = response.text;
+      if (responseText == null || responseText.isEmpty) {
+        throw Exception('응답이 비어있습니다');
       }
-    } else {
-      debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
-      throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
+
+      debugPrint(
+        'Gemini API 리스트 응답 수신: ${responseText.substring(0, min(100, responseText.length))}...',
+      );
+
+      // JSON 배열 추출 및 반환
+      return _extractJsonArrayFromText(responseText);
+    } catch (e) {
+      debugPrint('Gemini API 리스트 호출 실패: $e');
+      rethrow;
     }
   }
 
-  /// 텍스트에서 JSON 추출 메서드
+  /// 텍스트에서 JSON 객체 추출
   Map<String, dynamic> _extractJsonFromText(String text) {
-    final jsonStart = text.indexOf('{');
-    final jsonEnd = text.lastIndexOf('}') + 1;
+    // 코드 블록 제거
+    String cleanedText = text;
+    if (cleanedText.contains('```')) {
+      cleanedText =
+          cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
+    }
+
+    // JSON 객체 찾기
+    final jsonStart = cleanedText.indexOf('{');
+    final jsonEnd = cleanedText.lastIndexOf('}') + 1;
 
     if (jsonStart >= 0 && jsonEnd > jsonStart) {
-      final jsonString = text.substring(jsonStart, jsonEnd);
+      final jsonString = cleanedText.substring(jsonStart, jsonEnd);
       try {
         return jsonDecode(jsonString);
       } catch (e) {
@@ -1115,116 +1141,23 @@ class VertexAIClient {
     }
   }
 
-  /// 리스트 형태의 JSON 텍스트에서 JSON 배열 추출
-  Future<List<Map<String, dynamic>>> callTextModelForList(String prompt) async {
-    try {
-      if (!_initialized) await initialize();
-
-      final endpoint =
-          'https://aiplatform.googleapis.com/v1/projects/${_projectId}/locations/${_location}/publishers/google/models/${_modelId}:generateContent';
-
-      // 각 요청마다 다른 temperature 값 사용하여 다양성 증가
-      final random = Random();
-      final temperature = 0.5 + random.nextDouble() * 0.4; // 0.5~0.9 사이의 랜덤 값
-
-      // 요청마다 고유한 ID 추가 (캐시 방지)
-      final uniqueId = DateTime.now().millisecondsSinceEpoch;
-
-      // 페이로드 구성
-      final payload = {
-        'contents': [
-          {
-            'role': 'user',
-            'parts': [
-              {'text': '$prompt\n\n요청 ID: $uniqueId'},
-            ],
-          },
-        ],
-        'generationConfig': {
-          'temperature': temperature,
-          'maxOutputTokens': 1024,
-          'topK': 40,
-          'topP': 0.95,
-        },
-      };
-
-      // API 호출
-      final response = await _authClient.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
-        body: jsonEncode(payload),
-      );
-
-      // 응답 처리
-      return _processListResponse(response);
-    } catch (e) {
-      debugPrint('Vertex AI API 리스트 호출 실패: $e');
-      rethrow;
-    }
-  }
-
-  /// 리스트 응답 처리 메서드
-  Future<List<Map<String, dynamic>>> _processListResponse(
-    http.Response response,
-  ) async {
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body);
-
-      try {
-        // 응답 구조 확인
-        final candidates = data['candidates'];
-        if (candidates == null || candidates.isEmpty) {
-          throw Exception('응답에 candidates가 없습니다');
-        }
-
-        final content = candidates[0]['content'];
-        if (content == null) {
-          throw Exception('응답에 content가 없습니다');
-        }
-
-        final parts = content['parts'];
-        if (parts == null || parts.isEmpty) {
-          throw Exception('응답에 parts가 없습니다');
-        }
-
-        final String generatedText = parts[0]['text'] ?? '';
-
-        // 코드 블록 제거
-        String cleanedText = generatedText;
-        if (cleanedText.contains('```')) {
-          cleanedText =
-              cleanedText
-                  .replaceAll('```json', '')
-                  .replaceAll('```', '')
-                  .trim();
-        }
-
-        // JSON 배열 추출
-        return _extractJsonArrayFromText(cleanedText);
-      } catch (e) {
-        debugPrint('응답 처리 오류: $e');
-        debugPrint('원본 응답: ${response.body}');
-        throw Exception('응답 처리 중 오류: $e');
-      }
-    } else {
-      debugPrint('API 호출 실패: ${response.statusCode} ${response.body}');
-      throw Exception('API 호출 실패: ${response.statusCode} ${response.body}');
-    }
-  }
-
-  /// 텍스트에서 JSON 배열 추출 메서드
+  /// 텍스트에서 JSON 배열 추출
   List<Map<String, dynamic>> _extractJsonArrayFromText(String text) {
+    // 코드 블록 제거
+    String cleanedText = text;
+    if (cleanedText.contains('```')) {
+      cleanedText =
+          cleanedText.replaceAll('```json', '').replaceAll('```', '').trim();
+    }
+
     // 먼저 배열 형태 확인
-    final arrayStart = text.indexOf('[');
-    final arrayEnd = text.lastIndexOf(']') + 1;
+    final arrayStart = cleanedText.indexOf('[');
+    final arrayEnd = cleanedText.lastIndexOf(']') + 1;
 
     if (arrayStart >= 0 && arrayEnd > arrayStart) {
       try {
         final List<dynamic> parsedArray = jsonDecode(
-          text.substring(arrayStart, arrayEnd),
+          cleanedText.substring(arrayStart, arrayEnd),
         );
         return parsedArray
             .map((item) => Map<String, dynamic>.from(item))
@@ -1232,54 +1165,29 @@ class VertexAIClient {
       } catch (e) {
         debugPrint('JSON 배열 파싱 오류: $e');
         // 배열 파싱 실패 시, 단일 객체 확인
-        final jsonStart = text.indexOf('{');
-        final jsonEnd = text.lastIndexOf('}') + 1;
-
-        if (jsonStart >= 0 && jsonEnd > jsonStart) {
-          try {
-            final Map<String, dynamic> parsedJson = jsonDecode(
-              text.substring(jsonStart, jsonEnd),
-            );
-            return [parsedJson]; // 단일 객체를 리스트로 반환
-          } catch (e) {
-            debugPrint('단일 JSON 객체 파싱도 실패: $e');
-            throw Exception('JSON 객체 파싱 오류: $e');
-          }
-        } else {
-          throw Exception('JSON 배열 파싱 오류: $e');
-        }
+        return [_extractJsonFromText(cleanedText)];
       }
     } else {
       // 배열을 찾을 수 없는 경우, 단일 객체 확인
-      final jsonStart = text.indexOf('{');
-      final jsonEnd = text.lastIndexOf('}') + 1;
-
-      if (jsonStart >= 0 && jsonEnd > jsonStart) {
-        try {
-          final Map<String, dynamic> parsedJson = jsonDecode(
-            text.substring(jsonStart, jsonEnd),
-          );
-          return [parsedJson]; // 단일 객체를 리스트로 반환
-        } catch (e) {
-          debugPrint('JSON 객체 파싱 오류: $e');
-          throw Exception('JSON 객체 파싱 오류: $e');
-        }
-      } else {
+      try {
+        final singleObject = _extractJsonFromText(cleanedText);
+        return [singleObject]; // 단일 객체를 리스트로 반환
+      } catch (e) {
         debugPrint('JSON 형식을 찾을 수 없음: $text');
         throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
       }
     }
   }
 
+<<<<<<< HEAD
   // 인스턴스 소멸 시 리소스 정리
 >>>>>>> 96d3ead6 ([Optimize] AI Client Provider 성능 개선)
+=======
+  /// 리소스 정리
+>>>>>>> b28e09d8 (fix(ai) vertex ai 에서 firebase ai로 변경)
   void dispose() {
-    if (_initialized) {
-      _httpClient.close();
-      _authClient.close();
-      _initialized = false;
-      _initializing = false;
-      _initializeCompleter = null;
-    }
+    _initialized = false;
+    _initializing = false;
+    debugPrint('Firebase AI 클라이언트 리소스 정리 완료');
   }
 }

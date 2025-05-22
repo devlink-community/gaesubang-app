@@ -5,7 +5,7 @@ import '../../module/quiz_prompt.dart';
 import '../../module/vertex_client.dart';
 import 'fallback_service.dart';
 
-/// Vertex AI 데이터 소스 인터페이스
+/// Firebase AI 데이터 소스 인터페이스
 abstract interface class VertexAiDataSource {
   /// 단일 퀴즈 생성
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt);
@@ -23,25 +23,25 @@ abstract interface class VertexAiDataSource {
   Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt);
 }
 
-/// Vertex AI 데이터 소스 구현
+/// Firebase AI 데이터 소스 구현
 class VertexAiDataSourceImpl implements VertexAiDataSource {
-  final VertexAIClient _vertexClient;
+  final FirebaseAIClient _firebaseAIClient;
   final FallbackService _fallbackService;
-  final PromptService _promptService; // PromptService 추가
+  final PromptService _promptService;
 
   VertexAiDataSourceImpl({
-    required VertexAIClient vertexClient,
+    required FirebaseAIClient firebaseAIClient,
     required FallbackService fallbackService,
-    required PromptService promptService, // 생성자에 추가
-  }) : _vertexClient = vertexClient,
+    required PromptService promptService,
+  }) : _firebaseAIClient = firebaseAIClient,
        _fallbackService = fallbackService,
        _promptService = promptService;
 
   @override
   Future<Map<String, dynamic>> generateQuizWithPrompt(String prompt) async {
     try {
-      // 직접 호출만 담당 (프롬프트 구성에 관여하지 않음)
-      final result = await _vertexClient.callTextModel(prompt);
+      // Firebase AI SDK를 통한 간단한 호출
+      final result = await _firebaseAIClient.callTextModel(prompt);
       debugPrint(
         '퀴즈 생성 성공: ${result["question"]?.toString().substring(0, min(20, result["question"]?.toString().length ?? 0))}...',
       );
@@ -63,8 +63,8 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
       // 프롬프트 생성 서비스 활용
       final prompt = _promptService.createMultipleQuizPrompt(skills, count);
 
-      // 리스트 형태의 결과를 기대하는 호출
-      final results = await _vertexClient.callTextModelForList(prompt);
+      // Firebase AI SDK를 사용한 리스트 호출
+      final results = await _firebaseAIClient.callTextModelForList(prompt);
       debugPrint('스킬 기반 퀴즈 생성 성공: ${results.length}개');
       return results;
     } catch (e) {
@@ -94,8 +94,8 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
       // 프롬프트 생성 서비스 활용
       final prompt = _promptService.createGeneralQuizPrompt(count);
 
-      // 리스트 형태의 결과를 기대하는 호출
-      final results = await _vertexClient.callTextModelForList(prompt);
+      // Firebase AI SDK를 사용한 리스트 호출
+      final results = await _firebaseAIClient.callTextModelForList(prompt);
       debugPrint('일반 퀴즈 생성 성공: ${results.length}개');
       return results;
     } catch (e) {
@@ -113,8 +113,8 @@ class VertexAiDataSourceImpl implements VertexAiDataSource {
   @override
   Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt) async {
     try {
-      // 직접 호출만 담당
-      final result = await _vertexClient.callTextModel(prompt);
+      // Firebase AI SDK를 통한 간단한 호출
+      final result = await _firebaseAIClient.callTextModel(prompt);
       debugPrint('학습 팁 생성 성공: ${result["title"]}');
       return result;
     } catch (e) {
