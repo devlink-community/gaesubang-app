@@ -1,6 +1,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 admin.initializeApp();
@@ -334,13 +335,61 @@ async function saveNotificationToFirestore(notification) {
 
 <<<<<<< HEAD
 =======
+=======
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp();
+>>>>>>> 998410a6 (fix: firebase functions 수정 완료)
 
-const {onRequest} = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
+// FCM 토큰 조회 함수
+async function getUserFCMTokens(userId) {
+  try {
+    const tokensSnapshot = await admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('private')
+      .doc('fcmTokens')
+      .collection('tokens')
+      .where('lastUsed', '>', admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30일 이내
+      ))
+      .get();
+    
+    return tokensSnapshot.docs.map(doc => doc.data().token);
+  } catch (error) {
+    console.error('FCM 토큰 조회 실패:', error);
+    return [];
+  }
+}
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+// 알림 데이터를 Firestore에 저장
+async function saveNotificationToFirestore(notification) {
+  try {
+    await admin.firestore()
+      .collection('notifications')
+      .doc(notification.userId)
+      .collection('items')
+      .add({
+        type: notification.type,
+        targetId: notification.targetId,
+        senderId: notification.senderId,
+        senderName: notification.senderName,
+        senderProfileImage: notification.senderProfileImage || null,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        isRead: false,
+        readAt: null
+      });
+    
+    console.log('알림 데이터 저장 완료');
+  } catch (error) {
+    console.error('알림 데이터 저장 실패:', error);
+  }
+}
 
+<<<<<<< HEAD
 >>>>>>> 19ac2fd5 (feat: firebase functions 생성 완료)
 // exports.helloWorld = onRequest((request, response) => {
 //   logger.info("Hello logs!", {structuredData: true});
@@ -349,6 +398,8 @@ const logger = require("firebase-functions/logger");
 <<<<<<< HEAD
 >>>>>>> fbfaf547 (feat: firebase functions 생성 완료)
 =======
+=======
+>>>>>>> 998410a6 (fix: firebase functions 수정 완료)
 // FCM 메시지 전송
 async function sendFCMMessage(tokens, notification) {
   try {
@@ -559,7 +610,11 @@ exports.removeLikeNotification = functions.firestore
       console.error('좋아요 알림 삭제 오류:', error);
       return { error: error.message };
     }
+<<<<<<< HEAD
   });
 >>>>>>> fcff3de6 (fix: firebase functions 수정 완료)
 =======
 >>>>>>> 19ac2fd5 (feat: firebase functions 생성 완료)
+=======
+  });
+>>>>>>> 998410a6 (fix: firebase functions 수정 완료)
