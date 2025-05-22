@@ -1,8 +1,5 @@
 // lib/community/presentation/community_write/community_write_notifier.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
-import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_action.dart';
@@ -20,15 +17,12 @@ part 'community_write_notifier.g.dart';
 
 @riverpod
 class CommunityWriteNotifier extends _$CommunityWriteNotifier {
-  late final GetCurrentUserUseCase _getCurrentUserUseCase;
-
   @override
   CommunityWriteState build() {
-    _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
-
     ref.listen(appEventNotifierProvider, (previous, current) {
       if (previous != current) {
         final eventNotifier = ref.read(appEventNotifierProvider.notifier);
+        //TODO: 이곳 실제로 사용하는지 검증 필요합니다. 체크해주세요
       }
     });
 
@@ -112,10 +106,10 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
   Future<void> _loadExistingImages(List<String> imageUrls) async {
     // 편의상 첫 번째 이미지만 로드 (필요시 여러 이미지 로드로 확장)
     if (imageUrls.isEmpty) return;
-    
+
     try {
       final imageUrl = imageUrls.first;
-      
+
       // 네트워크 이미지 로드 (http 패키지 사용)
       final response = await http.get(Uri.parse(imageUrl));
       if (response.statusCode == 200) {
@@ -127,10 +121,9 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
       // 실패해도 계속 진행 (이미지 없이)
     }
   }
-  
 
   Future<void> _submit() async {
-    // 유효성 검사
+    // 유효성 검사 (동일)
     if (state.title.trim().isEmpty) {
       state = state.copyWith(
         errorMessage: CommunityErrorMessages.titleRequired,
@@ -149,64 +142,44 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
     state = state.copyWith(submitting: true, errorMessage: null);
 
     try {
-      debugPrint('🔄 CommunityWriteNotifier: 게시글 작성 시작 - 최신 사용자 정보 로드');
+      debugPrint('🔄 CommunityWriteNotifier: 게시글 작성 시작');
 
-      // 최신 사용자 정보 가져오기
-      final userProfileResult = await _getCurrentUserUseCase.execute();
-
-      if (userProfileResult case AsyncError(:final error)) {
-        debugPrint('❌ CommunityWriteNotifier: 사용자 정보 로드 실패 - $error');
-        throw Exception('사용자 정보를 가져오는데 실패했습니다: $error');
-      }
-
-      // 사용자 정보 추출 (AsyncData의 value 필드에서)
-      final Member author;
-      if (userProfileResult case AsyncData(:final value)) {
-        author = value;
-        debugPrint(
-          '✅ CommunityWriteNotifier: 최신 사용자 정보 로드 완료 - 닉네임: ${author.nickname}',
-        );
-      } else {
-        debugPrint('⚠️ CommunityWriteNotifier: 사용자 정보가 AsyncData가 아님');
-        throw Exception('사용자 정보를 가져오는데 실패했습니다: 예상치 못한 상태');
-      }
-
-      // 1. 게시글 ID 미리 생성 (Firebase에서 자동 생성되는 ID)
+      // 1. 게시글 ID 미리 생성
       final postId = FirebaseFirestore.instance.collection('posts').doc().id;
-      debugPrint('🔄 CommunityWriteNotifier: 게시글 ID 생성 - $postId');
 
       // 2. 이미지 업로드
       final List<Uri> imageUris = await _uploadImages(postId);
-      debugPrint('✅ CommunityWriteNotifier: 이미지 업로드 완료 - ${imageUris.length}개');
 
-      // 3. 게시글 데이터 생성 (수정: 사용자 프로필 전달)
+      // 3. 게시글 데이터 생성
       final usecase = ref.read(createPostUseCaseProvider);
-      final createdPostId = await usecase.execute(
+      final createResult = await usecase.execute(
         postId: postId,
         title: state.title.trim(),
         content: state.content.trim(),
         hashTags: state.hashTags,
         imageUris: imageUris,
-        author: author, // 중요: 최신 사용자 프로필 정보 전달
       );
 
-      debugPrint(
-        '✅ CommunityWriteNotifier: 게시글 생성 완료 - ID: $createdPostId, 작성자: ${author.nickname}',
-      );
+      // AsyncValue 처리 - 즉시 return하거나 throw
+      if (createResult case AsyncData(:final value)) {
+        final createdPostId = value;
 
-      // 4. 이벤트 발행: 게시글 생성됨
-      ref
-          .read(appEventNotifierProvider.notifier)
-          .emit(AppEvent.postCreated(createdPostId));
-      debugPrint(
-        '✅ CommunityWriteNotifier: 게시글 생성 이벤트 발행 - ID: $createdPostId',
-      );
+        debugPrint('✅ CommunityWriteNotifier: 게시글 생성 완료 - ID: $createdPostId');
 
-      // 5. 성공 상태 업데이트
-      state = state.copyWith(submitting: false, createdPostId: createdPostId);
+        // 이벤트 발행
+        ref
+            .read(appEventNotifierProvider.notifier)
+            .emit(AppEvent.postCreated(createdPostId));
+
+        // 성공 상태 업데이트
+        state = state.copyWith(submitting: false, createdPostId: createdPostId);
+      } else if (createResult case AsyncError(:final error)) {
+        throw Exception('게시글 생성 실패: $error');
+      } else {
+        throw Exception('게시글 생성 중 예상치 못한 상태');
+      }
     } catch (e) {
       debugPrint('❌ CommunityWriteNotifier: 게시글 작성 실패 - $e');
-      // 실패 처리
       state = state.copyWith(
         submitting: false,
         errorMessage: CommunityErrorMessages.postCreateFailed,
@@ -255,23 +228,10 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
     }
   }
 
-   // 게시글 수정 메서드 추가
+  // 게시글 수정 메서드 추가
   Future<void> _update() async {
-    // 유효성 검사 (기존 코드 재사용)
-    if (state.title.trim().isEmpty) {
-      state = state.copyWith(
-        errorMessage: CommunityErrorMessages.titleRequired,
-      );
-      return;
-    }
+    // 유효성 검사 및 ID 확인 (동일)
 
-    if (state.content.trim().isEmpty) {
-      state = state.copyWith(
-        errorMessage: CommunityErrorMessages.contentRequired,
-      );
-      return;
-    }
-    
     // 원본 게시글 ID 확인
     final originalPostId = state.originalPostId;
     if (originalPostId == null) {
@@ -285,51 +245,40 @@ class CommunityWriteNotifier extends _$CommunityWriteNotifier {
     state = state.copyWith(submitting: true, errorMessage: null);
 
     try {
-      // 최신 사용자 정보 가져오기
-      final userProfileResult = await _getCurrentUserUseCase.execute();
-      final Member author;
-      if (userProfileResult case AsyncData(:final value)) {
-        author = value;
-      } else {
-        throw Exception('사용자 정보를 가져오는데 실패했습니다');
-      }
-      
-      // 이미지 처리 (기존 이미지 교체 또는 유지)
+      // 이미지 처리
       List<Uri> imageUris = [];
       if (state.images.isNotEmpty) {
-        // 새 이미지 업로드
         imageUris = await _uploadImages(originalPostId);
-      } else {
-        // 기존 이미지 URL 그대로 유지하는 로직 (필요시)
       }
-      
+
       // 게시글 업데이트
       final usecase = ref.read(updatePostUseCaseProvider);
-      final updatedPostId = await usecase.execute(
+      final updateResult = await usecase.execute(
         postId: originalPostId,
         title: state.title.trim(),
         content: state.content.trim(),
         hashTags: state.hashTags,
         imageUris: imageUris,
-        author: author,
       );
-      
-      // 이벤트 발행
-      if (updatedPostId.value != null) {
-        ref.read(appEventNotifierProvider.notifier)
-          .emit(AppEvent.postUpdated(updatedPostId.value!));
+
+      // AsyncValue 처리
+      if (updateResult case AsyncData(:final value)) {
+        final updatedPostId = value;
+
+        // 이벤트 발행
+        ref
+            .read(appEventNotifierProvider.notifier)
+            .emit(AppEvent.postUpdated(updatedPostId));
+
+        // 성공 상태 업데이트
+        state = state.copyWith(submitting: false, updatedPostId: updatedPostId);
+      } else if (updateResult case AsyncError(:final error)) {
+        throw Exception('게시글 수정 실패: $error');
       } else {
-        throw Exception('업데이트된 게시글 ID가 null입니다');
+        throw Exception('게시글 수정 중 예상치 못한 상태');
       }
-      
-      // 성공 상태 업데이트
-      state = state.copyWith(
-        submitting: false,
-        updatedPostId: updatedPostId.value,
-      );
     } catch (e) {
       debugPrint('❌ CommunityWriteNotifier: 게시글 수정 실패 - $e');
-      // 실패 처리
       state = state.copyWith(
         submitting: false,
         errorMessage: CommunityErrorMessages.postUpdateFailed,
