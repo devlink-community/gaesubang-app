@@ -79,7 +79,11 @@ dependencies:
 >>>>>>> 939a689f (feat: 온보딩 화면/ 알림 위치 권한 설정 완료)
 =======
   firebase_ai: ^2.0.0
+<<<<<<< HEAD
 >>>>>>> 01a7d9ce (fix(vertex))
+=======
+  device_info_plus: ^11.4.0
+>>>>>>> e7eaaf40 (feat: device_info_plus package 추가 완료)
 
 
 
