@@ -1,6 +1,9 @@
 // lib/group/presentation/group_setting/group_settings_notifier.dart
+import 'dart:io';
+
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/image_compression.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
@@ -9,6 +12,9 @@ import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.da
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
+import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
+import 'package:devlink_mobile_app/storage/module/storage_di.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_settings_notifier.g.dart';
@@ -19,6 +25,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   late final GetGroupMembersUseCase _getGroupMembersUseCase;
   late final UpdateGroupUseCase _updateGroupUseCase;
   late final LeaveGroupUseCase _leaveGroupUseCase;
+  late final UploadImageUseCase _uploadImageUseCase;
 
   @override
   GroupSettingsState build(String groupId) {
@@ -26,6 +33,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
     _updateGroupUseCase = ref.watch(updateGroupUseCaseProvider);
     _leaveGroupUseCase = ref.watch(leaveGroupUseCaseProvider);
+    _uploadImageUseCase = ref.watch(uploadImageUseCaseProvider);
 
     // 초기 상태를 먼저 반환
     const initialState = GroupSettingsState();
@@ -101,6 +109,131 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     }
   }
 
+  /// 이미지 업로드 처리 - 세밀한 상태 관리
+  Future<void> uploadGroupImage(String localImagePath) async {
+    try {
+      // 업로드 시작 - 초기 상태 설정
+      state = state.copyWith(
+        imageUploadStatus: ImageUploadStatus.idle,
+        uploadProgress: 0.0,
+        originalImagePath: localImagePath,
+        errorMessage: null,
+        successMessage: null,
+      );
+
+      final currentGroup = state.group.valueOrNull;
+      if (currentGroup == null) {
+        state = state.copyWith(
+          imageUploadStatus: ImageUploadStatus.failed,
+          errorMessage: '그룹 정보가 없습니다.',
+        );
+        return;
+      }
+
+      debugPrint('🖼️ 이미지 업로드 시작: $localImagePath');
+
+      // 1단계: 이미지 압축 시작
+      state = state.copyWith(
+        imageUploadStatus: ImageUploadStatus.compressing,
+        uploadProgress: 0.1,
+      );
+
+      final compressedFile = await ImageCompressionUtils.compressAndSaveImage(
+        originalImagePath: localImagePath.replaceFirst('file://', ''),
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 85,
+        maxFileSizeKB: 500,
+      );
+
+      debugPrint('🖼️ 이미지 압축 완료: ${compressedFile.path}');
+
+      // 2단계: 압축 완료, 업로드 준비
+      state = state.copyWith(
+        uploadProgress: 0.3,
+      );
+
+      // 3단계: 압축된 이미지를 바이트로 읽기
+      final imageBytes = await compressedFile.readAsBytes();
+
+      // 4단계: Firebase Storage 업로드 시작
+      state = state.copyWith(
+        imageUploadStatus: ImageUploadStatus.uploading,
+        uploadProgress: 0.5,
+      );
+
+      final fileName =
+          'group_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final folderPath = 'groups/${currentGroup.id}';
+
+      final uploadResult = await _uploadImageUseCase.execute(
+        folderPath: folderPath,
+        fileName: fileName,
+        bytes: imageBytes,
+        metadata: {
+          'groupId': currentGroup.id,
+          'uploadedBy': currentGroup.ownerId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      switch (uploadResult) {
+        case AsyncData(:final value):
+          debugPrint('🖼️ 이미지 업로드 성공: $value');
+
+          // 5단계: 업로드 완료
+          state = state.copyWith(
+            imageUrl: value,
+            imageUploadStatus: ImageUploadStatus.completed,
+            uploadProgress: 1.0,
+            successMessage: '이미지 업로드가 완료되었습니다.',
+            originalImagePath: null, // 로컬 경로 초기화
+          );
+
+          // 임시 압축 파일 삭제
+          try {
+            if (await compressedFile.exists()) {
+              await compressedFile.delete();
+            }
+          } catch (e) {
+            debugPrint('임시 파일 삭제 실패: $e');
+          }
+
+          // 2초 후 완료 상태 초기화
+          Future.delayed(const Duration(seconds: 2), () {
+            if (state.imageUploadStatus == ImageUploadStatus.completed) {
+              state = state.copyWith(
+                imageUploadStatus: ImageUploadStatus.idle,
+                uploadProgress: 0.0,
+              );
+            }
+          });
+
+        case AsyncError(:final error):
+          debugPrint('🖼️ 이미지 업로드 실패: $error');
+          state = state.copyWith(
+            imageUploadStatus: ImageUploadStatus.failed,
+            uploadProgress: 0.0,
+            errorMessage: '이미지 업로드에 실패했습니다: $error',
+          );
+
+        case AsyncLoading():
+          // 업로드 중 상태는 이미 설정되어 있음
+          state = state.copyWith(uploadProgress: 0.8);
+          break;
+      }
+    } catch (e, st) {
+      debugPrint('🖼️ 이미지 업로드 과정에서 오류 발생: $e');
+      debugPrint('🖼️ StackTrace: $st');
+
+      state = state.copyWith(
+        imageUploadStatus: ImageUploadStatus.failed,
+        uploadProgress: 0.0,
+        errorMessage: '이미지 처리 중 오류가 발생했습니다: $e',
+      );
+    }
+  }
+
   Future<void> onAction(GroupSettingsAction action) async {
     switch (action) {
       case NameChanged(:final name):
@@ -114,7 +247,13 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(limitMemberCount: validCount);
 
       case ImageUrlChanged(:final imageUrl):
-        state = state.copyWith(imageUrl: imageUrl);
+        // 로컬 파일 경로인 경우 Firebase Storage에 업로드
+        if (imageUrl != null && imageUrl.startsWith('file://')) {
+          await uploadGroupImage(imageUrl);
+        } else {
+          // 네트워크 URL이거나 null인 경우 직접 설정
+          state = state.copyWith(imageUrl: imageUrl);
+        }
 
       case HashTagAdded(:final tag):
         final trimmed = tag.trim();
