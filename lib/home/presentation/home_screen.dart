@@ -1,5 +1,3 @@
-// lib/home/presentation/home_screen.dart
-
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
@@ -110,24 +108,8 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-<<<<<<< HEAD
-                    // 학습 팁 배너 - ValueKey로 변경
-                    StudyTipBanner(
-                      skills: skills,
-                      key: skills != null ? ValueKey('study_tip_banner_${skills!}') : const ValueKey('study_tip_banner'),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // 퀴즈 배너 - ValueKey로 변경
-=======
                     // 퀴즈 배너 - 위젯으로 올바르게 사용
->>>>>>> a6313124 (fix(ai): ui 개선)
                     DailyQuizBanner(
-<<<<<<< HEAD
-                      skills: skills,
-                      key: skills != null ? ValueKey('quiz_banner_${skills!}') : const ValueKey('quiz_banner'),
-=======
                       skills: userSkills,
                       key: ValueKey('quiz_banner_${userSkills ?? "default"}'),
                     ),
@@ -137,14 +119,8 @@ class HomeScreen extends StatelessWidget {
                     StudyTipBanner(
                       skills: userSkills,
                       key: ValueKey(
-<<<<<<< HEAD
-                        userSkills ?? 'default',
-                      ), // 스킬 변경시 새로고침을 위한 키 추가, null 방지
->>>>>>> 65e0a3e8 (quiz: banner 수정:)
-=======
                         'study_tip_banner_${userSkills ?? "default"}',
                       ),
->>>>>>> a6313124 (fix(ai): ui 개선)
                     ),
                   ],
                 ),
@@ -172,7 +148,7 @@ class HomeScreen extends StatelessWidget {
                     posts: state.popularPosts,
                     onTapPost:
                         (postId) =>
-                        onAction(HomeAction.onTapPopularPost(postId)),
+                            onAction(HomeAction.onTapPopularPost(postId)),
                   ),
 
                   // 하단 여백
@@ -194,7 +170,7 @@ class HomeScreen extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -229,7 +205,7 @@ class HomeScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColorStyles.primary80.withOpacity(0.05),
+          color: AppColorStyles.primary80.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
