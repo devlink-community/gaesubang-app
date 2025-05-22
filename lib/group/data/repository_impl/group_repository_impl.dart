@@ -309,6 +309,60 @@ class GroupRepositoryImpl implements GroupRepository {
     }
   }
 
+  // 🔧 새로운 실시간 스트림 메소드
+  @override
+  Stream<Result<List<GroupMember>>> streamGroupMemberTimerStatus(
+    String groupId,
+  ) {
+    return _dataSource
+        .streamGroupMemberTimerStatus(groupId)
+        .map((timerActivitiesData) {
+          try {
+            // 2. 그룹 멤버 정보 조회 (비동기 처리 필요)
+            return Result<List<GroupMember>>.success([]); // 임시 반환
+          } catch (e, st) {
+            return Result<List<GroupMember>>.error(
+              Failure(
+                FailureType.server,
+                '실시간 타이머 상태 조회 중 오류가 발생했습니다',
+                cause: e,
+                stackTrace: st,
+              ),
+            );
+          }
+        })
+        .asyncMap((initialResult) async {
+          // asyncMap을 사용하여 비동기 처리
+          if (initialResult is Error) return initialResult;
+
+          try {
+            // 1. 그룹 멤버 정보 조회
+            final membersData = await _dataSource.fetchGroupMembers(groupId);
+            final memberDtos =
+                membersData
+                    .map((data) => GroupMemberDto.fromJson(data))
+                    .toList();
+
+            // 2. 타이머 활동 정보 조회
+            final timerActivitiesData =
+                await _dataSource.streamGroupMemberTimerStatus(groupId).first;
+            final timerActivityDtos =
+                timerActivitiesData
+                    .map((data) => GroupTimerActivityDto.fromJson(data))
+                    .toList();
+
+            // 3. 멤버와 타이머 활동 정보 결합
+            final groupMembers = memberDtos.toModelList(timerActivityDtos);
+
+            return Result<List<GroupMember>>.success(groupMembers);
+          } catch (e, st) {
+            return Result<List<GroupMember>>.error(
+              mapExceptionToFailure(e, st),
+            );
+          }
+        });
+  }
+
   @override
   Future<Result<void>> startMemberTimer(String groupId) async {
     try {

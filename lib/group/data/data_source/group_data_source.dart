@@ -27,8 +27,13 @@ abstract interface class GroupDataSource {
   /// 그룹의 모든 멤버 조회
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId);
 
-  /// 그룹의 모든 타이머 활동 조회 (최신순, 멤버별 필터링)
+  // 그룹의 모든 타이머 활동 조회 (최신순, 멤버별 필터링)
   Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(String groupId);
+
+  /// 실시간 타이머 상태 스트림 조회 - 타이머 화면 표시용
+  Stream<List<Map<String, dynamic>>> streamGroupMemberTimerStatus(
+    String groupId,
+  );
 
   /// 그룹 이미지 업데이트
   Future<String> updateGroupImage(String groupId, String localImagePath);

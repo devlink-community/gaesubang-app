@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_ca
 import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
@@ -17,11 +18,16 @@ part 'group_detail_notifier.g.dart';
 @riverpod
 class GroupDetailNotifier extends _$GroupDetailNotifier {
   Timer? _timer;
+  StreamSubscription? _timerStatusSubscription; // 🔧 실시간 스트림 구독
+
   late final StartTimerUseCase _startTimerUseCase;
   late final StopTimerUseCase _stopTimerUseCase;
   late final PauseTimerUseCase _pauseTimerUseCase;
   late final GetGroupDetailUseCase _getGroupDetailUseCase;
   late final GetGroupMembersUseCase _getGroupMembersUseCase;
+  late final StreamGroupMemberTimerStatusUseCase
+  _streamGroupMemberTimerStatusUseCase; // 🔧 새로운 UseCase
+
   String _groupId = '';
 
   @override
@@ -34,11 +40,15 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _pauseTimerUseCase = ref.watch(pauseTimerUseCaseProvider);
     _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
     _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
+    _streamGroupMemberTimerStatusUseCase = ref.watch(
+      streamGroupMemberTimerStatusUseCaseProvider,
+    ); // 🔧 새로운 UseCase 주입
 
-    // 화면 이탈 시 타이머 정리
+    // 화면 이탈 시 타이머 및 스트림 정리
     ref.onDispose(() {
-      print('🗑️ GroupDetailNotifier dispose - 타이머 정리');
+      print('🗑️ GroupDetailNotifier dispose - 타이머 및 스트림 정리');
       _timer?.cancel();
+      _timerStatusSubscription?.cancel(); // 🔧 스트림 구독 해제
     });
 
     // build()에서는 초기 상태만 반환
@@ -126,9 +136,6 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 타이머 시작
     _startTimerCountdown();
-
-    // 🔥 백그라운드에서 멤버 타이머 데이터 업데이트 (로딩 상태 없이)
-    await _updateGroupMembersInBackground();
   }
 
   // 타이머 일시정지 처리
@@ -163,8 +170,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 상태 업데이트
     state = state.copyWith(timerStatus: TimerStatus.stop);
 
-    // 데이터 새로고침
-    await refreshAllData();
+    // 🔧 실시간 스트림이 자동으로 업데이트되므로 별도 새로고침 불필요
   }
 
   // 타이머 초기화 처리
@@ -172,10 +178,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _timer?.cancel();
     state = state.copyWith(timerStatus: TimerStatus.stop, elapsedSeconds: 0);
 
-    // 데이터 새로고침
-    if (_groupId.isNotEmpty) {
-      await refreshAllData();
-    }
+    // 🔧 실시간 스트림이 자동으로 업데이트되므로 별도 새로고침 불필요
   }
 
   // 그룹 ID 설정 (초기화 시에만 호출)
@@ -187,23 +190,83 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     await _loadInitialData();
   }
 
-  // 초기 데이터 로드 (새로고침과 활성 세션 확인을 한 번에)
+  // 🔧 초기 데이터 로드 (최초 한번은 기존 방식, 이후 실시간 스트림)
   Future<void> _loadInitialData() async {
     if (_groupId.isEmpty) return;
 
     print('🔄 초기 데이터 로드 시작 - groupId: $_groupId');
 
     try {
-      // 모든 초기 데이터를 병렬로 로드
+      // 1. 기본 그룹 정보와 최초 멤버 정보 로드
       await Future.wait([
         _loadGroupDetail(),
-        _updateGroupMembersInBackground(),
+        _loadInitialGroupMembers(), // 🔧 최초 한번만 기존 방식으로 로드
       ], eagerError: false);
+
+      // 2. 실시간 스트림 시작
+      _startRealTimeTimerStatusStream();
+
       print('✅ 초기 데이터 로드 완료');
     } catch (e, s) {
       print('❌ _loadInitialData 실패: $e');
       debugPrintStack(stackTrace: s);
     }
+  }
+
+  // 🔧 최초 멤버 정보 로드 (기존 방식)
+  Future<void> _loadInitialGroupMembers() async {
+    print('📥 최초 멤버 정보 로드 시작');
+
+    // 로딩 상태 설정
+    state = state.copyWith(groupMembersResult: const AsyncValue.loading());
+
+    try {
+      final result = await _getGroupMembersUseCase.execute(_groupId);
+      state = state.copyWith(groupMembersResult: result);
+      print('✅ 최초 멤버 정보 로드 완료');
+    } catch (e) {
+      print('❌ 최초 멤버 정보 로드 실패: $e');
+      state = state.copyWith(
+        groupMembersResult: AsyncValue.error(e, StackTrace.current),
+      );
+    }
+  }
+
+  // 🔧 실시간 타이머 상태 스트림 시작
+  void _startRealTimeTimerStatusStream() {
+    print('🔴 실시간 타이머 상태 스트림 시작');
+
+    // 기존 구독이 있다면 해제
+    _timerStatusSubscription?.cancel();
+
+    // 새로운 실시간 스트림 구독
+    _timerStatusSubscription = _streamGroupMemberTimerStatusUseCase
+        .execute(_groupId)
+        .listen(
+          (asyncValue) {
+            print('🔄 실시간 타이머 상태 업데이트 수신: ${asyncValue.runtimeType}');
+
+            // 🔧 백그라운드에서 조용히 상태 업데이트 (로딩 상태 없음)
+            switch (asyncValue) {
+              case AsyncData(:final value):
+                // 성공한 경우에만 상태 업데이트
+                state = state.copyWith(groupMembersResult: asyncValue);
+                print('✅ 실시간 멤버 상태 업데이트 완료 (${value.length}명)');
+
+              case AsyncError(:final error):
+                // 에러 발생 시 로그만 출력하고 기존 상태 유지
+                print('⚠️ 실시간 스트림 에러 (기존 상태 유지): $error');
+
+              case AsyncLoading():
+                // 로딩 상태는 무시 (깜빡임 방지)
+                print('🔄 실시간 스트림 로딩 중 (상태 유지)');
+            }
+          },
+          onError: (error) {
+            print('❌ 실시간 스트림 구독 에러: $error');
+            // 에러가 발생해도 기존 상태 유지
+          },
+        );
   }
 
   // 타이머 시작
@@ -215,36 +278,18 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
   }
 
-  // 타이머 틱 이벤트 처리
+  // 🔧 타이머 틱 이벤트 처리 (실시간 스트림이 있어서 백그라운드 업데이트 제거)
   void _handleTimerTick() {
     if (state.timerStatus != TimerStatus.running) return;
 
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
 
-    // 🔥 5초마다 백그라운드 멤버 타이머 업데이트 (깜빡임 없음)
-    if (state.elapsedSeconds % 5 == 0) {
-      _updateGroupMembersInBackground();
-    }
+    // 🔧 5초마다 백그라운드 업데이트 제거 - 실시간 스트림이 처리함
+    // 이제 타이머는 단순히 elapsedSeconds만 업데이트
   }
 
-  // 🔥 백그라운드 멤버 타이머 데이터 업데이트 (로딩 상태 없이)
-  Future<void> _updateGroupMembersInBackground() async {
-    if (_groupId.isEmpty) return;
-
-    try {
-      // 🔥 로딩 상태를 거치지 않고 직접 데이터 업데이트
-      final result = await _getGroupMembersUseCase.execute(_groupId);
-
-      // 🔥 성공한 경우에만 상태 업데이트
-      if (result is AsyncData) {
-        state = state.copyWith(groupMembersResult: result);
-      }
-      // 에러가 발생해도 기존 데이터 유지 (깜빡임 방지)
-    } catch (e) {
-      print('⚠️ 백그라운드 멤버 업데이트 실패: $e');
-      // 에러가 발생해도 기존 상태 유지 (깜빡임 방지)
-    }
-  }
+  // 🔧 백그라운드 멤버 타이머 데이터 업데이트 메소드 제거됨
+  // 실시간 스트림이 이 역할을 대신함
 
   // 데이터 새로고침 메서드 - 화면 재진입 시에만 사용
   Future<void> refreshAllData() async {
@@ -253,10 +298,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     print('🔄 데이터 새로고침 시작 - groupId: $_groupId');
 
     try {
-      await Future.wait([
-        _loadGroupDetail(),
-        _updateGroupMembersInBackground(),
-      ], eagerError: false);
+      // 🔧 그룹 정보만 새로고침 (멤버 정보는 실시간 스트림이 처리)
+      await _loadGroupDetail();
+
+      // 🔧 실시간 스트림 재시작 (연결이 끊어졌을 수도 있으므로)
+      _startRealTimeTimerStatusStream();
+
       print('✅ 데이터 새로고침 완료');
     } catch (e, s) {
       print('❌ refreshAllData 실패: $e');
