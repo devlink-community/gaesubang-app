@@ -83,14 +83,15 @@ async function sendFCMMessage(tokens, notification) {
   }
 }
 
-// 댓글 알림 함수
+// 댓글 알림 함수 - 경로 수정
 exports.sendCommentNotification = functions.firestore
-  .document('comments/{commentId}')
+  .document('posts/{postId}/comments/{commentId}')  // 경로 변경
   .onCreate(async (snapshot, context) => {
     try {
+      const postId = context.params.postId;
       const commentId = context.params.commentId;
       const commentData = snapshot.data();
-      const { postId, userId: commenterId, content } = commentData;
+      const { userId: commenterId, text: content } = commentData;  // 필드명 변경
       
       // 게시글 정보 조회
       const postSnapshot = await admin.firestore().collection('posts').doc(postId).get();
@@ -100,7 +101,7 @@ exports.sendCommentNotification = functions.firestore
       }
       
       const postData = postSnapshot.data();
-      const postAuthorId = postData.userId;
+      const postAuthorId = postData.authorId;  // 필드명 변경
       
       // 자기 댓글인 경우 알림 전송 안함
       if (commenterId === postAuthorId) {
@@ -126,10 +127,10 @@ exports.sendCommentNotification = functions.firestore
         type: 'comment',
         targetId: postId,
         senderId: commenterId,
-        senderName: commenterData.username || commenterData.nickname || '알 수 없는 사용자',
-        senderProfileImage: commenterData.profileImageUrl,
+        senderName: commenterData.nickname || '알 수 없는 사용자',  // 필드명 변경
+        senderProfileImage: commenterData.image,  // 필드명 변경
         title: '새 댓글 알림',
-        body: `${commenterData.username || '사용자'}님이 회원님의 게시글에 댓글을 남겼습니다: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
+        body: `${commenterData.nickname || '사용자'}님이 회원님의 게시글에 댓글을 남겼습니다: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
         data: {
           postId: postId,
           commentId: commentId,
@@ -151,14 +152,14 @@ exports.sendCommentNotification = functions.firestore
     }
   });
 
-// 좋아요 알림 함수
+// 좋아요 알림 함수 - 경로 수정
 exports.sendLikeNotification = functions.firestore
-  .document('likes/{likeId}')
+  .document('posts/{postId}/likes/{userId}')  // 경로 변경
   .onCreate(async (snapshot, context) => {
     try {
-      const likeId = context.params.likeId;
+      const postId = context.params.postId;
+      const likerId = context.params.userId;  // userId가 문서 ID
       const likeData = snapshot.data();
-      const { postId, userId: likerId } = likeData;
       
       // 게시글 정보 조회
       const postSnapshot = await admin.firestore().collection('posts').doc(postId).get();
@@ -168,7 +169,7 @@ exports.sendLikeNotification = functions.firestore
       }
       
       const postData = postSnapshot.data();
-      const postAuthorId = postData.userId;
+      const postAuthorId = postData.authorId;  // 필드명 변경
       
       // 자기 게시글에 좋아요 누른 경우 알림 전송 안함
       if (likerId === postAuthorId) {
@@ -194,10 +195,10 @@ exports.sendLikeNotification = functions.firestore
         type: 'like',
         targetId: postId,
         senderId: likerId,
-        senderName: likerData.username || likerData.nickname || '알 수 없는 사용자',
-        senderProfileImage: likerData.profileImageUrl,
+        senderName: likerData.nickname || '알 수 없는 사용자',  // 필드명 변경
+        senderProfileImage: likerData.image,  // 필드명 변경
         title: '새 좋아요 알림',
-        body: `${likerData.username || '사용자'}님이 회원님의 게시글에 좋아요를 눌렀습니다.`,
+        body: `${likerData.nickname || '사용자'}님이 회원님의 게시글에 좋아요를 눌렀습니다.`,
         data: {
           postId: postId,
           postTitle: postData.title?.substring(0, 50) || '게시글'
@@ -218,13 +219,13 @@ exports.sendLikeNotification = functions.firestore
     }
   });
 
-// 좋아요 취소 시 알림 삭제 (선택사항)
+// 좋아요 취소 시 알림 삭제 - 경로 수정 (선택사항)
 exports.removeLikeNotification = functions.firestore
-  .document('likes/{likeId}')
+  .document('posts/{postId}/likes/{userId}')  // 경로 변경
   .onDelete(async (snapshot, context) => {
     try {
-      const likeData = snapshot.data();
-      const { postId, userId: likerId } = likeData;
+      const postId = context.params.postId;
+      const likerId = context.params.userId;  // userId가 문서 ID
       
       // 게시글 정보 조회
       const postSnapshot = await admin.firestore().collection('posts').doc(postId).get();
@@ -233,7 +234,7 @@ exports.removeLikeNotification = functions.firestore
       }
       
       const postData = postSnapshot.data();
-      const postAuthorId = postData.userId;
+      const postAuthorId = postData.authorId;  // 필드명 변경
       
       // 해당 좋아요 알림 찾아서 삭제
       const notificationsSnapshot = await admin.firestore()
