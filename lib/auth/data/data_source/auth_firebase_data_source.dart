@@ -274,8 +274,11 @@ class AuthFirebaseDataSource implements AuthDataSource {
   @override
   Future<Map<String, dynamic>?> fetchCurrentUser() async {
     return ApiCallDecorator.wrap('FirebaseAuth.fetchCurrentUser', () async {
-      // 최적화된 병렬 처리 메서드 사용
-      return await fetchCurrentUserWithTimerActivities();
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      // 재시도 로직이 포함된 메서드 사용
+      return await _fetchUserDataWithRetry(user.uid);
     });
   }
 
@@ -641,14 +644,44 @@ class AuthFirebaseDataSource implements AuthDataSource {
         'Firebase 사용자 프로필: displayName=${firebaseUser.displayName}, photoURL=${firebaseUser.photoURL}',
       );
 
-      try {
-        // 사용자 정보 가져오기
-        return await fetchCurrentUserWithTimerActivities();
-      } catch (e) {
-        debugPrint('인증 상태 변화 스트림 에러: $e');
-        return null;
-      }
+      // 재시도 로직이 포함된 사용자 정보 가져오기
+      return await _fetchUserDataWithRetry(firebaseUser.uid);
     }).distinct(); // 중복 이벤트 방지
+  }
+
+  /// 재시도 로직이 포함된 사용자 데이터 가져오기
+  Future<Map<String, dynamic>?> _fetchUserDataWithRetry(
+    String uid, {
+    int maxRetries = 5,
+  }) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // fetchCurrentUserWithTimerActivities 호출
+        final userData = await fetchCurrentUserWithTimerActivities();
+        if (userData != null) {
+          debugPrint('✅ 인증 상태 스트림: 사용자 데이터 조회 성공 (시도: $attempt/$maxRetries)');
+          return userData;
+        }
+      } catch (e) {
+        debugPrint('⚠️ 인증 상태 스트림 시도 $attempt/$maxRetries 실패: $e');
+
+        // 마지막 시도가 아니라면 재시도
+        if (attempt < maxRetries) {
+          // 점진적으로 증가하는 대기 시간 (500ms, 1s, 1.5s, 2s, 2.5s)
+          final delayMs = 500 * attempt;
+          debugPrint('⏳ ${delayMs}ms 후 재시도...');
+          await Future.delayed(Duration(milliseconds: delayMs));
+          continue;
+        }
+
+        // 최대 재시도 횟수 초과
+        debugPrint('❌ 인증 상태 스트림: 최대 재시도 횟수 초과 ($maxRetries회)');
+        debugPrint('❌ 최종 오류: $e');
+      }
+    }
+
+    // 모든 재시도가 실패한 경우 null 반환 (unauthenticated 상태로 처리)
+    return null;
   }
 
   // 현재 인증 상태 확인 (추가)
@@ -659,6 +692,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
       return null;
     }
 
-    return await fetchCurrentUserWithTimerActivities();
+    // 재시도 로직이 포함된 메서드 사용
+    return await _fetchUserDataWithRetry(user.uid);
   }
 }

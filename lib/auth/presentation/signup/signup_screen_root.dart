@@ -64,8 +64,14 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
           ),
         );
 
-        // 🔥 홈 화면으로 이동 (자동 로그인 완료)
-        context.go('/home');
+        // 🔥 가장 간단하고 확실한 방법: 충분한 시간 대기 후 이동
+        // 라우터의 authStateChanges가 업데이트되기까지 기다림
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            debugPrint('✅ 3초 대기 후 홈으로 이동');
+            context.go('/home');
+          }
+        });
       } else if (next.hasError) {
         // ❌ 회원가입 실패 처리
         final error = next.error;
