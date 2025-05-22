@@ -1,4 +1,3 @@
-// lib/auth/data/data_source/auth_firebase_data_source.dart
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -9,7 +8,6 @@ import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart'
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
 
 import 'auth_data_source.dart';
 
@@ -459,19 +457,16 @@ class AuthFirebaseDataSource implements AuthDataSource {
       try {
         debugPrint('🔄 프로필 이미지 업로드 시작: $imagePath');
 
-        // 1. 이미지 파일 읽기 및 검증
+        // 1. 이미지 파일 검증 (이미 UseCase에서 압축된 파일을 받음)
         final File imageFile = File(imagePath);
         if (!await imageFile.exists()) {
           throw Exception('이미지 파일을 찾을 수 없습니다');
         }
 
-        // 2. 이미지 압축 및 리사이징
-        final Uint8List compressedImageBytes = await _compressImage(
-          imageFile,
-          maxWidth: 512,
-          maxHeight: 512,
-          quality: 80,
-        );
+        // 2. 이미지 바이트 읽기 (이미 압축된 상태)
+        final Uint8List imageBytes = await imageFile.readAsBytes();
+
+        debugPrint('📤 업로드할 이미지 크기: ${imageBytes.length ~/ 1024}KB');
 
         // 3. Firebase Storage에 업로드
         final String fileName =
@@ -485,13 +480,14 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
         // 4. 새 이미지 업로드
         final UploadTask uploadTask = storageRef.putData(
-          compressedImageBytes,
+          imageBytes,
           SettableMetadata(
             contentType: 'image/jpeg',
             customMetadata: {
               'userId': user.uid,
               'uploadedAt': DateTime.now().toIso8601String(),
               'originalPath': imagePath,
+              'compressedByUseCase': 'true',
             },
           ),
         );
@@ -537,65 +533,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
         }
       }
     }, params: {'imagePath': imagePath});
-  }
-
-  /// 이미지 압축 및 리사이징
-  Future<Uint8List> _compressImage(
-    File imageFile, {
-    required int maxWidth,
-    required int maxHeight,
-    required int quality,
-  }) async {
-    try {
-      // 파일 크기 체크 (10MB 이상이면 에러)
-      final int fileSizeInBytes = await imageFile.length();
-      const int maxFileSizeInBytes = 10 * 1024 * 1024; // 10MB
-
-      if (fileSizeInBytes > maxFileSizeInBytes) {
-        throw Exception('file_size: 이미지 파일이 너무 큽니다 (최대 10MB)');
-      }
-
-      // 원본 이미지 읽기
-      final Uint8List imageBytes = await imageFile.readAsBytes();
-      final img.Image? originalImage = img.decodeImage(imageBytes);
-
-      if (originalImage == null) {
-        throw Exception('이미지를 읽을 수 없습니다');
-      }
-
-      debugPrint(
-        '🔄 원본 이미지 크기: ${originalImage.width}x${originalImage.height}',
-      );
-
-      // 이미지 리사이징 (비율 유지)
-      final img.Image resizedImage = img.copyResize(
-        originalImage,
-        width: maxWidth,
-        height: maxHeight,
-        maintainAspect: true,
-      );
-
-      debugPrint(
-        '🔄 리사이즈된 이미지 크기: ${resizedImage.width}x${resizedImage.height}',
-      );
-
-      // JPEG 포맷으로 인코딩 (압축)
-      final Uint8List compressedBytes = Uint8List.fromList(
-        img.encodeJpg(resizedImage, quality: quality),
-      );
-
-      debugPrint(
-        '🔄 이미지 압축 완료: ${imageBytes.length} -> ${compressedBytes.length} bytes (${((1 - compressedBytes.length / imageBytes.length) * 100).toStringAsFixed(1)}% 압축)',
-      );
-
-      return compressedBytes;
-    } catch (e) {
-      debugPrint('❌ 이미지 압축 실패: $e');
-      if (e.toString().contains('file_size')) {
-        rethrow;
-      }
-      throw Exception('이미지 처리에 실패했습니다');
-    }
   }
 
   /// 기존 프로필 이미지 삭제

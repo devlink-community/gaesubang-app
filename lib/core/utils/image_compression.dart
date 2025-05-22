@@ -1,6 +1,5 @@
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -9,8 +8,8 @@ class ImageCompressionUtils {
   /// compute에서 실행될 이미지 압축 함수
   static Future<Uint8List> _compressImageInIsolate(
     Map<String, dynamic> params,
-  ) async {
-    return await _performCompression(params);
+  ) {
+    return _performCompression(params);
   }
 
   /// 실제 압축 작업 수행
@@ -88,7 +87,7 @@ class ImageCompressionUtils {
       'quality': quality,
     };
 
-    return await compute(_compressImageInIsolate, params);
+    return compute(_compressImageInIsolate, params);
   }
 
   /// 이미지 파일 크기 확인
