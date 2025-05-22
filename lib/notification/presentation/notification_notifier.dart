@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:devlink_mobile_app/core/auth/auth_state.dart';
+import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/delete_notification_use_case.dart';
 import 'package:devlink_mobile_app/notification/domain/usecase/get_notifications_use_case.dart';
@@ -9,6 +11,7 @@ import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 import 'package:devlink_mobile_app/notification/module/notification_di.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
+import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -24,12 +27,39 @@ class NotificationNotifier extends _$NotificationNotifier {
   late final FCMService _fcmService;
   StreamSubscription? _fcmSubscription;
 
-  // 현재 사용자 ID (실제 구현에서는 인증 서비스에서 가져옴)
-  String get _currentUserId => 'testUser'; // 임시 하드코딩 값
+  // _currentUserId getter 수정 - switch 표현식 올바른 사용
+  String? get _currentUserId {
+    print('=== _currentUserId 호출됨 ===');
+    final authStateAsync = ref.read(authStateProvider);
+
+    return authStateAsync.when(
+      data: (authState) {
+        print('authState 데이터: $authState');
+        switch (authState) {
+          case Authenticated(user: final member):
+            print('인증된 사용자 발견: ${member.uid}');
+            return member.uid;
+          case _:
+            print('인증되지 않은 상태');
+            return null;
+        }
+      },
+      loading: () {
+        print('authState 로딩 중...');
+        return null;
+      },
+      error: (error, stackTrace) {
+        print('authState 에러: $error');
+        return null;
+      },
+    );
+  }
 
   @override
   NotificationState build() {
-    // 의존성 주입
+    print('=== NotificationNotifier.build() 호출됨 ===');
+
+    // 기존 의존성 주입...
     _getNotificationsUseCase = ref.watch(getNotificationsUseCaseProvider);
     _markAsReadUseCase = ref.watch(markNotificationAsReadUseCaseProvider);
     _markAllAsReadUseCase = ref.watch(
@@ -38,18 +68,99 @@ class NotificationNotifier extends _$NotificationNotifier {
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
     _fcmService = ref.watch(fcmServiceProvider);
 
+    print('의존성 주입 완료');
+
     // FCM 알림 클릭 이벤트 구독
     _subscribeToFCMEvents();
+    print('FCM 이벤트 구독 완료');
 
-    // 초기 로딩은 별도 메서드로 처리하고, 초기 상태만 반환
-    Future.microtask(() => onAction(const NotificationAction.refresh()));
+    // 초기 인증 상태 확인 및 알림 로딩
+    _checkInitialAuthStateAndLoadNotifications();
 
-    // ref가 dispose될 때 구독 해제
+    // 인증 상태 변화를 감지하여 알림 로딩
+    ref.listen(authStateProvider, (previous, next) {
+      print('=== authStateProvider 변화 감지됨 ===');
+      print('이전 상태: $previous');
+      print('현재 상태: $next');
+
+      next.when(
+        data: (authState) {
+          print('authState 데이터: $authState');
+          switch (authState) {
+            case Authenticated():
+              print('로그인 상태 감지 - 알림 로딩 트리거');
+              Future.microtask(() {
+                print('microtask에서 refresh 액션 호출');
+                onAction(const NotificationAction.refresh());
+              });
+            case Unauthenticated():
+            case Loading():
+              print('비로그인/로딩 상태 - 알림 초기화');
+              state = const NotificationState(
+                notifications: AsyncData([]),
+                unreadCount: 0,
+              );
+          }
+        },
+        loading: () {
+          print('authState 로딩 중...');
+        },
+        error: (error, stackTrace) {
+          print('authState 에러: $error');
+          state = const NotificationState(
+            notifications: AsyncData([]),
+            unreadCount: 0,
+          );
+        },
+      );
+    });
+    print('authState 리스너 등록 완료');
+
     ref.onDispose(() {
+      print('NotificationNotifier dispose됨');
       _fcmSubscription?.cancel();
     });
 
+    print('초기 상태 반환: NotificationState()');
     return const NotificationState();
+  }
+
+  /// 초기 인증 상태를 확인하고 필요시 알림을 로딩
+  void _checkInitialAuthStateAndLoadNotifications() {
+    print('=== 초기 인증 상태 확인 시작 ===');
+
+    Future.microtask(() {
+      final authStateAsync = ref.read(authStateProvider);
+      print('현재 authState: $authStateAsync');
+
+      authStateAsync.when(
+        data: (authState) {
+          print('초기 authState 데이터: $authState');
+          switch (authState) {
+            case Authenticated(user: final member):
+              print('초기 상태에서 인증된 사용자 감지: ${member.nickname}');
+              print('초기 알림 로딩 트리거');
+              onAction(const NotificationAction.refresh());
+            case _:
+              print('초기 상태에서 비인증 상태');
+              state = const NotificationState(
+                notifications: AsyncData([]),
+                unreadCount: 0,
+              );
+          }
+        },
+        loading: () {
+          print('초기 authState 로딩 중...');
+        },
+        error: (error, stackTrace) {
+          print('초기 authState 에러: $error');
+          state = const NotificationState(
+            notifications: AsyncData([]),
+            unreadCount: 0,
+          );
+        },
+      );
+    });
   }
 
   /// FCM 이벤트 구독
@@ -92,8 +203,24 @@ class NotificationNotifier extends _$NotificationNotifier {
     }
   }
 
+  // _loadNotifications 메서드에 상세 로그 추가
   Future<void> _loadNotifications() async {
-    print('알림 로딩 시작');
+    print('=== _loadNotifications 시작 ===');
+    print('현재 환경: ${AppConfig.useMockAuth ? "Mock" : "Firebase"}');
+
+    final currentUserId = _currentUserId;
+    print('현재 사용자 ID: $currentUserId');
+
+    if (currentUserId == null) {
+      print('사용자 ID가 null - 빈 상태로 설정');
+      state = const NotificationState(
+        notifications: AsyncData([]),
+        unreadCount: 0,
+      );
+      return;
+    }
+
+    print('알림 로딩 시작: userId=$currentUserId');
 
     // 명시적으로 새 상태 객체 생성
     state = NotificationState(
@@ -101,14 +228,18 @@ class NotificationNotifier extends _$NotificationNotifier {
       unreadCount: state.unreadCount,
       errorMessage: state.errorMessage,
     );
+    print('로딩 상태로 변경됨');
 
     try {
-      final result = await _getNotificationsUseCase.execute(_currentUserId);
+      print('UseCase 호출 중...');
+      final result = await _getNotificationsUseCase.execute(currentUserId);
+      print('UseCase 결과 타입: ${result.runtimeType}');
       print('UseCase 결과: $result');
 
       if (result is AsyncData) {
         final notifications = result.value ?? [];
         final unreadCount = notifications.where((n) => !n.isRead).length;
+        print('알림 데이터 로드 성공: ${notifications.length}개, 읽지않음: $unreadCount개');
 
         // 완전히 새로운 상태 객체 생성
         state = NotificationState(
@@ -119,7 +250,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
         print('상태 업데이트 완료: ${state.notifications.runtimeType}');
       } else if (result is AsyncError) {
-        // 오류 상태로 업데이트
+        print('UseCase에서 에러 반환: ${result.error}');
         state = NotificationState(
           notifications: AsyncError(result.error!, result.stackTrace!),
           unreadCount: state.unreadCount,
@@ -128,8 +259,8 @@ class NotificationNotifier extends _$NotificationNotifier {
       }
     } catch (e, stack) {
       print('예외 발생: $e');
+      print('스택 트레이스: $stack');
 
-      // 예외 상태로 업데이트
       state = NotificationState(
         notifications: AsyncError(e, stack),
         unreadCount: state.unreadCount,
@@ -208,7 +339,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 모든 알림 읽음 처리
   Future<void> _markAllAsRead() async {
-    final result = await _markAllAsReadUseCase.execute(_currentUserId);
+    final result = await _markAllAsReadUseCase.execute(_currentUserId!);
 
     switch (result) {
       case AsyncData(:final value) when value:
