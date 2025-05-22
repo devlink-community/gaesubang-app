@@ -169,7 +169,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                             _buildErrorMessage(),
 
                           // 썸네일 선택기
-                          _buildImageSelector(),
+                          _buildImageSelectorWithUploadStatus(),
                           const SizedBox(height: 32),
 
                           // 그룹 이름 - 트렌디한 텍스트 필드로 교체
@@ -327,7 +327,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                                     ),
                                     filled: true,
                                     fillColor: Colors.white,
-                                    counterText: '', // 기본 카운터 숨김
+                                    counterText: '',
+                                    // 기본 카운터 숨김
                                     suffixIcon:
                                         isEditing &&
                                                 _descriptionController
@@ -415,90 +416,240 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     );
   }
 
-  Widget _buildImageSelector() {
+  // 업로드 상태가 포함된 이미지 선택기
+  Widget _buildImageSelectorWithUploadStatus() {
     return Center(
       child: Column(
         children: [
-          Material(
-            elevation: 6,
-            shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
-            shape: const CircleBorder(),
-            child: GestureDetector(
-              onTap:
-                  widget.state.isEditing && widget.state.isOwner
-                      ? () => widget.onAction(
-                        const GroupSettingsAction.selectImage(),
-                      )
-                      : null,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient:
-                      widget.state.imageUrl == null
-                          ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColorStyles.primary60.withValues(alpha: 0.2),
-                              AppColorStyles.primary100.withValues(alpha: 0.3),
-                            ],
+          Stack(
+            children: [
+              // 기본 이미지 컨테이너
+              Material(
+                elevation: 6,
+                shadowColor: AppColorStyles.primary100.withValues(alpha: 0.2),
+                shape: const CircleBorder(),
+                child: GestureDetector(
+                  onTap:
+                      widget.state.isEditing &&
+                              widget.state.isOwner &&
+                              !widget.state.isImageProcessing
+                          ? () => widget.onAction(
+                            const GroupSettingsAction.selectImage(),
                           )
                           : null,
-                  border: Border.all(color: Colors.white, width: 4),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(80),
-                  child:
-                      widget.state.imageUrl == null
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.add_photo_alternate_rounded,
-                                  size: 36,
-                                  color: AppColorStyles.primary100,
-                                ),
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient:
+                          widget.state.displayImagePath == null
+                              ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColorStyles.primary60.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  AppColorStyles.primary100.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ],
+                              )
+                              : null,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(80),
+                      child:
+                          widget.state.displayImagePath == null
+                              ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.add_photo_alternate_rounded,
+                                      size: 36,
+                                      color: AppColorStyles.primary100,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    widget.state.isEditing &&
+                                            widget.state.isOwner
+                                        ? '그룹 이미지 추가'
+                                        : '그룹 이미지',
+                                    style: TextStyle(
+                                      color: AppColorStyles.primary100,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : _buildImageBySourceType(
+                                widget.state.displayImagePath!,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                widget.state.isEditing && widget.state.isOwner
-                                    ? '그룹 이미지 추가'
-                                    : '그룹 이미지',
-                                style: TextStyle(
-                                  color: AppColorStyles.primary100,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          )
-                          : Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              _buildImageBySourceType(widget.state.imageUrl!),
-                            ],
-                          ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+
+              // 업로드 진행률 오버레이
+              if (widget.state.isImageUploading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.6),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // 원형 진행 표시기
+                        SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            value: widget.state.uploadProgress,
+                            strokeWidth: 4,
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.3,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.state.imageUploadStatusMessage,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 업로드 완료 체크 아이콘
+              if (widget.state.isImageUploadCompleted)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.green.withValues(alpha: 0.9),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '업로드 완료!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 업로드 실패 아이콘
+              if (widget.state.isImageUploadFailed)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red.withValues(alpha: 0.9),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error,
+                          color: Colors.white,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          '업로드 실패',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed:
+                              () => widget.onAction(
+                                const GroupSettingsAction.selectImage(),
+                              ),
+                          child: const Text(
+                            '다시 시도',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
+
+          // 상태별 설명 텍스트
           Text(
-            '그룹을 대표하는 이미지를 선택하세요',
-            style: TextStyle(fontSize: 14, color: AppColorStyles.gray80),
+            widget.state.isImageUploading
+                ? widget.state.imageUploadStatusMessage
+                : widget.state.isImageUploadCompleted
+                ? '이미지 업로드가 완료되었습니다!'
+                : widget.state.isImageUploadFailed
+                ? '이미지 업로드에 실패했습니다'
+                : '그룹을 대표하는 이미지를 선택하세요',
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  widget.state.isImageUploadFailed
+                      ? Colors.red
+                      : widget.state.isImageUploadCompleted
+                      ? Colors.green
+                      : AppColorStyles.gray80,
+              fontWeight:
+                  widget.state.isImageProcessing
+                      ? FontWeight.w500
+                      : FontWeight.normal,
+            ),
           ),
+
           // 이미지가 있을 경우 삭제 버튼 추가
-          if (widget.state.imageUrl != null &&
+          if (widget.state.displayImagePath != null &&
               widget.state.isEditing &&
-              widget.state.isOwner)
+              widget.state.isOwner &&
+              !widget.state.isImageProcessing)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: TextButton.icon(
