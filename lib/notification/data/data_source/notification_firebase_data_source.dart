@@ -54,31 +54,35 @@ class NotificationFirebaseDataSource implements NotificationDataSource {
   }
 
   @override
-  Future<bool> markAsRead(String notificationId) async {
-    return ApiCallDecorator.wrap('NotificationFirebase.markAsRead', () async {
-      try {
-        // 모든 사용자의 알림에서 해당 ID 찾기 (비효율적이지만 현재 구조상 필요)
-        final notificationsSnapshot =
-            await _firestore
-                .collectionGroup('items')
-                .where(FieldPath.documentId, isEqualTo: notificationId)
-                .get();
+  Future<bool> markAsRead(String userId, String notificationId) async {
+    return ApiCallDecorator.wrap(
+      'NotificationFirebase.markAsRead',
+      () async {
+        try {
+          // 특정 사용자의 특정 알림 문서에 직접 접근 (효율적)
+          final notificationRef = _getUserNotificationsCollection(
+            userId,
+          ).doc(notificationId);
 
-        if (notificationsSnapshot.docs.isEmpty) {
-          return false;
+          // 문서 존재 여부 확인
+          final docSnapshot = await notificationRef.get();
+          if (!docSnapshot.exists) {
+            return false; // 알림이 존재하지 않음
+          }
+
+          // 읽음 처리
+          await notificationRef.update({
+            'isRead': true,
+            'readAt': FieldValue.serverTimestamp(),
+          });
+
+          return true;
+        } catch (e) {
+          throw Exception('알림 읽음 처리에 실패했습니다: $e');
         }
-
-        final doc = notificationsSnapshot.docs.first;
-        await doc.reference.update({
-          'isRead': true,
-          'readAt': FieldValue.serverTimestamp(),
-        });
-
-        return true;
-      } catch (e) {
-        throw Exception('알림 읽음 처리에 실패했습니다: $e');
-      }
-    }, params: {'notificationId': notificationId});
+      },
+      params: {'userId': userId, 'notificationId': notificationId},
+    );
   }
 
   @override
@@ -89,7 +93,7 @@ class NotificationFirebaseDataSource implements NotificationDataSource {
         try {
           final batch = _firestore.batch();
 
-          // 읽지 않은 알림들만 조회
+          // 해당 사용자의 읽지 않은 알림들만 조회
           final unreadSnapshot =
               await _getUserNotificationsCollection(
                 userId,
@@ -118,31 +122,30 @@ class NotificationFirebaseDataSource implements NotificationDataSource {
   }
 
   @override
-  Future<bool> deleteNotification(String notificationId) async {
+  Future<bool> deleteNotification(String userId, String notificationId) async {
     return ApiCallDecorator.wrap(
       'NotificationFirebase.deleteNotification',
       () async {
         try {
-          // 모든 사용자의 알림에서 해당 ID 찾기
-          final notificationsSnapshot =
-              await _firestore
-                  .collectionGroup('items')
-                  .where(FieldPath.documentId, isEqualTo: notificationId)
-                  .get();
+          // 특정 사용자의 특정 알림 문서에 직접 접근 (효율적)
+          final notificationRef = _getUserNotificationsCollection(
+            userId,
+          ).doc(notificationId);
 
-          if (notificationsSnapshot.docs.isEmpty) {
-            return false;
+          // 문서 존재 여부 확인
+          final docSnapshot = await notificationRef.get();
+          if (!docSnapshot.exists) {
+            return false; // 알림이 존재하지 않음
           }
 
-          final doc = notificationsSnapshot.docs.first;
-          await doc.reference.delete();
-
+          // 알림 삭제
+          await notificationRef.delete();
           return true;
         } catch (e) {
           throw Exception('알림 삭제에 실패했습니다: $e');
         }
       },
-      params: {'notificationId': notificationId},
+      params: {'userId': userId, 'notificationId': notificationId},
     );
   }
 }
