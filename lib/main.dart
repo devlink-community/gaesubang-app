@@ -43,20 +43,6 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-
-      // 앱 빌드 완료 후 FCM 상태 확인
-      builder: (context, child) {
-        _performPostBuildCheck();
-        return child ?? const SizedBox.shrink();
-      },
     );
-  }
-
-  /// 앱 빌드 완료 후 상태 확인
-  void _performPostBuildCheck() {
-    // 2초 후에 FCM 상태 진단 (부담 없이)
-    Future.delayed(const Duration(seconds: 2), () {
-      AppInitializationService.diagnose();
-    });
   }
 }
