@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
@@ -35,6 +36,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final _positionController = TextEditingController();
   final _skillsController = TextEditingController();
 
+  // Debouncing을 위한 Timer들
+  Timer? _nicknameDebouncer;
+  Timer? _descriptionDebouncer;
+  Timer? _positionDebouncer;
+  Timer? _skillsDebouncer;
+
+  // 현재 업데이트 중인지 확인하는 플래그
+  bool _isUpdatingFromState = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,9 +56,52 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   void didUpdateWidget(covariant ProfileEditScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state != widget.state) {
-      _updateTextControllers();
+      _updateTextControllersIfNeeded();
       _updateLocalImageFile();
     }
+  }
+
+  void _updateTextControllersIfNeeded() {
+    final member = widget.state.editingProfile;
+    if (member == null) return;
+
+    _isUpdatingFromState = true;
+
+    // 현재 컨트롤러 값과 상태 값이 다를 때만 업데이트
+    if (_nicknameController.text != member.nickname) {
+      _nicknameController.value = _nicknameController.value.copyWith(
+        text: member.nickname,
+        selection: TextSelection.collapsed(offset: member.nickname.length),
+      );
+    }
+
+    if (_descriptionController.text != member.description) {
+      _descriptionController.value = _descriptionController.value.copyWith(
+        text: member.description,
+        selection: TextSelection.collapsed(offset: member.description.length),
+      );
+    }
+
+    final position = member.position ?? '';
+    if (_positionController.text != position) {
+      _positionController.value = _positionController.value.copyWith(
+        text: position,
+        selection: TextSelection.collapsed(offset: position.length),
+      );
+    }
+
+    final skills = member.skills ?? '';
+    if (_skillsController.text != skills) {
+      _skillsController.value = _skillsController.value.copyWith(
+        text: skills,
+        selection: TextSelection.collapsed(offset: skills.length),
+      );
+    }
+
+    // 다음 프레임에서 플래그 해제
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isUpdatingFromState = false;
+    });
   }
 
   void _updateTextControllers() {
@@ -74,12 +127,56 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
+  // Debounced onChanged 핸들러들
+  void _onNicknameChanged(String value) {
+    if (_isUpdatingFromState) return; // 상태에서 업데이트 중이면 무시
+
+    _nicknameDebouncer?.cancel();
+    _nicknameDebouncer = Timer(const Duration(milliseconds: 300), () {
+      widget.onAction(ProfileEditAction.onChangeNickname(value));
+    });
+  }
+
+  void _onDescriptionChanged(String value) {
+    if (_isUpdatingFromState) return;
+
+    _descriptionDebouncer?.cancel();
+    _descriptionDebouncer = Timer(const Duration(milliseconds: 300), () {
+      widget.onAction(ProfileEditAction.onChangeDescription(value));
+    });
+  }
+
+  void _onPositionChanged(String value) {
+    if (_isUpdatingFromState) return;
+
+    _positionDebouncer?.cancel();
+    _positionDebouncer = Timer(const Duration(milliseconds: 300), () {
+      widget.onAction(ProfileEditAction.onChangePosition(value));
+    });
+  }
+
+  void _onSkillsChanged(String value) {
+    if (_isUpdatingFromState) return;
+
+    _skillsDebouncer?.cancel();
+    _skillsDebouncer = Timer(const Duration(milliseconds: 300), () {
+      widget.onAction(ProfileEditAction.onChangeSkills(value));
+    });
+  }
+
   @override
   void dispose() {
     _nicknameController.dispose();
     _descriptionController.dispose();
     _positionController.dispose();
     _skillsController.dispose();
+
+    // Timer들 정리
+    _nicknameDebouncer?.cancel();
+    _descriptionDebouncer?.cancel();
+    _positionDebouncer?.cancel();
+    _skillsDebouncer?.cancel();
+
     super.dispose();
   }
 
@@ -149,9 +246,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             label: '닉네임',
             hint: '닉네임을 입력하세요',
             controller: _nicknameController,
-            onChanged:
-                (value) =>
-                    widget.onAction(ProfileEditAction.onChangeNickname(value)),
+            onChanged: _onNicknameChanged, // debounced 핸들러 사용
           ),
           const SizedBox(height: 16),
 
@@ -159,9 +254,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             label: '직무',
             hint: '직무를 입력하세요 (예: 백엔드 개발자, 프론트엔드 개발자)',
             controller: _positionController,
-            onChanged:
-                (value) =>
-                    widget.onAction(ProfileEditAction.onChangePosition(value)),
+            onChanged: _onPositionChanged, // debounced 핸들러 사용
           ),
           const SizedBox(height: 16),
 
@@ -169,9 +262,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             label: '스킬',
             hint: '보유한 스킬을 입력하세요 (예: Flutter, React, Python)',
             controller: _skillsController,
-            onChanged:
-                (value) =>
-                    widget.onAction(ProfileEditAction.onChangeSkills(value)),
+            onChanged: _onSkillsChanged, // debounced 핸들러 사용
           ),
           const SizedBox(height: 16),
 
@@ -180,10 +271,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             hint: '자신을 소개하는 글을 작성해보세요',
             controller: _descriptionController,
             maxLines: 5,
-            onChanged:
-                (value) => widget.onAction(
-                  ProfileEditAction.onChangeDescription(value),
-                ),
+            onChanged: _onDescriptionChanged, // debounced 핸들러 사용
           ),
           const SizedBox(height: 24),
 

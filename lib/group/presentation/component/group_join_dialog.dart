@@ -26,7 +26,7 @@ class GroupJoinDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -76,7 +76,7 @@ class GroupJoinDialog extends StatelessWidget {
       height: 150,
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        color: AppColorStyles.gray40.withOpacity(0.3),
+        color: AppColorStyles.gray40.withValues(alpha: 0.3),
       ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -140,7 +140,7 @@ class GroupJoinDialog extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColorStyles.primary100.withOpacity(0.08),
+        color: AppColorStyles.primary100.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -160,7 +160,7 @@ class GroupJoinDialog extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            '최대 ${group.limitMemberCount}명',
+            '최대 ${group.maxMemberCount}명',
             style: AppTextStyles.captionRegular.copyWith(
               color: AppColorStyles.gray80,
             ),
@@ -172,7 +172,7 @@ class GroupJoinDialog extends StatelessWidget {
 
   // 그룹 설명
   Widget _buildDescription() {
-    final description = group.description.trim() ?? '';
+    final description = group.description.trim();
 
     if (description.isEmpty) {
       return const SizedBox();
@@ -211,11 +211,11 @@ class GroupJoinDialog extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColorStyles.gray40.withOpacity(0.2),
+                    color: AppColorStyles.gray40.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '#${tag.content}',
+                    '#$tag',
                     style: AppTextStyles.body2Regular.copyWith(
                       color: AppColorStyles.gray100,
                     ),

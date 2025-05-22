@@ -9,6 +9,9 @@ import 'package:devlink_mobile_app/community/module/util/community_tab_type_enum
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_list/community_list_state.dart';
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_notifier.dart';
+import 'package:devlink_mobile_app/core/event/app_event.dart';
+import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_list_notifier.g.dart';
@@ -31,6 +34,35 @@ class CommunityListNotifier extends _$CommunityListNotifier {
         }
       },
     );
+
+    // 앱 이벤트 리스너 추가 - 게시글/댓글 변경 감지
+    ref.listen(appEventNotifierProvider, (previous, current) {
+      if (previous != current) {
+        final eventNotifier = ref.read(appEventNotifierProvider.notifier);
+
+        // // 프로필 변경 이벤트가 있으면 - 작성자 정보 관련이므로 목록 갱신
+        // if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
+        //   debugPrint('🔄 CommunityListNotifier: 프로필 업데이트 감지, 목록 갱신');
+        //   Future.microtask(() => _fetch());
+        //   return;
+        // }
+
+        // 게시글 관련 이벤트가 있으면 목록 갱신
+        final hasPostEvents = current.any(
+          (event) =>
+              event is PostLiked ||
+              event is PostBookmarked ||
+              event is CommentAdded ||
+              event is PostUpdated ||
+              event is PostDeleted,
+        );
+
+        if (hasPostEvents) {
+          debugPrint('🔄 CommunityListNotifier: 게시글 액션 이벤트 감지, 목록 갱신');
+          Future.microtask(() => _fetch());
+        }
+      }
+    });
 
     Future.microtask(_fetch);
     return const CommunityListState(currentTab: CommunityTabType.newest);

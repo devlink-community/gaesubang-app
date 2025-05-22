@@ -2,6 +2,7 @@
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_state.dart';
 import 'package:devlink_mobile_app/community/presentation/components/post_list_item.dart';
+import 'package:devlink_mobile_app/core/service/search_history_item.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
@@ -199,7 +200,8 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
   }
 
   Widget _buildRecentSearches() {
-    if (widget.state.recentSearches.isEmpty) {
+    if (widget.state.recentSearches.isEmpty &&
+        widget.state.popularSearches.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -220,115 +222,155 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '최근 검색어',
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color: AppColorStyles.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              TextButton(
-                onPressed:
-                    () => widget.onAction(
-                      const CommunitySearchAction.onClearAllRecentSearches(),
+        // 최근 검색어 섹션
+        if (widget.state.recentSearches.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '최근 검색어',
+                      style: AppTextStyles.subtitle1Bold.copyWith(
+                        color: AppColorStyles.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColorStyles.gray100,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    const SizedBox(width: 8),
+                    // 필터 버튼 (최신순/빈도순)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColorStyles.primary100.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getFilterDisplayName(widget.state.currentFilter),
+                        style: AppTextStyles.captionRegular.copyWith(
+                          color: AppColorStyles.primary100,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed:
+                      () => widget.onAction(
+                        const CommunitySearchAction.onClearAllRecentSearches(),
+                      ),
+                  child: Text(
+                    '전체 삭제',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: AppColorStyles.gray100,
+                    ),
                   ),
                 ),
-                child: Text(
-                  '전체 삭제',
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.gray100,
-                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 최근 검색어 목록
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: widget.state.recentSearches.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final query = widget.state.recentSearches[index];
+                return _buildSearchChip(
+                  query: query,
+                  isRecent: true,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ],
+    );
+  }
+
+  // 검색어 칩 위젯
+  Widget _buildSearchChip({
+    required String query,
+    required bool isRecent,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => widget.onAction(CommunitySearchAction.onSearch(query)),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color:
+                  isRecent ? AppColorStyles.gray40 : AppColorStyles.primary80,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isRecent) ...[
+                Icon(
+                  Icons.trending_up,
+                  size: 14,
+                  color: AppColorStyles.primary80,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                query,
+                style: AppTextStyles.body1Regular.copyWith(
+                  color: AppColorStyles.textPrimary,
                 ),
               ),
+              if (isRecent) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.gray40,
+                    shape: BoxShape.circle,
+                  ),
+                  child: InkResponse(
+                    onTap:
+                        () => widget.onAction(
+                          CommunitySearchAction.onRemoveRecentSearch(query),
+                        ),
+                    radius: 12,
+                    child: const Icon(
+                      Icons.close,
+                      size: 12,
+                      color: AppColorStyles.gray80,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-        // 수평 스크롤 최근 검색어 목록
-        SizedBox(
-          height: 40, // 높이 조정
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: widget.state.recentSearches.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final query = widget.state.recentSearches[index];
-
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap:
-                      () => widget.onAction(
-                        CommunitySearchAction.onSearch(query),
-                      ),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColorStyles.gray40),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          query,
-                          style: AppTextStyles.body1Regular.copyWith(
-                            color: AppColorStyles.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: AppColorStyles.gray40,
-                            shape: BoxShape.circle,
-                          ),
-                          child: InkResponse(
-                            onTap:
-                                () => widget.onAction(
-                                  CommunitySearchAction.onRemoveRecentSearch(
-                                    query,
-                                  ),
-                                ),
-                            radius: 12,
-                            child: const Icon(
-                              Icons.close,
-                              size: 12,
-                              color: AppColorStyles.gray80,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        // 나머지 공간 채우는 빈 영역
-        Expanded(child: Container()),
-      ],
+      ),
     );
+  }
+
+  // 필터 표시명 반환
+  String _getFilterDisplayName(SearchFilter filter) {
+    switch (filter) {
+      case SearchFilter.recent:
+        return '최신순';
+      case SearchFilter.alphabetical:
+        return '가나다순';
+    }
   }
 
   Widget _buildSearchResults() {

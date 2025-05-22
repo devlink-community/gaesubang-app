@@ -8,7 +8,7 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
-import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart'; // 추가
+import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -24,6 +24,8 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
   @override
   ProfileEditState build() {
+    debugPrint('🔄 ProfileEditNotifier: build() 호출');
+
     _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
     _updateProfileUseCase = ref.watch(updateProfileUseCaseProvider);
     _updateProfileImageUseCase = ref.watch(updateProfileImageUseCaseProvider);
@@ -33,6 +35,8 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   }
 
   Future<void> onAction(ProfileEditAction action) async {
+    debugPrint('🔄 ProfileEditNotifier: onAction($action)');
+
     switch (action) {
       case LoadProfile():
         await _loadProfile();
@@ -89,20 +93,24 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
   /// 프로필 로드
   Future<void> _loadProfile() async {
+    debugPrint('🔄 ProfileEditNotifier: 프로필 로드 시작');
     state = state.copyWith(profileState: const AsyncLoading());
 
     try {
       final result = await _getCurrentUserUseCase.execute();
 
       if (result case AsyncData(:final value)) {
+        debugPrint('✅ ProfileEditNotifier: 프로필 로드 성공: ${value.nickname}');
         state = state.copyWith(
           profileState: AsyncData(value),
           editingProfile: value,
         );
       } else if (result case AsyncError(:final error, :final stackTrace)) {
+        debugPrint('❌ ProfileEditNotifier: 프로필 로드 실패: $error');
         state = state.copyWith(profileState: AsyncError(error, stackTrace));
       }
     } catch (e, st) {
+      debugPrint('❌ ProfileEditNotifier: 프로필 로드 중 예외 발생: $e');
       state = state.copyWith(profileState: AsyncError(e, st));
     }
   }
@@ -134,10 +142,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
   /// 닉네임 중복 확인
   Future<void> _checkNicknameAvailability(String nickname) async {
+    debugPrint('🔄 ProfileEditNotifier: 닉네임 중복 확인 시작: $nickname');
+
     // 현재 사용자의 닉네임과 같으면 중복 확인하지 않음
     if (state.profileState case AsyncData(:final value)) {
       if (value.nickname == nickname) {
         state = state.copyWith(nicknameCheckState: const AsyncData(true));
+        debugPrint('✅ ProfileEditNotifier: 기존 닉네임과 동일하므로 중복 확인 생략');
         return;
       }
     }
@@ -149,6 +160,9 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
       if (result case AsyncData(:final value)) {
         state = state.copyWith(nicknameCheckState: AsyncData(value));
+        debugPrint(
+          '✅ ProfileEditNotifier: 닉네임 중복 확인 완료: ${value ? "사용 가능" : "중복"}',
+        );
 
         // 닉네임이 중복이면 에러 메시지 추가
         if (!value) {
@@ -159,17 +173,21 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           state = state.copyWith(validationErrors: updatedErrors);
         }
       } else if (result case AsyncError(:final error, :final stackTrace)) {
+        debugPrint('❌ ProfileEditNotifier: 닉네임 중복 확인 실패: $error');
         state = state.copyWith(
           nicknameCheckState: AsyncError(error, stackTrace),
         );
       }
     } catch (e, st) {
+      debugPrint('❌ ProfileEditNotifier: 닉네임 중복 확인 중 예외 발생: $e');
       state = state.copyWith(nicknameCheckState: AsyncError(e, st));
     }
   }
 
   /// 이미지 선택
   Future<void> _pickImage() async {
+    debugPrint('🔄 ProfileEditNotifier: 이미지 선택 시작');
+
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -180,15 +198,20 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       );
 
       if (image != null) {
+        debugPrint('✅ ProfileEditNotifier: 이미지 선택 완료: ${image.path}');
         await _updateProfileImage(File(image.path));
+      } else {
+        debugPrint('ℹ️ ProfileEditNotifier: 이미지 선택 취소됨');
       }
     } catch (e) {
-      debugPrint('이미지 선택 실패: $e');
+      debugPrint('❌ ProfileEditNotifier: 이미지 선택 실패: $e');
     }
   }
 
   /// 프로필 이미지 업데이트
   Future<void> _updateProfileImage(File imageFile) async {
+    debugPrint('🔄 ProfileEditNotifier: 프로필 이미지 업데이트 시작: ${imageFile.path}');
+
     try {
       final result = await _updateProfileImageUseCase.execute(imageFile.path);
 
@@ -202,8 +225,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         // ✅ 핵심: 이미지 업데이트 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
+        // 앱 이벤트 발행 코드 제거
+        // ref
+        //     .read(appEventNotifierProvider.notifier)
+        //     .emit(const AppEvent.profileUpdated());
+
         debugPrint(
-          '✅ ProfileEditNotifier: 이미지 업데이트 성공 및 갱신 상태 마크: ${value.image}',
+          '✅ ProfileEditNotifier: 이미지 업데이트 성공, 갱신 상태 마크: ${value.image}',
         );
       } else if (result case AsyncError(:final error)) {
         debugPrint('❌ ProfileEditNotifier: 이미지 업데이트 실패: $error');
@@ -215,8 +243,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
   /// 폼 검증
   void _validateForm() {
+    debugPrint('🔄 ProfileEditNotifier: 폼 검증 시작');
+
     final profile = state.editingProfile;
-    if (profile == null) return;
+    if (profile == null) {
+      debugPrint('❌ ProfileEditNotifier: 프로필이 null이므로 검증 불가');
+      return;
+    }
 
     final Map<String, String> errors = {};
 
@@ -259,12 +292,18 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
 
   /// 프로필 저장
   Future<void> _saveProfile() async {
+    debugPrint('🔄 ProfileEditNotifier: 프로필 저장 시작');
+
     final profile = state.editingProfile;
-    if (profile == null) return;
+    if (profile == null) {
+      debugPrint('❌ ProfileEditNotifier: 프로필이 null이므로 저장 불가');
+      return;
+    }
 
     // 저장 전 폼 검증
     _validateForm();
     if (state.hasValidationErrors) {
+      debugPrint('❌ ProfileEditNotifier: 폼 검증 실패로 저장 중단');
       return;
     }
 
@@ -285,8 +324,13 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           editingProfile: value,
         );
 
-        // ✅ 핵심: 프로필 저장 성공 시 프로필 갱신 상태 마크
+        // ✅ 핵심 1: 프로필 저장 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
+
+        // ✅ 핵심 2: 앱 이벤트 발행 코드 제거
+        // ref
+        //     .read(appEventNotifierProvider.notifier)
+        //     .emit(const AppEvent.profileUpdated());
 
         debugPrint(
           '✅ ProfileEditNotifier: 프로필 저장 성공 및 갱신 상태 마크: ${value.nickname}',

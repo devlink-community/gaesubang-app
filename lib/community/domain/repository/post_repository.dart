@@ -1,4 +1,5 @@
 // lib/community/domain/repository/post_repository.dart
+import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
@@ -38,5 +39,19 @@ abstract interface class PostRepository {
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
+    Member? author,
   });
+
+  /* Update */
+  Future<Result<String>> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+    Member? author,
+  });
+
+  /* Delete */
+  Future<Result<bool>> deletePost(String postId);
 }

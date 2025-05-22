@@ -1,15 +1,18 @@
-// lib/community/module/community_di.dart
+// lib/community/module/community_di.dart (상단 import 부분 수정)
 import 'package:devlink_mobile_app/community/data/data_source/mock_post_data_source_impl.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_firebase_data_source.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_comment_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/create_post_use_case.dart';
+import 'package:devlink_mobile_app/community/domain/usecase/delete_post_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_comments_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/fetch_post_detail_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/search_posts_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_bookmark_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_comment_like_use_case.dart';
 import 'package:devlink_mobile_app/community/domain/usecase/toggle_like_use_case.dart';
+import 'package:devlink_mobile_app/community/domain/usecase/update_post_use_case.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
+import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,21 +34,21 @@ PostDataSource postDataSource(Ref ref) {
     return MockPostDataSourceImpl();
   } else {
     print('Community DI: Firebase DataSource 사용');
-    return PostFirebaseDataSource();
+    return PostFirebaseDataSource(
+      firestore: ref.watch(firebaseFirestoreProvider),
+      auth: ref.watch(firebaseAuthProvider),
+    );
   }
 }
 
-// === Repository Providers ===
+// === Repository Providers === (나머지는 동일)
 
 @riverpod
 PostRepository postRepository(Ref ref) {
-  return PostRepositoryImpl(
-    dataSource: ref.watch(postDataSourceProvider),
-    ref: ref, // Ref 주입으로 Auth 상태 접근 가능
-  );
+  return PostRepositoryImpl(dataSource: ref.watch(postDataSourceProvider));
 }
 
-// === UseCase Providers ===
+// === UseCase Providers === (나머지는 동일)
 
 @riverpod
 LoadPostListUseCase loadPostListUseCase(Ref ref) {
@@ -95,4 +98,14 @@ SearchPostsUseCase searchPostsUseCase(Ref ref) {
 @riverpod
 ToggleCommentLikeUseCase toggleCommentLikeUseCase(Ref ref) {
   return ToggleCommentLikeUseCase(repo: ref.watch(postRepositoryProvider));
+}
+
+@riverpod
+UpdatePostUseCase updatePostUseCase(Ref ref) {
+  return UpdatePostUseCase(repo: ref.watch(postRepositoryProvider));
+}
+
+@riverpod
+DeletePostUseCase deletePostUseCase(Ref ref) {
+  return DeletePostUseCase(repo: ref.watch(postRepositoryProvider));
 }

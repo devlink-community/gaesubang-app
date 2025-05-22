@@ -60,17 +60,20 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
         widget.state.content != _contentCtrl.text) {
       _contentCtrl.text = widget.state.content;
     }
-
   }
 
   @override
   Widget build(BuildContext context) {
     final loading = widget.state.submitting;
+    final isEditMode = widget.state.isEditMode;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('게시글 작성', style: AppTextStyles.heading6Bold),
+        title: Text(
+          isEditMode ? '게시글 수정' : '게시글 작성',
+          style: AppTextStyles.heading6Bold,
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
@@ -120,7 +123,7 @@ class _CommunityWriteScreenState extends State<CommunityWriteScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        '게시글을 등록하는 중입니다...',
+                        isEditMode ? '게시글을 수정하는 중입니다...' : '게시글을 등록하는 중입니다...',
                         style: AppTextStyles.body1Regular.copyWith(
                           color: AppColorStyles.gray100,
                         ),

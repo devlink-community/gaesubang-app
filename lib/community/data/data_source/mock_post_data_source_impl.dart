@@ -7,6 +7,9 @@ import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.
 import 'post_data_source.dart';
 
 class MockPostDataSourceImpl implements PostDataSource {
+  // 현재 사용자 ID (Mock 환경에서는 고정값 사용)
+  static const String _currentUserId = 'user1';
+
   // 목 데이터 (새로운 DTO 구조 사용)
   static final List<PostDto> _mockPosts = [
     PostDto(
@@ -101,13 +104,10 @@ class MockPostDataSourceImpl implements PostDataSource {
   };
 
   @override
-  Future<List<PostDto>> fetchPostList({String? currentUserId}) async {
+  Future<List<PostDto>> fetchPostList() async {
     return ApiCallDecorator.wrap('MockPost.fetchPostList', () async {
       // 데이터 로딩 시뮬레이션
       await Future.delayed(const Duration(milliseconds: 500));
-
-      // 좋아요 수와 사용자 상태 포함하여 반환 (임의의 사용자 ID 'user1' 사용)
-      const currentUserId = 'user1';
 
       // 복사본 생성 및 추가 정보 설정
       return _mockPosts.map((post) {
@@ -115,9 +115,9 @@ class MockPostDataSourceImpl implements PostDataSource {
         final likeCount = _likedPosts[postId]?.length ?? 0;
         final commentCount = _mockComments[postId]?.length ?? 0;
         final isLikedByCurrentUser =
-            _likedPosts[postId]?.contains(currentUserId) ?? false;
+            _likedPosts[postId]?.contains(_currentUserId) ?? false;
         final isBookmarkedByCurrentUser =
-            _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+            _bookmarkedPosts[_currentUserId]?.contains(postId) ?? false;
 
         return post.copyWith(
           likeCount: likeCount,
@@ -130,10 +130,7 @@ class MockPostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<PostDto> fetchPostDetail(
-    String postId, {
-    String? currentUserId,
-  }) async {
+  Future<PostDto> fetchPostDetail(String postId) async {
     return ApiCallDecorator.wrap('MockPost.fetchPostDetail', () async {
       // 로딩 시뮬레이션
       await Future.delayed(const Duration(milliseconds: 300));
@@ -144,16 +141,13 @@ class MockPostDataSourceImpl implements PostDataSource {
         orElse: () => throw Exception(CommunityErrorMessages.postNotFound),
       );
 
-      // 임의의 현재 사용자 ID
-      const currentUserId = 'user1';
-
       // 좋아요 수 및 사용자 상태 설정
       final likeCount = _likedPosts[postId]?.length ?? 0;
       final commentCount = _mockComments[postId]?.length ?? 0; // 댓글 수 추가
       final isLikedByCurrentUser =
-          _likedPosts[postId]?.contains(currentUserId) ?? false;
+          _likedPosts[postId]?.contains(_currentUserId) ?? false;
       final isBookmarkedByCurrentUser =
-          _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+          _bookmarkedPosts[_currentUserId]?.contains(postId) ?? false;
 
       // 정보 추가하여 반환
       return post.copyWith(
@@ -166,37 +160,33 @@ class MockPostDataSourceImpl implements PostDataSource {
   }
 
   @override
-  Future<PostDto> toggleLike(
-    String postId,
-    String userId,
-    String userName,
-  ) async {
+  Future<PostDto> toggleLike(String postId) async {
     return ApiCallDecorator.wrap('MockPost.toggleLike', () async {
       await Future.delayed(const Duration(milliseconds: 200));
 
       // 좋아요 상태 토글
       final likedUsers = _likedPosts[postId] ?? <String>{};
 
-      if (likedUsers.contains(userId)) {
-        likedUsers.remove(userId);
+      if (likedUsers.contains(_currentUserId)) {
+        likedUsers.remove(_currentUserId);
       } else {
-        likedUsers.add(userId);
+        likedUsers.add(_currentUserId);
       }
 
       _likedPosts[postId] = likedUsers;
 
       // 업데이트된 게시글 반환
       return await fetchPostDetail(postId);
-    }, params: {'postId': postId, 'userId': userId});
+    }, params: {'postId': postId});
   }
 
   @override
-  Future<PostDto> toggleBookmark(String postId, String userId) async {
+  Future<PostDto> toggleBookmark(String postId) async {
     return ApiCallDecorator.wrap('MockPost.toggleBookmark', () async {
       await Future.delayed(const Duration(milliseconds: 200));
 
       // 북마크 상태 토글
-      final userBookmarks = _bookmarkedPosts[userId] ?? <String>{};
+      final userBookmarks = _bookmarkedPosts[_currentUserId] ?? <String>{};
 
       if (userBookmarks.contains(postId)) {
         userBookmarks.remove(postId);
@@ -204,29 +194,25 @@ class MockPostDataSourceImpl implements PostDataSource {
         userBookmarks.add(postId);
       }
 
-      _bookmarkedPosts[userId] = userBookmarks;
+      _bookmarkedPosts[_currentUserId] = userBookmarks;
 
       // 업데이트된 게시글 반환
       return await fetchPostDetail(postId);
-    }, params: {'postId': postId, 'userId': userId});
+    }, params: {'postId': postId});
   }
 
   @override
-  Future<List<PostCommentDto>> fetchComments(
-    String postId, {
-    String? currentUserId,
-  }) async {
+  Future<List<PostCommentDto>> fetchComments(String postId) async {
     return ApiCallDecorator.wrap('MockPost.fetchComments', () async {
       await Future.delayed(const Duration(milliseconds: 300));
 
       final comments = _mockComments[postId] ?? [];
-      const currentUserId = 'user1'; // 임의의 사용자 ID
 
       // 좋아요 정보 추가하여 복사본 반환
       return comments.map((comment) {
         final commentId = comment.id ?? '';
         final isLikedByCurrentUser =
-            _likedComments[commentId]?.contains(currentUserId) ?? false;
+            _likedComments[commentId]?.contains(_currentUserId) ?? false;
         return comment.copyWith(isLikedByCurrentUser: isLikedByCurrentUser);
       }).toList();
     }, params: {'postId': postId});
@@ -235,20 +221,22 @@ class MockPostDataSourceImpl implements PostDataSource {
   @override
   Future<List<PostCommentDto>> createComment({
     required String postId,
-    required String userId,
-    required String userName,
-    required String userProfileImage,
     required String content,
   }) async {
     return ApiCallDecorator.wrap('MockPost.createComment', () async {
       await Future.delayed(const Duration(milliseconds: 200));
 
+      // Mock 사용자 정보 (실제로는 현재 로그인된 사용자 정보 사용)
+      const mockUserName = '현재사용자';
+      const mockUserProfileImage =
+          'https://api.dicebear.com/6.x/micah/png?seed=current';
+
       // 새 댓글 생성
       final newComment = PostCommentDto(
         id: 'comment_${DateTime.now().millisecondsSinceEpoch}',
-        userId: userId,
-        userName: userName,
-        userProfileImage: userProfileImage,
+        userId: _currentUserId,
+        userName: mockUserName,
+        userProfileImage: mockUserProfileImage,
         text: content,
         createdAt: DateTime.now(),
         likeCount: 0,
@@ -262,67 +250,60 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 업데이트된 댓글 목록 반환
       return List.from(comments);
-    }, params: {'postId': postId, 'userId': userId});
+    }, params: {'postId': postId});
   }
 
   @override
   Future<PostCommentDto> toggleCommentLike(
     String postId,
     String commentId,
-    String userId,
-    String userName,
   ) async {
-    return ApiCallDecorator.wrap(
-      'MockPost.toggleCommentLike',
-      () async {
-        await Future.delayed(const Duration(milliseconds: 200));
+    return ApiCallDecorator.wrap('MockPost.toggleCommentLike', () async {
+      await Future.delayed(const Duration(milliseconds: 200));
 
-        // 좋아요 상태 토글
-        final likedUsers = _likedComments[commentId] ?? <String>{};
+      // 좋아요 상태 토글
+      final likedUsers = _likedComments[commentId] ?? <String>{};
 
-        bool newLikeStatus = false;
-        if (likedUsers.contains(userId)) {
-          likedUsers.remove(userId);
-          newLikeStatus = false;
-        } else {
-          likedUsers.add(userId);
-          newLikeStatus = true;
-        }
+      bool newLikeStatus = false;
+      if (likedUsers.contains(_currentUserId)) {
+        likedUsers.remove(_currentUserId);
+        newLikeStatus = false;
+      } else {
+        likedUsers.add(_currentUserId);
+        newLikeStatus = true;
+      }
 
-        _likedComments[commentId] = likedUsers;
+      _likedComments[commentId] = likedUsers;
 
-        // 해당 댓글 찾기
-        PostCommentDto? targetComment;
+      // 해당 댓글 찾기
+      PostCommentDto? targetComment;
 
-        for (final comments in _mockComments.values) {
-          for (final comment in comments) {
-            if (comment.id == commentId) {
-              targetComment = comment;
-              break;
-            }
+      for (final comments in _mockComments.values) {
+        for (final comment in comments) {
+          if (comment.id == commentId) {
+            targetComment = comment;
+            break;
           }
-          if (targetComment != null) break;
         }
+        if (targetComment != null) break;
+      }
 
-        if (targetComment == null) {
-          throw Exception(CommunityErrorMessages.commentLoadFailed);
-        }
+      if (targetComment == null) {
+        throw Exception(CommunityErrorMessages.commentLoadFailed);
+      }
 
-        // 좋아요 수와 상태 업데이트하여 반환
-        return targetComment.copyWith(
-          likeCount: likedUsers.length,
-          isLikedByCurrentUser: newLikeStatus,
-        );
-      },
-      params: {'postId': postId, 'commentId': commentId, 'userId': userId},
-    );
+      // 좋아요 수와 상태 업데이트하여 반환
+      return targetComment.copyWith(
+        likeCount: likedUsers.length,
+        isLikedByCurrentUser: newLikeStatus,
+      );
+    }, params: {'postId': postId, 'commentId': commentId});
   }
 
   @override
   Future<Map<String, bool>> checkCommentsLikeStatus(
     String postId,
     List<String> commentIds,
-    String userId,
   ) async {
     return ApiCallDecorator.wrap(
       'MockPost.checkCommentsLikeStatus',
@@ -334,26 +315,18 @@ class MockPostDataSourceImpl implements PostDataSource {
         // 각 댓글의 좋아요 상태 확인
         for (final commentId in commentIds) {
           final likedUsers = _likedComments[commentId] ?? <String>{};
-          result[commentId] = likedUsers.contains(userId);
+          result[commentId] = likedUsers.contains(_currentUserId);
         }
 
         return result;
       },
-      params: {
-        'postId': postId,
-        'commentCount': commentIds.length,
-        'userId': userId,
-      },
+      params: {'postId': postId, 'commentCount': commentIds.length},
     );
   }
 
   @override
   Future<String> createPost({
     required String postId,
-    required String authorId,
-    required String authorNickname,
-    required String authorPosition,
-    required String userProfileImage,
     required String title,
     required String content,
     required List<String> hashTags,
@@ -362,13 +335,19 @@ class MockPostDataSourceImpl implements PostDataSource {
     return ApiCallDecorator.wrap('MockPost.createPost', () async {
       await Future.delayed(const Duration(milliseconds: 400));
 
+      // Mock 현재 사용자 정보
+      const mockAuthorNickname = '현재사용자';
+      const mockAuthorPosition = '개발자';
+      const mockUserProfileImage =
+          'https://api.dicebear.com/6.x/micah/png?seed=current';
+
       // 새 게시글 생성
       final newPost = PostDto(
         id: postId,
-        authorId: authorId,
-        authorNickname: authorNickname,
-        authorPosition: authorPosition,
-        userProfileImage: userProfileImage,
+        authorId: _currentUserId,
+        authorNickname: mockAuthorNickname,
+        authorPosition: mockAuthorPosition,
+        userProfileImage: mockUserProfileImage,
         title: title,
         content: content,
         mediaUrls: imageUris.map((uri) => uri.toString()).toList(),
@@ -384,14 +363,11 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 생성된 게시글 ID 반환
       return postId;
-    }, params: {'postId': postId, 'authorId': authorId});
+    }, params: {'postId': postId});
   }
 
   @override
-  Future<List<PostDto>> searchPosts(
-    String query, {
-    String? currentUserId,
-  }) async {
+  Future<List<PostDto>> searchPosts(String query) async {
     return ApiCallDecorator.wrap('MockPost.searchPosts', () async {
       await Future.delayed(const Duration(milliseconds: 300));
 
@@ -401,9 +377,6 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 검색어가 제목, 내용, 태그 중 하나에 포함된 게시글 필터링
       final lowercaseQuery = query.toLowerCase();
-
-      // 임의의 사용자 ID
-      const currentUserId = 'user1';
 
       final results =
           _mockPosts
@@ -425,9 +398,9 @@ class MockPostDataSourceImpl implements PostDataSource {
                 final postId = post.id ?? '';
                 final likeCount = _likedPosts[postId]?.length ?? 0;
                 final isLikedByCurrentUser =
-                    _likedPosts[postId]?.contains(currentUserId) ?? false;
+                    _likedPosts[postId]?.contains(_currentUserId) ?? false;
                 final isBookmarkedByCurrentUser =
-                    _bookmarkedPosts[currentUserId]?.contains(postId) ?? false;
+                    _bookmarkedPosts[_currentUserId]?.contains(postId) ?? false;
 
                 return post.copyWith(
                   likeCount: likeCount,
@@ -444,51 +417,113 @@ class MockPostDataSourceImpl implements PostDataSource {
 
   // 새로 추가된 메서드 구현
   @override
-  Future<Map<String, bool>> checkUserLikeStatus(
-    List<String> postIds,
-    String userId,
-  ) async {
-    return ApiCallDecorator.wrap(
-      'MockPost.checkUserLikeStatus',
-      () async {
-        await Future.delayed(const Duration(milliseconds: 200));
+  Future<Map<String, bool>> checkUserLikeStatus(List<String> postIds) async {
+    return ApiCallDecorator.wrap('MockPost.checkUserLikeStatus', () async {
+      await Future.delayed(const Duration(milliseconds: 200));
 
-        final Map<String, bool> result = {};
+      final Map<String, bool> result = {};
 
-        // 각 게시글에 대한 좋아요 상태 확인
-        for (final postId in postIds) {
-          final likedUsers = _likedPosts[postId] ?? <String>{};
-          result[postId] = likedUsers.contains(userId);
-        }
+      // 각 게시글에 대한 좋아요 상태 확인
+      for (final postId in postIds) {
+        final likedUsers = _likedPosts[postId] ?? <String>{};
+        result[postId] = likedUsers.contains(_currentUserId);
+      }
 
-        return result;
-      },
-      params: {'postIds': postIds.length, 'userId': userId},
-    );
+      return result;
+    }, params: {'postIds': postIds.length});
   }
 
   @override
   Future<Map<String, bool>> checkUserBookmarkStatus(
     List<String> postIds,
-    String userId,
   ) async {
-    return ApiCallDecorator.wrap(
-      'MockPost.checkUserBookmarkStatus',
-      () async {
-        await Future.delayed(const Duration(milliseconds: 200));
+    return ApiCallDecorator.wrap('MockPost.checkUserBookmarkStatus', () async {
+      await Future.delayed(const Duration(milliseconds: 200));
 
-        final Map<String, bool> result = {};
+      final Map<String, bool> result = {};
 
-        // 각 게시글에 대한 북마크 상태 확인
-        final userBookmarks = _bookmarkedPosts[userId] ?? <String>{};
+      // 각 게시글에 대한 북마크 상태 확인
+      final userBookmarks = _bookmarkedPosts[_currentUserId] ?? <String>{};
 
-        for (final postId in postIds) {
-          result[postId] = userBookmarks.contains(postId);
-        }
+      for (final postId in postIds) {
+        result[postId] = userBookmarks.contains(postId);
+      }
 
-        return result;
-      },
-      params: {'postIds': postIds.length, 'userId': userId},
-    );
+      return result;
+    }, params: {'postIds': postIds.length});
+  }
+
+  @override
+  Future<String> updatePost({
+    required String postId,
+    required String title,
+    required String content,
+    required List<String> hashTags,
+    required List<Uri> imageUris,
+  }) async {
+    return ApiCallDecorator.wrap('MockPost.updatePost', () async {
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // 게시글 존재 확인
+      final postIndex = _mockPosts.indexWhere((post) => post.id == postId);
+      if (postIndex < 0) {
+        throw Exception(CommunityErrorMessages.postNotFound);
+      }
+
+      // 권한 확인 (작성자만 수정 가능)
+      final post = _mockPosts[postIndex];
+      if (post.authorId != _currentUserId) {
+        throw Exception(CommunityErrorMessages.noPermissionEdit);
+      }
+
+      // 기존 게시글 복사 후 업데이트
+      final updatedPost = post.copyWith(
+        title: title,
+        content: content,
+        hashTags: hashTags,
+        mediaUrls: imageUris.map((uri) => uri.toString()).toList(),
+        // likeCount, commentCount 등 기존 값은 유지
+      );
+
+      // 목록에서 업데이트
+      _mockPosts[postIndex] = updatedPost;
+
+      return postId;
+    }, params: {'postId': postId});
+  }
+
+  @override
+  Future<bool> deletePost(String postId) async {
+    return ApiCallDecorator.wrap('MockPost.deletePost', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // 게시글 존재 확인
+      final postIndex = _mockPosts.indexWhere((post) => post.id == postId);
+      if (postIndex < 0) {
+        throw Exception(CommunityErrorMessages.postNotFound);
+      }
+
+      // 권한 확인 (작성자만 삭제 가능)
+      final post = _mockPosts[postIndex];
+      if (post.authorId != _currentUserId) {
+        throw Exception(CommunityErrorMessages.noPermissionDelete);
+      }
+
+      // 게시글 삭제
+      _mockPosts.removeAt(postIndex);
+
+      // 관련 댓글 삭제
+      _mockComments.remove(postId);
+
+      // 관련 좋아요 삭제
+      _likedPosts.remove(postId);
+
+      // 북마크에서도 제거
+      _bookmarkedPosts.forEach((user, posts) {
+        posts.remove(postId);
+      });
+
+      return true;
+    }, params: {'postId': postId});
   }
 }

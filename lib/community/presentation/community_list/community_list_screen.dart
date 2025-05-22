@@ -208,22 +208,23 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
     }
   }
 
-  // 필터 적용 로직
+  // 필터 적용 로직 - 수정된 부분
   void _applyFilter(CommunityFilter filter) {
-    // 필터에 따른 액션 처리
     switch (filter) {
+      case CommunityFilter.all:
+        // 전체 탭의 경우 클라이언트 사이드에서 정렬만 변경
+        // 현재 데이터를 그대로 사용하되, 작성일순으로 정렬
+        // 별도의 액션 없이 로컬 상태만 변경
+        break;
+
       case CommunityFilter.newest:
         widget.onAction(
           const CommunityListAction.changeTab(CommunityTabType.newest),
         );
+
       case CommunityFilter.popular:
         widget.onAction(
           const CommunityListAction.changeTab(CommunityTabType.popular),
-        );
-      case CommunityFilter.all:
-        // all은 현재 API에서 지원하지 않으므로 newest로 처리
-        widget.onAction(
-          const CommunityListAction.changeTab(CommunityTabType.newest),
         );
     }
   }
@@ -266,41 +267,13 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
                 ),
               ],
             ),
-            // 글쓰기 버튼 (선택적)
-            // TextButton.icon(
-            //   onPressed:
-            //       () => widget.onAction(const CommunityListAction.tapWrite()),
-            //   icon: Icon(
-            //     Icons.edit,
-            //     size: 16,
-            //     color: AppColorStyles.primary100,
-            //   ),
-            //   label: Text(
-            //     '글쓰기',
-            //     style: TextStyle(
-            //       color: AppColorStyles.primary100,
-            //       fontSize: 14,
-            //       fontWeight: FontWeight.w500,
-            //     ),
-            //   ),
-            //   style: TextButton.styleFrom(
-            //     padding: const EdgeInsets.symmetric(
-            //       horizontal: 12,
-            //       vertical: 8,
-            //     ),
-            //     backgroundColor: AppColorStyles.primary100.withOpacity(0.1),
-            //     shape: RoundedRectangleBorder(
-            //       borderRadius: BorderRadius.circular(16),
-            //     ),
-            //   ),
-            // ),
           ],
         ),
       ),
     );
   }
 
-  // _buildBody 메서드 수정
+  // _buildBody 메서드 - 전체 탭 처리 로직 추가
   Widget _buildBody() {
     switch (widget.state.postList) {
       case AsyncLoading():
@@ -311,7 +284,6 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
               children: [
                 // 스켈레톤 UI 추가
                 const ListSkeleton(itemCount: 5),
-
                 // 하단 로딩 표시
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 24),
@@ -345,7 +317,6 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
         );
 
       case AsyncError(:final error):
-        // 기존 에러 화면 유지
         return SliverFillRemaining(
           child: Center(
             child: Column(
@@ -393,6 +364,13 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
           return SliverFillRemaining(child: _buildEmptyView());
         }
 
+        // 전체 탭인 경우 클라이언트에서 정렬 처리
+        List<dynamic> displayList = value;
+        if (_selectedFilter == CommunityFilter.all) {
+          displayList = [...value]
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList(
@@ -400,14 +378,14 @@ class _CommunityListScreenState extends State<CommunityListScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: PostListItem(
-                  post: value[index],
+                  post: displayList[index],
                   onTap:
                       () => widget.onAction(
-                        CommunityListAction.tapPost(value[index].id),
+                        CommunityListAction.tapPost(displayList[index].id),
                       ),
                 ),
               );
-            }, childCount: value.length),
+            }, childCount: displayList.length),
           ),
         );
 
@@ -491,7 +469,6 @@ class _StickyFilterBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    // 스크롤에 따라 배경에 그림자 효과를 추가하여 구분감 향상
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

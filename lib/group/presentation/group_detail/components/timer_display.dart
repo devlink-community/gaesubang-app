@@ -1,3 +1,4 @@
+// lib/group/presentation/group_detail/components/timer_display.dart
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 
@@ -18,7 +19,7 @@ class TimerDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRunning = timerStatus == TimerStatus.running;
-    final isCompleted = timerStatus == TimerStatus.completed;
+    final isStopped = timerStatus == TimerStatus.stop;
 
     final hours = elapsedSeconds ~/ 3600;
     final minutes = (elapsedSeconds % 3600) ~/ 60;
@@ -26,34 +27,27 @@ class TimerDisplay extends StatelessWidget {
 
     // 컴팩트 모드(상단 플로팅) 또는 일반 모드에 따라 스타일 변경
     if (isCompact) {
-      return _buildCompactTimer(
-        hours,
-        minutes,
-        seconds,
-        isRunning,
-        isCompleted,
-      );
+      return _buildCompactTimer(hours, minutes, seconds, isRunning, isStopped);
     } else {
-      return _buildFullTimer(hours, minutes, seconds, isRunning, isCompleted);
+      return _buildFullTimer(hours, minutes, seconds, isRunning, isStopped);
     }
   }
 
-  // 작은 타이머 디스플레이 (상단 플로팅용)
   // 작은 타이머 디스플레이 (상단 플로팅용)
   Widget _buildCompactTimer(
     int hours,
     int minutes,
     int seconds,
     bool isRunning,
-    bool isCompleted,
+    bool isStopped,
   ) {
     final timeText =
         '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-    // 완료 상태이면 다른 색상 사용
+    // 상태에 따른 배경색 결정
     final backgroundColor =
-        isCompleted
-            ? const Color(0xFF9E9E9E) // 회색 (완료 상태)
+        isStopped
+            ? const Color(0xFF9E9E9E) // 회색 (정지 상태)
             : isRunning
             ? const Color(0xFF8080FF) // 파란색 (실행 중)
             : const Color(0xFFCDCDFF); // 연한 파란색 (일시 정지)
@@ -81,25 +75,24 @@ class TimerDisplay extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          _buildControlButton(isRunning, isCompleted, size: 36, iconSize: 18),
+          _buildControlButton(isRunning, isStopped, size: 36, iconSize: 18),
         ],
       ),
     );
   }
 
   // 큰 타이머 디스플레이 (메인 화면용)
-  // 큰 타이머 디스플레이 (메인 화면용)
   Widget _buildFullTimer(
     int hours,
     int minutes,
     int seconds,
     bool isRunning,
-    bool isCompleted,
+    bool isStopped,
   ) {
     // 배경색 결정
     final backgroundColor =
-        isCompleted
-            ? const Color(0xFF9E9E9E) // 회색 (완료 상태)
+        isStopped
+            ? const Color(0xFFCDCDFF) // 회색 (정지 상태)
             : isRunning
             ? const Color(0xFF8080FF) // 파란색 (실행 중)
             : const Color(0xFFCDCDFF); // 연한 파란색 (일시 정지)
@@ -142,17 +135,16 @@ class TimerDisplay extends StatelessWidget {
           const SizedBox(height: 24),
 
           // 재생/일시정지 버튼
-          _buildControlButton(isRunning, isCompleted, size: 64, iconSize: 32),
+          _buildControlButton(isRunning, isStopped, size: 64, iconSize: 32),
         ],
       ),
     );
   }
 
   // 컨트롤 버튼 (재생/일시정지)
-  // 컨트롤 버튼 (재생/일시정지)
   Widget _buildControlButton(
     bool isRunning,
-    bool isCompleted, {
+    bool isStopped, {
     required double size,
     required double iconSize,
   }) {
@@ -174,16 +166,16 @@ class TimerDisplay extends StatelessWidget {
           ],
         ),
         child: Icon(
-          isCompleted
+          isStopped
               ? Icons
-                  .replay // 완료 상태일 때 재시작 아이콘
+                  .play_arrow // 정지 상태일 때 재생 아이콘
               : isRunning
               ? Icons
                   .pause // 실행 중일 때 일시 정지 아이콘
               : Icons.play_arrow, // 일시 정지 상태일 때 재생 아이콘
           color:
-              isCompleted
-                  ? const Color(0xFF9E9E9E) // 회색 (완료 상태)
+              isStopped
+                  ? const Color(0xFF9E9E9E) // 회색 (정지 상태)
                   : const Color(0xFF8080FF), // 파란색
           size: iconSize,
         ),
