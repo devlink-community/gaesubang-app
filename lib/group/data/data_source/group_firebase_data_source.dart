@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import 'group_data_source.dart';
@@ -11,12 +13,28 @@ import 'group_data_source.dart';
 class GroupFirebaseDataSource implements GroupDataSource {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final FirebaseAuth _auth;
+
+  // 캐싱을 위한 변수들
+  Set<String>? _cachedJoinedGroups;
+  String? _lastUserId;
 
   GroupFirebaseDataSource({
-    FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+    required FirebaseFirestore firestore,
+    required FirebaseStorage storage,
+    required FirebaseAuth auth,
+  }) : _firestore = firestore,
+       _storage = storage,
+       _auth = auth {
+    // FirebaseAuth 상태 변화 감지하여 캐시 관리
+    _auth.authStateChanges().listen((user) {
+      if (user?.uid != _lastUserId) {
+        // 사용자가 바뀌면 캐시 초기화
+        _cachedJoinedGroups = null;
+        _lastUserId = user?.uid;
+      }
+    });
+  }
 
   // Collection 참조들
   CollectionReference<Map<String, dynamic>> get _groupsCollection =>
@@ -25,66 +43,153 @@ class GroupFirebaseDataSource implements GroupDataSource {
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
-  @override
-  Future<List<Map<String, dynamic>>> fetchGroupList({
-    Set<String>? joinedGroupIds,
-  }) async {
+  // 현재 사용자 확인 헬퍼 메서드
+  String _getCurrentUserId() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+    return user.uid;
+  }
+
+  // 현재 사용자 정보 가져오기 헬퍼 메서드
+  Future<Map<String, String>> _getCurrentUserInfo() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception(AuthErrorMessages.noLoggedInUser);
+    }
+
+    final userId = user.uid;
+    final userName = user.displayName ?? '';
+    final profileUrl = user.photoURL ?? '';
+
+    return {
+      'userId': userId,
+      'userName': userName,
+      'profileUrl': profileUrl,
+    };
+  }
+
+  // 현재 사용자의 가입 그룹 ID 목록 가져오기 (캐싱 적용)
+  Future<Set<String>> _getCurrentUserJoinedGroupIds() async {
+    try {
+      final userId = _getCurrentUserId();
+      print('🔍 Checking joined groups for user: $userId');
+
+      // 캐시 확인
+      if (_cachedJoinedGroups != null && _lastUserId == userId) {
+        print('🔍 Using cached joined groups: $_cachedJoinedGroups');
+        return _cachedJoinedGroups!;
+      }
+
+      // Firestore에서 사용자 문서 조회
+      final userDoc = await _usersCollection.doc(userId).get();
+      print('🔍 User document exists: ${userDoc.exists}');
+
+      if (!userDoc.exists) {
+        print('🔍 User document not found, returning empty set');
+        _cachedJoinedGroups = {};
+        _lastUserId = userId;
+        return {};
+      }
+
+      final userData = userDoc.data()!;
+      print('🔍 User document data: $userData');
+
+      if (!userData.containsKey('joingroup')) {
+        print('🔍 No joingroup field found, returning empty set');
+        _cachedJoinedGroups = {};
+        _lastUserId = userId;
+        return {};
+      }
+
+      final joinGroups = userData['joingroup'] as List<dynamic>;
+      print('🔍 Raw joingroup data: $joinGroups');
+
+      final joinedGroupIds =
+          joinGroups
+              .map((group) {
+                print('🔍 Processing group: $group');
+                return group['group_id'] as String?;
+              })
+              .where((id) => id != null)
+              .cast<String>()
+              .toSet();
+
+      print('🔍 Extracted joined group IDs: $joinedGroupIds');
+
+      // 캐시 업데이트
+      _cachedJoinedGroups = joinedGroupIds;
+      _lastUserId = userId;
+
+      return joinedGroupIds;
+    } catch (e, st) {
+      print('🔍 Error getting joined groups: $e');
+      print('🔍 StackTrace: $st');
+      return {};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGroupList() async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupList', () async {
       try {
-        // 그룹 목록 조회 (생성일 기준 최신순)
+        // 1. 그룹 목록 조회
         final querySnapshot =
             await _groupsCollection
                 .orderBy('createdAt', descending: true)
                 .get();
 
         if (querySnapshot.docs.isEmpty) {
+          print('🔍 No groups found in Firestore');
           return [];
         }
 
-        // 그룹 데이터 변환 및 멤버십 상태 설정
+        print('🔍 Found ${querySnapshot.docs.length} groups in Firestore');
+
+        // 2. 현재 사용자의 가입 그룹 ID 목록 조회
+        final joinedGroupIds = await _getCurrentUserJoinedGroupIds();
+
+        // 3. 그룹 데이터 변환 및 멤버십 상태 설정
         final groups =
             querySnapshot.docs.map((doc) {
               final data = doc.data();
               data['id'] = doc.id;
 
-              // 가입 그룹 ID가 전달된 경우, 해당 정보로 멤버십 상태 설정
-              if (joinedGroupIds != null) {
-                data['isJoinedByCurrentUser'] = joinedGroupIds.contains(doc.id);
-              }
+              final groupId = doc.id;
+              final isJoined = joinedGroupIds.contains(groupId);
+
+              // 가입 여부 설정
+              data['isJoinedByCurrentUser'] = isJoined;
 
               return data;
             }).toList();
 
         return groups;
       } catch (e) {
-        print('그룹 목록 로드 오류: $e');
+        print('🔍 Error in fetchGroupList: $e');
         throw Exception(GroupErrorMessages.loadFailed);
       }
     });
   }
 
   @override
-  Future<Map<String, dynamic>> fetchGroupDetail(
-    String groupId, {
-    bool? isJoined,
-  }) async {
+  Future<Map<String, dynamic>> fetchGroupDetail(String groupId) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupDetail', () async {
       try {
-        // 그룹 문서 조회
+        // 1. 그룹 문서 조회
         final docSnapshot = await _groupsCollection.doc(groupId).get();
 
         if (!docSnapshot.exists) {
           throw Exception(GroupErrorMessages.notFound);
         }
 
-        // 기본 그룹 데이터
+        // 2. 기본 그룹 데이터
         final data = docSnapshot.data()!;
         data['id'] = docSnapshot.id;
 
-        // 가입 여부가 전달된 경우, 해당 정보 설정
-        if (isJoined != null) {
-          data['isJoinedByCurrentUser'] = isJoined;
-        }
+        // 3. 현재 사용자의 가입 여부 확인
+        final joinedGroupIds = await _getCurrentUserJoinedGroupIds();
+        data['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
 
         return data;
       } catch (e) {
@@ -98,14 +203,15 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  Future<void> fetchJoinGroup(
-    String groupId, {
-    required String userId,
-    required String userName,
-    required String profileUrl,
-  }) async {
+  Future<void> fetchJoinGroup(String groupId) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchJoinGroup', () async {
       try {
+        // 현재 사용자 정보 가져오기
+        final userInfo = await _getCurrentUserInfo();
+        final userId = userInfo['userId']!;
+        final userName = userInfo['userName']!;
+        final profileUrl = userInfo['profileUrl']!;
+
         // 트랜잭션을 사용하여 멤버 추가 및 카운터 업데이트
         return _firestore.runTransaction((transaction) async {
           // 1. 그룹 문서 조회
@@ -117,17 +223,17 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 3. 현재 멤버 수 확인
+          // 2. 현재 멤버 수 확인
           final data = groupDoc.data()!;
           final currentMemberCount = data['memberCount'] as int? ?? 0;
           final maxMemberCount = data['maxMemberCount'] as int? ?? 10;
 
-          // 4. 멤버 수 제한 확인
+          // 3. 멤버 수 제한 확인
           if (currentMemberCount >= maxMemberCount) {
             throw Exception(GroupErrorMessages.memberLimitReached);
           }
 
-          // 5. 멤버 추가
+          // 4. 멤버 추가
           transaction.set(
             _groupsCollection.doc(groupId).collection('members').doc(userId),
             {
@@ -139,12 +245,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
             },
           );
 
-          // 6. 멤버 수 증가
+          // 5. 멤버 수 증가
           transaction.update(_groupsCollection.doc(groupId), {
             'memberCount': currentMemberCount + 1,
           });
 
-          // 7. 사용자 문서에 가입 그룹 정보 추가
+          // 6. 사용자 문서에 가입 그룹 정보 추가
           transaction.update(_usersCollection.doc(userId), {
             'joingroup': FieldValue.arrayUnion([
               {
@@ -154,6 +260,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
               },
             ]),
           });
+
+          // 7. 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
+          _cachedJoinedGroups = null;
         });
       } catch (e) {
         if (e.toString().contains(GroupErrorMessages.notFound) ||
@@ -163,18 +272,21 @@ class GroupFirebaseDataSource implements GroupDataSource {
         print('그룹 가입 오류: $e');
         throw Exception(GroupErrorMessages.joinFailed);
       }
-    }, params: {'groupId': groupId, 'userId': userId});
+    }, params: {'groupId': groupId});
   }
 
   @override
   Future<Map<String, dynamic>> fetchCreateGroup(
-    Map<String, dynamic> groupData, {
-    required String ownerId,
-    required String ownerNickname,
-    required String ownerProfileUrl,
-  }) async {
+    Map<String, dynamic> groupData,
+  ) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchCreateGroup', () async {
       try {
+        // 현재 사용자 정보 가져오기
+        final userInfo = await _getCurrentUserInfo();
+        final ownerId = userInfo['userId']!;
+        final ownerNickname = userInfo['userName']!;
+        final ownerProfileUrl = userInfo['profileUrl']!;
+
         // 새 그룹 ID 생성
         final groupRef = _groupsCollection.doc();
         final groupId = groupRef.id;
@@ -187,9 +299,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
           ...groupData,
           'createdAt': now,
           'updatedAt': now,
-          'ownerId': ownerId, // 이름 변경: createdBy → ownerId
-          'ownerNickname': ownerNickname, // 추가: 방장 닉네임
-          'ownerProfileImage': ownerProfileUrl, // 추가: 방장 프로필 이미지
+          'ownerId': ownerId,
+          'ownerNickname': ownerNickname,
+          'ownerProfileImage': ownerProfileUrl,
           'memberCount': 1, // 처음에는 생성자만 멤버
         };
 
@@ -217,6 +329,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
               },
             ]),
           });
+
+          // 4. 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
+          _cachedJoinedGroups = null;
         });
 
         // 생성된 그룹 정보 반환을 위한 준비
@@ -235,7 +350,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
         print('그룹 생성 오류: $e');
         throw Exception(GroupErrorMessages.createFailed);
       }
-    }, params: {'ownerId': ownerId});
+    });
   }
 
   @override
@@ -280,7 +395,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
             // 사용자 문서 참조
             final userRef = _usersCollection.doc(userId);
 
-            // 현재 그룹 정보 조회 (사용자마다 한 번의 조회만 수행)
+            // 현재 그룹 정보 조회
             final userDoc = await userRef.get();
             if (!userDoc.exists || !userDoc.data()!.containsKey('joingroup')) {
               continue;
@@ -304,7 +419,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                           : groupInfo['group_image'],
                 };
 
-                // 기존 그룹 정보 제거 후 새 정보 추가 (배치에 작업 추가)
+                // 기존 그룹 정보 제거 후 새 정보 추가
                 batch.update(userRef, {
                   'joingroup': FieldValue.arrayRemove([groupInfo]),
                 });
@@ -332,9 +447,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  Future<void> fetchLeaveGroup(String groupId, String userId) async {
+  Future<void> fetchLeaveGroup(String groupId) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchLeaveGroup', () async {
       try {
+        final userId = _getCurrentUserId();
+
         // 트랜잭션을 사용하여 멤버 제거 및 카운터 업데이트
         return _firestore.runTransaction((transaction) async {
           // 1. 그룹 문서 조회
@@ -376,7 +493,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
           });
 
           // 7. 사용자 문서에서 가입 그룹 정보 제거
-          // 그룹 이름 가져오기
           final groupName = data['name'] as String?;
 
           if (groupName != null) {
@@ -393,6 +509,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
                   transaction.update(_usersCollection.doc(userId), {
                     'joingroup': FieldValue.arrayRemove([joingroup]),
                   });
+
+                  // 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
+                  _cachedJoinedGroups = null;
                   break;
                 }
               }
@@ -408,7 +527,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
         print('그룹 탈퇴 오류: $e');
         throw Exception(GroupErrorMessages.leaveFailed);
       }
-    }, params: {'groupId': groupId, 'userId': userId});
+    }, params: {'groupId': groupId});
   }
 
   @override
@@ -530,12 +649,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   @override
-  @override
   Future<List<Map<String, dynamic>>> searchGroups(
     String query, {
     bool searchKeywords = true,
     bool searchTags = true,
-    Set<String>? joinedGroupIds, // currentUserId 대신 joinedGroupIds 사용
     int? limit,
     String? sortBy,
   }) async {
@@ -547,12 +664,15 @@ class GroupFirebaseDataSource implements GroupDataSource {
             return [];
           }
 
+          // 현재 사용자의 가입 그룹 ID 목록 조회
+          final joinedGroupIds = await _getCurrentUserJoinedGroupIds();
+
           final lowercaseQuery = query.toLowerCase();
           final Set<DocumentSnapshot<Map<String, dynamic>>> resultDocs = {};
 
           // 키워드 검색 (이름, 설명)
           if (searchKeywords) {
-            // 이름 기반 검색 (시작하는 문자열)
+            // 이름 기반 검색
             final nameSnapshot =
                 await _groupsCollection
                     .orderBy('name')
@@ -562,7 +682,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
             resultDocs.addAll(nameSnapshot.docs);
 
-            // 설명 기반 검색 (시작하는 문자열)
+            // 설명 기반 검색
             final descSnapshot =
                 await _groupsCollection
                     .orderBy('description')
@@ -621,14 +741,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 final data = doc.data()!;
                 data['id'] = doc.id;
 
-                // 가입 그룹 정보를 이용하여 isJoinedByCurrentUser 설정
-                if (joinedGroupIds != null) {
-                  data['isJoinedByCurrentUser'] = joinedGroupIds.contains(
-                    doc.id,
-                  );
-                } else {
-                  data['isJoinedByCurrentUser'] = false; // 기본값 설정
-                }
+                // 가입 여부 설정
+                data['isJoinedByCurrentUser'] = joinedGroupIds.contains(doc.id);
 
                 return data;
               }).toList();
@@ -680,7 +794,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
           throw Exception('그룹 검색 중 오류가 발생했습니다');
         }
       },
-      params: {'query': query, 'joinedGroupIds': joinedGroupIds?.length ?? 0},
+      params: {'query': query},
     );
   }
 
@@ -731,19 +845,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
-  // startMemberTimer, pauseMemberTimer, stopMemberTimer 메서드를 단순화
-
   @override
-  Future<Map<String, dynamic>> startMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
     return ApiCallDecorator.wrap(
       'GroupFirebase.startMemberTimer',
       () async {
         try {
-          // 그룹 존재 확인만 하고 바로 활동 기록
+          // 현재 사용자 정보 가져오기
+          final userInfo = await _getCurrentUserInfo();
+          final memberId = userInfo['userId']!;
+          final memberName = userInfo['userName']!;
+
+          // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
@@ -779,21 +892,22 @@ class GroupFirebaseDataSource implements GroupDataSource {
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
-      params: {'groupId': groupId, 'memberId': memberId},
+      params: {'groupId': groupId},
     );
   }
 
   @override
-  Future<Map<String, dynamic>> pauseMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> pauseMemberTimer(String groupId) async {
     return ApiCallDecorator.wrap(
       'GroupFirebase.pauseMemberTimer',
       () async {
         try {
-          // 그룹 존재 확인만 하고 바로 활동 기록
+          // 현재 사용자 정보 가져오기
+          final userInfo = await _getCurrentUserInfo();
+          final memberId = userInfo['userId']!;
+          final memberName = userInfo['userName']!;
+
+          // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
@@ -829,21 +943,22 @@ class GroupFirebaseDataSource implements GroupDataSource {
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
-      params: {'groupId': groupId, 'memberId': memberId},
+      params: {'groupId': groupId},
     );
   }
 
   @override
-  Future<Map<String, dynamic>> stopMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
     return ApiCallDecorator.wrap(
       'GroupFirebase.stopMemberTimer',
       () async {
         try {
-          // 그룹 존재 확인만 하고 바로 활동 기록
+          // 현재 사용자 정보 가져오기
+          final userInfo = await _getCurrentUserInfo();
+          final memberId = userInfo['userId']!;
+          final memberName = userInfo['userName']!;
+
+          // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
@@ -879,7 +994,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
-      params: {'groupId': groupId, 'memberId': memberId},
+      params: {'groupId': groupId},
     );
   }
 
@@ -888,7 +1003,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     String groupId,
     int year,
     int month, {
-    int preloadMonths = 0, // 이전 몇 개월의 데이터를 함께 가져올지
+    int preloadMonths = 0,
   }) async {
     return ApiCallDecorator.wrap(
       'GroupFirebase.fetchMonthlyAttendances',

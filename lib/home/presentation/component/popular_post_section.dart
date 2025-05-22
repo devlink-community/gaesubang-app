@@ -22,7 +22,7 @@ class PopularPostSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle(),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _buildPostList(),
       ],
     );
@@ -30,10 +30,50 @@ class PopularPostSection extends StatelessWidget {
 
   Widget _buildSectionTitle() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(Icons.check_circle, color: AppColorStyles.primary80, size: 20),
-        const SizedBox(width: 8),
-        Text('인기 게시글', style: AppTextStyles.subtitle1Bold),
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '인기 게시글',
+              style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColorStyles.primary100.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.trending_up,
+                size: 14,
+                color: AppColorStyles.primary100,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'HOT',
+                style: AppTextStyles.captionRegular.copyWith(
+                  color: AppColorStyles.primary100,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -42,142 +82,272 @@ class PopularPostSection extends StatelessWidget {
     return posts.when(
       data: (data) {
         if (data.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: Text('인기 게시글이 없습니다')),
-          );
+          return _buildEmptyState();
         }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: data.length,
-          itemBuilder: (context, index) {
-            final post = data[index];
-            return _buildPostItem(post);
-          },
+        return Column(
+          children:
+              data.asMap().entries.map((entry) {
+                final index = entry.key;
+                final post = entry.value;
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index < data.length - 1 ? 12 : 0,
+                  ),
+                  child: _buildPostItem(post, index + 1),
+                );
+              }).toList(),
         );
       },
-      loading:
-          () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
+      loading: () => _buildLoadingState(),
+      error: (error, stack) => _buildErrorState(error),
+    );
+  }
+
+  Widget _buildPostItem(Post post, int rank) {
+    return InkWell(
+      onTap: () => onTapPost(post.id),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 상단: 프로필 + 작성자 정보 vs 순위 뱃지
+            Row(
+              children: [
+                // 왼쪽: 프로필 + 작성자
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(post.userProfileImageUrl),
+                      backgroundColor: AppColorStyles.gray40,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      post.authorNickname,
+                      style: AppTextStyles.captionRegular.copyWith(
+                        color: AppColorStyles.gray100,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const Spacer(),
+
+                // 오른쪽: 순위 뱃지
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: _getRankColor(rank),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: AppTextStyles.captionRegular.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // 제목
+            Text(
+              post.title,
+              style: AppTextStyles.subtitle1Bold.copyWith(
+                color: AppColorStyles.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 6),
+
+            // 내용 미리보기
+            if (post.content.isNotEmpty)
+              Text(
+                post.content,
+                style: AppTextStyles.body2Regular.copyWith(
+                  color: AppColorStyles.gray100,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+            const SizedBox(height: 8),
+
+            // 해시태그
+            if (post.hashTags.isNotEmpty)
+              Text(
+                post.hashTags.map((tag) => '#$tag').join(' '),
+                style: AppTextStyles.captionRegular.copyWith(
+                  color: AppColorStyles.primary80,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+            const SizedBox(height: 8),
+
+            // 하단: 댓글 및 좋아요 수 (오른쪽 정렬)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(
+                  Icons.comment_outlined,
+                  size: 16,
+                  color: AppColorStyles.gray80,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${post.commentCount}',
+                  style: AppTextStyles.captionRegular.copyWith(
+                    color: AppColorStyles.gray100,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  post.isLikedByCurrentUser
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  size: 16,
+                  color:
+                      post.isLikedByCurrentUser
+                          ? Colors.red
+                          : AppColorStyles.gray80,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${post.likeCount}',
+                  style: AppTextStyles.captionRegular.copyWith(
+                    color: AppColorStyles.gray100,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getRankColor(int rank) {
+    switch (rank) {
+      case 1:
+        return const Color(0xFFFFD700); // 금색
+      case 2:
+        return const Color(0xFFC0C0C0); // 은색
+      case 3:
+        return const Color(0xFFCD7F32); // 동색
+      default:
+        return AppColorStyles.gray80;
+    }
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.trending_up_outlined,
+            size: 48,
+            color: AppColorStyles.gray60,
           ),
-      error:
-          (error, stack) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+          const SizedBox(height: 12),
+          Text(
+            '아직 인기 게시글이 없습니다',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.gray80,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '첫 게시글을 작성해서 인기글이 되어보세요!',
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.gray60,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Column(
+      children: List.generate(3, (index) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: index < 2 ? 12 : 0),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Center(
-              child: Text(
-                '인기 게시글을 불러오는데 실패했습니다: $error',
-                style: AppTextStyles.body1Regular.copyWith(
-                  color: AppColorStyles.error,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColorStyles.primary100,
                 ),
               ),
             ),
           ),
+        );
+      }),
     );
   }
 
-  Widget _buildPostItem(Post post) {
-    // 날짜 포맷 설정
-    final dateFormat = DateFormat('yy-MM-dd');
-    final formattedDate = dateFormat.format(post.createdAt);
-
-    // 작성자
-    final authorName = post.authorNickname;
-
-    return InkWell(
-      onTap: () {
-        if (post.id.isNotEmpty) {
-          // ID가 비어있지 않은지 확인
-          print('게시글 클릭: ${post.id}');
-          onTapPost(post.id);
-        } else {
-          print('게시글 ID가 비어 있습니다.');
-        }
-      },
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 상단 정보 (날짜 + 작성자)
-              Row(
-                children: [
-                  Text(
-                    '$formattedDate · $authorName',
-                    style: AppTextStyles.captionRegular.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // 제목
-              Text(
-                post.title,
-                style: AppTextStyles.subtitle1Bold,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-
-              // 태그
-              if (post.hashTags.isNotEmpty)
-                Wrap(
-                  spacing: 4,
-                  children:
-                      post.hashTags.map((tag) {
-                        return Text(
-                          '#$tag',
-                          style: AppTextStyles.captionRegular.copyWith(
-                            color: AppColorStyles.primary80,
-                          ),
-                        );
-                      }).toList(),
-                ),
-              const SizedBox(height: 8),
-
-              // 하단 정보 (댓글 수 + 좋아요 수)
-              Row(
-                children: [
-                  Icon(
-                    Icons.comment_outlined,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${post.commentCount}',
-                    style: AppTextStyles.captionRegular,
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    post
-                            .isLikedByCurrentUser // 사용자의 좋아요 상태에 따라 아이콘 변경
-                        ? Icons.favorite
-                        : Icons.favorite_outline,
-                    size: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${post.likeCount}',
-                    style: AppTextStyles.captionRegular,
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildErrorState(Object error) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColorStyles.error.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 48,
+            color: AppColorStyles.error,
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            '인기 게시글을 불러오는데 실패했습니다',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.error,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '잠시 후 다시 시도해주세요',
+            style: AppTextStyles.captionRegular.copyWith(
+              color: AppColorStyles.gray80,
+            ),
+          ),
+        ],
       ),
     );
   }

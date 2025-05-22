@@ -24,6 +24,25 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   bool _initialized = false;
 
+  // 현재 사용자 ID (Mock 환경에서는 고정값 사용)
+  static const String _currentUserId = 'user1';
+
+  // 현재 사용자 정보 가져오기 헬퍼 메서드
+  Map<String, String> _getCurrentUserInfo() {
+    return {
+      'userId': _currentUserId,
+      'userName': '사용자1',
+      'profileUrl':
+          'https://i.pinimg.com/236x/31/fd/53/31fd53b6dc87e714783b5c52531ba6fb.jpg',
+    };
+  }
+
+  // 현재 사용자의 가입 그룹 ID 목록 가져오기
+  Set<String> _getCurrentUserJoinedGroupIds() {
+    final userGroupIds = _userGroups[_currentUserId] ?? [];
+    return userGroupIds.toSet();
+  }
+
   // DiceBear API 기반 이미지 URL 생성 함수
   String _generateDiceBearUrl() {
     // 개발/코딩/기술 테마에 적합한 스타일 선택
@@ -188,31 +207,27 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> fetchGroupList({
-    Set<String>? joinedGroupIds,
-  }) async {
+  Future<List<Map<String, dynamic>>> fetchGroupList() async {
     await Future.delayed(const Duration(milliseconds: 500));
     await _initializeIfNeeded();
+
+    // 현재 사용자의 가입 그룹 ID 목록 가져오기
+    final joinedGroupIds = _getCurrentUserJoinedGroupIds();
 
     // 그룹 리스트의 깊은 복사본 생성
     final groupsCopy =
         _groups.map((group) => Map<String, dynamic>.from(group)).toList();
 
-    // 가입 그룹 ID가 전달된 경우, 해당 정보로 멤버십 상태 설정
-    if (joinedGroupIds != null) {
-      for (final group in groupsCopy) {
-        group['isJoinedByCurrentUser'] = joinedGroupIds.contains(group['id']);
-      }
+    // 가입 그룹 정보로 멤버십 상태 설정
+    for (final group in groupsCopy) {
+      group['isJoinedByCurrentUser'] = joinedGroupIds.contains(group['id']);
     }
 
     return groupsCopy;
   }
 
   @override
-  Future<Map<String, dynamic>> fetchGroupDetail(
-    String groupId, {
-    bool? isJoined,
-  }) async {
+  Future<Map<String, dynamic>> fetchGroupDetail(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 700));
     await _initializeIfNeeded();
 
@@ -225,23 +240,23 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 그룹 데이터 복사
     final groupData = Map<String, dynamic>.from(_groups[groupIndex]);
 
-    // 가입 여부가 지정된 경우, 해당 정보 추가
-    if (isJoined != null) {
-      groupData['isJoinedByCurrentUser'] = isJoined;
-    }
+    // 현재 사용자의 가입 여부 확인
+    final joinedGroupIds = _getCurrentUserJoinedGroupIds();
+    groupData['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
 
     return groupData;
   }
 
   @override
-  Future<void> fetchJoinGroup(
-    String groupId, {
-    required String userId,
-    required String userName,
-    required String profileUrl,
-  }) async {
+  Future<void> fetchJoinGroup(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 800));
     await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final userId = userInfo['userId']!;
+    final userName = userInfo['userName']!;
+    final profileUrl = userInfo['profileUrl']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -292,13 +307,16 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<Map<String, dynamic>> fetchCreateGroup(
-    Map<String, dynamic> groupData, {
-    required String ownerId,
-    required String ownerNickname,
-    required String ownerProfileUrl,
-  }) async {
+    Map<String, dynamic> groupData,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 1000));
     await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final ownerId = userInfo['userId']!;
+    final ownerNickname = userInfo['userName']!;
+    final ownerProfileUrl = userInfo['profileUrl']!;
 
     // 새 그룹 ID 생성
     final newGroupId = 'group_${DateTime.now().millisecondsSinceEpoch}';
@@ -310,9 +328,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       'id': newGroupId,
       'createdAt': _dateFormat.format(now),
       'updatedAt': _dateFormat.format(now),
-      'ownerId': ownerId, // 변경: createdBy → ownerId
-      'ownerNickname': ownerNickname, // 추가: 방장 닉네임
-      'ownerProfileImage': ownerProfileUrl, // 추가: 방장 프로필 이미지
+      'ownerId': ownerId,
+      'ownerNickname': ownerNickname,
+      'ownerProfileImage': ownerProfileUrl,
       'memberCount': 1, // 처음에는 생성자만 멤버
     };
 
@@ -378,9 +396,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<void> fetchLeaveGroup(String groupId, String userId) async {
+  Future<void> fetchLeaveGroup(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 600));
     await _initializeIfNeeded();
+
+    final userId = _currentUserId;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -457,14 +477,12 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     return newImageUrl;
   }
-  // lib/group/data/data_source/mock_group_data_source_impl.dart
 
   @override
   Future<List<Map<String, dynamic>>> searchGroups(
     String query, {
     bool searchKeywords = true,
     bool searchTags = true,
-    Set<String>? joinedGroupIds, // currentUserId 대신 joinedGroupIds 사용
     int? limit,
     String? sortBy,
   }) async {
@@ -474,6 +492,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     if (query.isEmpty) {
       return [];
     }
+
+    // 현재 사용자의 가입 그룹 ID 목록 가져오기
+    final joinedGroupIds = _getCurrentUserJoinedGroupIds();
 
     final lowercaseQuery = query.toLowerCase();
     final Set<Map<String, dynamic>> resultSet = {};
@@ -504,11 +525,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     final results = resultSet.map((g) => Map<String, dynamic>.from(g)).toList();
 
     // 가입 그룹 정보를 이용하여 isJoinedByCurrentUser 설정
-    if (joinedGroupIds != null) {
-      for (final group in results) {
-        final groupId = group['id'] as String;
-        group['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
-      }
+    for (final group in results) {
+      final groupId = group['id'] as String;
+      group['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
     }
 
     // 정렬 적용
@@ -552,7 +571,6 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     return results;
   }
 
-  // fetchGroupTimerActivities 메서드에서 수정
   @override
   Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
     String groupId,
@@ -629,13 +647,14 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> startMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 400));
     await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final memberId = userInfo['userId']!;
+    final memberName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -663,13 +682,14 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> stopMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 400));
     await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final memberId = userInfo['userId']!;
+    final memberName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -697,13 +717,14 @@ class MockGroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> pauseMemberTimer(
-    String groupId,
-    String memberId,
-    String memberName,
-  ) async {
+  Future<Map<String, dynamic>> pauseMemberTimer(String groupId) async {
     await Future.delayed(const Duration(milliseconds: 300));
     await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final memberId = userInfo['userId']!;
+    final memberName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
