@@ -133,7 +133,7 @@ UpdateProfileUseCase updateProfileUseCase(Ref ref) {
 
 @riverpod
 UpdateProfileImageUseCase updateProfileImageUseCase(
-  UpdateProfileImageUseCaseRef ref,
+  Ref ref,
 ) {
   return UpdateProfileImageUseCase(ref.watch(authRepositoryProvider));
 }
