@@ -132,28 +132,30 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
   }
 
   @override
-  Future<bool> markAsRead(String notificationId) async {
+  Future<bool> markAsRead(String userId, String notificationId) async {
     // 지연 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 300));
 
-    // 모든 사용자의 알림을 순회하며 해당 ID의 알림 찾기
-    for (var notifications in _userNotifications.values) {
-      for (var i = 0; i < notifications.length; i++) {
-        if (notifications[i].id == notificationId) {
-          // 새 DTO 생성해서 교체 (isRead = true)
-          notifications[i] = NotificationDto(
-            id: notifications[i].id,
-            userId: notifications[i].userId,
-            type: notifications[i].type,
-            targetId: notifications[i].targetId,
-            senderName: notifications[i].senderName,
-            createdAt: notifications[i].createdAt,
-            isRead: true,
-            description: notifications[i].description,
-            imageUrl: notifications[i].imageUrl,
-          );
-          return true;
-        }
+    // 특정 사용자의 알림만 조회 (효율적)
+    final notifications = _userNotifications[userId];
+    if (notifications == null) return false;
+
+    // 해당 ID의 알림 찾기
+    for (var i = 0; i < notifications.length; i++) {
+      if (notifications[i].id == notificationId) {
+        // 새 DTO 생성해서 교체 (isRead = true)
+        notifications[i] = NotificationDto(
+          id: notifications[i].id,
+          userId: notifications[i].userId,
+          type: notifications[i].type,
+          targetId: notifications[i].targetId,
+          senderName: notifications[i].senderName,
+          createdAt: notifications[i].createdAt,
+          isRead: true,
+          description: notifications[i].description,
+          imageUrl: notifications[i].imageUrl,
+        );
+        return true;
       }
     }
 
@@ -168,7 +170,7 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
     final notifications = _userNotifications[userId];
     if (notifications == null) return false;
 
-    // 모든 알림을 읽음 처리
+    // 해당 사용자의 모든 알림을 읽음 처리
     for (var i = 0; i < notifications.length; i++) {
       notifications[i] = NotificationDto(
         id: notifications[i].id,
@@ -187,28 +189,22 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
   }
 
   @override
-  Future<bool> deleteNotification(String notificationId) async {
+  Future<bool> deleteNotification(String userId, String notificationId) async {
     // 지연 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 300));
 
-    bool deleted = false;
+    // 특정 사용자의 알림만 조회 (효율적)
+    final notifications = _userNotifications[userId];
+    if (notifications == null) return false;
 
-    // 모든 사용자의 알림에서 해당 ID를 가진 알림 삭제
-    for (var entry in _userNotifications.entries) {
-      final filtered =
-          entry.value
-              .where((notification) => notification.id != notificationId)
-              .toList();
+    // 해당 ID를 가진 알림 삭제
+    final originalLength = notifications.length;
+    _userNotifications[userId] =
+        notifications
+            .where((notification) => notification.id != notificationId)
+            .toList();
 
-      // 목록 길이가 변경되었다면 삭제된 것
-      if (filtered.length != entry.value.length) {
-        deleted = true;
-      }
-
-      // 필터링된 목록으로 갱신
-      _userNotifications[entry.key] = filtered;
-    }
-
-    return deleted;
+    // 목록 길이가 변경되었다면 삭제된 것
+    return _userNotifications[userId]!.length < originalLength;
   }
 }

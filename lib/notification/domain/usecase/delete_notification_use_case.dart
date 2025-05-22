@@ -8,8 +8,8 @@ class DeleteNotificationUseCase {
   DeleteNotificationUseCase({required NotificationRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<bool>> execute(String notificationId) async {
-    final result = await _repository.deleteNotification(notificationId);
+  Future<AsyncValue<bool>> execute(String userId, String notificationId) async {
+    final result = await _repository.deleteNotification(userId, notificationId);
 
     switch (result) {
       case Success(:final data):
