@@ -612,8 +612,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
           print('그룹 탈퇴 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
-        print('그룹 탈퇴 오류: $e');
-        throw Exception(GroupErrorMessages.leaveFailed);
       }
     }, params: {'groupId': groupId});
   }
@@ -959,60 +957,92 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
-  // 🔧 새로운 실시간 스트림 메소드
+  // lib/group/data/data_source/group_firebase_data_source.dart
+
+  // 🔧 새로운 실시간 스트림 메소드 - DTO 반환 방식으로 수정
   @override
   Stream<List<Map<String, dynamic>>> streamGroupMemberTimerStatus(
     String groupId,
   ) {
     return _groupsCollection
         .doc(groupId)
-        .collection('members')
+        .collection('timerActivities')
+        .orderBy('timestamp', descending: true)
         .snapshots()
-        .asyncMap((membersSnapshot) async {
+        .asyncMap((activitiesSnapshot) async {
           try {
-            if (membersSnapshot.docs.isEmpty) {
+            print('🔴 실시간 타이머 활동 감지: ${activitiesSnapshot.docs.length}개 활동');
+
+            // 1. 멤버 정보 조회 (캐싱 활용)
+            final members = await fetchGroupMembers(groupId);
+
+            if (members.isEmpty) {
+              print('⚠️ 멤버가 없어서 빈 리스트 반환');
               return <Map<String, dynamic>>[];
             }
 
-            // 멤버별 실시간 타이머 상태 스트림들 생성
-            final memberIds =
-                membersSnapshot.docs
-                    .map((doc) => doc.data()['userId'] as String?)
-                    .where((userId) => userId != null)
-                    .cast<String>()
-                    .toList();
+            // 2. 멤버별 최신 타이머 활동 추출
+            final memberLastActivities = <String, Map<String, dynamic>>{};
 
-            // 각 멤버별 최신 타이머 활동 조회
-            final futures = memberIds.map((memberId) async {
-              final activitySnapshot =
-                  await _groupsCollection
-                      .doc(groupId)
-                      .collection('timerActivities')
-                      .where('memberId', isEqualTo: memberId)
-                      .orderBy('timestamp', descending: true)
-                      .limit(1)
-                      .get();
+            for (final doc in activitiesSnapshot.docs) {
+              final activity = doc.data();
+              final memberId = activity['memberId'] as String?;
 
-              if (activitySnapshot.docs.isNotEmpty) {
-                final doc = activitySnapshot.docs.first;
-                final data = doc.data();
-                data['id'] = doc.id;
-                return data;
+              if (memberId != null &&
+                  !memberLastActivities.containsKey(memberId)) {
+                memberLastActivities[memberId] = {
+                  ...activity,
+                  'id': doc.id,
+                };
               }
-              return null;
-            });
+            }
 
-            final results = await Future.wait(futures);
-            return results
-                .where((data) => data != null)
-                .cast<Map<String, dynamic>>()
-                .toList();
+            print('🔍 멤버별 최신 활동 추출 완료: ${memberLastActivities.length}명');
+
+            // 3. DTO 형태로 결합하여 반환
+            return _combineMemebersWithTimerStatusAsDto(
+              members,
+              memberLastActivities,
+            );
           } catch (e) {
-            print('실시간 타이머 상태 조회 오류: $e');
+            print('❌ 실시간 타이머 상태 스트림 오류: $e');
             return <Map<String, dynamic>>[];
           }
         });
   }
+
+  // 🔧 멤버 정보와 타이머 상태를 DTO 형태로 결합하는 헬퍼 메서드
+  List<Map<String, dynamic>> _combineMemebersWithTimerStatusAsDto(
+    List<Map<String, dynamic>> members,
+    Map<String, Map<String, dynamic>> memberLastActivities,
+  ) {
+    final result = <Map<String, dynamic>>[];
+
+    for (final member in members) {
+      final memberId = member['userId'] as String?;
+      if (memberId == null) {
+        // userId가 없는 멤버는 그대로 추가 (타이머 상태 없음)
+        result.add({
+          'memberDto': member,
+          'timerActivityDto': null,
+        });
+        continue;
+      }
+
+      // 해당 멤버의 최신 타이머 활동 찾기
+      final lastActivity = memberLastActivities[memberId];
+
+      // 멤버 DTO와 타이머 활동 DTO를 분리하여 저장
+      result.add({
+        'memberDto': member,
+        'timerActivityDto': lastActivity, // null일 수 있음 (타이머 활동이 없는 경우)
+      });
+    }
+
+    return result;
+  }
+
+  // 🗑️ 기존 _combineMemebersWithTimerStatus 메서드는 제거
 
   @override
   Future<Map<String, dynamic>> startMemberTimer(String groupId) async {

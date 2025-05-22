@@ -1,4 +1,6 @@
 // lib/group/presentation/group_detail/group_detail_screen.dart
+import 'dart:async';
+
 import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
@@ -33,11 +35,17 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   bool _isTimerVisible = true;
   bool _isMessageExpanded = false;
 
+  // 🔧 실시간 멤버 타이머 업데이트를 위한 Timer 추가
+  Timer? _memberTimerUpdateTimer;
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
+
+    // 🔧 멤버 타이머 실시간 업데이트 시작
+    _startMemberTimerUpdates();
   }
 
   @override
@@ -72,10 +80,38 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
+  // 🔧 멤버 타이머 실시간 업데이트 시작
+  void _startMemberTimerUpdates() {
+    _memberTimerUpdateTimer?.cancel();
+    _memberTimerUpdateTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        // 활성 멤버가 있는 경우에만 UI 업데이트
+        final members = _extractMembersData();
+        final hasActiveMembers = members.any((member) => member.isActive);
+
+        if (hasActiveMembers && mounted) {
+          setState(() {
+            // UI 업데이트를 위한 setState
+            // 실제 데이터는 GroupMember의 currentElapsedTimeFormat에서 실시간 계산됨
+          });
+        }
+      },
+    );
+  }
+
+  // 🔧 멤버 타이머 업데이트 중지
+  void _stopMemberTimerUpdates() {
+    _memberTimerUpdateTimer?.cancel();
+    _memberTimerUpdateTimer = null;
+  }
+
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    // 🔧 멤버 타이머 업데이트 정리
+    _stopMemberTimerUpdates();
     super.dispose();
   }
 
@@ -336,7 +372,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 🔧 개별 멤버 아이템 - 실시간 시간 표시 개선
+  // 🔧 개별 멤버 아이템 - 실시간 시간 표시
   Widget _buildMemberItem(GroupMember member) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -399,7 +435,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ),
         const SizedBox(height: 8),
 
-        // 🔧 타이머 표시 - 실시간 시간 사용
+        // 🔧 타이머 표시 - 실시간 계산 사용
         member.isActive
             ? Container(
               padding: const EdgeInsets.symmetric(
@@ -411,7 +447,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                member.currentElapsedTimeFormat, // 🔧 실시간 시간 포맷 사용
+                member.currentElapsedTimeFormat, // 🔧 실시간 시간 계산 사용
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
