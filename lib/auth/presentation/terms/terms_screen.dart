@@ -10,11 +10,7 @@ class TermsScreen extends StatelessWidget {
   final TermsState state;
   final void Function(TermsAction action) onAction;
 
-  const TermsScreen({
-    super.key,
-    required this.state,
-    required this.onAction,
-  });
+  const TermsScreen({super.key, required this.state, required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +27,7 @@ class TermsScreen extends StatelessWidget {
               children: [
                 // 상단 영역 - 이미지 및 설명
                 SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.35,
+                  height: MediaQuery.of(context).size.height * 0.40,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -41,7 +37,7 @@ class TermsScreen extends StatelessWidget {
                         width: 258,
                         height: 258,
                       ),
-
+                      const SizedBox(height: 8),
                       // 타이틀 텍스트
                       Text(
                         '개수방 멤버쉽에',
@@ -73,7 +69,10 @@ class TermsScreen extends StatelessWidget {
                     _buildCheckbox(
                       title: '모든 약관에 동의합니다.',
                       isChecked: state.isAllAgreed,
-                      onChanged: (value) => onAction(TermsAction.allAgreedChanged(value ?? false)),
+                      onChanged:
+                          (value) => onAction(
+                            TermsAction.allAgreedChanged(value ?? false),
+                          ),
                       bold: true,
                     ),
                     const SizedBox(height: 24),
@@ -83,12 +82,16 @@ class TermsScreen extends StatelessWidget {
                       title: '서비스 이용 약관',
                       subtitle: '(필수)',
                       isChecked: state.isServiceTermsAgreed,
-                      onChanged: (value) => onAction(
-                        TermsAction.serviceTermsAgreedChanged(value ?? false),
-                      ),
-                      onButtonPressed: () => onAction(
-                        const TermsAction.viewTermsDetail('service'),
-                      ),
+                      onChanged:
+                          (value) => onAction(
+                            TermsAction.serviceTermsAgreedChanged(
+                              value ?? false,
+                            ),
+                          ),
+                      onButtonPressed:
+                          () => onAction(
+                            const TermsAction.viewTermsDetail('service'),
+                          ),
                     ),
                     const SizedBox(height: 16),
 
@@ -97,12 +100,16 @@ class TermsScreen extends StatelessWidget {
                       title: '개인정보 수집 및 이용 동의',
                       subtitle: '(필수)',
                       isChecked: state.isPrivacyPolicyAgreed,
-                      onChanged: (value) => onAction(
-                        TermsAction.privacyPolicyAgreedChanged(value ?? false),
-                      ),
-                      onButtonPressed: () => onAction(
-                        const TermsAction.viewTermsDetail('privacy'),
-                      ),
+                      onChanged:
+                          (value) => onAction(
+                            TermsAction.privacyPolicyAgreedChanged(
+                              value ?? false,
+                            ),
+                          ),
+                      onButtonPressed:
+                          () => onAction(
+                            const TermsAction.viewTermsDetail('privacy'),
+                          ),
                     ),
                     const SizedBox(height: 16),
 
@@ -111,12 +118,14 @@ class TermsScreen extends StatelessWidget {
                       title: '마케팅 정보 수신 동의',
                       subtitle: '(선택)',
                       isChecked: state.isMarketingAgreed,
-                      onChanged: (value) => onAction(
-                        TermsAction.marketingAgreedChanged(value ?? false),
-                      ),
-                      onButtonPressed: () => onAction(
-                        const TermsAction.viewTermsDetail('marketing'),
-                      ),
+                      onChanged:
+                          (value) => onAction(
+                            TermsAction.marketingAgreedChanged(value ?? false),
+                          ),
+                      onButtonPressed:
+                          () => onAction(
+                            const TermsAction.viewTermsDetail('marketing'),
+                          ),
                     ),
                   ],
                 ),
@@ -141,7 +150,8 @@ class TermsScreen extends StatelessWidget {
                     // 추가된 회원가입으로 돌아가기 버튼
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () => onAction(const TermsAction.navigateBack()),
+                      onPressed:
+                          () => onAction(const TermsAction.navigateBack()),
                       child: Text(
                         '회원가입으로 돌아가기',
                         style: AppTextStyles.body2Regular.copyWith(
@@ -186,9 +196,10 @@ class TermsScreen extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: bold
-                ? AppTextStyles.subtitle1Bold.copyWith(fontSize: 16)
-                : AppTextStyles.body1Regular,
+            style:
+                bold
+                    ? AppTextStyles.subtitle1Bold.copyWith(fontSize: 16)
+                    : AppTextStyles.body1Regular,
           ),
         ),
       ],
@@ -221,17 +232,16 @@ class TermsScreen extends StatelessWidget {
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: AppTextStyles.body1Regular.copyWith(
-                color: Colors.black,
-              ),
+              style: AppTextStyles.body1Regular.copyWith(color: Colors.black),
               children: [
                 TextSpan(text: title),
                 TextSpan(
                   text: ' $subtitle',
                   style: TextStyle(
-                    color: subtitle.contains('필수')
-                        ? AppColorStyles.primary100
-                        : AppColorStyles.gray80,
+                    color:
+                        subtitle.contains('필수')
+                            ? AppColorStyles.primary100
+                            : AppColorStyles.gray80,
                   ),
                 ),
               ],
