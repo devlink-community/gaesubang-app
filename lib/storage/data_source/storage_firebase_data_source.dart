@@ -1,4 +1,4 @@
-// lib/storage/data/data_source/storage_firebase_data_source.dart
+// lib/storage/data_source/storage_firebase_data_source.dart
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -41,9 +41,9 @@ class StorageFirebaseDataSource implements StorageDataSource {
 
           // 다운로드 URL 반환
           return await taskSnapshot.ref.getDownloadURL();
-        } catch (e) {
-          debugPrint('이미지 업로드 실패: $e');
-          throw Exception('이미지 업로드에 실패했습니다: $e');
+        } catch (e, st) {
+          debugPrint('이미지 업로드 실패: $e\n$st');
+          rethrow; // 원본 예외를 그대로 전달
         }
       },
       params: {'folderPath': folderPath, 'fileName': fileName},
@@ -78,11 +78,16 @@ class StorageFirebaseDataSource implements StorageDataSource {
           );
         }
 
-        // 모든 업로드 완료 대기
-        final results = await Future.wait(futures);
-        uploadedUrls.addAll(results);
+        try {
+          // 모든 업로드 완료 대기
+          final results = await Future.wait(futures);
+          uploadedUrls.addAll(results);
 
-        return uploadedUrls;
+          return uploadedUrls;
+        } catch (e, st) {
+          debugPrint('다중 이미지 업로드 실패: $e\n$st');
+          rethrow; // 원본 예외를 그대로 전달
+        }
       },
       params: {'folderPath': folderPath, 'count': bytesList.length},
     );
@@ -95,9 +100,9 @@ class StorageFirebaseDataSource implements StorageDataSource {
         // URL에서 파일 경로 추출
         final ref = _storage.refFromURL(imageUrl);
         await ref.delete();
-      } catch (e) {
-        debugPrint('이미지 삭제 실패: $e');
-        throw Exception('이미지 삭제에 실패했습니다: $e');
+      } catch (e, st) {
+        debugPrint('이미지 삭제 실패: $e\n$st');
+        rethrow; // 원본 예외를 그대로 전달
       }
     }, params: {'imageUrl': imageUrl});
   }
@@ -117,9 +122,9 @@ class StorageFirebaseDataSource implements StorageDataSource {
         for (final prefix in result.prefixes) {
           await deleteFolder(prefix.fullPath);
         }
-      } catch (e) {
-        debugPrint('폴더 삭제 실패: $e');
-        throw Exception('폴더 삭제에 실패했습니다: $e');
+      } catch (e, st) {
+        debugPrint('폴더 삭제 실패: $e\n$st');
+        rethrow; // 원본 예외를 그대로 전달
       }
     }, params: {'folderPath': folderPath});
   }
