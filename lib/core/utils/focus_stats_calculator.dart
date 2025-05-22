@@ -231,20 +231,36 @@ class FocusStatsCalculator {
       // 시작 시간을 저장할 임시 맵 (memberId -> 시작 시간)
       final Map<String, DateTime> memberStartTimes = {};
 
-      // 활동 시간순 정렬
-      activities.sort((a, b) {
+      // 🔧 잘못된 데이터 필터링: timestamp가 null인 활동 제거
+      final validActivities =
+          activities.where((activity) {
+            final timestamp = _extractDateTime(activity['timestamp']);
+            return timestamp != null;
+          }).toList();
+
+      // 활동 시간순 정렬 (개선된 null 처리)
+      validActivities.sort((a, b) {
         final aTime = _extractDateTime(a['timestamp']);
         final bTime = _extractDateTime(b['timestamp']);
+
+        // 파싱 실패(=null) 시 뒤로 보내기
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
         return aTime.compareTo(bTime);
       });
 
       // 모든 활동 로그를 순회하며 분석
-      for (final activity in activities) {
+      for (final activity in validActivities) {
         final memberId = activity['memberId'];
         final timestamp = _extractDateTime(activity['timestamp']);
         final type = activity['type'] as String?;
 
-        if (memberId == null || type == null) continue;
+        // 🔧 필수 데이터 검증: null이면 스킵
+        if (memberId == null || timestamp == null || type == null) {
+          print('⚠️ 잘못된 활동 데이터 스킵: $activity');
+          continue;
+        }
 
         // 멤버 정보 저장 (이름, 프로필 이미지 URL)
         if (activity['memberName'] != null) {
@@ -265,7 +281,7 @@ class FocusStatsCalculator {
           final startTime = memberStartTimes[memberId]!;
           final durationMinutes = timestamp.difference(startTime).inMinutes;
 
-          // 시간이 0 이상인 경우에만 기록
+          // 🔧 음수 duration 방지: 시간이 0 이상인 경우에만 기록
           if (durationMinutes > 0) {
             // 멤버별 날짜별 맵 초기화
             memberDailyMinutes[memberId] ??= {};
@@ -274,6 +290,8 @@ class FocusStatsCalculator {
             // 해당 날짜에 시간 추가
             memberDailyMinutes[memberId]![dateKey] =
                 memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
+          } else {
+            print('⚠️ 음수 duration 발견, 스킵: start=$startTime, pause=$timestamp');
           }
 
           // 시작 시간 제거 (다음 start까지 기다림)
@@ -283,7 +301,7 @@ class FocusStatsCalculator {
           final startTime = memberStartTimes[memberId]!;
           final durationMinutes = timestamp.difference(startTime).inMinutes;
 
-          // 시간이 0 이상인 경우에만 기록
+          // 🔧 음수 duration 방지: 시간이 0 이상인 경우에만 기록
           if (durationMinutes > 0) {
             // 멤버별 날짜별 맵 초기화
             memberDailyMinutes[memberId] ??= {};
@@ -292,6 +310,8 @@ class FocusStatsCalculator {
             // 해당 날짜에 시간 추가
             memberDailyMinutes[memberId]![dateKey] =
                 memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
+          } else {
+            print('⚠️ 음수 duration 발견, 스킵: start=$startTime, end=$timestamp');
           }
 
           // 시작 시간 제거 (다음 계산을 위해)
@@ -315,19 +335,22 @@ class FocusStatsCalculator {
                 int.parse(dateParts[2]),
               );
 
-              attendances.add(
-                Attendance(
-                  groupId: groupId,
-                  memberId: memberId,
-                  memberName: memberInfo.$1,
-                  profileUrl: memberInfo.$2,
-                  date: date,
-                  timeInMinutes: minutes,
-                ),
-              );
+              // 🔧 최소 학습 시간 검증: 1분 이상만 출석으로 간주
+              if (minutes >= 1) {
+                attendances.add(
+                  Attendance(
+                    groupId: groupId,
+                    memberId: memberId,
+                    memberName: memberInfo.$1,
+                    profileUrl: memberInfo.$2,
+                    date: date,
+                    timeInMinutes: minutes,
+                  ),
+                );
+              }
             } catch (e) {
               // 날짜 파싱 오류 시 스킵
-              print('날짜 파싱 오류: $dateKey - $e');
+              print('⚠️ 날짜 파싱 오류 스킵: $dateKey - $e');
             }
           }
         });
@@ -338,47 +361,52 @@ class FocusStatsCalculator {
 
       return attendances;
     } catch (e, st) {
-      print('출석 기록 계산 오류: $e');
+      print('❌ 출석 기록 계산 오류: $e');
       print('StackTrace: $st');
       return [];
     }
   }
 
-  /// Firebase Timestamp 또는 DateTime을 DateTime으로 안전하게 변환
-  static DateTime _extractDateTime(dynamic timestamp) {
+  /// Firebase Timestamp 또는 DateTime을 DateTime으로 안전하게 변환 (수정된 부분)
+  /// 🔧 파싱 실패 시 null 반환으로 변경
+  static DateTime? _extractDateTime(dynamic timestamp) {
     if (timestamp == null) {
-      return DateTime.now();
+      return null;
     }
 
-    // Firebase Timestamp인 경우
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
-    }
-
-    // 이미 DateTime인 경우
-    if (timestamp is DateTime) {
-      return timestamp;
-    }
-
-    // 문자열인 경우
-    if (timestamp is String) {
-      return DateTime.tryParse(timestamp) ?? DateTime.now();
-    }
-
-    // Map 형태의 Timestamp (Firestore에서 가끔 이런 형태로 옴)
-    if (timestamp is Map<String, dynamic>) {
-      final seconds = timestamp['_seconds'] as int?;
-      final nanoseconds = timestamp['_nanoseconds'] as int?;
-
-      if (seconds != null) {
-        return DateTime.fromMillisecondsSinceEpoch(
-          seconds * 1000 + (nanoseconds ?? 0) ~/ 1000000,
-        );
+    try {
+      // Firebase Timestamp인 경우
+      if (timestamp is Timestamp) {
+        return timestamp.toDate();
       }
+
+      // 이미 DateTime인 경우
+      if (timestamp is DateTime) {
+        return timestamp;
+      }
+
+      // 문자열인 경우
+      if (timestamp is String) {
+        return DateTime.tryParse(timestamp);
+      }
+
+      // Map 형태의 Timestamp (Firestore에서 가끔 이런 형태로 옴)
+      if (timestamp is Map<String, dynamic>) {
+        final seconds = timestamp['_seconds'] as int?;
+        final nanoseconds = timestamp['_nanoseconds'] as int?;
+
+        if (seconds != null) {
+          return DateTime.fromMillisecondsSinceEpoch(
+            seconds * 1000 + (nanoseconds ?? 0) ~/ 1000000,
+          );
+        }
+      }
+    } catch (e) {
+      print('⚠️ timestamp 변환 실패: $timestamp, error: $e');
     }
 
-    // 기본값
-    return DateTime.now();
+    // 🔧 모든 변환 시도 실패 시 null 반환
+    return null;
   }
 
   /// DateTime을 YYYY-MM-DD 형식 문자열로 변환
