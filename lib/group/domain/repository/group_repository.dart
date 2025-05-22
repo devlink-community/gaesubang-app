@@ -21,8 +21,13 @@ abstract interface class GroupRepository {
   /// 멤버 타이머 일시정지/재개
   Future<Result<void>> pauseMemberTimer(String groupId);
 
-  /// 그룹 멤버 목록과 해당 타이머 상태 조회
+  /// 그룹 멤버 목록과 해당 타이머 상태 조회 (한 번만 조회)
   Future<Result<List<GroupMember>>> getGroupMembers(String groupId);
+
+  /// 🔧 새로운 실시간 그룹 멤버 타이머 상태 스트림
+  Stream<Result<List<GroupMember>>> streamGroupMemberTimerStatus(
+    String groupId,
+  );
 
   /// 특정 그룹의 특정 월 출석 기록 조회
   Future<Result<List<Attendance>>> getAttendancesByMonth(

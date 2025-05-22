@@ -1,4 +1,5 @@
 // lib/group/data/data_source/mock_group_data_source_impl.dart
+import 'dart:async';
 import 'dart:math';
 
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
@@ -21,6 +22,10 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   // 타이머 활동과 출석부를 위한 맵 추가
   final Map<String, List<Map<String, dynamic>>> _timerActivities = {};
+
+  // 🔧 실시간 스트림 컨트롤러 추가
+  final Map<String, StreamController<List<Map<String, dynamic>>>>
+  _timerStatusControllers = {};
 
   bool _initialized = false;
 
@@ -93,6 +98,67 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         DateTime.now().subtract(Duration(days: _random.nextInt(30))),
       ),
     };
+  }
+
+  // 🔧 멤버별 최신 타이머 활동 조회 (내부 메소드)
+  List<Map<String, dynamic>> _getLatestTimerActivitiesByMember(String groupId) {
+    _timerActivities[groupId] ??= [];
+    final activities = _timerActivities[groupId]!;
+
+    if (activities.isEmpty) {
+      return [];
+    }
+
+    // 멤버별로 가장 최근 활동만 필터링
+    final Map<String, Map<String, dynamic>> memberIdToActivity = {};
+
+    // 활동을 시간순으로 정렬 (최신순)
+    activities.sort((a, b) {
+      final timestampA = a['timestamp'] as String?;
+      final timestampB = b['timestamp'] as String?;
+
+      if (timestampA == null || timestampB == null) return 0;
+
+      try {
+        final dateA = _dateFormat.parse(timestampA);
+        final dateB = _dateFormat.parse(timestampB);
+        return dateB.compareTo(dateA); // 내림차순 (최신순)
+      } catch (e) {
+        return 0;
+      }
+    });
+
+    // 각 멤버의 최신 활동만 수집
+    for (final activity in activities) {
+      final memberId = activity['memberId'] as String?;
+
+      if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
+        memberIdToActivity[memberId] = Map<String, dynamic>.from(activity);
+      }
+    }
+
+    return memberIdToActivity.values.toList();
+  }
+
+  // 🔧 스트림 컨트롤러 가져오기 또는 생성
+  StreamController<List<Map<String, dynamic>>> _getTimerStatusController(
+    String groupId,
+  ) {
+    if (!_timerStatusControllers.containsKey(groupId) ||
+        _timerStatusControllers[groupId]!.isClosed) {
+      _timerStatusControllers[groupId] =
+          StreamController<List<Map<String, dynamic>>>.broadcast();
+    }
+    return _timerStatusControllers[groupId]!;
+  }
+
+  // 🔧 스트림으로 데이터 전송
+  void _notifyTimerStatusChange(String groupId) {
+    if (_timerStatusControllers.containsKey(groupId) &&
+        !_timerStatusControllers[groupId]!.isClosed) {
+      final latestActivities = _getLatestTimerActivitiesByMember(groupId);
+      _timerStatusControllers[groupId]!.add(latestActivities);
+    }
   }
 
   // Mock 데이터 초기화
@@ -200,6 +266,28 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         final userId = member['userId'] as String;
         _userGroups[userId] ??= [];
         _userGroups[userId]!.add(groupId);
+      }
+
+      // 🔧 각 멤버에 대해 기본 타이머 활동 생성
+      _timerActivities[groupId] = [];
+      for (final member in members) {
+        final memberId = member['userId'] as String?;
+        final memberName = member['userName'] as String?;
+
+        if (memberId != null && memberName != null) {
+          // 기본 활동 추가 (end 타입)
+          _timerActivities[groupId]!.add({
+            'id':
+                'activity_${memberId}_${DateTime.now().millisecondsSinceEpoch}',
+            'memberId': memberId,
+            'memberName': memberName,
+            'type': 'end',
+            'timestamp': _dateFormat.format(
+              DateTime.now().subtract(const Duration(hours: 1)),
+            ),
+            'groupId': groupId,
+          });
+        }
       }
     }
 
@@ -571,6 +659,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     return results;
   }
 
+  // 🔧 기존 fetchGroupTimerActivities를 private으로 변경하고 최적화
   @override
   Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
     String groupId,
@@ -584,66 +673,25 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       throw Exception('그룹을 찾을 수 없습니다: $groupId');
     }
 
-    // 타이머 활동 컬렉션 초기화 (없으면)
-    _timerActivities[groupId] ??= [];
+    return _getLatestTimerActivitiesByMember(groupId);
+  }
 
-    // 이 그룹의 타이머 활동 목록
-    final activities = _timerActivities[groupId]!;
-
-    // 타이머 활동이 없는 경우, 각 멤버에 대해 기본 활동 생성
-    if (activities.isEmpty) {
-      final members = _memberships[groupId] ?? [];
-
-      for (final member in members) {
-        final memberId = member['userId'] as String?;
-        final memberName = member['userName'] as String?;
-
-        if (memberId != null && memberName != null) {
-          // 기본 활동 추가 (end 타입)
-          activities.add({
-            'id':
-                'activity_${memberId}_${DateTime.now().millisecondsSinceEpoch}',
-            'memberId': memberId,
-            'memberName': memberName,
-            'type': 'end',
-            'timestamp': _dateFormat.format(
-              DateTime.now().subtract(const Duration(hours: 1)),
-            ),
-            'groupId': groupId,
-          });
-        }
-      }
-    }
-
-    // 멤버별로 가장 최근 활동만 필터링
-    final Map<String, Map<String, dynamic>> memberIdToActivity = {};
-
-    // 활동을 시간순으로 정렬 (최신순)
-    activities.sort((a, b) {
-      final timestampA = a['timestamp'] as String?;
-      final timestampB = b['timestamp'] as String?;
-
-      if (timestampA == null || timestampB == null) return 0;
-
-      try {
-        final dateA = _dateFormat.parse(timestampA);
-        final dateB = _dateFormat.parse(timestampB);
-        return dateB.compareTo(dateA); // 내림차순 (최신순)
-      } catch (e) {
-        return 0;
+  // 🔧 새로운 실시간 스트림 메소드
+  @override
+  Stream<List<Map<String, dynamic>>> streamGroupMemberTimerStatus(
+    String groupId,
+  ) {
+    // 그룹 초기화
+    _initializeIfNeeded().then((_) {
+      // 초기화 완료 후 첫 데이터 전송
+      final controller = _getTimerStatusController(groupId);
+      if (!controller.isClosed) {
+        final latestActivities = _getLatestTimerActivitiesByMember(groupId);
+        controller.add(latestActivities);
       }
     });
 
-    // 각 멤버의 최신 활동만 수집
-    for (final activity in activities) {
-      final memberId = activity['memberId'] as String?;
-
-      if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
-        memberIdToActivity[memberId] = Map<String, dynamic>.from(activity);
-      }
-    }
-
-    return memberIdToActivity.values.toList();
+    return _getTimerStatusController(groupId).stream;
   }
 
   @override
@@ -677,6 +725,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 타이머 활동 저장
     _timerActivities[groupId] ??= [];
     _timerActivities[groupId]!.add(activity);
+
+    // 🔧 실시간 스트림으로 변경 알림
+    _notifyTimerStatusChange(groupId);
 
     return activity;
   }
@@ -713,6 +764,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     _timerActivities[groupId] ??= [];
     _timerActivities[groupId]!.add(activity);
 
+    // 🔧 실시간 스트림으로 변경 알림
+    _notifyTimerStatusChange(groupId);
+
     return activity;
   }
 
@@ -747,6 +801,9 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     // 타이머 활동 저장
     _timerActivities[groupId] ??= [];
     _timerActivities[groupId]!.add(activity);
+
+    // 🔧 실시간 스트림으로 변경 알림
+    _notifyTimerStatusChange(groupId);
 
     return activity;
   }
@@ -796,5 +853,13 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         })
         .map((activity) => Map<String, dynamic>.from(activity))
         .toList();
+  }
+
+  // 🔧 리소스 정리 메소드 추가
+  Future<void> dispose() async {
+    for (final controller in _timerStatusControllers.values) {
+      await controller.close();
+    }
+    _timerStatusControllers.clear();
   }
 }

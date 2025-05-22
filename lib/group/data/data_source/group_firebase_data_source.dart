@@ -15,9 +15,13 @@ class GroupFirebaseDataSource implements GroupDataSource {
   final FirebaseStorage _storage;
   final FirebaseAuth _auth;
 
-  // 캐싱을 위한 변수들
+  // 가입 그룹 캐싱을 위한 변수들
   Set<String>? _cachedJoinedGroups;
   String? _lastUserId;
+
+  // 🔧 멤버 정보 캐싱을 위한 변수들
+  List<Map<String, dynamic>>? _cachedGroupMembers;
+  String? _lastGroupId;
 
   GroupFirebaseDataSource({
     required FirebaseFirestore firestore,
@@ -29,9 +33,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
     // FirebaseAuth 상태 변화 감지하여 캐시 관리
     _auth.authStateChanges().listen((user) {
       if (user?.uid != _lastUserId) {
-        // 사용자가 바뀌면 캐시 초기화
+        // 사용자가 바뀌면 모든 캐시 초기화
         _cachedJoinedGroups = null;
+        _cachedGroupMembers = null; // 🔧 멤버 캐시도 초기화
         _lastUserId = user?.uid;
+        _lastGroupId = null; // 🔧 그룹 ID도 초기화
       }
     });
   }
@@ -130,6 +136,58 @@ class GroupFirebaseDataSource implements GroupDataSource {
     }
   }
 
+  // 🔧 그룹 ID 변경 시 멤버 캐시 무효화
+  void _invalidateMemberCacheIfNeeded(String newGroupId) {
+    if (_lastGroupId != null && _lastGroupId != newGroupId) {
+      print(
+        '🗑️ Group ID changed ($_lastGroupId → $newGroupId), invalidating member cache',
+      );
+      _cachedGroupMembers = null;
+      _lastGroupId = null;
+    }
+  }
+
+  // 🔧 멤버 정보 캐시 무효화 (그룹 변경 작업 시 호출)
+  void _invalidateMemberCache(String groupId) {
+    if (_lastGroupId == groupId) {
+      print('🗑️ Invalidating member cache for group: $groupId');
+      _cachedGroupMembers = null;
+      _lastGroupId = null;
+    }
+  }
+
+  // 그룹 멤버 목록 조회 (내부 헬퍼 메서드)
+  Future<List<String>> _getGroupMemberIds(String groupId) async {
+    try {
+      // 🔧 멤버 정보 캐시 확인
+      List<Map<String, dynamic>> members;
+
+      if (_cachedGroupMembers != null && _lastGroupId == groupId) {
+        print('🔍 Using cached group members for memberIds');
+        members = _cachedGroupMembers!;
+      } else {
+        final membersSnapshot =
+            await _groupsCollection.doc(groupId).collection('members').get();
+
+        members =
+            membersSnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList();
+      }
+
+      return members
+          .map((member) => member['userId'] as String?)
+          .where((userId) => userId != null)
+          .cast<String>()
+          .toList();
+    } catch (e) {
+      print('그룹 멤버 조회 오류: $e');
+      return [];
+    }
+  }
+
   @override
   Future<List<Map<String, dynamic>>> fetchGroupList() async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupList', () async {
@@ -177,6 +235,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<Map<String, dynamic>> fetchGroupDetail(String groupId) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupDetail', () async {
       try {
+        // 🔧 그룹 ID 변경 감지
+        _invalidateMemberCacheIfNeeded(groupId);
+
         // 1. 그룹 문서 조회
         final docSnapshot = await _groupsCollection.doc(groupId).get();
 
@@ -227,7 +288,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
             _groupsCollection.doc(groupId),
           );
 
-          // ✅ 비즈니스 로직 검증: 그룹 존재 여부
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
           }
@@ -237,12 +297,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
           final currentMemberCount = data['memberCount'] as int? ?? 0;
           final maxMemberCount = data['maxMemberCount'] as int? ?? 10;
 
-          // ✅ 비즈니스 로직 검증: 멤버 수 제한
+          // 3. 멤버 수 제한 확인
           if (currentMemberCount >= maxMemberCount) {
             throw Exception(GroupErrorMessages.memberLimitReached);
           }
 
-          // Firebase 작업들...
+          // 4. 멤버 추가
           transaction.set(
             _groupsCollection.doc(groupId).collection('members').doc(userId),
             {
@@ -254,7 +314,25 @@ class GroupFirebaseDataSource implements GroupDataSource {
             },
           );
 
-          // 나머지 Firebase 작업들...
+          // 5. 멤버 수 증가
+          transaction.update(_groupsCollection.doc(groupId), {
+            'memberCount': currentMemberCount + 1,
+          });
+
+          // 6. 사용자 문서에 가입 그룹 정보 추가
+          transaction.update(_usersCollection.doc(userId), {
+            'joingroup': FieldValue.arrayUnion([
+              {
+                'group_id': groupId,
+                'group_name': data['name'] ?? '',
+                'group_image': data['imageUrl'] ?? '',
+              },
+            ]),
+          });
+
+          // 7. 캐시 무효화 (가입 그룹 정보와 멤버 정보가 변경되었으므로)
+          _cachedJoinedGroups = null;
+          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화
         });
       } catch (e, st) {
         // ✅ 예외 구분 처리
@@ -330,6 +408,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 4. 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
           _cachedJoinedGroups = null;
+          // 🔧 새 그룹이므로 멤버 캐시는 무효화할 필요 없음
         });
 
         // 생성된 그룹 정보 반환을 위한 준비
@@ -437,6 +516,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 그룹 이름/이미지가 변경되지 않았으면 그룹 문서만 업데이트
           await _groupsCollection.doc(groupId).update(updates);
         }
+
+        // 🔧 그룹 정보 변경 시 멤버 캐시 무효화 (멤버 정보에 그룹명 등이 포함될 수 있음)
+        if (nameChanged || imageUrlChanged) {
+          _invalidateMemberCache(groupId);
+        }
       } catch (e) {
         print('그룹 업데이트 오류: $e');
         throw Exception(GroupErrorMessages.updateFailed);
@@ -510,8 +594,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
             }
           }
 
-          // 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
+          // 캐시 무효화 (가입 그룹 정보와 멤버 정보가 변경되었으므로)
           _cachedJoinedGroups = null;
+          _invalidateMemberCache(groupId); // 🔧 멤버 캐시 무효화
         });
       } catch (e, st) {
         // ✅ 예외 구분 처리
@@ -527,6 +612,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
           print('그룹 탈퇴 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
+        print('그룹 탈퇴 오류: $e');
+        throw Exception(GroupErrorMessages.leaveFailed);
       }
     }, params: {'groupId': groupId});
   }
@@ -535,6 +622,14 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupMembers', () async {
       try {
+        // 🔧 캐시 확인
+        if (_cachedGroupMembers != null && _lastGroupId == groupId) {
+          print('🔍 Using cached group members');
+          return List<Map<String, dynamic>>.from(_cachedGroupMembers!);
+        }
+
+        print('🔍 Fetching group members from Firestore');
+
         // 그룹 존재 확인
         final groupDoc = await _groupsCollection.doc(groupId).get();
         if (!groupDoc.exists) {
@@ -552,6 +647,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
               data['id'] = doc.id;
               return data;
             }).toList();
+
+        // 🔧 캐시 업데이트
+        _cachedGroupMembers = List<Map<String, dynamic>>.from(members);
+        _lastGroupId = groupId;
+        print('🔍 Cached group members for groupId: $groupId');
 
         return members;
       } catch (e) {
@@ -641,6 +741,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
           }
         }
 
+        // 🔧 이미지 변경 시 멤버 캐시 무효화 (필요시)
+        _invalidateMemberCache(groupId);
+
         return imageUrl;
       } catch (e) {
         print('그룹 이미지 업데이트 오류: $e');
@@ -678,7 +781,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 await _groupsCollection
                     .orderBy('name')
                     .startAt([lowercaseQuery])
-                    .endAt(['$lowercaseQuery\uf8ff'])
+                    .endAt([lowercaseQuery + '\uf8ff'])
                     .get();
 
             resultDocs.addAll(nameSnapshot.docs);
@@ -688,7 +791,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 await _groupsCollection
                     .orderBy('description')
                     .startAt([lowercaseQuery])
-                    .endAt(['$lowercaseQuery\uf8ff'])
+                    .endAt([lowercaseQuery + '\uf8ff'])
                     .get();
 
             resultDocs.addAll(descSnapshot.docs);
@@ -813,30 +916,40 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
-          // 타이머 활동 컬렉션 조회 (최신순)
-          final activitiesSnapshot =
-              await _groupsCollection
-                  .doc(groupId)
-                  .collection('timerActivities')
-                  .orderBy('timestamp', descending: true)
-                  .get();
+          // 🔧 개선: 멤버별 최신 활동만 효율적으로 조회
+          final memberIds = await _getGroupMemberIds(groupId);
 
-          // 멤버별로 가장 최근 활동만 필터링
-          final memberIdToActivity = <String, Map<String, dynamic>>{};
-
-          for (final activityDoc in activitiesSnapshot.docs) {
-            final activityData = activityDoc.data();
-            final memberId = activityData['memberId'] as String?;
-
-            if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
-              // 아직 추가되지 않은 멤버의 활동만 추가 (가장 최근 활동)
-              activityData['id'] = activityDoc.id;
-              memberIdToActivity[memberId] = activityData;
-            }
+          if (memberIds.isEmpty) {
+            return [];
           }
 
-          // 타이머 활동 정보 리스트로 반환
-          return memberIdToActivity.values.toList();
+          // 멤버별로 최신 1개씩만 병렬 조회
+          final futures = memberIds.map((memberId) async {
+            final activitySnapshot =
+                await _groupsCollection
+                    .doc(groupId)
+                    .collection('timerActivities')
+                    .where('memberId', isEqualTo: memberId)
+                    .orderBy('timestamp', descending: true)
+                    .limit(1)
+                    .get();
+
+            if (activitySnapshot.docs.isNotEmpty) {
+              final doc = activitySnapshot.docs.first;
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }
+            return null;
+          });
+
+          final results = await Future.wait(futures);
+
+          // null 제거하고 반환
+          return results
+              .where((data) => data != null)
+              .cast<Map<String, dynamic>>()
+              .toList();
         } catch (e) {
           print('그룹 타이머 활동 조회 오류: $e');
           throw Exception(GroupErrorMessages.loadFailed);
@@ -844,6 +957,61 @@ class GroupFirebaseDataSource implements GroupDataSource {
       },
       params: {'groupId': groupId},
     );
+  }
+
+  // 🔧 새로운 실시간 스트림 메소드
+  @override
+  Stream<List<Map<String, dynamic>>> streamGroupMemberTimerStatus(
+    String groupId,
+  ) {
+    return _groupsCollection
+        .doc(groupId)
+        .collection('members')
+        .snapshots()
+        .asyncMap((membersSnapshot) async {
+          try {
+            if (membersSnapshot.docs.isEmpty) {
+              return <Map<String, dynamic>>[];
+            }
+
+            // 멤버별 실시간 타이머 상태 스트림들 생성
+            final memberIds =
+                membersSnapshot.docs
+                    .map((doc) => doc.data()['userId'] as String?)
+                    .where((userId) => userId != null)
+                    .cast<String>()
+                    .toList();
+
+            // 각 멤버별 최신 타이머 활동 조회
+            final futures = memberIds.map((memberId) async {
+              final activitySnapshot =
+                  await _groupsCollection
+                      .doc(groupId)
+                      .collection('timerActivities')
+                      .where('memberId', isEqualTo: memberId)
+                      .orderBy('timestamp', descending: true)
+                      .limit(1)
+                      .get();
+
+              if (activitySnapshot.docs.isNotEmpty) {
+                final doc = activitySnapshot.docs.first;
+                final data = doc.data();
+                data['id'] = doc.id;
+                return data;
+              }
+              return null;
+            });
+
+            final results = await Future.wait(futures);
+            return results
+                .where((data) => data != null)
+                .cast<Map<String, dynamic>>()
+                .toList();
+          } catch (e) {
+            print('실시간 타이머 상태 조회 오류: $e');
+            return <Map<String, dynamic>>[];
+          }
+        });
   }
 
   @override
