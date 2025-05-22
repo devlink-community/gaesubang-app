@@ -121,6 +121,7 @@ app.*.symbols
 # ignore code-generated Dart files
 *.g.dart
 *.freezed.dart
+*.mocks.dart
 
 # IntelliJ IDEA project settings
 .idea/
