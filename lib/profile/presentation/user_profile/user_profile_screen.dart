@@ -24,13 +24,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     with TickerProviderStateMixin {
   // SingleTickerProviderStateMixin → TickerProviderStateMixin 변경
   late AnimationController _animationController;
+  late AnimationController _floatingController;
   late Animation<double> _fadeInAnimation;
   late Animation<double> _slideAnimation;
-  late AnimationController _floatingController;
   late Animation<double> _floatingAnimation;
-
-  bool _isSkillsExpanded = false;
-  bool _isInfoExpanded = false;
 
   @override
   void initState() {
@@ -43,18 +40,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-
-    _fadeInAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
-
-    _slideAnimation = Tween<double>(begin: 30, end: 0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-      ),
-    );
 
     _floatingAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
       CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
@@ -221,11 +206,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             radius: 50,
                             backgroundColor: AppColorStyles.gray40,
                             backgroundImage:
-                                member.image?.isNotEmpty == true
-                                    ? NetworkImage(member.image!)
+                                member.image.isNotEmpty == true
+                                    ? NetworkImage(member.image)
                                     : null,
                             child:
-                                member.image?.isEmpty != false
+                                member.image.isEmpty != false
                                     ? Icon(
                                       Icons.person,
                                       size: 50,
@@ -251,7 +236,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   const SizedBox(height: 16),
 
                   // 설명
-                  if (member.description?.isNotEmpty == true)
+                  if (member.description.isNotEmpty == true)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -264,7 +249,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         ),
                       ),
                       child: Text(
-                        member.description!,
+                        member.description,
                         style: AppTextStyles.body1Regular.copyWith(
                           color: AppColorStyles.textPrimary,
                           height: 1.5,
@@ -348,150 +333,119 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ],
         border: Border.all(color: AppColorStyles.gray40, width: 0.5),
       ),
-      child: Column(
-        children: [
-          // 헤더 (클릭 가능)
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isSkillsExpanded = !_isSkillsExpanded;
-              });
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.code,
-                      color: AppColorStyles.primary100,
-                      size: 20,
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 헤더 (클릭 불가능, 화살표 제거)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  child: Icon(
+                    Icons.code,
+                    color: AppColorStyles.primary100,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '개발자 정보',
+                  style: AppTextStyles.subtitle1Bold.copyWith(
+                    color: AppColorStyles.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // 항상 표시되는 콘텐츠
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 직무 정보
+                if (member?.position?.isNotEmpty == true) ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: AppColorStyles.primary100,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(left: 8),
                     child: Text(
-                      '개발자 정보',
+                      '직무',
                       style: AppTextStyles.subtitle1Bold.copyWith(
                         color: AppColorStyles.textPrimary,
+                        fontSize: 14,
                       ),
                     ),
                   ),
-                  AnimatedRotation(
-                    turns: _isSkillsExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      Icons.expand_more,
-                      color: AppColorStyles.gray80,
-                      size: 24,
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 확장 가능한 콘텐츠
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _isSkillsExpanded
-                    ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 직무 정보
-                          if (member?.position?.isNotEmpty == true) ...[
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: AppColorStyles.primary100,
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Text(
-                                '직무',
-                                style: AppTextStyles.subtitle1Bold.copyWith(
-                                  color: AppColorStyles.textPrimary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColorStyles.primary100.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    AppColorStyles.primary80.withValues(
-                                      alpha: 0.08,
-                                    ),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                member!.position!,
-                                style: AppTextStyles.body1Regular.copyWith(
-                                  color: AppColorStyles.textPrimary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (member.skills?.isNotEmpty == true)
-                              const SizedBox(height: 20),
-                          ],
-
-                          // 기술 스택
-                          if (member?.skills?.isNotEmpty == true) ...[
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: AppColorStyles.primary100,
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Text(
-                                '기술 스택',
-                                style: AppTextStyles.subtitle1Bold.copyWith(
-                                  color: AppColorStyles.textPrimary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _buildSkillTags(member!.skills!),
-                          ],
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorStyles.primary100.withValues(alpha: 0.15),
+                          AppColorStyles.primary80.withValues(alpha: 0.08),
                         ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-        ],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      member!.position!,
+                      style: AppTextStyles.body1Regular.copyWith(
+                        color: AppColorStyles.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  if (member.skills?.isNotEmpty == true)
+                    const SizedBox(height: 20),
+                ],
+
+                // 기술 스택
+                if (member?.skills?.isNotEmpty == true) ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: AppColorStyles.primary100,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '기술 스택',
+                      style: AppTextStyles.subtitle1Bold.copyWith(
+                        color: AppColorStyles.textPrimary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSkillTags(member!.skills!),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -611,181 +565,146 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ],
         border: Border.all(color: AppColorStyles.gray40, width: 0.5),
       ),
-      child: Column(
-        children: [
-          // 헤더 (클릭 가능)
-          InkWell(
-            onTap: () {
-              setState(() {
-                _isInfoExpanded = !_isInfoExpanded;
-              });
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.analytics_outlined,
-                      color: AppColorStyles.primary100,
-                      size: 20,
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 헤더 (클릭 불가능, 화살표 제거)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '활동 정보',
-                      style: AppTextStyles.subtitle1Bold.copyWith(
-                        color: AppColorStyles.textPrimary,
-                      ),
-                    ),
+                  child: Icon(
+                    Icons.analytics_outlined,
+                    color: AppColorStyles.primary100,
+                    size: 20,
                   ),
-                  AnimatedRotation(
-                    turns: _isInfoExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    child: Icon(
-                      Icons.expand_more,
-                      color: AppColorStyles.gray80,
-                      size: 24,
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '활동 정보',
+                  style: AppTextStyles.subtitle1Bold.copyWith(
+                    color: AppColorStyles.textPrimary,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
 
-          // 확장 가능한 콘텐츠
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child:
-                _isInfoExpanded
-                    ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+
+            // 항상 표시되는 콘텐츠
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 연속 학습일 정보
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColorStyles.primary100.withValues(alpha: 0.15),
+                        AppColorStyles.primary80.withValues(alpha: 0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // 연속 학습일 정보
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColorStyles.primary100.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  AppColorStyles.primary80.withValues(
-                                    alpha: 0.08,
-                                  ),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.local_fire_department,
-                                      color: Colors.orange,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '연속 학습일',
-                                      style: AppTextStyles.body2Regular
-                                          .copyWith(
-                                            color: AppColorStyles.textPrimary,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${member.streakDays}일',
-                                  style: AppTextStyles.heading6Bold.copyWith(
-                                    color: AppColorStyles.primary100,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          Icon(
+                            Icons.local_fire_department,
+                            color: Colors.orange,
+                            size: 20,
                           ),
-
-                          const SizedBox(height: 16),
-
-                          // 기타 정보들
-                          _buildInfoRow(
-                            icon:
-                                member.onAir
-                                    ? Icons.circle
-                                    : Icons.nightlight_round,
-                            label: '활동 상태',
-                            value: member.onAir ? '활동 중' : '휴식 중',
-                            color: member.onAir ? Colors.green : Colors.grey,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          _buildInfoRow(
-                            icon: Icons.group,
-                            label: '참여 그룹',
-                            value: '${member.joinedGroups.length}개',
-                            color: AppColorStyles.primary100,
-                          ),
-
-                          // 도움말 텍스트
-                          const SizedBox(height: 16),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.blue.withValues(alpha: 0.1),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.lightbulb_outline,
-                                  size: 20,
-                                  color: Colors.blue[700],
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '함께 성장하는 개발자입니다!',
-                                    style: AppTextStyles.body2Regular.copyWith(
-                                      color: AppColorStyles.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '연속 학습일',
+                            style: AppTextStyles.body2Regular.copyWith(
+                              color: AppColorStyles.textPrimary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '${member.streakDays}일',
+                        style: AppTextStyles.heading6Bold.copyWith(
+                          color: AppColorStyles.primary100,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 기타 정보들
+                _buildInfoRow(
+                  icon: member.onAir ? Icons.circle : Icons.nightlight_round,
+                  label: '활동 상태',
+                  value: member.onAir ? '활동 중' : '휴식 중',
+                  color: member.onAir ? Colors.green : Colors.grey,
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildInfoRow(
+                  icon: Icons.group,
+                  label: '참여 그룹',
+                  value: '${member.joinedGroups.length}개',
+                  color: AppColorStyles.primary100,
+                ),
+
+                // 도움말 텍스트
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        size: 20,
+                        color: Colors.blue[700],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '함께 성장하는 개발자입니다!',
+                          style: AppTextStyles.body2Regular.copyWith(
+                            color: AppColorStyles.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
