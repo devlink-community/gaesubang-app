@@ -1,7 +1,9 @@
-// lib/group/presentation/group_settings/group_settings_screen_root.dart
+// lib/group/presentation/group_setting/group_settings_screen_root.dart
+import 'package:devlink_mobile_app/group/presentation/component/group_leave_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen.dart';
+import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -26,9 +28,9 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
       ).select((value) => value.successMessage),
       (previous, next) {
         if (next != null && previous != next) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(next)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(next)),
+          );
 
           // 탈퇴 성공 시 그룹 목록으로 이동
           if (next.contains('탈퇴')) {
@@ -47,8 +49,8 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
             await _pickImageFromGallery(context, notifier);
             break;
           case LeaveGroup():
-            // 탈퇴 확인 다이얼로그 표시
-            await _showLeaveConfirmDialog(context, notifier);
+            // 새로운 트렌디한 탈퇴 다이얼로그 표시
+            await _showNewLeaveConfirmDialog(context, state, notifier);
             break;
           default:
             // 나머지 액션은 Notifier에서 처리
@@ -78,40 +80,48 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
         notifier.onAction(GroupSettingsAction.imageUrlChanged(localImagePath));
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        // ignore: use_build_context_synchronously
-        context,
-      ).showSnackBar(SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다: $e')),
+      );
     }
   }
 
-  // 그룹 탈퇴 확인 다이얼로그
-  Future<void> _showLeaveConfirmDialog(
+  // 🔥 새로운 트렌디한 그룹 탈퇴 확인 다이얼로그
+  Future<void> _showNewLeaveConfirmDialog(
     BuildContext context,
+    GroupSettingsState state,
     GroupSettingsNotifier notifier,
   ) async {
-    final result = await showDialog<bool>(
+    // 그룹 정보 확인
+    final group = state.group.valueOrNull;
+    if (group == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('그룹 정보를 불러올 수 없습니다')),
+      );
+      return;
+    }
+
+    // 방장 여부 확인
+    final isOwner = state.isOwner;
+
+    // 트렌디한 다이얼로그 표시
+    await showDialog(
       context: context,
+      barrierDismissible: true,
       builder:
-          (context) => AlertDialog(
-            title: const Text('그룹 탈퇴'),
-            content: const Text('정말로 이 그룹에서 탈퇴하시겠습니까?\n탈퇴 후에는 다시 초대를 받아야 합니다.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('취소'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('탈퇴', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+          (context) => GroupLeaveDialog(
+            group: group,
+            isOwner: isOwner,
+            onConfirmLeave: () {
+              // 탈퇴 진행
+              Navigator.of(context).pop();
+              notifier.onAction(const GroupSettingsAction.leaveGroup());
+            },
+            onCancel: () {
+              // 취소
+              Navigator.of(context).pop();
+            },
           ),
     );
-
-    if (result == true) {
-      notifier.onAction(const GroupSettingsAction.leaveGroup());
-    }
   }
 }

@@ -130,6 +130,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     }
   }
 
+  @override
   Future<List<Map<String, dynamic>>> fetchGroupList() async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchGroupList', () async {
       try {
@@ -454,69 +455,63 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         // 트랜잭션을 사용하여 멤버 제거 및 카운터 업데이트
         return _firestore.runTransaction((transaction) async {
-          // 1. 그룹 문서 조회
+          // 🔥 1단계: 모든 읽기 작업을 먼저 수행
           final groupDoc = await transaction.get(
             _groupsCollection.doc(groupId),
           );
-
-          if (!groupDoc.exists) {
-            throw Exception(GroupErrorMessages.notFound);
-          }
-
-          // 2. 멤버십 상태 확인
           final memberDoc = await transaction.get(
             _groupsCollection.doc(groupId).collection('members').doc(userId),
           );
+          final userDoc = await transaction.get(_usersCollection.doc(userId));
+
+          // 🔥 2단계: 읽기 완료 후 검증 로직
+          if (!groupDoc.exists) {
+            throw Exception(GroupErrorMessages.notFound);
+          }
 
           if (!memberDoc.exists) {
             throw Exception(GroupErrorMessages.notMember);
           }
 
-          // 3. 소유자 확인 (소유자는 탈퇴 불가)
+          // 소유자 확인 (소유자는 탈퇴 불가)
           final memberData = memberDoc.data()!;
           if (memberData['role'] == 'owner') {
             throw Exception(GroupErrorMessages.ownerCannotLeave);
           }
 
-          // 4. 현재 멤버 수 확인
-          final data = groupDoc.data()!;
-          final currentMemberCount = data['memberCount'] as int? ?? 0;
+          // 현재 멤버 수 확인
+          final groupData = groupDoc.data()!;
+          final currentMemberCount = groupData['memberCount'] as int? ?? 0;
 
-          // 5. 멤버 제거
+          // 🔥 3단계: 모든 쓰기 작업을 나중에 수행
+          // 멤버 제거
           transaction.delete(
             _groupsCollection.doc(groupId).collection('members').doc(userId),
           );
 
-          // 6. 멤버 수 감소
+          // 멤버 수 감소
           transaction.update(_groupsCollection.doc(groupId), {
             'memberCount': currentMemberCount > 0 ? currentMemberCount - 1 : 0,
           });
 
-          // 7. 사용자 문서에서 가입 그룹 정보 제거
-          final groupName = data['name'] as String?;
+          // 사용자 문서에서 가입 그룹 정보 제거
+          if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
+            final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
 
-          if (groupName != null) {
-            // 사용자 문서 조회
-            final userDoc = await transaction.get(_usersCollection.doc(userId));
-
-            if (userDoc.exists && userDoc.data()!.containsKey('joingroup')) {
-              final joingroups = userDoc.data()!['joingroup'] as List<dynamic>;
-
-              // 그룹 ID로 항목 찾기
-              for (final joingroup in joingroups) {
-                if (joingroup['group_id'] == groupId) {
-                  // 그룹 정보 제거
-                  transaction.update(_usersCollection.doc(userId), {
-                    'joingroup': FieldValue.arrayRemove([joingroup]),
-                  });
-
-                  // 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
-                  _cachedJoinedGroups = null;
-                  break;
-                }
+            // 그룹 ID로 항목 찾기
+            for (final joingroup in joingroups) {
+              if (joingroup['group_id'] == groupId) {
+                // 그룹 정보 제거
+                transaction.update(_usersCollection.doc(userId), {
+                  'joingroup': FieldValue.arrayRemove([joingroup]),
+                });
+                break;
               }
             }
           }
+
+          // 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
+          _cachedJoinedGroups = null;
         });
       } catch (e) {
         if (e.toString().contains(GroupErrorMessages.notFound) ||
@@ -677,7 +672,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 await _groupsCollection
                     .orderBy('name')
                     .startAt([lowercaseQuery])
-                    .endAt([lowercaseQuery + '\uf8ff'])
+                    .endAt(['$lowercaseQuery\uf8ff'])
                     .get();
 
             resultDocs.addAll(nameSnapshot.docs);
@@ -687,7 +682,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 await _groupsCollection
                     .orderBy('description')
                     .startAt([lowercaseQuery])
-                    .endAt([lowercaseQuery + '\uf8ff'])
+                    .endAt(['$lowercaseQuery\uf8ff'])
                     .get();
 
             resultDocs.addAll(descSnapshot.docs);
