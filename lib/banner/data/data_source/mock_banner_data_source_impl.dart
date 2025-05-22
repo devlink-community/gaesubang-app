@@ -31,12 +31,12 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     return _mockBanners.where((banner) => banner.isActive == true).toList();
   }
 
-  // Mock 데이터 정의
+  // Mock 데이터 정의 - assets 이미지 사용
   static final List<BannerDto> _mockBanners = [
     BannerDto(
       id: 'banner_001',
-      title: '개발자 성장 프로그램',
-      imageUrl: 'https://picsum.photos/380/220?random=1',
+      title: '',
+      imageUrl: 'assets/images/banner_001.png', // assets 이미지 사용
       linkUrl: 'https://example.com/developer-program',
       isActive: true,
       displayOrder: 1,
@@ -47,8 +47,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_002',
-      title: 'Flutter 마스터 클래스',
-      imageUrl: 'https://picsum.photos/380/220?random=2',
+      title: '',
+      imageUrl: 'assets/images/banner_002.png', // assets 이미지 사용
       linkUrl: 'https://example.com/flutter-masterclass',
       isActive: true,
       displayOrder: 2,
@@ -59,8 +59,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_003',
-      title: 'AI 개발 부트캠프',
-      imageUrl: 'https://picsum.photos/380/220?random=3',
+      title: '',
+      imageUrl: 'assets/images/banner_003.png', // assets 이미지 사용
       linkUrl: 'https://example.com/ai-bootcamp',
       isActive: true,
       displayOrder: 3,
@@ -71,8 +71,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_004',
-      title: '비활성화된 배너',
-      imageUrl: 'https://picsum.photos/380/220?random=4',
+      title: '',
+      imageUrl: 'assets/images/banner_004.png', // assets 이미지 사용
       linkUrl: 'https://example.com/inactive',
       isActive: false,
       displayOrder: 4,
@@ -83,8 +83,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_005',
-      title: '기간 만료된 배너',
-      imageUrl: 'https://picsum.photos/380/220?random=5',
+      title: '',
+      imageUrl: 'assets/images/banner_005.png', // assets 이미지 사용
       linkUrl: 'https://example.com/expired',
       isActive: true,
       displayOrder: 5,

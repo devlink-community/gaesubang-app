@@ -47,10 +47,20 @@ class AdvertisementBanner extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          // 배너 이미지 - Flutter 기본 Image.network 사용
+          // 배너 이미지 - assets과 network 이미지 모두 지원
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: Image.network(
+            child: banner.imageUrl.startsWith('assets/')
+                ? Image.asset(
+              banner.imageUrl,
+              width: 380,
+              height: 220,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildImageErrorState();
+              },
+            )
+                : Image.network(
               banner.imageUrl,
               width: 380,
               height: 220,
