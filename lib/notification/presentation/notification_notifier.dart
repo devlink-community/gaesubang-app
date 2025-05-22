@@ -13,6 +13,9 @@ import 'package:devlink_mobile_app/notification/presentation/notification_action
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
+import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'notification_notifier.g.dart';
@@ -25,31 +28,37 @@ class NotificationNotifier extends _$NotificationNotifier {
   late final MarkAllNotificationsAsReadUseCase _markAllAsReadUseCase;
   late final DeleteNotificationUseCase _deleteNotificationUseCase;
   late final FCMService _fcmService;
-  StreamSubscription? _fcmSubscription;
+  late final FCMTokenService _fcmTokenService;
 
-  // _currentUserId getter 수정 - switch 표현식 올바른 사용
+  // 스트림 구독 관리
+  StreamSubscription? _fcmSubscription;
+  ProviderSubscription? _authSubscription;
+
+  // 마지막으로 토큰을 등록한 사용자 ID (중복 방지)
+  String? _lastRegisteredUserId;
+
   String? get _currentUserId {
-    print('=== _currentUserId 호출됨 ===');
+    debugPrint('=== _currentUserId 호출됨 ===');
     final authStateAsync = ref.read(authStateProvider);
 
     return authStateAsync.when(
       data: (authState) {
-        print('authState 데이터: $authState');
+        debugPrint('authState 데이터: $authState');
         switch (authState) {
           case Authenticated(user: final member):
-            print('인증된 사용자 발견: ${member.uid}');
+            debugPrint('인증된 사용자 발견: ${member.uid}');
             return member.uid;
           case _:
-            print('인증되지 않은 상태');
+            debugPrint('인증되지 않은 상태');
             return null;
         }
       },
       loading: () {
-        print('authState 로딩 중...');
+        debugPrint('authState 로딩 중...');
         return null;
       },
       error: (error, stackTrace) {
-        print('authState 에러: $error');
+        debugPrint('authState 에러: $error');
         return null;
       },
     );
@@ -57,9 +66,9 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   @override
   NotificationState build() {
-    print('=== NotificationNotifier.build() 호출됨 ===');
+    debugPrint('=== NotificationNotifier.build() 호출됨 ===');
 
-    // 기존 의존성 주입...
+    // 의존성 주입
     _getNotificationsUseCase = ref.watch(getNotificationsUseCaseProvider);
     _markAsReadUseCase = ref.watch(markNotificationAsReadUseCaseProvider);
     _markAllAsReadUseCase = ref.watch(
@@ -67,97 +76,181 @@ class NotificationNotifier extends _$NotificationNotifier {
     );
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
     _fcmService = ref.watch(fcmServiceProvider);
+    _fcmTokenService = ref.watch(fcmTokenServiceProvider);
 
-    print('의존성 주입 완료');
+    debugPrint('의존성 주입 완료');
 
     // FCM 알림 클릭 이벤트 구독
     _subscribeToFCMEvents();
-    print('FCM 이벤트 구독 완료');
+    debugPrint('FCM 이벤트 구독 완료');
+
+    // 인증 상태 변화 감지 및 처리
+    _setupAuthStateListener();
+    debugPrint('인증 상태 리스너 설정 완료');
 
     // 초기 인증 상태 확인 및 알림 로딩
     _checkInitialAuthStateAndLoadNotifications();
 
-    // 인증 상태 변화를 감지하여 알림 로딩
-    ref.listen(authStateProvider, (previous, next) {
-      print('=== authStateProvider 변화 감지됨 ===');
-      print('이전 상태: $previous');
-      print('현재 상태: $next');
+    // 리소스 정리
+    ref.onDispose(() {
+      debugPrint('NotificationNotifier dispose됨');
+      _fcmSubscription?.cancel();
+      _authSubscription?.close();
+    });
+
+    debugPrint('초기 상태 반환: NotificationState()');
+    return const NotificationState();
+  }
+
+  /// 인증 상태 변화 리스너 설정
+  void _setupAuthStateListener() {
+    _authSubscription = ref.listen(authStateProvider, (previous, next) {
+      debugPrint('=== authStateProvider 변화 감지됨 ===');
+      debugPrint('이전 상태: $previous');
+      debugPrint('현재 상태: $next');
 
       next.when(
         data: (authState) {
-          print('authState 데이터: $authState');
+          debugPrint('authState 데이터: $authState');
           switch (authState) {
-            case Authenticated():
-              print('로그인 상태 감지 - 알림 로딩 트리거');
-              Future.microtask(() {
-                print('microtask에서 refresh 액션 호출');
-                onAction(const NotificationAction.refresh());
-              });
+            case Authenticated(user: final member):
+              debugPrint('로그인 상태 감지 - 사용자: ${member.nickname}');
+              _handleUserLogin(member.uid, member.nickname);
             case Unauthenticated():
+              debugPrint('로그아웃 상태 감지');
+              _handleUserLogout();
             case Loading():
-              print('비로그인/로딩 상태 - 알림 초기화');
-              state = const NotificationState(
-                notifications: AsyncData([]),
-                unreadCount: 0,
-              );
+              debugPrint('로딩 상태');
+              break;
           }
         },
         loading: () {
-          print('authState 로딩 중...');
+          debugPrint('authState 로딩 중...');
         },
         error: (error, stackTrace) {
-          print('authState 에러: $error');
-          state = const NotificationState(
-            notifications: AsyncData([]),
-            unreadCount: 0,
-          );
+          debugPrint('authState 에러: $error');
+          _handleAuthError();
         },
       );
     });
-    print('authState 리스너 등록 완료');
+  }
 
-    ref.onDispose(() {
-      print('NotificationNotifier dispose됨');
-      _fcmSubscription?.cancel();
-    });
+  /// 사용자 로그인 처리
+  Future<void> _handleUserLogin(String userId, String nickname) async {
+    debugPrint('=== 사용자 로그인 처리 시작 ===');
+    debugPrint('사용자 ID: $userId');
+    debugPrint('닉네임: $nickname');
 
-    print('초기 상태 반환: NotificationState()');
-    return const NotificationState();
+    try {
+      // 1. FCM 토큰 등록 (중복 방지)
+      await _registerFCMTokenIfNeeded(userId);
+
+      // 2. FCM 서비스 진단 (디버깅용)
+      await _fcmTokenService.diagnoseService(userId);
+
+      // 3. 알림 목록 로딩
+      Future.microtask(() {
+        debugPrint('microtask에서 알림 refresh 액션 호출');
+        onAction(const NotificationAction.refresh());
+      });
+
+      debugPrint('✅ 사용자 로그인 처리 완료');
+    } catch (e) {
+      debugPrint('❌ 사용자 로그인 처리 실패: $e');
+    }
+  }
+
+  /// 사용자 로그아웃 처리
+  Future<void> _handleUserLogout() async {
+    debugPrint('=== 사용자 로그아웃 처리 시작 ===');
+
+    try {
+      // 1. 알림 상태 초기화
+      state = const NotificationState(
+        notifications: AsyncData([]),
+        unreadCount: 0,
+      );
+
+      // 2. 등록된 사용자 ID 초기화
+      _lastRegisteredUserId = null;
+
+      debugPrint('✅ 사용자 로그아웃 처리 완료');
+    } catch (e) {
+      debugPrint('❌ 사용자 로그아웃 처리 실패: $e');
+    }
+  }
+
+  /// 인증 에러 처리
+  void _handleAuthError() {
+    debugPrint('=== 인증 에러 처리 ===');
+
+    state = const NotificationState(
+      notifications: AsyncData([]),
+      unreadCount: 0,
+      errorMessage: '인증 오류가 발생했습니다.',
+    );
+  }
+
+  /// FCM 토큰 등록 (중복 방지)
+  Future<void> _registerFCMTokenIfNeeded(String userId) async {
+    // 이미 등록된 사용자인 경우 스킵
+    if (_lastRegisteredUserId == userId) {
+      debugPrint('이미 등록된 사용자 - FCM 토큰 등록 스킵');
+      return;
+    }
+
+    try {
+      debugPrint('=== FCM 토큰 등록 시작 ===');
+
+      // 1. 권한 확인
+      final hasPermission = await _fcmTokenService.hasNotificationPermission();
+      if (!hasPermission) {
+        debugPrint('FCM 권한이 없음 - 권한 요청');
+        final granted = await _fcmTokenService.requestNotificationPermission();
+        if (!granted) {
+          debugPrint('⚠️ FCM 권한 거부됨');
+          return;
+        }
+      }
+
+      // 2. 토큰 등록
+      await _fcmTokenService.registerDeviceToken(userId);
+
+      // 3. 등록 완료 마킹
+      _lastRegisteredUserId = userId;
+
+      debugPrint('✅ FCM 토큰 등록 완료');
+    } catch (e) {
+      debugPrint('❌ FCM 토큰 등록 실패: $e');
+    }
   }
 
   /// 초기 인증 상태를 확인하고 필요시 알림을 로딩
   void _checkInitialAuthStateAndLoadNotifications() {
-    print('=== 초기 인증 상태 확인 시작 ===');
+    debugPrint('=== 초기 인증 상태 확인 시작 ===');
 
     Future.microtask(() {
       final authStateAsync = ref.read(authStateProvider);
-      print('현재 authState: $authStateAsync');
+      debugPrint('현재 authState: $authStateAsync');
 
       authStateAsync.when(
         data: (authState) {
-          print('초기 authState 데이터: $authState');
+          debugPrint('초기 authState 데이터: $authState');
           switch (authState) {
             case Authenticated(user: final member):
-              print('초기 상태에서 인증된 사용자 감지: ${member.nickname}');
-              print('초기 알림 로딩 트리거');
-              onAction(const NotificationAction.refresh());
+              debugPrint('초기 상태에서 인증된 사용자 감지: ${member.nickname}');
+              _handleUserLogin(member.uid, member.nickname);
             case _:
-              print('초기 상태에서 비인증 상태');
-              state = const NotificationState(
-                notifications: AsyncData([]),
-                unreadCount: 0,
-              );
+              debugPrint('초기 상태에서 비인증 상태');
+              _handleUserLogout();
           }
         },
         loading: () {
-          print('초기 authState 로딩 중...');
+          debugPrint('초기 authState 로딩 중...');
         },
         error: (error, stackTrace) {
-          print('초기 authState 에러: $error');
-          state = const NotificationState(
-            notifications: AsyncData([]),
-            unreadCount: 0,
-          );
+          debugPrint('초기 authState 에러: $error');
+          _handleAuthError();
         },
       );
     });
@@ -166,25 +259,23 @@ class NotificationNotifier extends _$NotificationNotifier {
   /// FCM 이벤트 구독
   void _subscribeToFCMEvents() {
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
-      // FCM 알림 탭 이벤트 처리
-      // 여기서는 간단히 알림 목록을 새로고침하고 특정 알림을 읽음 처리
+      debugPrint('=== FCM 알림 탭 이벤트 수신 ===');
+      debugPrint('알림 타입: ${payload.type}');
+      debugPrint('타겟 ID: ${payload.targetId}');
+
+      // 알림 목록 새로고침
       onAction(const NotificationAction.refresh());
 
-      // 알림 타입 및 타겟 ID를 기반으로 화면 이동 로직은 Root에서 처리
+      // 특정 알림 처리는 Root에서 처리하도록 위임
+      // 여기서는 단순히 알림 목록만 새로고침
     });
-  }
-
-  /// FCM 토큰 서버 등록
-  Future<void> registerFCMToken() async {
-    final token = await _fcmService.getToken();
-    if (token != null) {
-      // TODO: 실제 구현에서는 사용자의 FCM 토큰을 서버에 등록하는 API 호출
-      print('FCM 토큰 등록: $token');
-    }
   }
 
   /// 액션 핸들러 - 모든 사용자 액션의 진입점
   Future<void> onAction(NotificationAction action) async {
+    debugPrint('=== NotificationAction 수신 ===');
+    debugPrint('액션 타입: ${action.runtimeType}');
+
     switch (action) {
       case Refresh():
         await _loadNotifications();
@@ -203,16 +294,16 @@ class NotificationNotifier extends _$NotificationNotifier {
     }
   }
 
-  // _loadNotifications 메서드에 상세 로그 추가
+  /// 알림 목록 로딩
   Future<void> _loadNotifications() async {
-    print('=== _loadNotifications 시작 ===');
-    print('현재 환경: ${AppConfig.useMockAuth ? "Mock" : "Firebase"}');
+    debugPrint('=== _loadNotifications 시작 ===');
+    debugPrint('현재 환경: ${AppConfig.useMockAuth ? "Mock" : "Firebase"}');
 
     final currentUserId = _currentUserId;
-    print('현재 사용자 ID: $currentUserId');
+    debugPrint('현재 사용자 ID: $currentUserId');
 
     if (currentUserId == null) {
-      print('사용자 ID가 null - 빈 상태로 설정');
+      debugPrint('사용자 ID가 null - 빈 상태로 설정');
       state = const NotificationState(
         notifications: AsyncData([]),
         unreadCount: 0,
@@ -220,37 +311,38 @@ class NotificationNotifier extends _$NotificationNotifier {
       return;
     }
 
-    print('알림 로딩 시작: userId=$currentUserId');
+    debugPrint('알림 로딩 시작: userId=$currentUserId');
 
-    // 명시적으로 새 상태 객체 생성
+    // 로딩 상태로 설정
     state = NotificationState(
       notifications: const AsyncLoading(),
       unreadCount: state.unreadCount,
       errorMessage: state.errorMessage,
     );
-    print('로딩 상태로 변경됨');
+    debugPrint('로딩 상태로 변경됨');
 
     try {
-      print('UseCase 호출 중...');
+      debugPrint('UseCase 호출 중...');
       final result = await _getNotificationsUseCase.execute(currentUserId);
-      print('UseCase 결과 타입: ${result.runtimeType}');
-      print('UseCase 결과: $result');
+      debugPrint('UseCase 결과 타입: ${result.runtimeType}');
+      debugPrint('UseCase 결과: $result');
 
       if (result is AsyncData) {
         final notifications = result.value ?? [];
         final unreadCount = notifications.where((n) => !n.isRead).length;
-        print('알림 데이터 로드 성공: ${notifications.length}개, 읽지않음: $unreadCount개');
+        debugPrint(
+          '알림 데이터 로드 성공: ${notifications.length}개, 읽지않음: $unreadCount개',
+        );
 
-        // 완전히 새로운 상태 객체 생성
         state = NotificationState(
           notifications: AsyncData(notifications),
           unreadCount: unreadCount,
           errorMessage: null,
         );
 
-        print('상태 업데이트 완료: ${state.notifications.runtimeType}');
+        debugPrint('상태 업데이트 완료: ${state.notifications.runtimeType}');
       } else if (result is AsyncError) {
-        print('UseCase에서 에러 반환: ${result.error}');
+        debugPrint('UseCase에서 에러 반환: ${result.error}');
         state = NotificationState(
           notifications: AsyncError(result.error!, result.stackTrace!),
           unreadCount: state.unreadCount,
@@ -258,8 +350,8 @@ class NotificationNotifier extends _$NotificationNotifier {
         );
       }
     } catch (e, stack) {
-      print('예외 발생: $e');
-      print('스택 트레이스: $stack');
+      debugPrint('예외 발생: $e');
+      debugPrint('스택 트레이스: $stack');
 
       state = NotificationState(
         notifications: AsyncError(e, stack),
@@ -271,6 +363,8 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 알림 탭 처리
   Future<void> _handleTapNotification(String notificationId) async {
+    debugPrint('=== 알림 탭 처리: $notificationId ===');
+
     // 읽음 처리
     await _markAsRead(notificationId);
 
@@ -281,142 +375,177 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 단일 알림 읽음 처리
   Future<void> _markAsRead(String notificationId) async {
-    final result = await _markAsReadUseCase.execute(notificationId);
+    debugPrint('=== 단일 알림 읽음 처리: $notificationId ===');
 
-    switch (result) {
-      case AsyncData(:final value) when value:
-        // 성공적으로 읽음 처리됨
-        final currentNotifications = state.notifications.valueOrNull;
-        if (currentNotifications != null) {
-          // 읽지 않은 상태였는지 플래그
-          bool wasUnread = false;
+    try {
+      final result = await _markAsReadUseCase.execute(notificationId);
 
-          // 알림 목록 업데이트
-          final updatedNotifications =
-              currentNotifications.map((notification) {
-                if (notification.id == notificationId) {
-                  // 원래 읽지 않은 상태였는지 기록
-                  if (!notification.isRead) {
-                    wasUnread = true;
+      switch (result) {
+        case AsyncData(:final value) when value:
+          debugPrint('✅ 알림 읽음 처리 성공');
+          _updateNotificationReadStatus(notificationId, true);
 
-                    // 알림 읽음 처리
-                    return AppNotification(
-                      id: notification.id,
-                      userId: notification.userId,
-                      type: notification.type,
-                      targetId: notification.targetId,
-                      senderName: notification.senderName,
-                      createdAt: notification.createdAt,
-                      isRead: true, // 읽음 상태로 변경
-                      description: notification.description,
-                      imageUrl: notification.imageUrl,
-                    );
-                  }
-                }
-                return notification;
-              }).toList();
+        case AsyncError(:final error):
+          debugPrint('❌ 알림 읽음 처리 실패: $error');
+          state = state.copyWith(errorMessage: '알림 읽음 처리에 실패했습니다.');
 
-          // 읽지 않은 알림이었을 경우에만 카운트 감소
-          final newUnreadCount =
-              wasUnread
-                  ? (state.unreadCount > 0 ? state.unreadCount - 1 : 0)
-                  : state.unreadCount;
-
-          state = state.copyWith(
-            notifications: AsyncData(updatedNotifications),
-            unreadCount: newUnreadCount,
-          );
-        }
-
-      case AsyncError(:final error):
-        state = state.copyWith(errorMessage: '알림 읽음 처리에 실패했습니다.');
-
-      default:
-        // 다른 케이스는 무시
-        break;
+        default:
+          debugPrint('알림 읽음 처리 결과를 알 수 없음');
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ 알림 읽음 처리 예외: $e');
+      state = state.copyWith(errorMessage: '알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
 
   /// 모든 알림 읽음 처리
   Future<void> _markAllAsRead() async {
-    final result = await _markAllAsReadUseCase.execute(_currentUserId!);
+    debugPrint('=== 모든 알림 읽음 처리 ===');
 
-    switch (result) {
-      case AsyncData(:final value) when value:
-        // 성공적으로 모두 읽음 처리됨
-        // 현재 상태의 알림 목록 업데이트
-        final currentNotifications = state.notifications.valueOrNull;
-        if (currentNotifications != null) {
-          final updatedNotifications =
-              currentNotifications.map((notification) {
-                if (!notification.isRead) {
-                  return AppNotification(
-                    id: notification.id,
-                    userId: notification.userId,
-                    type: notification.type,
-                    targetId: notification.targetId,
-                    senderName: notification.senderName,
-                    createdAt: notification.createdAt,
-                    isRead: true,
-                    description: notification.description,
-                    imageUrl: notification.imageUrl,
-                  );
-                }
-                return notification;
-              }).toList();
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      debugPrint('사용자 ID가 null - 모든 읽음 처리 불가');
+      return;
+    }
 
-          state = state.copyWith(
-            notifications: AsyncData(updatedNotifications),
-            unreadCount: 0,
-          );
-        }
+    try {
+      final result = await _markAllAsReadUseCase.execute(currentUserId);
 
-      case AsyncError(:final error):
-        state = state.copyWith(errorMessage: '알림 읽음 처리에 실패했습니다.');
+      switch (result) {
+        case AsyncData(:final value) when value:
+          debugPrint('✅ 모든 알림 읽음 처리 성공');
+          _updateAllNotificationsReadStatus();
 
-      default:
-        // 다른 케이스는 무시
-        break;
+        case AsyncError(:final error):
+          debugPrint('❌ 모든 알림 읽음 처리 실패: $error');
+          state = state.copyWith(errorMessage: '모든 알림 읽음 처리에 실패했습니다.');
+
+        default:
+          debugPrint('모든 알림 읽음 처리 결과를 알 수 없음');
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ 모든 알림 읽음 처리 예외: $e');
+      state = state.copyWith(errorMessage: '모든 알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
 
   /// 알림 삭제
   Future<void> _deleteNotification(String notificationId) async {
-    final result = await _deleteNotificationUseCase.execute(notificationId);
+    debugPrint('=== 알림 삭제: $notificationId ===');
 
-    switch (result) {
-      case AsyncData(:final value) when value:
-        // 성공적으로 삭제됨
-        // 현재 상태의 알림 목록에서 제거
-        final currentNotifications = state.notifications.valueOrNull;
-        if (currentNotifications != null) {
-          // 삭제된 알림을 찾아서 읽지 않은 상태였는지 확인
-          final wasUnread = currentNotifications
-              .where((n) => n.id == notificationId)
-              .any((n) => !n.isRead);
+    try {
+      final result = await _deleteNotificationUseCase.execute(notificationId);
 
-          // 목록에서 해당 알림 제거
-          final updatedNotifications =
-              currentNotifications
-                  .where((notification) => notification.id != notificationId)
-                  .toList();
+      switch (result) {
+        case AsyncData(:final value) when value:
+          debugPrint('✅ 알림 삭제 성공');
+          _removeNotificationFromState(notificationId);
 
-          // unreadCount 업데이트
-          final newUnreadCount =
-              wasUnread ? state.unreadCount - 1 : state.unreadCount;
+        case AsyncError(:final error):
+          debugPrint('❌ 알림 삭제 실패: $error');
+          state = state.copyWith(errorMessage: '알림 삭제에 실패했습니다.');
 
-          state = state.copyWith(
-            notifications: AsyncData(updatedNotifications),
-            unreadCount: newUnreadCount,
-          );
-        }
-
-      case AsyncError(:final error):
-        state = state.copyWith(errorMessage: '알림 삭제에 실패했습니다.');
-
-      default:
-        // 다른 케이스는 무시
-        break;
+        default:
+          debugPrint('알림 삭제 결과를 알 수 없음');
+          break;
+      }
+    } catch (e) {
+      debugPrint('❌ 알림 삭제 예외: $e');
+      state = state.copyWith(errorMessage: '알림 삭제 중 오류가 발생했습니다.');
     }
+  }
+
+  /// 특정 알림의 읽음 상태 업데이트
+  void _updateNotificationReadStatus(String notificationId, bool isRead) {
+    final currentNotifications = state.notifications.valueOrNull;
+    if (currentNotifications == null) return;
+
+    bool wasUnread = false;
+    final updatedNotifications =
+        currentNotifications.map((notification) {
+          if (notification.id == notificationId) {
+            if (!notification.isRead && isRead) {
+              wasUnread = true;
+            }
+            return AppNotification(
+              id: notification.id,
+              userId: notification.userId,
+              type: notification.type,
+              targetId: notification.targetId,
+              senderName: notification.senderName,
+              createdAt: notification.createdAt,
+              isRead: isRead,
+              description: notification.description,
+              imageUrl: notification.imageUrl,
+            );
+          }
+          return notification;
+        }).toList();
+
+    final newUnreadCount =
+        wasUnread
+            ? (state.unreadCount > 0 ? state.unreadCount - 1 : 0)
+            : state.unreadCount;
+
+    state = state.copyWith(
+      notifications: AsyncData(updatedNotifications),
+      unreadCount: newUnreadCount,
+    );
+  }
+
+  /// 모든 알림의 읽음 상태 업데이트
+  void _updateAllNotificationsReadStatus() {
+    final currentNotifications = state.notifications.valueOrNull;
+    if (currentNotifications == null) return;
+
+    final updatedNotifications =
+        currentNotifications.map((notification) {
+          if (!notification.isRead) {
+            return AppNotification(
+              id: notification.id,
+              userId: notification.userId,
+              type: notification.type,
+              targetId: notification.targetId,
+              senderName: notification.senderName,
+              createdAt: notification.createdAt,
+              isRead: true,
+              description: notification.description,
+              imageUrl: notification.imageUrl,
+            );
+          }
+          return notification;
+        }).toList();
+
+    state = state.copyWith(
+      notifications: AsyncData(updatedNotifications),
+      unreadCount: 0,
+    );
+  }
+
+  /// 상태에서 알림 제거
+  void _removeNotificationFromState(String notificationId) {
+    final currentNotifications = state.notifications.valueOrNull;
+    if (currentNotifications == null) return;
+
+    // 삭제될 알림이 읽지 않은 상태였는지 확인
+    final wasUnread = currentNotifications
+        .where((n) => n.id == notificationId)
+        .any((n) => !n.isRead);
+
+    // 목록에서 해당 알림 제거
+    final updatedNotifications =
+        currentNotifications
+            .where((notification) => notification.id != notificationId)
+            .toList();
+
+    final newUnreadCount =
+        wasUnread ? state.unreadCount - 1 : state.unreadCount;
+
+    state = state.copyWith(
+      notifications: AsyncData(updatedNotifications),
+      unreadCount: newUnreadCount,
+    );
   }
 }
