@@ -62,7 +62,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       appBar: AppBar(
         centerTitle: true,
         title: Text('비밀번호 변경', style: AppTextStyles.heading6Bold),
-        automaticallyImplyLeading: true,
+        // Navigator key 충돌 방지를 위해 leading 직접 구현
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => widget.onAction(ChangePasswordAction.navigateBack()),
+        ),
         elevation: 0,
       ),
       backgroundColor: Colors.white,
@@ -107,43 +111,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
 
                       const SizedBox(height: 24),
+                      Column(
+                        children: [
+                          CustomButton(
+                            text: '비밀번호 재설정 이메일 발송',
+                            onPressed:
+                                () => widget.onAction(
+                                  ChangePasswordAction.sendResetEmail(),
+                                ),
+                            isLoading: isLoading,
+                            backgroundColor: AppColorStyles.primary100,
+                            foregroundColor: Colors.white,
+                            height: 52,
+                            width: double.infinity,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Column(
-                  children: [
-                    CustomButton(
-                      text: '비밀번호 재설정 이메일 발송',
-                      onPressed:
-                          () => widget.onAction(
-                            ChangePasswordAction.sendResetEmail(),
-                          ),
-                      isLoading: isLoading,
-                      backgroundColor: AppColorStyles.primary100,
-                      foregroundColor: Colors.white,
-                      height: 52,
-                      width: double.infinity,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    TextButton(
-                      onPressed:
-                          () => widget.onAction(
-                            ChangePasswordAction.navigateBack(),
-                          ),
-                      child: Text(
-                        '설정으로 돌아가기',
-                        style: AppTextStyles.body2Regular.copyWith(
-                          color: AppColorStyles.gray80,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],

@@ -270,7 +270,6 @@ GoRouter appRouter(Ref ref) {
         '/sign-up',
         '/terms',
         '/forget-password',
-        '/change-password',
       ];
 
       // 현재 경로가 퍼블릭 경로인지 확인
