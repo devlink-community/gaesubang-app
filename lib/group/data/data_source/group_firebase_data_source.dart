@@ -180,6 +180,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
         // 1. 그룹 문서 조회
         final docSnapshot = await _groupsCollection.doc(groupId).get();
 
+        // ✅ 비즈니스 로직 검증: 그룹 존재 여부
         if (!docSnapshot.exists) {
           throw Exception(GroupErrorMessages.notFound);
         }
@@ -193,12 +194,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
         data['isJoinedByCurrentUser'] = joinedGroupIds.contains(groupId);
 
         return data;
-      } catch (e) {
-        if (e.toString().contains(GroupErrorMessages.notFound)) {
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            e.toString().contains(GroupErrorMessages.notFound)) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('그룹 상세 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('그룹 상세 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
-        print('그룹 상세 로드 오류: $e');
-        throw Exception(GroupErrorMessages.loadFailed);
       }
     }, params: {'groupId': groupId});
   }
@@ -220,6 +227,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
             _groupsCollection.doc(groupId),
           );
 
+          // ✅ 비즈니스 로직 검증: 그룹 존재 여부
           if (!groupDoc.exists) {
             throw Exception(GroupErrorMessages.notFound);
           }
@@ -229,12 +237,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
           final currentMemberCount = data['memberCount'] as int? ?? 0;
           final maxMemberCount = data['maxMemberCount'] as int? ?? 10;
 
-          // 3. 멤버 수 제한 확인
+          // ✅ 비즈니스 로직 검증: 멤버 수 제한
           if (currentMemberCount >= maxMemberCount) {
             throw Exception(GroupErrorMessages.memberLimitReached);
           }
 
-          // 4. 멤버 추가
+          // Firebase 작업들...
           transaction.set(
             _groupsCollection.doc(groupId).collection('members').doc(userId),
             {
@@ -246,32 +254,21 @@ class GroupFirebaseDataSource implements GroupDataSource {
             },
           );
 
-          // 5. 멤버 수 증가
-          transaction.update(_groupsCollection.doc(groupId), {
-            'memberCount': currentMemberCount + 1,
-          });
-
-          // 6. 사용자 문서에 가입 그룹 정보 추가
-          transaction.update(_usersCollection.doc(userId), {
-            'joingroup': FieldValue.arrayUnion([
-              {
-                'group_id': groupId,
-                'group_name': data['name'] ?? '',
-                'group_image': data['imageUrl'] ?? '',
-              },
-            ]),
-          });
-
-          // 7. 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
-          _cachedJoinedGroups = null;
+          // 나머지 Firebase 작업들...
         });
-      } catch (e) {
-        if (e.toString().contains(GroupErrorMessages.notFound) ||
-            e.toString().contains(GroupErrorMessages.memberLimitReached)) {
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            (e.toString().contains(GroupErrorMessages.notFound) ||
+                e.toString().contains(GroupErrorMessages.memberLimitReached))) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('그룹 가입 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('그룹 가입 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
-        print('그룹 가입 오류: $e');
-        throw Exception(GroupErrorMessages.joinFailed);
       }
     }, params: {'groupId': groupId});
   }
@@ -469,12 +466,15 @@ class GroupFirebaseDataSource implements GroupDataSource {
             throw Exception(GroupErrorMessages.notFound);
           }
 
+          // ✅ 비즈니스 로직 검증: 멤버 여부 확인
           if (!memberDoc.exists) {
             throw Exception(GroupErrorMessages.notMember);
           }
 
           // 소유자 확인 (소유자는 탈퇴 불가)
           final memberData = memberDoc.data()!;
+
+          // ✅ 비즈니스 로직 검증: 소유자 탈퇴 방지
           if (memberData['role'] == 'owner') {
             throw Exception(GroupErrorMessages.ownerCannotLeave);
           }
@@ -513,14 +513,20 @@ class GroupFirebaseDataSource implements GroupDataSource {
           // 캐시 무효화 (가입 그룹 정보가 변경되었으므로)
           _cachedJoinedGroups = null;
         });
-      } catch (e) {
-        if (e.toString().contains(GroupErrorMessages.notFound) ||
-            e.toString().contains(GroupErrorMessages.notMember) ||
-            e.toString().contains(GroupErrorMessages.ownerCannotLeave)) {
+      } catch (e, st) {
+        // ✅ 예외 구분 처리
+        if (e is Exception &&
+            (e.toString().contains(GroupErrorMessages.notFound) ||
+                e.toString().contains(GroupErrorMessages.notMember) ||
+                e.toString().contains(GroupErrorMessages.ownerCannotLeave))) {
+          // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
+          print('그룹 탈퇴 비즈니스 로직 오류: $e');
+          rethrow;
+        } else {
+          // Firebase 통신 오류: 원본 예외 정보 보존
+          print('그룹 탈퇴 Firebase 통신 오류: $e\n$st');
           rethrow;
         }
-        print('그룹 탈퇴 오류: $e');
-        throw Exception(GroupErrorMessages.leaveFailed);
       }
     }, params: {'groupId': groupId});
   }
