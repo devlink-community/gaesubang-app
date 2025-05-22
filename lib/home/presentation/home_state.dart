@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/home/domain/model/notice.dart';
+import 'package:devlink_mobile_app/banner/domain/model/banner.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -12,9 +13,11 @@ class HomeState with _$HomeState {
     this.notices = const AsyncLoading(),
     this.userGroups = const AsyncLoading(),
     this.popularPosts = const AsyncLoading(),
+    this.activeBanner = const AsyncLoading(),
   });
 
   final AsyncValue<List<Notice>> notices;
   final AsyncValue<List<Group>> userGroups;
   final AsyncValue<List<Post>> popularPosts;
+  final AsyncValue<Banner?> activeBanner;
 }
