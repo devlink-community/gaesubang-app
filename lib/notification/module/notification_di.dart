@@ -8,13 +8,20 @@ import 'package:devlink_mobile_app/notification/domain/usecase/mark_all_notifica
 import 'package:devlink_mobile_app/notification/domain/usecase/mark_notification_as_read_use_case.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:devlink_mobile_app/core/config/app_config.dart';
+import 'package:devlink_mobile_app/notification/data/data_source/notification_firebase_data_source.dart';
 
 part 'notification_di.g.dart';
 
-// 데이터 소스 제공
+// 데이터 소스 제공 - 환경에 따라 Mock 또는 Firebase 선택
 @riverpod
 NotificationDataSource notificationDataSource(Ref ref) {
-  return MockNotificationDataSourceImpl();
+  // AppConfig의 useMockAuth 설정에 따라 DataSource 결정
+  if (AppConfig.useMockAuth) {
+    return MockNotificationDataSourceImpl();
+  } else {
+    return NotificationFirebaseDataSource();
+  }
 }
 
 // 리포지토리 제공
