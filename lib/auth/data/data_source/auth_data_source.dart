@@ -1,4 +1,6 @@
 // lib/auth/data/data_source/auth_data_source.dart
+import '../dto/user_dto.dart';
+
 abstract interface class AuthDataSource {
   /// 이메일, 비밀번호로 로그인
   Future<Map<String, dynamic>> fetchLogin({
@@ -68,4 +70,6 @@ abstract interface class AuthDataSource {
 
   /// 현재 인증 상태 확인 (추가)
   Future<Map<String, dynamic>?> getCurrentAuthState();
+
+  Future<UserDto> fetchUserProfile(String userId);
 }

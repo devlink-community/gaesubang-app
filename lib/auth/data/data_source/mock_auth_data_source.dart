@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart'
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/api_call_logger.dart';
+import '../dto/user_dto.dart';
 import 'auth_data_source.dart';
 
 class MockAuthDataSource implements AuthDataSource {
@@ -637,5 +638,31 @@ class MockAuthDataSource implements AuthDataSource {
     }
 
     return await _fetchUserWithTimerActivities(_currentUserId!);
+  }
+
+  @override
+  Future<UserDto> fetchUserProfile(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
+
+    // Mock 사용자 데이터 생성 (실제 Mock 데이터 구조에 맞춰 수정 필요)
+    final mockUserData = {
+      'uid': userId,
+      'email': 'user$userId@example.com',
+      'nickname': '사용자$userId',
+      'image':
+          'https://randomuser.me/api/portraits/men/${int.tryParse(userId.substring(userId.length - 1)) ?? 1}.jpg',
+      'description': '안녕하세요! 열심히 공부하고 있습니다.',
+      'onAir': false,
+      'position': '개발자',
+      'skills': 'Flutter, Dart',
+      'streakDays': 7,
+      'isServiceTermsAgreed': true,
+      'isPrivacyPolicyAgreed': true,
+      'isMarketingAgreed': false,
+      'agreedAt': DateTime.now().toIso8601String(),
+      'joingroup': [],
+    };
+
+    return UserDto.fromJson(mockUserData);
   }
 }

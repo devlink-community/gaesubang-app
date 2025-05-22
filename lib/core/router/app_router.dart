@@ -17,7 +17,6 @@ import 'package:devlink_mobile_app/group/presentation/group_attendance/attendanc
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_screen_root.dart';
-import 'package:devlink_mobile_app/group/presentation/group_detail/mock_screen/mock_screen.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_search/group_search_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen_root.dart';
@@ -36,6 +35,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../app_setting/presentation/change_password_root.dart';
+import '../../profile/presentation/user_profile/user_profile_screen_root.dart';
 
 part 'app_router.g.dart';
 
@@ -223,10 +223,11 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ChangePasswordScreenRoot(),
       ),
       GoRoute(
-        path: '/user/:id/profile',
-        builder:
-            (context, state) =>
-                MockUserProfileScreen(userId: state.pathParameters['id']!),
+        path: '/user/:userId/profile',
+        builder: (context, state) {
+          final userId = state.pathParameters['userId']!;
+          return UserProfileScreenRoot(userId: userId);
+        },
       ),
     ],
     redirect: (context, state) {

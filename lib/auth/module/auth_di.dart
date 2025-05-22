@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:devlink_mobile_app/notification/module/fcm_di.dart';
 
 import '../../core/config/app_config.dart';
+import '../../profile/presentation/user_profile/get_user_profile_usecase.dart';
 import '../data/data_source/auth_data_source.dart';
 import '../data/data_source/auth_firebase_data_source.dart';
 import '../data/data_source/mock_auth_data_source.dart';
@@ -137,3 +138,7 @@ UpdateProfileImageUseCase updateProfileImageUseCase(
 ) {
   return UpdateProfileImageUseCase(ref.watch(authRepositoryProvider));
 }
+
+@riverpod
+GetUserProfileUseCase getUserProfileUseCase(Ref ref) =>
+    GetUserProfileUseCase(repository: ref.watch(authRepositoryProvider));

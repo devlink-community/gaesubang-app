@@ -88,4 +88,6 @@ abstract interface class AuthRepository {
   /// 계정 삭제 시 모든 FCM 토큰 제거
   /// 해당 사용자의 모든 디바이스에서 알림을 받지 않도록 설정
   Future<Result<void>> removeAllFCMTokens(String userId);
+
+  Future<Result<Member>> getUserProfile(String userId);
 }

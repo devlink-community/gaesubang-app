@@ -19,6 +19,8 @@ class UserDto {
     this.isMarketingAgreed,
     this.agreedAt,
     this.joinedGroups,
+    this.position,
+    this.skills,
   });
 
   final String? email;
@@ -30,6 +32,8 @@ class UserDto {
   final bool? isServiceTermsAgreed;
   final bool? isPrivacyPolicyAgreed;
   final bool? isMarketingAgreed;
+  final String? position;
+  final String? skills;
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
@@ -40,5 +44,6 @@ class UserDto {
 
   factory UserDto.fromJson(Map<String, dynamic> json) =>
       _$UserDtoFromJson(json);
+
   Map<String, dynamic> toJson() => _$UserDtoToJson(this);
 }

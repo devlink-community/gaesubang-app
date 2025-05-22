@@ -710,4 +710,18 @@ class AuthRepositoryImpl implements AuthRepository {
     _cachedMember = null;
     _lastFirebaseUserId = null;
   }
+
+  @override
+  Future<Result<Member>> getUserProfile(String userId) async {
+    try {
+      final userDto = await _authDataSource.fetchUserProfile(userId);
+      // UserDto를 Map으로 변환한 후 기존 mapper 사용
+      final userMap = userDto.toJson();
+      final member = userMap.toMember();
+      return Result.success(member);
+    } catch (e, st) {
+      final failure = AuthExceptionMapper.mapAuthException(e, st);
+      return Result.error(failure);
+    }
+  }
 }
