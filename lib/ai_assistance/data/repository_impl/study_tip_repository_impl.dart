@@ -24,7 +24,7 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
       // PromptService를 사용하여 프롬프트 생성
       final prompt = _promptService.createStudyTipPrompt(skillArea);
 
-      // 데이터소스를 통한 API 호출
+      // 데이터소스를 통한 Firebase AI API 호출
       final response = await _dataSource.generateStudyTipWithPrompt(prompt);
 
       // DTO로 변환

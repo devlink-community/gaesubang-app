@@ -11,23 +11,23 @@ abstract interface class StudyTipDataSource {
 }
 
 class StudyTipDataSourceImpl implements StudyTipDataSource {
-  final VertexAIClient _vertexClient;
+  final FirebaseAIClient _firebaseAIClient;
   final FallbackService _fallbackService;
   final PromptService _promptService;
 
   StudyTipDataSourceImpl({
-    required VertexAIClient vertexClient,
+    required FirebaseAIClient firebaseAIClient,
     required FallbackService fallbackService,
     required PromptService promptService,
-  }) : _vertexClient = vertexClient,
+  }) : _firebaseAIClient = firebaseAIClient,
        _fallbackService = fallbackService,
        _promptService = promptService;
 
   @override
   Future<Map<String, dynamic>> generateStudyTipWithPrompt(String prompt) async {
     try {
-      // 직접 호출만 담당
-      final result = await _vertexClient.callTextModel(prompt);
+      // Firebase AI SDK를 통한 간단한 호출
+      final result = await _firebaseAIClient.callTextModel(prompt);
       debugPrint('학습 팁 생성 성공: ${result["title"]}');
       return result;
     } catch (e) {

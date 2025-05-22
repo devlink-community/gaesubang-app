@@ -5,7 +5,6 @@ import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // 데이터 소스 import
-
 import '../data/data_source/fallback_service.dart';
 import '../data/data_source/quiz_data_source.dart';
 import '../data/data_source/study_tip_data_source.dart';
@@ -13,16 +12,11 @@ import '../data/data_source/study_tip_data_source.dart';
 import '../data/repository_impl/quiz_data_repository_impl.dart';
 import '../data/repository_impl/study_tip_repository_impl.dart';
 // 도메인 레포지토리 인터페이스 import
-
 import '../domain/repository/quiz_repository.dart';
 import '../domain/repository/study_tip_repository.dart';
 // 유스케이스 import
 import '../domain/use_case/generate_quiz_use_case.dart';
 import '../domain/use_case/get_study_tip_use_case.dart';
-
-// 서비스 import
-
-// Vertex AI 클라이언트 import
 
 //------------------------------------------------------------------
 // 서비스 프로바이더
@@ -38,12 +32,12 @@ final fallbackServiceProvider = Provider<FallbackService>((ref) {
 });
 
 //------------------------------------------------------------------
-// Vertex AI 클라이언트 프로바이더
+// Firebase AI 클라이언트 프로바이더
 //------------------------------------------------------------------
-/// 중앙 집중식 Vertex AI 클라이언트 프로바이더
+/// 중앙 집중식 Firebase AI 클라이언트 프로바이더
 /// 이 Provider는 app 전체에서 단일 인스턴스를 공유합니다.
-final vertexAIClientProvider = Provider<VertexAIClient>((ref) {
-  final client = VertexAIClient();
+final firebaseAIClientProvider = Provider<FirebaseAIClient>((ref) {
+  final client = FirebaseAIClient();
 
   // 초기화 트리거 - 앱 시작 시 한 번만 실행됩니다
   Future.microtask(() => client.initialize());
@@ -60,13 +54,13 @@ final vertexAIClientProvider = Provider<VertexAIClient>((ref) {
 // 퀴즈 관련 프로바이더
 //------------------------------------------------------------------
 /// 퀴즈 데이터 소스 프로바이더
-final vertexAiDataSourceProvider = Provider<VertexAiDataSource>((ref) {
-  final vertexClient = ref.watch(vertexAIClientProvider);
+final vertexAiDataSourceProvider = Provider<FirebaseAiDataSource>((ref) {
+  final firebaseAIClient = ref.watch(firebaseAIClientProvider);
   final fallbackService = ref.watch(fallbackServiceProvider);
   final promptService = ref.watch(promptServiceProvider);
 
   return VertexAiDataSourceImpl(
-    vertexClient: vertexClient,
+    firebaseAIClient: firebaseAIClient,
     fallbackService: fallbackService,
     promptService: promptService,
   );
@@ -94,12 +88,12 @@ final generateQuizUseCaseProvider = Provider<GenerateQuizUseCase>((ref) {
 //------------------------------------------------------------------
 /// 학습 팁 데이터 소스 프로바이더
 final studyTipDataSourceProvider = Provider<StudyTipDataSource>((ref) {
-  final vertexClient = ref.watch(vertexAIClientProvider);
+  final firebaseAIClient = ref.watch(firebaseAIClientProvider);
   final fallbackService = ref.watch(fallbackServiceProvider);
   final promptService = ref.watch(promptServiceProvider);
 
   return StudyTipDataSourceImpl(
-    vertexClient: vertexClient,
+    firebaseAIClient: firebaseAIClient,
     fallbackService: fallbackService,
     promptService: promptService,
   );

@@ -657,7 +657,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       child: Row(
         children: [
           const Expanded(
-            child: Divider(color: AppColorStyles.gray40, thickness: 1),
+            child: Divider(
+              color: AppColorStyles.gray40,
+              thickness: 1,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),

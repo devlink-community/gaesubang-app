@@ -11,8 +11,8 @@ import '../dto/quiz_dto.dart';
 import '../mapper/quiz_mapper.dart';
 
 class QuizRepositoryImpl implements QuizRepository {
-  final VertexAiDataSource _dataSource;
-  final PromptService _promptService; // PromptService 필드 추가
+  final FirebaseAiDataSource _dataSource;
+  final PromptService _promptService;
   final Random _random = Random();
 
   // 기술별 키워드 맵 - 관련성 검사에 사용
@@ -290,9 +290,8 @@ class QuizRepositoryImpl implements QuizRepository {
     ],
   };
 
-  // 생성자에 promptService 매개변수 추가
   QuizRepositoryImpl({
-    required VertexAiDataSource dataSource,
+    required FirebaseAiDataSource dataSource,
     required PromptService promptService,
   }) : _dataSource = dataSource,
        _promptService = promptService;
@@ -310,7 +309,7 @@ class QuizRepositoryImpl implements QuizRepository {
       // 최대 5번까지 시도
       while (retryCount < 5) {
         try {
-          debugPrint('AI 퀴즈 생성 시도 ${retryCount + 1}/5');
+          debugPrint('Firebase AI 퀴즈 생성 시도 ${retryCount + 1}/5');
 
           // PromptService를 사용하여 프롬프트 생성
           final prompt = _promptService.createQuizPrompt(cleanedSkill);
@@ -394,7 +393,7 @@ class QuizRepositoryImpl implements QuizRepository {
       }
 
       // 모든 시도가 실패한 경우 맞춤형 퀴즈 생성
-      debugPrint('AI 퀴즈 생성 모두 실패. 최후의 시도를 합니다.');
+      debugPrint('Firebase AI 퀴즈 생성 모두 실패. 최후의 시도를 합니다.');
 
       // 최후의 시도 - 이미 정의된 문자열을 기반으로 퀴즈 생성
       final fallbackQuiz = _generateFallbackQuiz(cleanedSkill);
