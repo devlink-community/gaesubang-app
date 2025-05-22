@@ -35,28 +35,43 @@ part 'group_di.g.dart';
 
 // ==================== 그룹 관련 DI ====================
 
-// DataSource 프로바이더 - AppConfig에 따라 Firebase 또는 Mock 구현체 제공
-@Riverpod(keepAlive: true)
+// 🔧 수정: DataSource 프로바이더 - dispose 처리를 위해 keepAlive 제거하고 ref.onDispose 추가
+@riverpod
 GroupDataSource groupDataSource(Ref ref) {
+  GroupDataSource dataSource;
+
   // AppConfig 설정에 따라 Firebase 또는 Mock 구현체 제공
   if (AppConfig.useMockGroup) {
     if (kDebugMode) {
       print('GroupDataSource: MockGroupDataSourceImpl 사용');
     }
-    return MockGroupDataSourceImpl();
+    dataSource = MockGroupDataSourceImpl();
   } else {
     if (kDebugMode) {
       print('GroupDataSource: GroupFirebaseDataSource 사용');
     }
 
     // Firebase 인스턴스들을 주입
-    return GroupFirebaseDataSource(
+    dataSource = GroupFirebaseDataSource(
       firestore: ref.watch(firebaseFirestoreProvider),
-      storage:
-          FirebaseStorage.instance, // FirebaseStorage는 별도 Provider 없이 직접 사용
+      storage: FirebaseStorage.instance,
       auth: ref.watch(firebaseAuthProvider),
     );
   }
+
+  // 🔧 새로 추가: Provider가 dispose될 때 DataSource의 dispose 호출
+  ref.onDispose(() {
+    if (kDebugMode) {
+      print('GroupDataSource Provider: onDispose 호출');
+    }
+
+    // Firebase DataSource인 경우에만 dispose 호출
+    if (dataSource is GroupFirebaseDataSource) {
+      dataSource.dispose();
+    }
+  });
+
+  return dataSource;
 }
 
 // Group chat DataSource
