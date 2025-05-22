@@ -1,5 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+// // import 'package:cached_network_image/cached_network_image.dart'; // 기본 Image.network 사용으로 제거 // 패키지 없으면 주석 처리
+import 'package:flutter/material.dart' hide Banner;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/styles/app_color_styles.dart';
@@ -47,16 +47,21 @@ class AdvertisementBanner extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          // 배너 이미지
+          // 배너 이미지 - Flutter 기본 Image.network 사용
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: CachedNetworkImage(
-              imageUrl: banner.imageUrl,
+            child: Image.network(
+              banner.imageUrl,
               width: 380,
               height: 220,
               fit: BoxFit.cover,
-              placeholder: (context, url) => _buildImageLoadingState(),
-              errorWidget: (context, url, error) => _buildImageErrorState(),
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return _buildImageLoadingState();
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return _buildImageErrorState();
+              },
             ),
           ),
 

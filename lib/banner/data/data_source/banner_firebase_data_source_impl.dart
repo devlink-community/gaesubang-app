@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../banner/data/data_source/banner_data_source.dart';
-import '../../../banner/data/dto/banner_dto.dart';
+import 'banner_data_source.dart';
+import '../dto/banner_dto.dart';
 
 class BannerFirebaseDataSourceImpl implements BannerDataSource {
   final FirebaseFirestore _firestore;
