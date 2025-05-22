@@ -5,6 +5,7 @@ import 'package:line_icons/line_icons.dart';
 
 import '../../ai_assistance/presentation/quiz_banner.dart';
 import '../../ai_assistance/presentation/study_tip_banner.dart';
+import '../../banner/presentation/component/advertisement_banner.dart';
 import 'component/group_section.dart';
 import 'component/popular_post_section.dart';
 import 'home_action.dart';
@@ -97,9 +98,8 @@ class HomeScreen extends StatelessWidget {
           children: [
             _buildHeader(),
 
-            // 카드 영역 - 횡스크롤로 변경
+            // 카드 영역 - 횡스크롤로 변경 (광고 배너 추가)
             const SizedBox(height: 24),
-            // StudyTipBanner와 DailyQuizBanner 렌더링 부분 수정
             SizedBox(
               height: 220, // 카드 높이 고정
               child: SingleChildScrollView(
@@ -108,14 +108,18 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    // 퀴즈 배너 - 위젯으로 올바르게 사용
+                    // 광고 배너 - 첫 번째로 배치
+                    const AdvertisementBanner(),
+                    const SizedBox(width: 12),
+
+                    // 퀴즈 배너 - 두 번째로 배치
                     DailyQuizBanner(
                       skills: userSkills,
                       key: ValueKey('quiz_banner_${userSkills ?? "default"}'),
                     ),
                     const SizedBox(width: 12),
 
-                    // 학습 팁 배너 - 위젯으로 올바르게 사용
+                    // 학습 팁 배너 - 세 번째로 배치
                     StudyTipBanner(
                       skills: userSkills,
                       key: ValueKey(
@@ -148,7 +152,7 @@ class HomeScreen extends StatelessWidget {
                     posts: state.popularPosts,
                     onTapPost:
                         (postId) =>
-                            onAction(HomeAction.onTapPopularPost(postId)),
+                        onAction(HomeAction.onTapPopularPost(postId)),
                   ),
 
                   // 하단 여백
