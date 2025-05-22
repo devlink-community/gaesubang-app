@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
@@ -9,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
+import '../dto/user_dto.dart';
 import 'auth_data_source.dart';
 
 class AuthFirebaseDataSource implements AuthDataSource {
@@ -588,5 +588,27 @@ class AuthFirebaseDataSource implements AuthDataSource {
     }
 
     return await fetchCurrentUserWithTimerActivities();
+  }
+
+  @override
+  Future<UserDto> fetchUserProfile(String userId) async {
+    return ApiCallDecorator.wrap('AuthFirebase.fetchUserProfile', () async {
+      try {
+        // Firestore에서 특정 사용자 문서 조회
+        final docSnapshot = await _usersCollection.doc(userId).get();
+
+        if (!docSnapshot.exists) {
+          throw Exception('사용자를 찾을 수 없습니다');
+        }
+
+        final userData = docSnapshot.data()!;
+        userData['uid'] = docSnapshot.id; // 문서 ID를 uid로 설정
+
+        return UserDto.fromJson(userData);
+      } catch (e) {
+        print('사용자 프로필 조회 오류: $e');
+        throw Exception('사용자 프로필을 불러오는데 실패했습니다');
+      }
+    }, params: {'userId': userId});
   }
 }

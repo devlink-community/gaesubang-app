@@ -70,4 +70,6 @@ abstract interface class AuthRepository {
 
   /// 현재 인증 상태 확인
   Future<AuthState> getCurrentAuthState();
+
+  Future<Result<Member>> getUserProfile(String userId);
 }
