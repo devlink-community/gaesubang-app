@@ -11,9 +11,9 @@ import 'package:devlink_mobile_app/community/domain/usecase/toggle_like_use_case
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_state.dart';
-import 'package:devlink_mobile_app/core/event/app_event.dart'; // 추가된 import
-import 'package:devlink_mobile_app/core/event/app_event_notifier.dart'; // 추가된 import
-import 'package:flutter/foundation.dart';
+import 'package:devlink_mobile_app/core/event/app_event.dart';
+import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_detail_notifier.g.dart';
@@ -33,7 +33,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   /* ---------- build ---------- */
   @override
   CommunityDetailState build(String postId) {
-    debugPrint('🔄 CommunityDetailNotifier: build(postId: $postId)');
+    AppLogger.communityInfo('CommunityDetailNotifier 초기화 시작: $postId');
 
     _postId = postId;
     _fetchDetail = ref.watch(fetchPostDetailUseCaseProvider);
@@ -51,7 +51,7 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
     //
     //     // 프로필 변경 이벤트가 있으면 화면 새로고침
     //     if (eventNotifier.hasEventOfType<ProfileUpdated>()) {
-    //       debugPrint('🔄 CommunityDetailNotifier: 프로필 업데이트 감지, 게시글 새로고침');
+    //       AppLogger.communityInfo('프로필 업데이트 감지, 게시글 새로고침: $postId');
     //       _loadAll();
     //     }
     //   }
@@ -59,15 +59,20 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
 
     // 초기 상태 → 비동기 로드
     _loadAll();
+    AppLogger.communityInfo('CommunityDetailNotifier 초기화 완료: $postId');
     return const CommunityDetailState();
   }
 
   /* ---------- public actions ---------- */
   Future<void> onAction(CommunityDetailAction action) async {
-    debugPrint('🔄 CommunityDetailNotifier: onAction($action)');
+    AppLogger.debug(
+      'CommunityDetailAction 수신: ${action.runtimeType}',
+      tag: 'CommunityDetail',
+    );
 
     switch (action) {
       case Refresh():
+        AppLogger.communityInfo('사용자 요청으로 게시글 새로고침: $_postId');
         await _loadAll();
 
       case ToggleLike():
@@ -87,12 +92,12 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
         await _handleDeletePost();
 
       case EditPost():
-        debugPrint('📝 CommunityDetailNotifier: EditPost action received');
+        AppLogger.communityInfo('게시글 수정 요청: $_postId');
     }
   }
 
   Future<bool> _handleDeletePost() async {
-    debugPrint('🔄 CommunityDetailNotifier: 게시글 삭제 시작');
+    AppLogger.logBox('게시글 삭제', '게시글 삭제 프로세스 시작: $_postId');
 
     try {
       final result = await _deletePostUseCase.execute(_postId);
@@ -103,19 +108,19 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
           ref
               .read(appEventNotifierProvider.notifier)
               .emit(AppEvent.postDeleted(_postId));
-          debugPrint('✅ CommunityDetailNotifier: 게시글 삭제 성공 및 이벤트 발행');
+          AppLogger.communityInfo('게시글 삭제 성공 및 이벤트 발행: $_postId');
           return true;
 
         case AsyncError(:final error):
-          debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 오류: $error');
+          AppLogger.communityError('게시글 삭제 실패', error: error);
           return false;
 
         default:
-          debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 실패');
+          AppLogger.communityError('게시글 삭제 실패: 예상치 못한 결과');
           return false;
       }
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 게시글 삭제 중 예외 발생: $e');
+    } catch (e, st) {
+      AppLogger.communityError('게시글 삭제 중 예외 발생', error: e, stackTrace: st);
       return false;
     }
   }
@@ -123,49 +128,65 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
   /* ---------- internal handlers ---------- */
   // 좋아요 처리 및 이벤트 발행
   Future<void> _handleLike() async {
-    debugPrint('🔄 CommunityDetailNotifier: 좋아요 토글 시작');
+    AppLogger.communityInfo('좋아요 토글 시작: $_postId');
     state = state.copyWith(post: const AsyncLoading());
 
     try {
       final result = await _toggleLike.execute(_postId);
       state = state.copyWith(post: result);
 
-      // 이벤트 발행: 좋아요 상태 변경됨
-      ref
-          .read(appEventNotifierProvider.notifier)
-          .emit(AppEvent.postLiked(_postId));
+      // 결과에 따른 로깅
+      switch (result) {
+        case AsyncData(:final value):
+          final likeStatus = value.isLikedByCurrentUser ? '추가' : '취소';
+          AppLogger.communityInfo(
+            '좋아요 $likeStatus 완료: $_postId (총 ${value.likeCount}개)',
+          );
 
-      debugPrint('✅ CommunityDetailNotifier: 좋아요 토글 완료 및 이벤트 발행');
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 좋아요 토글 오류: $e');
-      // 에러 처리는 AsyncValue 내부에서 자동으로 처리됨
+          // 이벤트 발행: 좋아요 상태 변경됨
+          ref
+              .read(appEventNotifierProvider.notifier)
+              .emit(AppEvent.postLiked(_postId));
+
+        case AsyncError(:final error):
+          AppLogger.communityError('좋아요 토글 실패', error: error);
+      }
+    } catch (e, st) {
+      AppLogger.communityError('좋아요 토글 중 예외 발생', error: e, stackTrace: st);
     }
   }
 
   // 북마크 처리 및 이벤트 발행
   Future<void> _handleBookmark() async {
-    debugPrint('🔄 CommunityDetailNotifier: 북마크 토글 시작');
+    AppLogger.communityInfo('북마크 토글 시작: $_postId');
     state = state.copyWith(post: const AsyncLoading());
 
     try {
       final result = await _toggleBookmark.execute(_postId);
       state = state.copyWith(post: result);
 
-      // 이벤트 발행: 북마크 상태 변경됨
-      ref
-          .read(appEventNotifierProvider.notifier)
-          .emit(AppEvent.postBookmarked(_postId));
+      // 결과에 따른 로깅
+      switch (result) {
+        case AsyncData(:final value):
+          final bookmarkStatus = value.isBookmarkedByCurrentUser ? '추가' : '제거';
+          AppLogger.communityInfo('북마크 $bookmarkStatus 완료: $_postId');
 
-      debugPrint('✅ CommunityDetailNotifier: 북마크 토글 완료 및 이벤트 발행');
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 북마크 토글 오류: $e');
-      // 에러 처리는 AsyncValue 내부에서 자동으로 처리됨
+          // 이벤트 발행: 북마크 상태 변경됨
+          ref
+              .read(appEventNotifierProvider.notifier)
+              .emit(AppEvent.postBookmarked(_postId));
+
+        case AsyncError(:final error):
+          AppLogger.communityError('북마크 토글 실패', error: error);
+      }
+    } catch (e, st) {
+      AppLogger.communityError('북마크 토글 중 예외 발생', error: e, stackTrace: st);
     }
   }
 
   // 댓글 추가 및 이벤트 발행
   Future<void> _handleAddComment(String content) async {
-    debugPrint('🔄 CommunityDetailNotifier: 댓글 추가 시작');
+    AppLogger.communityInfo('댓글 추가 시작: $_postId, 내용 길이: ${content.length}자');
     state = state.copyWith(comments: const AsyncLoading());
 
     try {
@@ -175,26 +196,30 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
       );
       state = state.copyWith(comments: result);
 
-      // 이벤트 발행: 댓글 추가됨 (생성된 댓글 ID는 모르지만 POST_ID는 알고 있음)
-      ref
-          .read(appEventNotifierProvider.notifier)
-          .emit(AppEvent.commentAdded(_postId, "unknown"));
+      // 결과에 따른 로깅
+      switch (result) {
+        case AsyncData(:final value):
+          AppLogger.communityInfo('댓글 추가 완료: $_postId (총 ${value.length}개)');
 
-      // 게시글 데이터도 함께 새로고침 (댓글 카운트 반영)
-      await _refreshPostDetail();
+          // 이벤트 발행: 댓글 추가됨
+          ref
+              .read(appEventNotifierProvider.notifier)
+              .emit(AppEvent.commentAdded(_postId, "unknown"));
 
-      debugPrint('✅ CommunityDetailNotifier: 댓글 추가 완료 및 이벤트 발행');
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 댓글 추가 오류: $e');
-      // 에러 처리는 AsyncValue 내부에서 자동으로 처리됨
+          // 게시글 데이터도 함께 새로고침 (댓글 카운트 반영)
+          await _refreshPostDetail();
+
+        case AsyncError(:final error):
+          AppLogger.communityError('댓글 추가 실패', error: error);
+      }
+    } catch (e, st) {
+      AppLogger.communityError('댓글 추가 중 예외 발생', error: e, stackTrace: st);
     }
   }
 
   // 댓글 좋아요 처리 및 이벤트 발행
   Future<void> _handleCommentLike(String commentId) async {
-    debugPrint(
-      '🔄 CommunityDetailNotifier: 댓글 좋아요 토글 시작 (commentId: $commentId)',
-    );
+    AppLogger.communityInfo('댓글 좋아요 토글 시작: $_postId, 댓글: $commentId');
 
     try {
       // 기존 comments 배열 가져오기
@@ -222,32 +247,37 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
           // 업데이트된 댓글 목록으로 상태 갱신
           state = state.copyWith(comments: AsyncData(updatedComments));
 
+          final likeStatus = value.isLikedByCurrentUser ? '추가' : '취소';
+          AppLogger.communityInfo(
+            '댓글 좋아요 $likeStatus 완료: $commentId (총 ${value.likeCount}개)',
+          );
+
           // 이벤트 발행: 댓글 좋아요 상태 변경됨
           ref
               .read(appEventNotifierProvider.notifier)
               .emit(AppEvent.commentLiked(_postId, commentId));
 
-          debugPrint('✅ CommunityDetailNotifier: 댓글 좋아요 토글 완료 및 이벤트 발행');
-
         case AsyncError(:final error, :final stackTrace):
           // 실패: 에러 상태로 갱신
-          debugPrint('❌ CommunityDetailNotifier: 댓글 좋아요 토글 오류: $error');
-        // 전체 comments 에러로 설정하기보다 토스트 메시지 등으로 처리할 수 있음
-        // 여기서는 간단히 처리
+          AppLogger.communityError(
+            '댓글 좋아요 토글 실패',
+            error: error,
+            stackTrace: stackTrace,
+          );
 
         case AsyncLoading():
           // 로딩: 무시 (이미 처리됨)
           break;
       }
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 댓글 좋아요 토글 중 예외 발생: $e');
+    } catch (e, st) {
+      AppLogger.communityError('댓글 좋아요 토글 중 예외 발생', error: e, stackTrace: st);
     }
   }
 
   /* ---------- internal utility methods ---------- */
   // 게시글과 댓글 모두 로드
   Future<void> _loadAll() async {
-    debugPrint('🔄 CommunityDetailNotifier: 게시글 및 댓글 로드 시작');
+    AppLogger.logStep(1, 3, '게시글 및 댓글 로드 시작: $_postId');
 
     // 1) 로딩 표시
     state = const CommunityDetailState(
@@ -255,24 +285,49 @@ class CommunityDetailNotifier extends _$CommunityDetailNotifier {
       comments: AsyncLoading(),
     );
 
-    // 2) 동시 요청
-    final postResult = await _fetchDetail.execute(_postId);
-    final commentResult = await _fetchComments.execute(_postId);
+    try {
+      AppLogger.logStep(2, 3, '게시글 상세 정보 요청');
+      final postResult = await _fetchDetail.execute(_postId);
 
-    state = state.copyWith(post: postResult, comments: commentResult);
-    debugPrint('✅ CommunityDetailNotifier: 게시글 및 댓글 로드 완료');
+      AppLogger.logStep(3, 3, '댓글 목록 요청');
+      final commentResult = await _fetchComments.execute(_postId);
+
+      state = state.copyWith(post: postResult, comments: commentResult);
+
+      // 결과 로깅
+      final postStatus = switch (postResult) {
+        AsyncData(:final value) => '성공 (제목: ${value.title})',
+        AsyncError() => '실패',
+        _ => '로딩중',
+      };
+
+      final commentStatus = switch (commentResult) {
+        AsyncData(:final value) => '성공 (${value.length}개)',
+        AsyncError() => '실패',
+        _ => '로딩중',
+      };
+
+      AppLogger.communityInfo(
+        '데이터 로드 완료: $_postId | 게시글: $postStatus, 댓글: $commentStatus',
+      );
+    } catch (e, st) {
+      AppLogger.communityError('데이터 로드 중 예외 발생', error: e, stackTrace: st);
+    }
   }
 
   // 게시글만 새로고침 (댓글 카운트 등 업데이트)
   Future<void> _refreshPostDetail() async {
-    debugPrint('🔄 CommunityDetailNotifier: 게시글 정보만 새로고침');
+    AppLogger.debug('게시글 정보만 새로고침: $_postId');
 
     try {
       final postResult = await _fetchDetail.execute(_postId);
       state = state.copyWith(post: postResult);
-      debugPrint('✅ CommunityDetailNotifier: 게시글 정보 새로고침 완료');
-    } catch (e) {
-      debugPrint('❌ CommunityDetailNotifier: 게시글 정보 새로고침 오류: $e');
+
+      if (postResult case AsyncData(:final value)) {
+        AppLogger.debug('게시글 정보 새로고침 완료: ${value.commentCount}개 댓글');
+      }
+    } catch (e, st) {
+      AppLogger.warning('게시글 정보 새로고침 실패 (무시됨)', error: e, stackTrace: st);
       // 에러는 무시 (댓글 추가 후 게시글 정보 갱신 실패는 UX에 크게 영향 없음)
     }
   }
