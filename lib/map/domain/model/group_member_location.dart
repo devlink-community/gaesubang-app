@@ -5,7 +5,7 @@ part 'group_member_location.freezed.dart';
 @freezed
 class GroupMemberLocation with _$GroupMemberLocation {
   const GroupMemberLocation({
-    required this.memberId,
+    required this.userId,
     required this.nickname,
     required this.imageUrl,
     required this.latitude,
@@ -15,7 +15,7 @@ class GroupMemberLocation with _$GroupMemberLocation {
   });
 
   @override
-  final String memberId;
+  final String userId;
   @override
   final String nickname;
   @override

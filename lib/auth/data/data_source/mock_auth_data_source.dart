@@ -172,7 +172,7 @@ class MockAuthDataSource implements AuthDataSource {
 
       activities.add({
         'id': 'activity_${userId}_${day.millisecondsSinceEpoch}',
-        'memberId': userId,
+        'userId': userId,
         'type': 'start',
         'timestamp': day.subtract(Duration(minutes: dayActivities)),
         'metadata': {'task': '집중 공부', 'device': 'mobile'},
@@ -180,7 +180,7 @@ class MockAuthDataSource implements AuthDataSource {
 
       activities.add({
         'id': 'activity_${userId}_${day.millisecondsSinceEpoch}_end',
-        'memberId': userId,
+        'userId': userId,
         'type': 'end',
         'timestamp': day,
         'metadata': {'task': '집중 공부', 'device': 'mobile'},

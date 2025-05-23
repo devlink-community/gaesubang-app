@@ -4,7 +4,7 @@ abstract interface class GroupLocationDataSource {
   /// 멤버 위치 업데이트
   Future<void> updateMemberLocation(
     String groupId,
-    String memberId,
+    String userId,
     double latitude,
     double longitude,
   );

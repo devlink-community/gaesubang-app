@@ -353,7 +353,7 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 멤버 선택
   void _selectMember(GroupMemberLocation member) {
-    print('멤버 선택: ${member.nickname} (${member.memberId})');
+    print('멤버 선택: ${member.nickname} (${member.userId})');
     state = state.copyWith(selectedMember: member);
 
     // 선택한 멤버 위치로 카메라 이동

@@ -224,22 +224,22 @@ class FocusStatsCalculator {
     memberDateActivities = {};
 
     for (final activity in activities) {
-      final memberId = activity['memberId'] as String?;
+      final userId = activity['userId'] as String?;
       final timestamp = activity['timestamp'];
-      if (memberId == null || timestamp == null) continue;
+      if (userId == null || timestamp == null) continue;
 
       final date = _parseTimestamp(timestamp);
       final dateKey = DateFormat('yyyy-MM-dd').format(date);
 
-      memberDateActivities[memberId] ??= {};
-      memberDateActivities[memberId]![dateKey] ??= [];
-      memberDateActivities[memberId]![dateKey]!.add(activity);
+      memberDateActivities[userId] ??= {};
+      memberDateActivities[userId]![dateKey] ??= [];
+      memberDateActivities[userId]![dateKey]!.add(activity);
     }
 
     // 각 멤버의 일별 총 활동 시간 계산
     final List<Attendance> attendances = [];
 
-    memberDateActivities.forEach((memberId, dateActivities) {
+    memberDateActivities.forEach((userId, dateActivities) {
       dateActivities.forEach((dateKey, dayActivities) {
         // 시간순 정렬
         dayActivities.sort((a, b) {
@@ -313,14 +313,14 @@ class FocusStatsCalculator {
         }
 
         if (totalMinutes > 0) {
-          final memberName = dayActivities.first['memberName'] as String? ?? '';
+          final userName = dayActivities.first['userName'] as String? ?? '';
           final profileUrl = dayActivities.first['profileUrl'] as String?;
 
           attendances.add(
             Attendance(
               groupId: groupId,
-              memberId: memberId,
-              memberName: memberName,
+              userId: userId,
+              userName: userName,
               profileUrl: profileUrl,
               date: DateFormat('yyyy-MM-dd').parse(dateKey),
               timeInMinutes: totalMinutes,

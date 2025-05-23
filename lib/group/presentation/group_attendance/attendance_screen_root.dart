@@ -300,9 +300,9 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
     // 멤버별로 그룹화
     final groupedByMember = <String, List<dynamic>>{};
     for (final attendance in attendancesForDate) {
-      final memberId = attendance.memberId;
-      groupedByMember.putIfAbsent(memberId, () => []);
-      groupedByMember[memberId]!.add(attendance);
+      final userId = attendance.userId;
+      groupedByMember.putIfAbsent(userId, () => []);
+      groupedByMember[userId]!.add(attendance);
     }
 
     // 총 학습 시간별로 정렬 (내림차순)
@@ -413,7 +413,7 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
       0,
       (sum, attendance) => sum + (attendance.timeInMinutes as int),
     );
-    final memberCount = attendances.map((a) => a.memberId).toSet().length;
+    final memberCount = attendances.map((a) => a.userId).toSet().length;
     final avgMinutes = memberCount > 0 ? totalMinutes ~/ memberCount : 0;
 
     return Container(
@@ -571,7 +571,7 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
             ),
             child: Center(
               child: Text(
-                attendance.memberName?.substring(0, 1) ?? '?',
+                attendance.userName?.substring(0, 1) ?? '?',
                 style: AppTextStyles.subtitle1Bold.copyWith(
                   color: AppColorStyles.white,
                 ),
@@ -588,7 +588,7 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
                 Row(
                   children: [
                     Text(
-                      attendance.memberName ?? '멤버 ${attendance.memberId}',
+                      attendance.userName ?? '멤버 ${attendance.userId}',
                       style: AppTextStyles.subtitle1Bold,
                     ),
                     if (rank == 1) ...[

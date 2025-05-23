@@ -14,14 +14,14 @@ class GroupLocationRepositoryImpl implements GroupLocationRepository {
   @override
   Future<Result<void>> updateMemberLocation(
     String groupId,
-    String memberId,
+    String userId,
     double latitude,
     double longitude,
   ) async {
     try {
       await _dataSource.updateMemberLocation(
         groupId,
-        memberId,
+        userId,
         latitude,
         longitude,
       );

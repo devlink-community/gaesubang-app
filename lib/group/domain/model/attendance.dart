@@ -7,8 +7,8 @@ part 'attendance.freezed.dart';
 class Attendance with _$Attendance {
   const Attendance({
     required this.groupId,
-    required this.memberId,
-    required this.memberName,
+    required this.userId,
+    required this.userName,
     this.profileUrl,
     required this.date,
     required this.timeInMinutes,
@@ -18,10 +18,10 @@ class Attendance with _$Attendance {
   final String groupId;
 
   /// 멤버 ID
-  final String memberId;
+  final String userId;
 
   /// 멤버 이름 (UI 표시용)
-  final String memberName;
+  final String userName;
 
   /// 멤버 프로필 이미지 URL
   final String? profileUrl;
