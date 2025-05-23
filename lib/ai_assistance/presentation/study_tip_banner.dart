@@ -782,7 +782,7 @@ class _StudyTipDialogState extends State<_StudyTipDialog> {
                         ),
                         SizedBox(width: 8),
                         Text(
-                          '버그보다 무서운 영어, 한 입씩!',
+                          '버그보다 무서운 영어, 하루 한 입씩!',
                           style: TextStyle(
                             color: AppColorStyles.primary80,
                             fontWeight: FontWeight.w600,
