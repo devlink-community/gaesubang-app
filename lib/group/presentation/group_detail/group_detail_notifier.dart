@@ -79,6 +79,17 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     return const GroupDetailState();
   }
 
+  // mounted 체크를 포함한 안전한 state 업데이트
+  void _safeSetState(GroupDetailState Function() stateBuilder) {
+    if (mounted) {
+      try {
+        state = stateBuilder();
+      } catch (e) {
+        print('❌ State 업데이트 실패: $e');
+      }
+    }
+  }
+
   // 🔧 모든 타이머 정리
   void _cleanupAllTimers() {
     _timer?.cancel();
@@ -416,10 +427,19 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Future<void> _loadInitialGroupMembers() async {
     print('📥 최초 멤버 정보 로드 시작');
 
+    if (!mounted) return; // 시작 전 체크
+
     state = state.copyWith(groupMembersResult: const AsyncValue.loading());
 
     try {
       final result = await _getGroupMembersUseCase?.execute(_groupId);
+
+      // 비동기 작업 후 mounted 체크
+      if (!mounted) {
+        print('🔇 Notifier가 dispose되어 결과 무시');
+        return;
+      }
+
       if (result != null) {
         state = state.copyWith(groupMembersResult: result);
         print('✅ 최초 멤버 정보 로드 완료');
@@ -501,6 +521,10 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 🔧 스트림 데이터 처리
   void _handleStreamData(AsyncValue<List<GroupMember>> asyncValue) {
+    if (!mounted) {
+      print('🔇 Notifier가 dispose되어 스트림 데이터 무시');
+      return;
+    }
     print('🔄 실시간 타이머 상태 업데이트 수신: ${asyncValue.runtimeType}');
 
     switch (asyncValue) {
@@ -510,12 +534,14 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
         final mergedMembers = _mergeLocalTimerStateWithRemoteData(value);
 
-        state = state.copyWith(
-          groupMembersResult: AsyncData(mergedMembers),
-          streamConnectionStatus: StreamConnectionStatus.connected,
-          lastStreamUpdateTime: DateTime.now(),
-          errorMessage: null,
-          reconnectionAttempts: 0,
+        _safeSetState(
+          () => state.copyWith(
+            groupMembersResult: AsyncData(mergedMembers),
+            streamConnectionStatus: StreamConnectionStatus.connected,
+            lastStreamUpdateTime: DateTime.now(),
+            errorMessage: null,
+            reconnectionAttempts: 0,
+          ),
         );
 
         print('✅ 실시간 멤버 상태 업데이트 완료 (${mergedMembers.length}명)');
