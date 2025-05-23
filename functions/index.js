@@ -828,3 +828,256 @@ function calculateDailyFocusTime(activityDocs) {
   console.log(`최종 집중 시간: ${totalFocusMinutes}분`);
   return totalFocusMinutes;
 }
+
+// === 프로필 변경 시 관련 데이터 동기화 ===
+exports.syncProfileChanges = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change, context) => {
+    try {
+      console.log('=== 프로필 변경 동기화 시작 ===');
+      
+      const userId = context.params.userId;
+      const beforeData = change.before.data();
+      const afterData = change.after.data();
+      
+      console.log('사용자 ID:', userId);
+      console.log('변경 전 닉네임:', beforeData.nickname);
+      console.log('변경 후 닉네임:', afterData.nickname);
+      console.log('변경 전 이미지:', beforeData.image ? '있음' : '없음');
+      console.log('변경 후 이미지:', afterData.image ? '있음' : '없음');
+      
+      // 닉네임이나 이미지가 변경되지 않은 경우 처리 안함
+      const nicknameChanged = beforeData.nickname !== afterData.nickname;
+      const imageChanged = beforeData.image !== afterData.image;
+      
+      if (!nicknameChanged && !imageChanged) {
+        console.log('닉네임과 이미지 모두 변경되지 않음 - 동기화 건너뜀');
+        return { skipped: true, reason: 'no_changes' };
+      }
+      
+      console.log('변경 사항:', {
+        nickname: nicknameChanged,
+        image: imageChanged
+      });
+      
+      let totalUpdated = 0;
+      
+      // === 1. 그룹 멤버 정보 업데이트 ===
+      console.log('1. 그룹 멤버 정보 업데이트 시작');
+      
+      try {
+        const memberGroupsSnapshot = await admin.firestore()
+          .collectionGroup('members')
+          .where('userId', '==', userId)
+          .get();
+        
+        console.log('사용자가 속한 그룹 멤버 문서 수:', memberGroupsSnapshot.docs.length);
+        
+        if (!memberGroupsSnapshot.empty) {
+          const batch1 = admin.firestore().batch();
+          let batch1Count = 0;
+          
+          memberGroupsSnapshot.docs.forEach(memberDoc => {
+            const updateData = {};
+            
+            if (nicknameChanged) {
+              updateData.userName = afterData.nickname;
+            }
+            if (imageChanged) {
+              updateData.profileUrl = afterData.image || '';
+            }
+            
+            batch1.update(memberDoc.ref, updateData);
+            batch1Count++;
+            
+            console.log(`그룹 멤버 문서 업데이트 예약: ${memberDoc.ref.path}`);
+          });
+          
+          await batch1.commit();
+          totalUpdated += batch1Count;
+          console.log(`그룹 멤버 정보 업데이트 완료: ${batch1Count}개`);
+        }
+      } catch (groupError) {
+        console.error('그룹 멤버 정보 업데이트 중 오류:', groupError);
+      }
+      
+      // === 2. 게시글 작성자 정보 업데이트 ===
+      console.log('2. 게시글 작성자 정보 업데이트 시작');
+      
+      try {
+        const postsSnapshot = await admin.firestore()
+          .collection('posts')
+          .where('authorId', '==', userId)
+          .get();
+        
+        console.log('사용자가 작성한 게시글 수:', postsSnapshot.docs.length);
+        
+        if (!postsSnapshot.empty) {
+          const batch2 = admin.firestore().batch();
+          let batch2Count = 0;
+          
+          postsSnapshot.docs.forEach(postDoc => {
+            const updateData = {};
+            
+            if (nicknameChanged) {
+              updateData.authorNickname = afterData.nickname;
+            }
+            if (imageChanged) {
+              updateData.userProfileImage = afterData.image || '';
+            }
+            
+            batch2.update(postDoc.ref, updateData);
+            batch2Count++;
+            
+            console.log(`게시글 문서 업데이트 예약: ${postDoc.id}`);
+          });
+          
+          await batch2.commit();
+          totalUpdated += batch2Count;
+          console.log(`게시글 작성자 정보 업데이트 완료: ${batch2Count}개`);
+        }
+      } catch (postError) {
+        console.error('게시글 작성자 정보 업데이트 중 오류:', postError);
+      }
+      
+      // === 3. 댓글 작성자 정보 업데이트 ===
+      console.log('3. 댓글 작성자 정보 업데이트 시작');
+      
+      try {
+        const commentsSnapshot = await admin.firestore()
+          .collectionGroup('comments')
+          .where('userId', '==', userId)
+          .get();
+        
+        console.log('사용자가 작성한 댓글 수:', commentsSnapshot.docs.length);
+        
+        if (!commentsSnapshot.empty) {
+          // 댓글은 많을 수 있으므로 배치 단위로 분할 처리
+          const batchSize = 450; // 안전 마진 고려
+          
+          for (let i = 0; i < commentsSnapshot.docs.length; i += batchSize) {
+            const batch3 = admin.firestore().batch();
+            const batchDocs = commentsSnapshot.docs.slice(i, i + batchSize);
+            
+            batchDocs.forEach(commentDoc => {
+              const updateData = {};
+              
+              if (nicknameChanged) {
+                updateData.userName = afterData.nickname;
+              }
+              if (imageChanged) {
+                updateData.userProfileImage = afterData.image || '';
+              }
+              
+              batch3.update(commentDoc.ref, updateData);
+              
+              console.log(`댓글 문서 업데이트 예약: ${commentDoc.ref.path}`);
+            });
+            
+            await batch3.commit();
+            totalUpdated += batchDocs.length;
+            console.log(`댓글 배치 ${Math.floor(i/batchSize) + 1} 업데이트 완료: ${batchDocs.length}개`);
+          }
+        }
+      } catch (commentError) {
+        console.error('댓글 작성자 정보 업데이트 중 오류:', commentError);
+      }
+      
+      // === 4. 그룹 타이머 활동 정보 업데이트 ===
+      console.log('4. 그룹 타이머 활동 정보 업데이트 시작');
+      
+      try {
+        if (nicknameChanged) {
+          const timerActivitiesSnapshot = await admin.firestore()
+            .collectionGroup('timerActivities')
+            .where('userId', '==', userId)
+            .get();
+          
+          console.log('사용자의 그룹 타이머 활동 수:', timerActivitiesSnapshot.docs.length);
+          
+          if (!timerActivitiesSnapshot.empty) {
+            const batch4 = admin.firestore().batch();
+            let batch4Count = 0;
+            
+            timerActivitiesSnapshot.docs.forEach(activityDoc => {
+              batch4.update(activityDoc.ref, {
+                memberName: afterData.nickname
+              });
+              batch4Count++;
+              
+              console.log(`타이머 활동 문서 업데이트 예약: ${activityDoc.ref.path}`);
+            });
+            
+            await batch4.commit();
+            totalUpdated += batch4Count;
+            console.log(`타이머 활동 정보 업데이트 완료: ${batch4Count}개`);
+          }
+        }
+      } catch (activityError) {
+        console.error('타이머 활동 정보 업데이트 중 오류:', activityError);
+      }
+      
+      // === 5. 최근 알림 발송자 정보 업데이트 (최근 30일 알림만) ===
+      console.log('5. 알림 발송자 정보 업데이트 시작');
+      
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+        
+        const notificationsSnapshot = await admin.firestore()
+          .collectionGroup('items')
+          .where('senderId', '==', userId)
+          .where('createdAt', '>=', thirtyDaysAgoTimestamp)
+          .get();
+        
+        console.log('사용자가 발송한 최근 알림 수:', notificationsSnapshot.docs.length);
+        
+        if (!notificationsSnapshot.empty) {
+          const batch5 = admin.firestore().batch();
+          let batch5Count = 0;
+          
+          notificationsSnapshot.docs.forEach(notificationDoc => {
+            const updateData = {};
+            
+            if (nicknameChanged) {
+              updateData.senderName = afterData.nickname;
+            }
+            if (imageChanged) {
+              updateData.senderProfileImage = afterData.image || '';
+            }
+            
+            batch5.update(notificationDoc.ref, updateData);
+            batch5Count++;
+            
+            console.log(`알림 문서 업데이트 예약: ${notificationDoc.ref.path}`);
+          });
+          
+          await batch5.commit();
+          totalUpdated += batch5Count;
+          console.log(`알림 발송자 정보 업데이트 완료: ${batch5Count}개`);
+        }
+      } catch (notificationError) {
+        console.error('알림 발송자 정보 업데이터 중 오류:', notificationError);
+      }
+      
+      console.log('=== 프로필 변경 동기화 완료 ===');
+      console.log('총 업데이트된 문서 수:', totalUpdated);
+      
+      return { 
+        success: true, 
+        userId: userId,
+        changes: {
+          nickname: nicknameChanged,
+          image: imageChanged
+        },
+        updatedDocuments: totalUpdated,
+        newNickname: afterData.nickname,
+        newImageUrl: afterData.image || null
+      };
+      
+    } catch (error) {
+      console.error('=== 프로필 변경 동기화 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message, userId: context.params.userId };
+    }
+  });
