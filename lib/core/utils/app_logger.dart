@@ -50,23 +50,57 @@ class AppLogger {
     }
   }
 
-  /// 로그 메시지 포맷팅
+  /// 로그 메시지 포맷팅 (logger 패키지 스타일)
   static String _formatLogMessage(LogRecord record) {
-    final level = record.level.name.padRight(7);
+    final emoji = _getEmojiForLevel(record.level);
+    final colorCode = _getColorForLevel(record.level);
+    final resetColor = '\x1B[0m';
     final time = record.time.toString().substring(11, 23); // HH:mm:ss.SSS
     final logger = record.loggerName.isNotEmpty ? '[${record.loggerName}]' : '';
+    final levelName = record.level.name.padRight(7);
     
-    var message = '$time $level $logger ${record.message}';
+    // 메인 로그 라인
+    var message = '$colorCode$emoji $time $levelName$logger$resetColor ${record.message}';
     
+    // 에러 정보 추가
     if (record.error != null) {
-      message += '\n  Error: ${record.error}';
+      message += '\n$colorCode┗━ ❌ Error: ${record.error}$resetColor';
     }
     
+    // 스택트레이스 추가 (간략하게)
     if (record.stackTrace != null && kDebugMode) {
-      message += '\n  StackTrace: ${record.stackTrace}';
+      final stackLines = record.stackTrace.toString().split('\n');
+      final relevantLines = stackLines
+          .where((line) => line.contains('package:devlink_mobile_app'))
+          .take(3)
+          .join('\n   ');
+      
+      if (relevantLines.isNotEmpty) {
+        message += '\n$colorCode┗━ 📍 Stack:$resetColor\n   $relevantLines';
+      }
     }
     
     return message;
+  }
+
+  /// 로그 레벨별 이모지 반환
+  static String _getEmojiForLevel(Level level) {
+    if (level >= Level.SEVERE) return '🔥'; // SEVERE/ERROR
+    if (level >= Level.WARNING) return '⚠️'; // WARNING
+    if (level >= Level.INFO) return '💡'; // INFO
+    if (level >= Level.CONFIG) return '⚙️'; // CONFIG
+    if (level >= Level.FINE) return '🐛'; // DEBUG/FINE
+    return '📝'; // FINER/FINEST
+  }
+
+  /// 로그 레벨별 색상 코드 반환 (ANSI)
+  static String _getColorForLevel(Level level) {
+    if (level >= Level.SEVERE) return '\x1B[91m'; // 밝은 빨강
+    if (level >= Level.WARNING) return '\x1B[93m'; // 밝은 노랑
+    if (level >= Level.INFO) return '\x1B[96m'; // 밝은 청록
+    if (level >= Level.CONFIG) return '\x1B[95m'; // 밝은 자홍
+    if (level >= Level.FINE) return '\x1B[92m'; // 밝은 초록
+    return '\x1B[37m'; // 밝은 회색
   }
 
   /// Level을 dart:developer의 레벨로 변환
@@ -168,5 +202,42 @@ class AppLogger {
   /// 로깅 재활성화
   static void enableAll() {
     Logger.root.level = _getRootLevel();
+  }
+
+  // 🎨 예쁜 로깅 메서드들 (특별한 경우에 사용)
+  
+  /// 박스 스타일 로그 (중요한 시작/완료 시)
+  static void logBox(String title, String message, {Level level = Level.INFO}) {
+    final logger = _getLogger('Box');
+    final colorCode = _getColorForLevel(level);
+    final resetColor = '\x1B[0m';
+    
+    final boxMessage = '''
+$colorCode╭─────────────────────────────────────────╮
+│ 📦 $title
+├─────────────────────────────────────────┤
+│ $message
+╰─────────────────────────────────────────╯$resetColor''';
+    
+    logger.log(level, boxMessage);
+  }
+
+  /// 배너 스타일 로그 (앱 시작 등)
+  static void logBanner(String message) {
+    final logger = _getLogger('Banner');
+    final bannerMessage = '''
+🚀═══════════════════════════════════════════════════════════════
+   $message
+═══════════════════════════════════════════════════════════════''';
+    
+    logger.info(bannerMessage);
+  }
+
+  /// 단계별 진행 로그
+  static void logStep(int step, int total, String message) {
+    final progress = '[$step/$total]';
+    final progressBar = '█' * ((step * 10) ~/ total) + '░' * (10 - (step * 10) ~/ total);
+    
+    info('$progress $progressBar $message', tag: 'Progress');
   }
 }
