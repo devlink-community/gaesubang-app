@@ -108,6 +108,47 @@ class GroupFirebaseDataSource implements GroupDataSource {
     _stopMemberChangeDetection();
   }
 
+  // 🔧 새로 추가: Firebase Storage URL에서 이미지 삭제하는 헬퍼 메서드
+  Future<void> _deleteImageFromStorage(String imageUrl) async {
+    try {
+      if (imageUrl.isEmpty || !imageUrl.startsWith('http')) {
+        print('🗑️ Invalid image URL, skipping deletion: $imageUrl');
+        return;
+      }
+
+      // Firebase Storage URL에서 파일 참조 생성
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+      print('🗑️ Successfully deleted image from storage: $imageUrl');
+    } catch (e) {
+      // 이미지가 이미 삭제되었거나 존재하지 않는 경우는 무시
+      if (e.toString().contains('object-not-found')) {
+        print('🗑️ Image already deleted or not found: $imageUrl');
+      } else {
+        print('❌ Failed to delete image from storage: $e');
+        // 삭제 실패는 로그만 남기고 예외를 던지지 않음 (그룹 업데이트는 계속 진행)
+      }
+    }
+  }
+
+  // 🔧 새로 추가: 그룹 폴더 전체 삭제하는 헬퍼 메서드
+  Future<void> _deleteGroupFolder(String groupId) async {
+    try {
+      final folderRef = _storage.ref().child('groups/$groupId');
+
+      // 폴더 내 모든 파일 목록 가져오기
+      final result = await folderRef.listAll();
+
+      // 각 파일 삭제
+      final deleteFutures = result.items.map((item) => item.delete());
+      await Future.wait(deleteFutures);
+
+      print('🗑️ Successfully deleted group folder: groups/$groupId');
+    } catch (e) {
+      print('❌ Failed to delete group folder: $e');
+    }
+  }
+
   // 현재 사용자 확인 헬퍼 메서드
   String _getCurrentUserId() {
     final user = _auth.currentUser;
@@ -500,6 +541,24 @@ class GroupFirebaseDataSource implements GroupDataSource {
   ) async {
     return ApiCallDecorator.wrap('GroupFirebase.fetchUpdateGroup', () async {
       try {
+        // 🔧 이미지 업데이트 시 기존 이미지 삭제 처리
+        if (updateData.containsKey('imageUrl')) {
+          // 기존 그룹 정보 조회
+          final groupDoc = await _groupsCollection.doc(groupId).get();
+          if (groupDoc.exists) {
+            final currentData = groupDoc.data()!;
+            final currentImageUrl = currentData['imageUrl'] as String?;
+
+            // 기존 이미지가 있고, 새 이미지와 다른 경우 기존 이미지 삭제
+            if (currentImageUrl != null &&
+                currentImageUrl.isNotEmpty &&
+                currentImageUrl != updateData['imageUrl']) {
+              print('🗑️ Deleting previous group image: $currentImageUrl');
+              await _deleteImageFromStorage(currentImageUrl);
+            }
+          }
+        }
+
         // 업데이트 필드 준비
         final updates = {...updateData};
 
@@ -1442,5 +1501,31 @@ class GroupFirebaseDataSource implements GroupDataSource {
     DateTime timestamp,
   ) async {
     return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+  }
+
+  // 🔧 새로 추가: 그룹 삭제 시 관련 이미지들 모두 삭제하는 메서드
+  Future<void> deleteGroupWithImages(String groupId) async {
+    try {
+      // 1. 그룹 문서에서 이미지 URL 가져오기
+      final groupDoc = await _groupsCollection.doc(groupId).get();
+      if (groupDoc.exists) {
+        final groupData = groupDoc.data()!;
+        final imageUrl = groupData['imageUrl'] as String?;
+
+        // 그룹 대표 이미지 삭제
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          await _deleteImageFromStorage(imageUrl);
+        }
+      }
+
+      // 2. 그룹 폴더 전체 삭제 (혹시 남은 이미지들까지 모두 정리)
+      await _deleteGroupFolder(groupId);
+
+      // 3. 그룹 문서 삭제는 별도 메서드에서 처리하도록 함
+      print('🗑️ Group images cleanup completed for groupId: $groupId');
+    } catch (e) {
+      print('❌ Failed to delete group images: $e');
+      // 이미지 삭제 실패는 로그만 남기고 계속 진행
+    }
   }
 }

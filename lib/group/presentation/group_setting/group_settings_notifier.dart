@@ -54,7 +54,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
     switch (result) {
       case AsyncData(:final value):
-      // 현재 사용자가 방장인지 확인
+        // 현재 사용자가 방장인지 확인
         final isOwner = value.ownerId == currentUser?.id;
 
         state = state.copyWith(
@@ -63,9 +63,9 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           description: value.description,
           imageUrl: value.imageUrl,
           hashTags:
-          value.hashTags
-              .map((tag) => HashTag(id: tag, content: tag))
-              .toList(),
+              value.hashTags
+                  .map((tag) => HashTag(id: tag, content: tag))
+                  .toList(),
           limitMemberCount: value.maxMemberCount,
           isOwner: isOwner,
         );
@@ -95,7 +95,10 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   }
 
   // 🔧 새로 추가: 멤버 페이지 로딩 로직
-  Future<void> _loadMemberPage(String groupId, {bool isInitialLoad = false}) async {
+  Future<void> _loadMemberPage(
+    String groupId, {
+    bool isInitialLoad = false,
+  }) async {
     try {
       if (!isInitialLoad) {
         // 추가 로딩 시작
@@ -115,7 +118,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           _handleMemberPageError(error, isInitialLoad);
 
         case AsyncLoading():
-        // 로딩 상태는 이미 설정됨
+          // 로딩 상태는 이미 설정됨
           break;
       }
     } catch (e, st) {
@@ -125,7 +128,10 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   }
 
   // 🔧 새로 추가: 멤버 로딩 성공 처리
-  void _handleMemberPageSuccess(List<GroupMember> allMembers, bool isInitialLoad) {
+  void _handleMemberPageSuccess(
+    List<GroupMember> allMembers,
+    bool isInitialLoad,
+  ) {
     final currentPage = isInitialLoad ? 0 : state.currentMemberPage;
     final pageSize = state.memberPageSize;
 
@@ -137,15 +143,15 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     final newMembers = allMembers.skip(startIndex).take(pageSize).toList();
 
     // 기존 멤버 목록과 합치기
-    final updatedMembers = isInitialLoad
-        ? newMembers
-        : [...state.paginatedMembers, ...newMembers];
+    final updatedMembers =
+        isInitialLoad ? newMembers : [...state.paginatedMembers, ...newMembers];
 
     // 더 로드할 멤버가 있는지 확인
     final hasMore = endIndex < allMembers.length;
 
     state = state.copyWith(
-      members: AsyncData(allMembers), // 전체 멤버 목록도 업데이트
+      members: AsyncData(allMembers),
+      // 전체 멤버 목록도 업데이트
       paginatedMembers: updatedMembers,
       currentMemberPage: isInitialLoad ? 0 : currentPage + 1,
       hasMoreMembers: hasMore,
@@ -153,7 +159,9 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       memberLoadError: null,
     );
 
-    debugPrint('멤버 페이지 로딩 완료: ${updatedMembers.length}/${allMembers.length}, hasMore: $hasMore');
+    debugPrint(
+      '멤버 페이지 로딩 완료: ${updatedMembers.length}/${allMembers.length}, hasMore: $hasMore',
+    );
   }
 
   // 🔧 새로 추가: 멤버 로딩 에러 처리
@@ -296,7 +304,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             imageUploadStatus: ImageUploadStatus.completed,
             uploadProgress: 1.0,
             successMessage: '이미지 업로드가 완료되었습니다.',
-            originalImagePath: null, // 로컬 경로 초기화
+            originalImagePath: null,
+            // 로컬 경로 초기화
             isSubmitting: false, // 로딩 OFF
           );
 
@@ -329,7 +338,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           );
 
         case AsyncLoading():
-        // 업로드 중 상태는 이미 설정되어 있음
+          // 업로드 중 상태는 이미 설정되어 있음
           state = state.copyWith(uploadProgress: 0.8);
           break;
       }
@@ -359,11 +368,31 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(limitMemberCount: validCount);
 
       case ImageUrlChanged(:final imageUrl):
-      // 로컬 파일 경로인 경우 Firebase Storage에 업로드
-        if (imageUrl != null && imageUrl.startsWith('file://')) {
+        // null인 경우 (이미지 삭제 버튼 클릭)
+        if (imageUrl == null) {
+          final currentImageUrl = state.imageUrl;
+
+          // 현재 Firebase Storage 이미지가 있으면 삭제 예약 (실제 삭제는 save 시점에서)
+          if (currentImageUrl != null && currentImageUrl.startsWith('http')) {
+            // 삭제할 이미지 URL을 상태에 저장해두고, save 시점에서 삭제 처리
+            state = state.copyWith(
+              imageUrl: null,
+              originalImagePath: null, // 로컬 이미지 경로도 초기화
+              imageUploadStatus: ImageUploadStatus.idle,
+            );
+          } else {
+            state = state.copyWith(
+              imageUrl: null,
+              originalImagePath: null,
+              imageUploadStatus: ImageUploadStatus.idle,
+            );
+          }
+        }
+        // 로컬 파일 경로인 경우 Firebase Storage에 업로드
+        else if (imageUrl.startsWith('file://')) {
           await uploadGroupImage(imageUrl);
         } else {
-          // 네트워크 URL이거나 null인 경우 직접 설정
+          // 네트워크 URL인 경우 직접 설정
           state = state.copyWith(imageUrl: imageUrl);
         }
 
@@ -388,7 +417,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         );
 
       case ToggleEditMode():
-      // 현재 편집 모드 상태의 반대로 변경
+        // 현재 편집 모드 상태의 반대로 변경
         state = state.copyWith(isEditing: !state.isEditing);
 
         // 편집 모드를 종료하면 원래 그룹 정보로 되돌림
@@ -400,9 +429,9 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
               description: originalGroup.description,
               imageUrl: originalGroup.imageUrl,
               hashTags:
-              originalGroup.hashTags
-                  .map((tag) => HashTag(id: tag, content: tag))
-                  .toList(),
+                  originalGroup.hashTags
+                      .map((tag) => HashTag(id: tag, content: tag))
+                      .toList(),
               limitMemberCount: originalGroup.maxMemberCount,
             );
           }
@@ -415,7 +444,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         await _leaveGroup();
 
       case Refresh():
-      // 그룹 ID 가져오기
+        // 그룹 ID 가져오기
         final group = state.group.valueOrNull;
         if (group != null) {
           await _loadGroupDetail(group.id);
@@ -423,10 +452,10 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         }
 
       case SelectImage():
-      // Root에서 처리 (이미지 선택 다이얼로그 표시)
+        // Root에서 처리 (이미지 선택 다이얼로그 표시)
         break;
 
-    // 🔧 새로 추가: 페이지네이션 관련 액션 처리
+      // 🔧 새로 추가: 페이지네이션 관련 액션 처리
       case LoadMoreMembers():
         final group = state.group.valueOrNull;
         if (group != null && state.canLoadMoreMembers) {
@@ -488,7 +517,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     // 결과 처리
     switch (result) {
       case AsyncData():
-      // 그룹 정보 다시 로드
+        // 그룹 정보 다시 로드
         await _loadGroupDetail(currentGroup.id);
         await _loadInitialMembers(currentGroup.id); // 🔧 페이지네이션 버전으로 변경
         state = state.copyWith(
@@ -502,7 +531,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           errorMessage: _getFriendlyErrorMessage(error),
         );
       case AsyncLoading():
-      // 이미 처리됨
+        // 이미 처리됨
         break;
     }
   }
@@ -532,7 +561,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           errorMessage: _getFriendlyErrorMessage(error),
         );
       case AsyncLoading():
-      // 이미 처리됨
+        // 이미 처리됨
         break;
     }
   }
