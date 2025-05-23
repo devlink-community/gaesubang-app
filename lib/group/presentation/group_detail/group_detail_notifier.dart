@@ -308,21 +308,23 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
   }
 
-  // 🔧 타이머 재개 처리
+  // 🔧 타이머 재개 처리 (수정)
   Future<void> _handleResumeTimer() async {
     if (state.timerStatus != TimerStatus.paused) return;
 
-    // pause 상태에서 resume - 기존 elapsedSeconds 유지
+    // 기존 elapsedSeconds 유지한 채로 resume
     state = state.copyWith(timerStatus: TimerStatus.running);
 
+    // 새로운 세션 시작 시간은 현재로 설정하되
+    // elapsedSeconds는 그대로 유지
     _localTimerStartTime = DateTime.now();
 
+    // 서버 상태 업데이트
     _updateCurrentUserInMemberList(
       isActive: true,
       timerStartTime: _localTimerStartTime,
     );
 
-    // API 호출 (실패해도 로컬 상태는 유지)
     try {
       await _recordTimerActivityUseCase?.resume(_groupId);
     } catch (e) {
@@ -330,7 +332,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
 
     _startTimerCountdown();
-    _startMidnightDetection(); // 추가: 자정 감지 재시작
+    _startMidnightDetection();
   }
 
   // 🔧 타이머 정지 처리 (재시도 포함)
@@ -733,6 +735,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   void _handleTimerTick() {
     if (state.timerStatus != TimerStatus.running) return;
 
+    // 단순히 1초씩 증가 (이미 서버에서 받은 초기값부터 시작)
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
 
     if (_localTimerStartTime != null) {
@@ -802,6 +805,26 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         currentUserMember.timerStartTime != null) {
       print('⚠️ 비정상 종료 감지 - 마지막 상태가 활성 상태');
       _handleAbnormalTermination(currentUserMember.timerStartTime!);
+      return;
+    }
+    // 서버에서 활성 상태이고 정상적인 경우
+    if (currentUserMember.isActive &&
+        currentUserMember.timerStartTime != null) {
+      // 비정상 종료가 아닌 정상 실행 중인 경우 확인
+      final elapsedTime = DateTime.now().difference(
+        currentUserMember.timerStartTime!,
+      );
+
+      // 24시간 이상 경과했으면 비정상으로 판단 (예시)
+      if (elapsedTime.inHours > 24) {
+        print('⚠️ 비정상 종료 감지 - 24시간 이상 경과');
+        _handleAbnormalTermination(currentUserMember.timerStartTime!);
+        return;
+      }
+
+      // 정상적인 활성 상태라면 복원
+      print('✅ 서버에서 활성 타이머 감지 - 상태 복원');
+      _restoreActiveState(currentUserMember);
       return;
     }
 
@@ -1016,5 +1039,25 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     } else {
       print('✅ 타이머 활동 기록 성공');
     }
+  }
+
+  // 🔧 활성 상태 복원 (새로 추가)
+  void _restoreActiveState(GroupMember member) {
+    // 서버의 시작 시간을 그대로 사용
+    _localTimerStartTime = member.timerStartTime;
+
+    // 서버 시작 시간부터 현재까지의 경과 시간 계산
+    final elapsedSeconds = member.elapsedSeconds;
+
+    state = state.copyWith(
+      timerStatus: TimerStatus.running,
+      elapsedSeconds: elapsedSeconds,
+    );
+
+    // 로컬 타이머 시작
+    _startTimerCountdown();
+    _startMidnightDetection();
+
+    print('✅ 타이머 상태 복원 완료: ${elapsedSeconds}초 경과');
   }
 }
