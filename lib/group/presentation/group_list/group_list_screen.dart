@@ -242,46 +242,19 @@ class _GroupListScreenState extends State<GroupListScreen> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: AppColorStyles.primary100,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  headingText,
-                  style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
-                ),
-              ],
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                color: AppColorStyles.primary100,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    '정렬',
-                    style: TextStyle(
-                      color: AppColorStyles.primary100,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.sort, size: 16, color: AppColorStyles.primary100),
-                ],
-              ),
+            const SizedBox(width: 8),
+            Text(
+              headingText,
+              style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
             ),
           ],
         ),
