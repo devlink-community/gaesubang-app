@@ -14,7 +14,7 @@ class GetActiveBannersUseCase {
       : _repository = repository;
 
   /// 활성 배너 중 랜덤하게 하나를 선택하여 반환
-  /// 시간대별 시드를 사용하여 30분마다 다른 배너가 선택되도록 함
+  /// 시간대별 시드를 사용하여 1분마다 다른 배너가 선택되도록 함 (테스트용)
   Future<AsyncValue<Banner?>> execute() async {
     final result = await _repository.getActiveBanners();
 
@@ -36,7 +36,7 @@ class GetActiveBannersUseCase {
           return const AsyncData(null);
         }
 
-        // 시간대별 랜덤 시드 생성 (30분 단위)
+        // 시간대별 랜덤 시드 생성 (1분 단위 - 테스트용)
         final timeSlot = _generateTimeSlot(now);
         final selectedBanner = _selectRandomBanner(activeBanners, timeSlot);
 
@@ -47,20 +47,20 @@ class GetActiveBannersUseCase {
     }
   }
 
-  /// 30분 단위로 시간 슬롯 생성
+  /// 1분 단위로 시간 슬롯 생성 (테스트용)
   int _generateTimeSlot(DateTime now) {
-    // 년월일 + 시간(30분 단위)로 시드 생성
+    // 년월일 + 시간 + 분으로 시드 생성
     final year = now.year;
     final month = now.month;
     final day = now.day;
     final hour = now.hour;
-    final halfHour = now.minute ~/ 30; // 0 또는 1
+    final minute = now.second ~/ 20; // 분 단위로 변경
 
     return year * 100000000 +
         month * 1000000 +
         day * 10000 +
         hour * 100 +
-        halfHour;
+        minute;
   }
 
   /// 시간 슬롯을 시드로 사용하여 배너 랜덤 선택
