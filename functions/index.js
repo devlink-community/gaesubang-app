@@ -1081,3 +1081,276 @@ exports.syncProfileChanges = functions.firestore
       return { error: error.message, userId: context.params.userId };
     }
   });
+
+  // === 사용자 탈퇴 시 관련 데이터 정리 ===
+exports.cleanupUserData = functions.firestore
+  .document('users/{userId}')
+  .onDelete(async (snapshot, context) => {
+    try {
+      console.log('=== 사용자 탈퇴 데이터 정리 시작 ===');
+      
+      const userId = context.params.userId;
+      const userData = snapshot.data();
+      
+      console.log('탈퇴 사용자 ID:', userId);
+      console.log('탈퇴 사용자 닉네임:', userData.nickname);
+      
+      let totalProcessed = 0;
+      
+      // === 1. FCM 토큰 모두 삭제 ===
+      console.log('1. FCM 토큰 삭제 시작');
+      
+      try {
+        const fcmTokensSnapshot = await admin.firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('private')
+          .doc('fcmTokens')
+          .collection('tokens')
+          .get();
+        
+        if (!fcmTokensSnapshot.empty) {
+          const batch1 = admin.firestore().batch();
+          
+          fcmTokensSnapshot.docs.forEach(tokenDoc => {
+            batch1.delete(tokenDoc.ref);
+          });
+          
+          // fcmTokens 문서도 삭제
+          batch1.delete(admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('private')
+            .doc('fcmTokens'));
+          
+          await batch1.commit();
+          totalProcessed += fcmTokensSnapshot.docs.length + 1;
+          console.log('FCM 토큰 삭제 완료:', fcmTokensSnapshot.docs.length, '개');
+        }
+      } catch (fcmError) {
+        console.error('FCM 토큰 삭제 중 오류:', fcmError);
+      }
+      
+      // === 2. 사용자 개인 타이머 활동 삭제 ===
+      console.log('2. 사용자 개인 타이머 활동 삭제 시작');
+      
+      try {
+        const timerActivitiesSnapshot = await admin.firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('timerActivities')
+          .get();
+        
+        if (!timerActivitiesSnapshot.empty) {
+          const batch2 = admin.firestore().batch();
+          
+          timerActivitiesSnapshot.docs.forEach(activityDoc => {
+            batch2.delete(activityDoc.ref);
+          });
+          
+          await batch2.commit();
+          totalProcessed += timerActivitiesSnapshot.docs.length;
+          console.log('개인 타이머 활동 삭제 완료:', timerActivitiesSnapshot.docs.length, '개');
+        }
+      } catch (activityError) {
+        console.error('개인 타이머 활동 삭제 중 오류:', activityError);
+      }
+      
+      // === 3. 사용자 북마크 삭제 ===
+      console.log('3. 사용자 북마크 삭제 시작');
+      
+      try {
+        const bookmarksSnapshot = await admin.firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('bookmarks')
+          .get();
+        
+        if (!bookmarksSnapshot.empty) {
+          const batch3 = admin.firestore().batch();
+          
+          bookmarksSnapshot.docs.forEach(bookmarkDoc => {
+            batch3.delete(bookmarkDoc.ref);
+          });
+          
+          await batch3.commit();
+          totalProcessed += bookmarksSnapshot.docs.length;
+          console.log('북마크 삭제 완료:', bookmarksSnapshot.docs.length, '개');
+        }
+      } catch (bookmarkError) {
+        console.error('북마크 삭제 중 오류:', bookmarkError);
+      }
+      
+      // === 4. 사용자 알림 모두 삭제 ===
+      console.log('4. 사용자 알림 삭제 시작');
+      
+      try {
+        const notificationsSnapshot = await admin.firestore()
+          .collection('notifications')
+          .doc(userId)
+          .collection('items')
+          .get();
+        
+        if (!notificationsSnapshot.empty) {
+          const batch4 = admin.firestore().batch();
+          
+          notificationsSnapshot.docs.forEach(notificationDoc => {
+            batch4.delete(notificationDoc.ref);
+          });
+          
+          // notifications 부모 문서도 삭제
+          batch4.delete(admin.firestore()
+            .collection('notifications')
+            .doc(userId));
+          
+          await batch4.commit();
+          totalProcessed += notificationsSnapshot.docs.length + 1;
+          console.log('알림 삭제 완료:', notificationsSnapshot.docs.length, '개');
+        }
+      } catch (notificationError) {
+        console.error('알림 삭제 중 오류:', notificationError);
+      }
+      
+      // === 5. 그룹 멤버십 제거 및 관련 데이터 정리 ===
+      console.log('5. 그룹 멤버십 제거 시작');
+      
+      try {
+        const membershipSnapshot = await admin.firestore()
+          .collectionGroup('members')
+          .where('userId', '==', userId)
+          .get();
+        
+        if (!membershipSnapshot.empty) {
+          console.log('사용자가 속한 그룹 수:', membershipSnapshot.docs.length);
+          
+          // 각 그룹에서 멤버 제거 및 memberCount 감소
+          const groupUpdates = new Map();
+          const batch5 = admin.firestore().batch();
+          
+          membershipSnapshot.docs.forEach(memberDoc => {
+            batch5.delete(memberDoc.ref);
+            
+            // 그룹 ID 추출 (groups/{groupId}/members/{memberId} 경로에서)
+            const groupId = memberDoc.ref.parent.parent.id;
+            groupUpdates.set(groupId, (groupUpdates.get(groupId) || 0) + 1);
+          });
+          
+          // 각 그룹의 memberCount 감소
+          for (const [groupId, removedCount] of groupUpdates) {
+            const groupRef = admin.firestore().collection('groups').doc(groupId);
+            batch5.update(groupRef, {
+              memberCount: admin.firestore.FieldValue.increment(-removedCount)
+            });
+          }
+          
+          await batch5.commit();
+          totalProcessed += membershipSnapshot.docs.length + groupUpdates.size;
+          console.log('그룹 멤버십 제거 완료:', membershipSnapshot.docs.length, '개');
+          console.log('영향받는 그룹 수:', groupUpdates.size);
+        }
+      } catch (membershipError) {
+        console.error('그룹 멤버십 제거 중 오류:', membershipError);
+      }
+      
+      // === 6. 사용자가 작성한 좋아요/댓글 좋아요 제거 ===
+      console.log('6. 사용자 좋아요 데이터 정리 시작');
+      
+      try {
+        // 게시글 좋아요 제거
+        const postLikesSnapshot = await admin.firestore()
+          .collectionGroup('likes')
+          .where('userId', '==', userId)
+          .get();
+        
+        if (!postLikesSnapshot.empty) {
+          // 좋아요 제거와 동시에 likeCount 감소 처리를 위해 그룹별로 처리
+          const postLikesByPost = new Map();
+          
+          postLikesSnapshot.docs.forEach(likeDoc => {
+            const pathParts = likeDoc.ref.path.split('/');
+            
+            if (pathParts.includes('posts') && pathParts.includes('likes')) {
+              // posts/{postId}/likes/{userId} 형태
+              if (pathParts.length === 4) {
+                const postId = pathParts[1];
+                if (!postLikesByPost.has(postId)) {
+                  postLikesByPost.set(postId, []);
+                }
+                postLikesByPost.get(postId).push(likeDoc);
+              }
+              // posts/{postId}/comments/{commentId}/likes/{userId} 형태
+              else if (pathParts.length === 6) {
+                const postId = pathParts[1];
+                const commentId = pathParts[3];
+                const key = `${postId}:${commentId}`;
+                if (!postLikesByPost.has(key)) {
+                  postLikesByPost.set(key, []);
+                }
+                postLikesByPost.get(key).push(likeDoc);
+              }
+            }
+          });
+          
+          // 좋아요 제거 및 카운터 감소
+          const batch6 = admin.firestore().batch();
+          
+          for (const [key, likeDocs] of postLikesByPost) {
+            const pathParts = key.split(':');
+            
+            if (pathParts.length === 1) {
+              // 게시글 좋아요
+              const postId = pathParts[0];
+              const postRef = admin.firestore().collection('posts').doc(postId);
+              
+              likeDocs.forEach(likeDoc => {
+                batch6.delete(likeDoc.ref);
+              });
+              
+              batch6.update(postRef, {
+                likeCount: admin.firestore.FieldValue.increment(-likeDocs.length)
+              });
+            } else if (pathParts.length === 2) {
+              // 댓글 좋아요
+              const postId = pathParts[0];
+              const commentId = pathParts[1];
+              const commentRef = admin.firestore()
+                .collection('posts')
+                .doc(postId)
+                .collection('comments')
+                .doc(commentId);
+              
+              likeDocs.forEach(likeDoc => {
+                batch6.delete(likeDoc.ref);
+              });
+              
+              batch6.update(commentRef, {
+                likeCount: admin.firestore.FieldValue.increment(-likeDocs.length)
+              });
+            }
+          }
+          
+          await batch6.commit();
+          totalProcessed += postLikesSnapshot.docs.length;
+          console.log('사용자 좋아요 데이터 정리 완료:', postLikesSnapshot.docs.length, '개');
+        }
+      } catch (likeError) {
+        console.error('좋아요 데이터 정리 중 오류:', likeError);
+      }
+      
+      // === 결과 출력 ===
+      console.log('=== 사용자 탈퇴 데이터 정리 완료 ===');
+      console.log('총 처리된 문서 수:', totalProcessed);
+      
+      return { 
+        success: true, 
+        userId: userId,
+        userNickname: userData.nickname,
+        processedDocuments: totalProcessed
+      };
+      
+    } catch (error) {
+      console.error('=== 사용자 탈퇴 데이터 정리 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message, userId: context.params.userId };
+    }
+  });
