@@ -872,23 +872,14 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       return;
     }
 
-    // 이제 안전하게 currentUserMember 사용
-    // 1. 활성 상태(start/resume)인데 비정상 종료된 경우
+    // 1. 활성 상태인 경우 처리
     if (currentUserMember.isActive &&
         currentUserMember.timerStartTime != null) {
-      print('⚠️ 비정상 종료 감지 - 마지막 상태가 활성 상태');
-      _handleAbnormalTermination(currentUserMember.timerStartTime!);
-      return;
-    }
-    // 서버에서 활성 상태이고 정상적인 경우
-    if (currentUserMember.isActive &&
-        currentUserMember.timerStartTime != null) {
-      // 비정상 종료가 아닌 정상 실행 중인 경우 확인
       final elapsedTime = DateTime.now().difference(
         currentUserMember.timerStartTime!,
       );
 
-      // 24시간 이상 경과했으면 비정상으로 판단 (예시)
+      // 24시간 이상 경과했으면 비정상으로 판단
       if (elapsedTime.inHours > 24) {
         print('⚠️ 비정상 종료 감지 - 24시간 이상 경과');
         _handleAbnormalTermination(currentUserMember.timerStartTime!);
