@@ -1,6 +1,8 @@
 // lib/group/presentation/group_detail/group_detail_notifier.dart
 import 'dart:async';
 
+import 'package:devlink_mobile_app/auth/domain/usecase/update_user_stats_after_timer_use_case.dart';
+import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
@@ -38,6 +40,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   GetGroupMembersUseCase? _getGroupMembersUseCase;
   StreamGroupMemberTimerStatusUseCase? _streamGroupMemberTimerStatusUseCase;
 
+  // 🚀 새로 추가: 사용자 통계 업데이트 UseCase
+  UpdateUserStatsAfterTimerUseCase? _updateUserStatsAfterTimerUseCase;
+
   String _groupId = '';
   String _groupName = ''; // 🔧 알림용 그룹명 저장
   String? _currentUserId;
@@ -59,7 +64,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         streamGroupMemberTimerStatusUseCaseProvider,
       );
 
-      print('🔧 UseCase 의존성 주입 완료');
+      // 🚀 새로 추가: 사용자 통계 업데이트 UseCase 주입
+      _updateUserStatsAfterTimerUseCase = ref.watch(
+        updateUserStatsAfterTimerUseCaseProvider,
+      );
+
+      print('🔧 UseCase 의존성 주입 완료 (통계 업데이트 UseCase 포함)');
     }
 
     final currentUser = ref.watch(currentUserProvider);
@@ -122,6 +132,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     print('📱 백그라운드 진입 - 타이머 즉시 종료');
 
     final currentElapsedSeconds = state.elapsedSeconds;
+    final currentUserId = _currentUserId; // 🚀 사용자 ID 보존
 
     // 🔧 1. 즉시 로컬 상태 완전 정리 (동기 처리)
     _timer?.cancel();
@@ -143,6 +154,13 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _stopTimerWithRetry().catchError((e) {
       print('🔧 백그라운드 API 호출 실패 (무시): $e');
     });
+
+    // 🚀 4. 백그라운드에서 사용자 통계 업데이트 (Fire-and-forget)
+    if (currentUserId != null && currentElapsedSeconds >= 60) {
+      // 최소 1분 이상 집중한 경우에만 통계 업데이트
+      _updateUserStatsAfterTimerUseCase?.executeInBackground(currentUserId);
+      print('🚀 백그라운드 사용자 통계 업데이트 시작: $currentUserId');
+    }
 
     print('✅ 백그라운드 타이머 종료 처리 완료');
   }
@@ -314,11 +332,15 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _startTimerCountdown();
   }
 
-  // 🔧 타이머 정지 처리 (재시도 포함)
+  // 🚀 타이머 정지 처리 (사용자 통계 업데이트 추가)
   Future<void> _handleStopTimer() async {
     if (state.timerStatus == TimerStatus.stop) return;
 
     print('⏹️ 타이머 정지 처리 시작');
+
+    // 🚀 통계 업데이트를 위한 데이터 보존
+    final currentUserId = _currentUserId;
+    final currentElapsedSeconds = state.elapsedSeconds;
 
     // 1. 즉시 로컬 상태 변경 (중복 호출 방지)
     _timer?.cancel();
@@ -333,6 +355,17 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 2. API 호출 (재시도 포함)
     await _stopTimerWithRetry();
+
+    // 🚀 3. 사용자 통계 업데이트 (백그라운드)
+    if (currentUserId != null && currentElapsedSeconds >= 60) {
+      // 최소 1분 이상 집중한 경우에만 통계 업데이트
+      print('🚀 사용자 통계 업데이트 시작: $currentUserId, ${currentElapsedSeconds}초');
+      _updateUserStatsAfterTimerUseCase?.executeInBackground(currentUserId);
+    } else {
+      print(
+        'ℹ️ 통계 업데이트 조건 불충족: userId=$currentUserId, elapsed=${currentElapsedSeconds}초',
+      );
+    }
   }
 
   // 🔧 StopTimer API 재시도 로직

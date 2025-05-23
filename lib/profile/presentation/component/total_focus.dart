@@ -11,10 +11,15 @@ class TotalTimeInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🚀 디버그 로그 추가
+    debugPrint('🚀 TotalTimeInfo: 받은 totalMinutes = $totalMinutes');
+
     // 시간·분으로 변환 (예: 125분 → 2시간 5분)
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
     final display = hours > 0 ? '${hours}시간 ${minutes}분' : '${minutes}분';
+
+    debugPrint('🚀 TotalTimeInfo: 표시될 텍스트 = $display');
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

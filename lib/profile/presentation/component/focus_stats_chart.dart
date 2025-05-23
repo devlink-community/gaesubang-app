@@ -55,16 +55,29 @@ class _FocusStatsChartState extends State<FocusStatsChart>
 
   @override
   Widget build(BuildContext context) {
+    // 🚀 디버그 로그 추가
+    debugPrint('🚀 FocusStatsChart: 받은 stats = ${widget.stats}');
+    debugPrint(
+      '🚀 FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
+    );
+    debugPrint(
+      '🚀 FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
+    );
+
     // 1) 원본 데이터 정렬
     final entries =
         widget.stats.weeklyMinutes.entries.toList()..sort(
           (a, b) => _weekdayIndex(a.key).compareTo(_weekdayIndex(b.key)),
         );
 
+    debugPrint('🚀 FocusStatsChart: 정렬된 entries = $entries');
+
     // 2) 최대값 계산
     final maxVal = entries
         .map((e) => e.value.toDouble())
         .fold<double>(0, (prev, curr) => max(prev, curr));
+
+    debugPrint('🚀 FocusStatsChart: maxVal = $maxVal');
 
     // 3) 색상 정의 - 살짝 더 깊은 파란색 계열로 수정
     final fillColor = const Color(0xFF4355F9);
@@ -158,6 +171,10 @@ class _FocusStatsChartState extends State<FocusStatsChart>
                     // 애니메이션 적용 - 높이에 애니메이션 값 곱함
                     final animatedHeight = minutes * _animation.value;
 
+                    debugPrint(
+                      '🚀 FocusStatsChart: Bar $idx - minutes=$minutes, animatedHeight=$animatedHeight',
+                    );
+
                     return BarChartGroupData(
                       x: idx,
                       barRods: [
@@ -191,6 +208,7 @@ class _FocusStatsChartState extends State<FocusStatsChart>
     );
   }
 
+  // 🚀 빠진 메서드 추가
   int _weekdayIndex(String day) {
     const order = ['월', '화', '수', '목', '금', '토', '일'];
     return order.indexOf(day);

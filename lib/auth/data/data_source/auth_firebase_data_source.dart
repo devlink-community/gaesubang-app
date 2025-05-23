@@ -69,7 +69,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
           final userData = userDoc.data()!;
 
-          // 완전한 사용자 정보 구성
+          // 🚀 Firebase User 문서에 저장된 통계 필드 포함
           final completeUserData = {
             'uid': user.uid,
             'email': userData['email'] ?? user.email,
@@ -87,12 +87,26 @@ class AuthFirebaseDataSource implements AuthDataSource {
             'agreedAt': userData['agreedAt'],
             'joingroup': userData['joingroup'] ?? [],
 
-            // 타이머 활동 데이터 포함
+            // 🚀 Firebase에 저장된 집중시간 통계 필드들
+            'totalFocusMinutes': userData['totalFocusMinutes'] ?? 0,
+            'weeklyFocusMinutes': userData['weeklyFocusMinutes'] ?? 0,
+            'lastStatsUpdated': userData['lastStatsUpdated'],
+
+            // 타이머 활동 데이터 포함 (기존 방식 유지 - 호환성)
             'timerActivities':
                 activitiesSnapshot.docs
                     .map((doc) => {'id': doc.id, ...doc.data()})
                     .toList(),
           };
+
+          debugPrint('🚀 Firebase User 통계 로드 완료:');
+          debugPrint(
+            '  - totalFocusMinutes: ${completeUserData['totalFocusMinutes']}',
+          );
+          debugPrint(
+            '  - weeklyFocusMinutes: ${completeUserData['weeklyFocusMinutes']}',
+          );
+          debugPrint('  - streakDays: ${completeUserData['streakDays']}');
 
           return completeUserData;
         } catch (e) {

@@ -70,11 +70,15 @@ class ProfileNotifier extends _$ProfileNotifier {
         case AsyncData(:final value):
           debugPrint('✅ ProfileNotifier: 사용자 프로필 로드 완료');
           debugPrint('📊 Firebase 통계 - 총 집중시간: ${value.totalFocusMinutes}분');
+          debugPrint('📊 Firebase 통계 - 이번 주: ${value.weeklyFocusMinutes}분');
           debugPrint('🔥 Firebase 통계 - 연속일: ${value.streakDays}일');
 
-          // Firebase에 저장된 통계로 FocusTimeStats 생성
-          final focusStats =
-              value.focusStats ?? _createFocusStatsFromMember(value);
+          // 🚀 Member에 포함된 FocusStats 사용
+          final focusStats = value.focusStats ?? _getDefaultStats();
+
+          debugPrint('📊 FocusStats 확인:');
+          debugPrint('  - totalMinutes: ${focusStats.totalMinutes}');
+          debugPrint('  - weeklyMinutes: ${focusStats.weeklyMinutes}');
 
           // 최종 상태 업데이트
           if (state.activeRequestId == currentRequestId) {
@@ -85,6 +89,7 @@ class ProfileNotifier extends _$ProfileNotifier {
             );
 
             debugPrint('✅ ProfileNotifier: Firebase 통계 기반 데이터 로드 완료');
+            debugPrint('📊 차트에 전달된 데이터: ${focusStats.totalMinutes}분');
           } else {
             debugPrint(
               '⚠️ ProfileNotifier: 요청 완료 시점에 다른 요청이 진행 중이므로 상태 업데이트 무시',
@@ -120,35 +125,6 @@ class ProfileNotifier extends _$ProfileNotifier {
         );
       }
     }
-  }
-
-  /// Member의 Firebase 통계로 FocusTimeStats 생성
-  FocusTimeStats _createFocusStatsFromMember(Member member) {
-    // Firebase에 저장된 통계 사용
-    final totalMinutes = member.totalFocusMinutes;
-    final weeklyTotal = member.weeklyFocusMinutes;
-
-    // 요일별 분배 (간단한 균등 분배)
-    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final weeklyMinutes = <String, int>{};
-
-    if (weeklyTotal > 0) {
-      final avgPerDay = weeklyTotal ~/ 7;
-      final remainder = weeklyTotal % 7;
-
-      for (int i = 0; i < weekdays.length; i++) {
-        weeklyMinutes[weekdays[i]] = avgPerDay + (i < remainder ? 1 : 0);
-      }
-    } else {
-      for (final day in weekdays) {
-        weeklyMinutes[day] = 0;
-      }
-    }
-
-    return FocusTimeStats(
-      totalMinutes: totalMinutes,
-      weeklyMinutes: weeklyMinutes,
-    );
   }
 
   /// 기본 통계 반환 (데이터가 없을 때 사용)

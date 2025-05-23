@@ -1,4 +1,6 @@
 // lib/auth/data/mapper/user_mapper.dart
+import 'package:flutter/cupertino.dart';
+
 import '../../../core/utils/focus_stats_calculator.dart';
 import '../../../profile/domain/model/focus_time_stats.dart';
 import '../../domain/model/member.dart';
@@ -41,15 +43,45 @@ extension MapToMemberMapper on Map<String, dynamic> {
 
 // Map → Member + FocusStats 변환 (타이머 활동 포함된 데이터 → Member + Stats)
 extension MapToMemberWithStatsMapper on Map<String, dynamic> {
-  /// 타이머 활동이 포함된 데이터를 Member로 변환하고 FocusStats도 계산
+  /// 🚀 Firebase User 문서에 저장된 통계를 우선 사용하는 변환
   Member toMemberWithCalculatedStats() {
     // 기본 Member 정보 변환
     final member = toMember();
 
-    // 타이머 활동 데이터 처리
+    // 🚀 1. Firebase User 문서에 저장된 통계 확인
+    final firebaseTotalMinutes = this['totalFocusMinutes'] as int? ?? 0;
+    final firebaseWeeklyMinutes = this['weeklyFocusMinutes'] as int? ?? 0;
+    final firebaseStreakDays = this['streakDays'] as int? ?? 0;
+
+    // 🚀 2. Firebase 통계가 있으면 우선 사용
+    if (firebaseTotalMinutes > 0 ||
+        firebaseWeeklyMinutes > 0 ||
+        firebaseStreakDays > 0) {
+      debugPrint('🚀 Firebase 저장된 통계 사용:');
+      debugPrint('  - totalFocusMinutes: $firebaseTotalMinutes');
+      debugPrint('  - weeklyFocusMinutes: $firebaseWeeklyMinutes');
+      debugPrint('  - streakDays: $firebaseStreakDays');
+
+      final focusStats = _createFocusStatsFromFirebaseData(
+        totalMinutes: firebaseTotalMinutes,
+        weeklyMinutes: firebaseWeeklyMinutes,
+      );
+
+      return member.copyWith(
+        focusStats: focusStats,
+        totalFocusMinutes: firebaseTotalMinutes,
+        weeklyFocusMinutes: firebaseWeeklyMinutes,
+        streakDays: firebaseStreakDays,
+        lastStatsUpdated: _parseTimestamp(this['lastStatsUpdated']),
+      );
+    }
+
+    // 🚀 3. Firebase 통계가 없으면 타이머 활동에서 계산 (기존 방식)
     final timerActivitiesData = this['timerActivities'] as List<dynamic>?;
 
     if (timerActivitiesData != null && timerActivitiesData.isNotEmpty) {
+      debugPrint('🚀 타이머 활동 데이터에서 통계 계산');
+
       // List<Map> → List<TimerActivityDto> 변환
       final activities =
           timerActivitiesData
@@ -68,12 +100,41 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
       return member.copyWith(focusStats: focusStats);
     }
 
-    // 타이머 활동이 없는 경우 기본 통계 반환
+    // 🚀 4. 둘 다 없으면 기본 통계 반환
+    debugPrint('🚀 기본 통계 반환 (데이터 없음)');
     return member.copyWith(
       focusStats: const FocusTimeStats(
         totalMinutes: 0,
         weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
       ),
+    );
+  }
+
+  /// 🚀 Firebase 통계 데이터로 FocusTimeStats 생성
+  FocusTimeStats _createFocusStatsFromFirebaseData({
+    required int totalMinutes,
+    required int weeklyMinutes,
+  }) {
+    // 요일별 분배 (간단한 균등 분배)
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final weeklyMinutesMap = <String, int>{};
+
+    if (weeklyMinutes > 0) {
+      final avgPerDay = weeklyMinutes ~/ 7;
+      final remainder = weeklyMinutes % 7;
+
+      for (int i = 0; i < weekdays.length; i++) {
+        weeklyMinutesMap[weekdays[i]] = avgPerDay + (i < remainder ? 1 : 0);
+      }
+    } else {
+      for (final day in weekdays) {
+        weeklyMinutesMap[day] = 0;
+      }
+    }
+
+    return FocusTimeStats(
+      totalMinutes: totalMinutes,
+      weeklyMinutes: weeklyMinutesMap,
     );
   }
 
@@ -93,6 +154,18 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
 
   /// 별도의 FocusStats만 계산 (캐싱된 Member가 있을 때 통계만 업데이트하는 경우)
   FocusTimeStats? toFocusStats() {
+    // 🚀 1. Firebase 통계 먼저 확인
+    final firebaseTotalMinutes = this['totalFocusMinutes'] as int? ?? 0;
+    final firebaseWeeklyMinutes = this['weeklyFocusMinutes'] as int? ?? 0;
+
+    if (firebaseTotalMinutes > 0 || firebaseWeeklyMinutes > 0) {
+      return _createFocusStatsFromFirebaseData(
+        totalMinutes: firebaseTotalMinutes,
+        weeklyMinutes: firebaseWeeklyMinutes,
+      );
+    }
+
+    // 🚀 2. Firebase 통계가 없으면 타이머 활동에서 계산
     final timerActivitiesData = this['timerActivities'] as List<dynamic>?;
 
     if (timerActivitiesData == null || timerActivitiesData.isEmpty) {
