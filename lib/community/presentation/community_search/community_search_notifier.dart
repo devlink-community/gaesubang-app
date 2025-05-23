@@ -1,3 +1,4 @@
+// lib/community/presentation/community_search/community_search_notifier.dart
 import 'package:devlink_mobile_app/community/domain/usecase/search_posts_use_case.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
@@ -36,24 +37,39 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     await _loadSearchHistory();
   }
 
-  /// 검색어 히스토리 로드 (최근 + 인기)
+  /// 검색어 히스토리 로드 (최근 + 인기) - 에러 수정
   Future<void> _loadSearchHistory() async {
     try {
       // 로딩 상태 표시
       state = state.copyWith(isLoading: true);
       AppLogger.info('검색 히스토리 로드 시작');
 
-      // 병렬로 최근 검색어와 인기 검색어 로드
-      final results = await Future.wait([
-        SearchHistoryService.getRecentSearches(
+      // ✅ 각각 개별적으로 처리하여 인덱스 에러 방지
+      List<String> recentSearches = [];
+      List<String> popularSearches = [];
+
+      try {
+        // 최근 검색어 로드
+        recentSearches = await SearchHistoryService.getRecentSearches(
           category: SearchCategory.community,
           filter: state.currentFilter,
           limit: 8,
-        ),
-      ]);
+        );
+        AppLogger.debug('최근 검색어 로드 성공: ${recentSearches.length}개');
+      } catch (e, st) {
+        AppLogger.warning('최근 검색어 로드 실패', error: e, stackTrace: st);
+        recentSearches = []; // 실패 시 빈 배열
+      }
 
-      final recentSearches = results[0];
-      final popularSearches = results[1];
+      try {
+        // 인기 검색어 로드 (현재는 빈 배열로 처리)
+        // TODO: 추후 인기 검색어 기능 구현 시 활성화
+        popularSearches = [];
+        AppLogger.debug('인기 검색어: 현재 비활성화 상태');
+      } catch (e, st) {
+        AppLogger.warning('인기 검색어 로드 실패', error: e, stackTrace: st);
+        popularSearches = []; // 실패 시 빈 배열
+      }
 
       // 상태 업데이트
       state = state.copyWith(
@@ -67,7 +83,13 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       );
     } catch (e, st) {
       AppLogger.error('검색어 히스토리 로드 실패', error: e, stackTrace: st);
-      state = state.copyWith(isLoading: false);
+
+      // 에러 발생 시 안전한 기본값으로 설정
+      state = state.copyWith(
+        recentSearches: [],
+        popularSearches: [],
+        isLoading: false,
+      );
     }
   }
 
@@ -143,7 +165,7 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       // 결과 로깅
       switch (result) {
         case AsyncData(:final value):
-          AppLogger.info('검색 완료: "$trimmedQuery" - ${value.length}개 결과');
+          AppLogger.searchInfo(trimmedQuery, value.length);
           if (value.isEmpty) {
             AppLogger.warning('검색 결과 없음: "$trimmedQuery"');
           }
@@ -162,7 +184,7 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     }
   }
 
-  /// 검색어 히스토리에 추가 (빈도수 관리)
+  /// 검색어 히스토리에 추가 (빈도수 관리) - 에러 처리 개선
   Future<void> _addToSearchHistory(String query) async {
     try {
       AppLogger.debug('검색어 히스토리 추가: "$query"');
@@ -176,32 +198,39 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       // ⭐ 즉시 상태 업데이트 (로컬에서 빠르게 반영)
       _updateLocalHistory(query);
 
-      // 백그라운드에서 전체 히스토리 다시 로드
-      _loadSearchHistory();
+      // 백그라운드에서 전체 히스토리 다시 로드 (에러 무시)
+      _loadSearchHistory().catchError((e, st) {
+        AppLogger.warning('백그라운드 히스토리 로드 실패 (무시됨)', error: e, stackTrace: st);
+      });
 
       AppLogger.info('검색어 히스토리 추가 완료: "$query"');
     } catch (e, st) {
       AppLogger.error('검색어 히스토리 추가 실패', error: e, stackTrace: st);
+      // 히스토리 추가 실패는 검색 기능에 크게 영향 없으므로 계속 진행
     }
   }
 
   /// 로컬 상태에서 빠르게 히스토리 업데이트
   void _updateLocalHistory(String query) {
-    final updatedRecent = [...state.recentSearches];
+    try {
+      final updatedRecent = [...state.recentSearches];
 
-    // 기존에 있으면 제거
-    updatedRecent.remove(query);
+      // 기존에 있으면 제거
+      updatedRecent.remove(query);
 
-    // 맨 앞에 추가
-    updatedRecent.insert(0, query);
+      // 맨 앞에 추가
+      updatedRecent.insert(0, query);
 
-    // 최대 8개까지만 유지
-    if (updatedRecent.length > 8) {
-      updatedRecent.removeRange(8, updatedRecent.length);
+      // 최대 8개까지만 유지
+      if (updatedRecent.length > 8) {
+        updatedRecent.removeRange(8, updatedRecent.length);
+      }
+
+      state = state.copyWith(recentSearches: updatedRecent);
+      AppLogger.debug('로컬 검색 히스토리 업데이트: "$query" (총 ${updatedRecent.length}개)');
+    } catch (e, st) {
+      AppLogger.warning('로컬 히스토리 업데이트 실패', error: e, stackTrace: st);
     }
-
-    state = state.copyWith(recentSearches: updatedRecent);
-    AppLogger.debug('로컬 검색 히스토리 업데이트: "$query" (총 ${updatedRecent.length}개)');
   }
 
   /// 특정 검색어 삭제
@@ -275,6 +304,8 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       AppLogger.info('검색 필터 적용 완료: ${filteredSearches.length}개 검색어');
     } catch (e, st) {
       AppLogger.error('검색어 필터 변경 실패', error: e, stackTrace: st);
+      // 실패 시 빈 배열로 안전하게 처리
+      state = state.copyWith(recentSearches: []);
     }
   }
 
