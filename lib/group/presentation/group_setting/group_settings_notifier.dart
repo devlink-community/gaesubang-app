@@ -26,6 +26,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   late final LeaveGroupUseCase _leaveGroupUseCase;
   late final UploadImageUseCase _uploadImageUseCase;
 
+  // 추가: mounted 변수
+  bool _mounted = true;
+
+  bool get mounted => _mounted;
+
   @override
   GroupSettingsState build(String groupId) {
     _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
@@ -34,8 +39,16 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     _leaveGroupUseCase = ref.watch(leaveGroupUseCaseProvider);
     _uploadImageUseCase = ref.watch(uploadImageUseCaseProvider);
 
+    // 추가: Provider가 dispose될 때 호출될 콜백 등록
+    ref.onDispose(() {
+      _mounted = false;
+      debugPrint('GroupSettingsNotifier disposed');
+    });
+
     // 초기 상태를 먼저 반환
-    const initialState = GroupSettingsState();
+    const initialState = GroupSettingsState(
+      currentAction: GroupAction.none,
+    );
 
     // 비동기 데이터 로드는 별도로 실행 (state 초기화 후)
     Future.microtask(() {
@@ -228,9 +241,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
   /// 이미지 업로드 처리 - 세밀한 상태 관리
   Future<void> uploadGroupImage(String localImagePath) async {
     try {
-      state = state.copyWith(isSubmitting: true);
-      // 업로드 시작 - 초기 상태 설정
       state = state.copyWith(
+        isSubmitting: true,
+        currentAction: GroupAction.imageUpload,
+        // 작업 타입 설정
+        // 업로드 시작 - 초기 상태 설정
         imageUploadStatus: ImageUploadStatus.idle,
         uploadProgress: 0.0,
         originalImagePath: localImagePath,
@@ -243,6 +258,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(
           imageUploadStatus: ImageUploadStatus.failed,
           errorMessage: '그룹 정보가 없습니다.',
+          isSubmitting: false, // 에러 상태이므로 로딩 해제
+          currentAction: GroupAction.none, // 작업 완료
         );
         return;
       }
@@ -255,8 +272,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         uploadProgress: 0.1,
       );
 
+      // file:// 프로토콜 제거 (플랫폼 호환성 개선)
+      final cleanPath = localImagePath.replaceFirst(RegExp(r'^file:\/\/'), '');
+      debugPrint('🖼️ 정제된 이미지 경로: $cleanPath');
+
       final compressedFile = await ImageCompressionUtils.compressAndSaveImage(
-        originalImagePath: localImagePath.replaceFirst('file://', ''),
+        originalImagePath: cleanPath,
         maxWidth: 800,
         maxHeight: 800,
         quality: 85,
@@ -272,6 +293,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
       // 3단계: 압축된 이미지를 바이트로 읽기
       final imageBytes = await compressedFile.readAsBytes();
+      debugPrint('🖼️ 이미지 바이트 크기: ${imageBytes.length}');
 
       // 4단계: Firebase Storage 업로드 시작
       state = state.copyWith(
@@ -283,6 +305,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           'group_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final folderPath = 'groups/${currentGroup.id}';
 
+      debugPrint('🖼️ 스토리지 경로: $folderPath/$fileName');
+
       final uploadResult = await _uploadImageUseCase.execute(
         folderPath: folderPath,
         fileName: fileName,
@@ -291,6 +315,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           'groupId': currentGroup.id,
           'uploadedBy': currentGroup.ownerId,
           'uploadedAt': DateTime.now().toIso8601String(),
+          'contentType': 'image/jpeg',
         },
       );
 
@@ -306,7 +331,9 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             successMessage: '이미지 업로드가 완료되었습니다.',
             originalImagePath: null,
             // 로컬 경로 초기화
-            isSubmitting: false, // 로딩 OFF
+            isSubmitting: false,
+            // 로딩 OFF
+            currentAction: GroupAction.none, // 작업 완료
           );
 
           // 임시 압축 파일 삭제
@@ -318,24 +345,31 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             debugPrint('임시 파일 삭제 실패: $e');
           }
 
-          // 2초 후 완료 상태 초기화
-          Future.delayed(const Duration(seconds: 2), () {
-            if (state.imageUploadStatus == ImageUploadStatus.completed) {
-              state = state.copyWith(
-                imageUploadStatus: ImageUploadStatus.idle,
-                uploadProgress: 0.0,
-              );
+          // 3초 후 완료 상태 초기화
+          Future.delayed(const Duration(seconds: 3), () {
+            if (_mounted) {
+              // mounted 변수 사용
+              if (state.imageUploadStatus == ImageUploadStatus.completed) {
+                state = state.copyWith(
+                  imageUploadStatus: ImageUploadStatus.idle,
+                  uploadProgress: 0.0,
+                );
+              }
             }
           });
+          break;
 
         case AsyncError(:final error):
           debugPrint('🖼️ 이미지 업로드 실패: $error');
           state = state.copyWith(
             imageUploadStatus: ImageUploadStatus.failed,
             uploadProgress: 0.0,
-            errorMessage: _getFriendlyErrorMessage(error),
-            isSubmitting: false, // 로딩 OFF
+            errorMessage: '이미지 업로드 실패: ${_getFriendlyErrorMessage(error)}',
+            isSubmitting: false,
+            // 로딩 OFF
+            currentAction: GroupAction.none, // 작업 완료
           );
+          break;
 
         case AsyncLoading():
           // 업로드 중 상태는 이미 설정되어 있음
@@ -349,8 +383,10 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       state = state.copyWith(
         imageUploadStatus: ImageUploadStatus.failed,
         uploadProgress: 0.0,
-        errorMessage: _getFriendlyErrorMessage(e),
-        isSubmitting: false, // 로딩 OFF
+        errorMessage: '이미지 업로드 실패: ${_getFriendlyErrorMessage(e)}',
+        isSubmitting: false,
+        // 로딩 OFF
+        currentAction: GroupAction.none, // 작업 완료
       );
     }
   }
@@ -389,10 +425,13 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           }
         }
         // 로컬 파일 경로인 경우 Firebase Storage에 업로드
-        else if (imageUrl.startsWith('file://')) {
+        else if (imageUrl.startsWith('file://') ||
+            imageUrl.startsWith('content://')) {
+          debugPrint('🖼️ 로컬 파일 업로드 시작: $imageUrl');
           await uploadGroupImage(imageUrl);
         } else {
           // 네트워크 URL인 경우 직접 설정
+          debugPrint('🖼️ 네트워크 URL 직접 설정: $imageUrl');
           state = state.copyWith(imageUrl: imageUrl);
         }
 
@@ -438,6 +477,13 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         }
 
       case Save():
+        // 이미지 업로드 중이면 저장 방지
+        if (state.isImageUploading) {
+          state = state.copyWith(
+            errorMessage: '이미지 업로드가 진행 중입니다. 완료 후 다시 시도해 주세요.',
+          );
+          return;
+        }
         await _updateGroup();
 
       case LeaveGroup():
@@ -491,6 +537,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
     state = state.copyWith(
       isSubmitting: true,
+      currentAction: GroupAction.save, // 작업 타입 설정
       errorMessage: null,
       successMessage: null,
     );
@@ -524,12 +571,16 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           isSubmitting: false,
           isEditing: false, // 편집 모드 종료
           successMessage: '그룹 정보가 성공적으로 업데이트되었습니다.',
+          currentAction: GroupAction.none, // 작업 완료
         );
+        break;
       case AsyncError(:final error):
         state = state.copyWith(
           isSubmitting: false,
           errorMessage: _getFriendlyErrorMessage(error),
+          currentAction: GroupAction.none, // 작업 완료
         );
+        break;
       case AsyncLoading():
         // 이미 처리됨
         break;
@@ -543,7 +594,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       return;
     }
 
-    state = state.copyWith(isSubmitting: true, errorMessage: null);
+    state = state.copyWith(
+      isSubmitting: true,
+      currentAction: GroupAction.leave, // 작업 타입 설정
+      errorMessage: null,
+    );
 
     // 그룹 탈퇴
     final result = await _leaveGroupUseCase.execute(currentGroup.id);
@@ -554,12 +609,16 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(
           isSubmitting: false,
           successMessage: '그룹에서 성공적으로 탈퇴했습니다.',
+          currentAction: GroupAction.none, // 작업 완료
         );
+        break;
       case AsyncError(:final error):
         state = state.copyWith(
           isSubmitting: false,
           errorMessage: _getFriendlyErrorMessage(error),
+          currentAction: GroupAction.none, // 작업 완료
         );
+        break;
       case AsyncLoading():
         // 이미 처리됨
         break;
