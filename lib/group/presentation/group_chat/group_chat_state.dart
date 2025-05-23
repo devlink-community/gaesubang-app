@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../ai_assistance/module/bot_constants.dart';
 import '../../../ai_assistance/module/group_chat_bot_service.dart';
 
 part 'group_chat_state.freezed.dart';
@@ -72,17 +73,7 @@ class GroupChatState with _$GroupChatState {
     final lowerMessage = currentMessage.toLowerCase();
 
     // 봇 멘션 패턴들
-    final mentionPatterns = [
-      '@챗봇',
-      '@봇',
-      '@ai',
-      '@어시스턴트',
-      '@assistant',
-      '@리서처',
-      '@researcher',
-      '@상담사',
-      '@counselor',
-    ];
+    final mentionPatterns = BotConstants.mentionPatterns;
 
     return mentionPatterns.any(
       (pattern) => lowerMessage.contains(pattern.toLowerCase()),

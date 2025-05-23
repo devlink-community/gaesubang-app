@@ -151,9 +151,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             onSend: _handleSendMessage,
             // 🆕 봇 관련 프로퍼티들
             activeBotType: widget.state.activeBotType,
-            onBotToggle: () {
-              widget.onAction(const GroupChatAction.toggleBotActive());
-            },
             onBotTypeSelected: (botType) {
               widget.onAction(GroupChatAction.setBotType(botType));
             },

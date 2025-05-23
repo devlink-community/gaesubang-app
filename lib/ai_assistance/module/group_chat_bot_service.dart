@@ -5,6 +5,8 @@ import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
 import 'package:devlink_mobile_app/group/domain/model/chat_message.dart';
 import 'package:flutter/foundation.dart';
 
+import 'bot_constants.dart';
+
 /// 그룹 채팅용 챗봇 서비스
 class GroupChatbotService {
   final FirebaseAIClient _aiClient;
@@ -27,21 +29,8 @@ class GroupChatbotService {
         botType,
       );
 
-      // 🔧 수정: AI 응답 생성 및 직접 텍스트 처리
-      final response = await _aiClient.callTextModel(context);
-
-      String botResponse;
-
-      // JSON 응답인지 확인
-      if (response.containsKey('content') ||
-          response.containsKey('text') ||
-          response.containsKey('response')) {
-        botResponse = _extractResponseText(response);
-      } else {
-        // 🆕 추가: response 자체가 텍스트인 경우
-        botResponse =
-            response.values.first?.toString() ?? _getFallbackResponse(botType);
-      }
+      // 🔧 수정: 챗봇 전용 메서드 사용
+      final botResponse = await _aiClient.callTextModelForChat(context);
 
       // 봇 메시지 생성
       return _createBotMessage(
@@ -254,15 +243,7 @@ $conversationHistory
 
     // 멘션 패턴들
     final mentionPatterns = [
-      '@챗봇',
-      '@봇',
-      '@ai',
-      '@어시스턴트',
-      '@assistant',
-      '@리서처',
-      '@researcher',
-      '@상담사',
-      '@counselor',
+      ...BotConstants.mentionPatterns,
       botName,
     ];
 

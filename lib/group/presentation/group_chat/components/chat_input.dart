@@ -13,7 +13,6 @@ class ChatInput extends StatelessWidget {
     required this.onChanged,
     required this.onSend,
     this.activeBotType,
-    this.onBotToggle,
     this.onBotTypeSelected,
   });
 
@@ -25,7 +24,6 @@ class ChatInput extends StatelessWidget {
 
   // 🆕 봇 관련 프로퍼티들
   final BotType? activeBotType;
-  final VoidCallback? onBotToggle;
   final ValueChanged<BotType?>? onBotTypeSelected;
 
   @override
