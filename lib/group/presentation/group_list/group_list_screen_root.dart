@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/group/presentation/component/group_join_dialog.dart';
+import 'package:devlink_mobile_app/group/presentation/component/group_full_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_screen.dart';
@@ -19,7 +20,7 @@ class GroupListScreenRoot extends ConsumerWidget {
 
     ref.listen(
       groupListNotifierProvider.select((value) => value.selectedGroup),
-      (previous, next) {
+          (previous, next) {
         if (next is AsyncData && next.value != null) {
           final group = next.value!;
 
@@ -33,8 +34,14 @@ class GroupListScreenRoot extends ConsumerWidget {
             // selectedGroup 초기화
             notifier.onAction(const GroupListAction.resetSelectedGroup());
           } else {
-            // 가입되지 않은 그룹이면 가입 다이얼로그 표시
-            _showGroupDialog(context, group, notifier);
+            // 가입되지 않은 그룹인 경우 인원 수 확인
+            if (group.memberCount >= group.maxMemberCount) {
+              // 인원 마감된 그룹이면 인원 마감 다이얼로그 표시
+              _showGroupFullDialog(context, group, notifier);
+            } else {
+              // 여유 있는 그룹이면 가입 다이얼로그 표시
+              _showGroupJoinDialog(context, group, notifier);
+            }
           }
         }
       },
@@ -42,7 +49,7 @@ class GroupListScreenRoot extends ConsumerWidget {
 
     ref.listen(
       groupListNotifierProvider.select((value) => value.joinGroupResult),
-      (previous, next) {
+          (previous, next) {
         if (previous is AsyncLoading) {
           if (next is AsyncData) {
             final selectedGroup = state.selectedGroup;
@@ -80,7 +87,7 @@ class GroupListScreenRoot extends ConsumerWidget {
           case OnTapCreateGroup():
             context.push('/group/create');
           case OnCloseDialog():
-            // 다이얼로그 닫을 때 selectedGroup 초기화
+          // 다이얼로그 닫을 때 selectedGroup 초기화
             notifier.onAction(const GroupListAction.resetSelectedGroup());
             Navigator.of(context).pop();
           default:
@@ -90,11 +97,11 @@ class GroupListScreenRoot extends ConsumerWidget {
     );
   }
 
-  void _showGroupDialog(
-    BuildContext context,
-    Group group,
-    GroupListNotifier notifier,
-  ) {
+  void _showGroupJoinDialog(
+      BuildContext context,
+      Group group,
+      GroupListNotifier notifier,
+      ) {
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -104,7 +111,7 @@ class GroupListScreenRoot extends ConsumerWidget {
           onAction: (action) {
             switch (action) {
               case OnCloseDialog():
-                // 다이얼로그 닫을 때 selectedGroup 초기화
+              // 다이얼로그 닫을 때 selectedGroup 초기화
                 notifier.onAction(const GroupListAction.resetSelectedGroup());
                 Navigator.of(context).pop();
 
@@ -120,6 +127,33 @@ class GroupListScreenRoot extends ConsumerWidget {
                   ),
                 );
                 notifier.onAction(action);
+
+              default:
+                notifier.onAction(action);
+            }
+          },
+        );
+      },
+    );
+  }
+
+  void _showGroupFullDialog(
+      BuildContext context,
+      Group group,
+      GroupListNotifier notifier,
+      ) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return GroupFullDialog(
+          group: group,
+          onAction: (action) {
+            switch (action) {
+              case OnCloseDialog():
+              // 다이얼로그 닫을 때 selectedGroup 초기화
+                notifier.onAction(const GroupListAction.resetSelectedGroup());
+                Navigator.of(context).pop();
 
               default:
                 notifier.onAction(action);

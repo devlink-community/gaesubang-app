@@ -130,7 +130,7 @@ class GroupFullDialog extends StatelessWidget {
           ),
           child: Text(
             '확인',
-            style: AppTextStyles.subtitle2Bold.copyWith(
+            style: AppTextStyles.subtitle2Regular.copyWith(
               color: Colors.white,
             ),
           ),
