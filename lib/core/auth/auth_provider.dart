@@ -1,4 +1,5 @@
 // lib/core/auth/auth_provider.dart
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -27,14 +28,13 @@ Stream<AuthState> authState(Ref ref) {
 
         final member = userData.toMemberWithCalculatedStats();
         AppLogger.authInfo(
-          '사용자 로그인 상태 감지: ${member.nickname} (${member.email})',
+          '사용자 로그인 상태 감지: ${PrivacyMaskUtil.maskNickname(member.nickname)} (${PrivacyMaskUtil.maskEmail(member.email)})', // 변경
         );
         AppLogger.logState('AuthenticatedUser', {
-          'userId': member.uid,
-          'email': member.email,
-          'nickname': member.nickname,
+          'userId': PrivacyMaskUtil.maskUserId(member.uid), // 변경
+          'email': PrivacyMaskUtil.maskEmail(member.email), // 변경
+          'nickname': PrivacyMaskUtil.maskNickname(member.nickname), // 변경
           'streakDays': member.streakDays,
-          // ✅ null 안전 접근
           'totalFocusMinutes': member.focusStats?.totalMinutes ?? 0,
         });
 
