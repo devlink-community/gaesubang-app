@@ -54,7 +54,7 @@ class GetActiveBannersUseCase {
     final month = now.month;
     final day = now.day;
     final hour = now.hour;
-    final minute = now.minute; // 분 단위로 변경
+    final minute = now.second ~/ 20; // 분 단위로 변경
 
     return year * 100000000 +
         month * 1000000 +
