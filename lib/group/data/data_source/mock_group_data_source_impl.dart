@@ -855,6 +855,98 @@ class MockGroupDataSourceImpl implements GroupDataSource {
         .toList();
   }
 
+  // lib/group/data/data_source/mock_group_data_source_impl.dart 끝부분에 추가
+
+  // ===== 타임스탬프 지정 가능한 메서드들 추가 =====
+
+  @override
+  Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
+    String groupId,
+    String activityType,
+    DateTime timestamp,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _initializeIfNeeded();
+
+    // 현재 사용자 정보 가져오기
+    final userInfo = _getCurrentUserInfo();
+    final memberId = userInfo['userId']!;
+    final memberName = userInfo['userName']!;
+
+    // 그룹 존재 확인
+    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
+    if (groupIndex == -1) {
+      throw Exception(GroupErrorMessages.notFound);
+    }
+
+    // 타이머 활동 생성
+    final activityId =
+        'activity_${memberId}_${timestamp.millisecondsSinceEpoch}';
+    final activity = {
+      'id': activityId,
+      'memberId': memberId,
+      'memberName': memberName,
+      'type': activityType,
+      'timestamp': _dateFormat.format(timestamp), // 특정 시간으로 설정
+      'groupId': groupId,
+      'metadata': {
+        'isManualTimestamp': true, // 수동으로 설정된 타임스탬프 표시
+        'recordedAt': _dateFormat.format(DateTime.now()), // 실제 기록 시간
+      },
+    };
+
+    // 타이머 활동 저장
+    _timerActivities[groupId] ??= [];
+    _timerActivities[groupId]!.add(activity);
+
+    // 타이머 활동을 시간순으로 정렬 (중요!)
+    _timerActivities[groupId]!.sort((a, b) {
+      final timestampA = a['timestamp'] as String?;
+      final timestampB = b['timestamp'] as String?;
+
+      if (timestampA == null || timestampB == null) return 0;
+
+      try {
+        final dateA = _dateFormat.parse(timestampA);
+        final dateB = _dateFormat.parse(timestampB);
+        return dateA.compareTo(dateB); // 오름차순 (시간순)
+      } catch (e) {
+        return 0;
+      }
+    });
+
+    // 🔧 실시간 스트림으로 변경 알림
+    _notifyTimerStatusChange(groupId);
+
+    print('✅ Mock 타이머 활동 기록 완료: $activityType at $timestamp');
+
+    return activity;
+  }
+
+  @override
+  Future<Map<String, dynamic>> startMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+  }
+
+  @override
+  Future<Map<String, dynamic>> pauseMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+  }
+
+  @override
+  Future<Map<String, dynamic>> stopMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+  }
+
   // 🔧 리소스 정리 메소드 추가
   Future<void> dispose() async {
     for (final controller in _timerStatusControllers.values) {

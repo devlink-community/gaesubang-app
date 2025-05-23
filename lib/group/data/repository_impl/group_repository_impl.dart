@@ -478,4 +478,67 @@ class GroupRepositoryImpl implements GroupRepository {
       );
     }
   }
+  // ===== 타임스탬프 지정 가능한 메서드들 추가 =====
+
+  @override
+  Future<Result<void>> recordTimerActivityWithTimestamp(
+    String groupId,
+    String activityType,
+    DateTime timestamp,
+  ) async {
+    try {
+      await _dataSource.recordTimerActivityWithTimestamp(
+        groupId,
+        activityType,
+        timestamp,
+      );
+
+      return const Result.success(null);
+    } catch (e, st) {
+      // 특정 오류 타입 처리
+      if (e.toString().contains('그룹을 찾을 수 없습니다')) {
+        return Result.error(
+          Failure(
+            FailureType.server,
+            '그룹을 찾을 수 없습니다.',
+            cause: e,
+            stackTrace: st,
+          ),
+        );
+      }
+
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '타이머 활동 기록에 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Result<void>> startMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+  }
+
+  @override
+  Future<Result<void>> pauseMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+  }
+
+  @override
+  Future<Result<void>> stopMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+  }
 }

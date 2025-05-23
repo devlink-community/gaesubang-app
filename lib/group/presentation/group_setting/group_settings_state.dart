@@ -31,10 +31,17 @@ class GroupSettingsState with _$GroupSettingsState {
     this.errorMessage,
     this.successMessage,
     this.isOwner = false,
-    // 이미지 업로드 관련 새 필드들
+    // 이미지 업로드 관련 필드들
     this.imageUploadStatus = ImageUploadStatus.idle,
     this.uploadProgress = 0.0,
     this.originalImagePath,
+    // 🔧 새로 추가: 멤버 페이지네이션 관련 필드들
+    this.currentMemberPage = 0,
+    this.memberPageSize = 10,
+    this.hasMoreMembers = true,
+    this.isLoadingMoreMembers = false,
+    this.paginatedMembers = const [],
+    this.memberLoadError,
   });
 
   final AsyncValue<Group> group;
@@ -50,17 +57,25 @@ class GroupSettingsState with _$GroupSettingsState {
   final String? successMessage;
   final bool isOwner;
 
-  // 이미지 업로드 관련 새 필드들
+  // 이미지 업로드 관련 필드들
   final ImageUploadStatus imageUploadStatus;
   final double uploadProgress; // 0.0 ~ 1.0
   final String? originalImagePath; // 원본 이미지 경로 (로컬)
+
+  // 🔧 새로 추가: 멤버 페이지네이션 관련 필드들
+  final int currentMemberPage; // 현재 페이지 (0부터 시작)
+  final int memberPageSize; // 페이지당 멤버 수
+  final bool hasMoreMembers; // 더 로드할 멤버가 있는지
+  final bool isLoadingMoreMembers; // 추가 멤버 로딩 중인지
+  final List<GroupMember> paginatedMembers; // 페이지네이션된 멤버 목록
+  final String? memberLoadError; // 멤버 로딩 전용 에러 메시지
 
   // 헬퍼 메서드들
 
   /// 이미지 업로드 중인지 확인
   bool get isImageUploading =>
       imageUploadStatus == ImageUploadStatus.compressing ||
-      imageUploadStatus == ImageUploadStatus.uploading;
+          imageUploadStatus == ImageUploadStatus.uploading;
 
   /// 이미지 압축 중인지 확인
   bool get isImageCompressing =>
@@ -83,8 +98,8 @@ class GroupSettingsState with _$GroupSettingsState {
   /// 현재 이미지가 업로드된 네트워크 이미지인지 확인
   bool get hasUploadedImage =>
       imageUrl != null &&
-      imageUrl!.startsWith('http') &&
-      !imageUrl!.startsWith('file://');
+          imageUrl!.startsWith('http') &&
+          !imageUrl!.startsWith('file://');
 
   /// 업로드 진행률 백분율 (0 ~ 100)
   int get uploadProgressPercent => (uploadProgress * 100).round();
@@ -114,9 +129,9 @@ class GroupSettingsState with _$GroupSettingsState {
   /// 저장 가능한지 확인 (편집 중이면서 이미지 처리가 완료된 상태)
   bool get canSave =>
       isEditing &&
-      !isImageProcessing &&
-      name.trim().isNotEmpty &&
-      description.trim().isNotEmpty;
+          !isImageProcessing &&
+          name.trim().isNotEmpty &&
+          description.trim().isNotEmpty;
 
   /// 현재 표시할 이미지 URL 또는 경로
   String? get displayImagePath {
@@ -130,5 +145,63 @@ class GroupSettingsState with _$GroupSettingsState {
     }
     // 기본 imageUrl 사용
     return imageUrl;
+  }
+
+  // 🔧 새로 추가: 멤버 페이지네이션 관련 헬퍼 메서드들
+
+  /// 더 많은 멤버를 로드할 수 있는지 확인
+  bool get canLoadMoreMembers => hasMoreMembers && !isLoadingMoreMembers;
+
+  /// 멤버 목록이 로딩 중인지 확인 (초기 로딩 또는 추가 로딩)
+  bool get isMemberLoading => members.isLoading || isLoadingMoreMembers;
+
+  /// 표시할 총 멤버 수
+  int get totalDisplayedMembers => paginatedMembers.length;
+
+  /// 다음 페이지 번호
+  int get nextMemberPage => currentMemberPage + 1;
+
+  /// 멤버 목록에 에러가 있는지 확인
+  bool get hasMemberError => memberLoadError != null || members.hasError;
+
+  /// 사용자 친화적인 멤버 에러 메시지 반환
+  String? get friendlyMemberErrorMessage {
+    if (memberLoadError != null) {
+      return memberLoadError;
+    }
+    if (members.hasError) {
+      return _getFriendlyErrorMessage(members.error);
+    }
+    return null;
+  }
+
+  /// 에러 객체를 사용자 친화적인 메시지로 변환
+  String _getFriendlyErrorMessage(Object? error) {
+    if (error == null) return '알 수 없는 오류가 발생했습니다';
+
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('network') ||
+        errorString.contains('connection') ||
+        errorString.contains('socket')) {
+      return '인터넷 연결을 확인해주세요';
+    }
+
+    if (errorString.contains('timeout')) {
+      return '요청 시간이 초과되었습니다. 다시 시도해주세요';
+    }
+
+    if (errorString.contains('unauthorized') ||
+        errorString.contains('permission')) {
+      return '권한이 없습니다. 다시 로그인해주세요';
+    }
+
+    if (errorString.contains('server') ||
+        errorString.contains('500') ||
+        errorString.contains('503')) {
+      return '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요';
+    }
+
+    return '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요';
   }
 }

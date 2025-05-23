@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/image_compression.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
+import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
@@ -39,7 +40,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     // 비동기 데이터 로드는 별도로 실행 (state 초기화 후)
     Future.microtask(() {
       _loadGroupDetail(groupId);
-      _loadGroupMembers(groupId);
+      _loadInitialMembers(groupId);
     });
 
     return initialState;
@@ -71,39 +72,157 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       case AsyncError(:final error):
         state = state.copyWith(
           group: result,
-          errorMessage: '그룹 정보를 불러오는데 실패했습니다: $error',
+          errorMessage: _getFriendlyErrorMessage(error),
         );
       case AsyncLoading():
         state = state.copyWith(group: result);
     }
   }
 
-  Future<void> _loadGroupMembers(String groupId) async {
-    // 멤버 목록 로딩 시작
-    state = state.copyWith(members: const AsyncValue.loading());
+  // 🔧 새로 추가: 초기 멤버 로딩 (페이지네이션 방식)
+  Future<void> _loadInitialMembers(String groupId) async {
+    // 멤버 목록 로딩 시작 - 페이지네이션 상태 초기화
+    state = state.copyWith(
+      members: const AsyncValue.loading(),
+      currentMemberPage: 0,
+      paginatedMembers: [],
+      hasMoreMembers: true,
+      isLoadingMoreMembers: false,
+      memberLoadError: null,
+    );
 
+    await _loadMemberPage(groupId, isInitialLoad: true);
+  }
+
+  // 🔧 새로 추가: 멤버 페이지 로딩 로직
+  Future<void> _loadMemberPage(
+    String groupId, {
+    bool isInitialLoad = false,
+  }) async {
     try {
+      if (!isInitialLoad) {
+        // 추가 로딩 시작
+        state = state.copyWith(
+          isLoadingMoreMembers: true,
+          memberLoadError: null,
+        );
+      }
+
       final result = await _getGroupMembersUseCase.execute(groupId);
 
       switch (result) {
         case AsyncData(:final value):
-          state = state.copyWith(members: AsyncData(value));
+          _handleMemberPageSuccess(value, isInitialLoad);
 
         case AsyncError(:final error):
-          state = state.copyWith(
-            members: AsyncError(error, StackTrace.current),
-            errorMessage: '멤버 목록을 불러오는데 실패했습니다: $error',
-          );
+          _handleMemberPageError(error, isInitialLoad);
 
         case AsyncLoading():
-          state = state.copyWith(members: result);
+          // 로딩 상태는 이미 설정됨
+          break;
       }
     } catch (e, st) {
+      debugPrint('멤버 페이지 로드 중 예외 발생: $e\n$st');
+      _handleMemberPageError(e, isInitialLoad);
+    }
+  }
+
+  // 🔧 새로 추가: 멤버 로딩 성공 처리
+  void _handleMemberPageSuccess(
+    List<GroupMember> allMembers,
+    bool isInitialLoad,
+  ) {
+    final currentPage = isInitialLoad ? 0 : state.currentMemberPage;
+    final pageSize = state.memberPageSize;
+
+    // 현재까지 로드된 멤버 수 계산
+    final startIndex = isInitialLoad ? 0 : state.paginatedMembers.length;
+    final endIndex = startIndex + pageSize;
+
+    // 새로 로드할 멤버들 추출
+    final newMembers = allMembers.skip(startIndex).take(pageSize).toList();
+
+    // 기존 멤버 목록과 합치기
+    final updatedMembers =
+        isInitialLoad ? newMembers : [...state.paginatedMembers, ...newMembers];
+
+    // 더 로드할 멤버가 있는지 확인
+    final hasMore = endIndex < allMembers.length;
+
+    state = state.copyWith(
+      members: AsyncData(allMembers),
+      // 전체 멤버 목록도 업데이트
+      paginatedMembers: updatedMembers,
+      currentMemberPage: isInitialLoad ? 0 : currentPage + 1,
+      hasMoreMembers: hasMore,
+      isLoadingMoreMembers: false,
+      memberLoadError: null,
+    );
+
+    debugPrint(
+      '멤버 페이지 로딩 완료: ${updatedMembers.length}/${allMembers.length}, hasMore: $hasMore',
+    );
+  }
+
+  // 🔧 새로 추가: 멤버 로딩 에러 처리
+  void _handleMemberPageError(Object error, bool isInitialLoad) {
+    final friendlyMessage = _getFriendlyErrorMessage(error);
+
+    if (isInitialLoad) {
+      // 초기 로딩 실패
       state = state.copyWith(
-        members: AsyncError(e, st),
-        errorMessage: '멤버 목록 로드 중 오류: $e',
+        members: AsyncError(error, StackTrace.current),
+        memberLoadError: friendlyMessage,
+        isLoadingMoreMembers: false,
+      );
+    } else {
+      // 추가 로딩 실패
+      state = state.copyWith(
+        memberLoadError: friendlyMessage,
+        isLoadingMoreMembers: false,
       );
     }
+
+    debugPrint('멤버 로딩 실패: $friendlyMessage');
+  }
+
+  // 🔧 새로 추가: 사용자 친화적 에러 메시지 생성
+  String _getFriendlyErrorMessage(Object? error) {
+    if (error == null) return '알 수 없는 오류가 발생했습니다';
+
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('network') ||
+        errorString.contains('connection') ||
+        errorString.contains('socket')) {
+      return '인터넷 연결을 확인해주세요';
+    }
+
+    if (errorString.contains('timeout')) {
+      return '요청 시간이 초과되었습니다. 다시 시도해주세요';
+    }
+
+    if (errorString.contains('unauthorized') ||
+        errorString.contains('permission') ||
+        errorString.contains('권한')) {
+      return '권한이 없습니다. 다시 로그인해주세요';
+    }
+
+    if (errorString.contains('server') ||
+        errorString.contains('500') ||
+        errorString.contains('503')) {
+      return '서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요';
+    }
+
+    if (errorString.contains('그룹을 찾을 수 없습니다')) {
+      return '그룹을 찾을 수 없습니다';
+    }
+
+    if (errorString.contains('멤버')) {
+      return '멤버 정보를 불러오는데 실패했습니다';
+    }
+
+    return '일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요';
   }
 
   /// 이미지 업로드 처리 - 세밀한 상태 관리
@@ -185,7 +304,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
             imageUploadStatus: ImageUploadStatus.completed,
             uploadProgress: 1.0,
             successMessage: '이미지 업로드가 완료되었습니다.',
-            originalImagePath: null, // 로컬 경로 초기화
+            originalImagePath: null,
+            // 로컬 경로 초기화
             isSubmitting: false, // 로딩 OFF
           );
 
@@ -213,7 +333,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           state = state.copyWith(
             imageUploadStatus: ImageUploadStatus.failed,
             uploadProgress: 0.0,
-            errorMessage: '이미지 업로드에 실패했습니다: $error',
+            errorMessage: _getFriendlyErrorMessage(error),
             isSubmitting: false, // 로딩 OFF
           );
 
@@ -229,7 +349,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       state = state.copyWith(
         imageUploadStatus: ImageUploadStatus.failed,
         uploadProgress: 0.0,
-        errorMessage: '이미지 처리 중 오류가 발생했습니다: $e',
+        errorMessage: _getFriendlyErrorMessage(e),
         isSubmitting: false, // 로딩 OFF
       );
     }
@@ -328,12 +448,36 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         final group = state.group.valueOrNull;
         if (group != null) {
           await _loadGroupDetail(group.id);
-          await _loadGroupMembers(group.id);
+          await _loadInitialMembers(group.id); // 🔧 페이지네이션 버전으로 변경
         }
 
       case SelectImage():
         // Root에서 처리 (이미지 선택 다이얼로그 표시)
         break;
+
+      // 🔧 새로 추가: 페이지네이션 관련 액션 처리
+      case LoadMoreMembers():
+        final group = state.group.valueOrNull;
+        if (group != null && state.canLoadMoreMembers) {
+          await _loadMemberPage(group.id, isInitialLoad: false);
+        }
+
+      case RetryLoadMembers():
+        final group = state.group.valueOrNull;
+        if (group != null) {
+          // 현재 페이지 상태에 따라 초기 로딩 또는 추가 로딩 재시도
+          if (state.paginatedMembers.isEmpty) {
+            await _loadInitialMembers(group.id);
+          } else {
+            await _loadMemberPage(group.id, isInitialLoad: false);
+          }
+        }
+
+      case ResetMemberPagination():
+        final group = state.group.valueOrNull;
+        if (group != null) {
+          await _loadInitialMembers(group.id);
+        }
     }
   }
 
@@ -375,7 +519,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       case AsyncData():
         // 그룹 정보 다시 로드
         await _loadGroupDetail(currentGroup.id);
-        await _loadGroupMembers(currentGroup.id); // 멤버 정보도 다시 로드
+        await _loadInitialMembers(currentGroup.id); // 🔧 페이지네이션 버전으로 변경
         state = state.copyWith(
           isSubmitting: false,
           isEditing: false, // 편집 모드 종료
@@ -384,7 +528,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       case AsyncError(:final error):
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: '그룹 정보 업데이트 실패: $error',
+          errorMessage: _getFriendlyErrorMessage(error),
         );
       case AsyncLoading():
         // 이미 처리됨
@@ -414,7 +558,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       case AsyncError(:final error):
         state = state.copyWith(
           isSubmitting: false,
-          errorMessage: '그룹 탈퇴 실패: $error',
+          errorMessage: _getFriendlyErrorMessage(error),
         );
       case AsyncLoading():
         // 이미 처리됨
