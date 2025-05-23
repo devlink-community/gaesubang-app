@@ -10,13 +10,13 @@ class UpdateMemberLocationUseCase {
 
   Future<AsyncValue<void>> execute(
     String groupId,
-    String memberId,
+    String memberUserId,
     double latitude,
     double longitude,
   ) async {
     final result = await _repository.updateMemberLocation(
       groupId,
-      memberId,
+      memberUserId,
       latitude,
       longitude,
     );

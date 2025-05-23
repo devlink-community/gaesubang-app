@@ -22,12 +22,12 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
   @override
   Future<void> updateMemberLocation(
     String groupId,
-    String memberId,
+    String userId,
     double latitude,
     double longitude,
   ) async {
     if (kDebugMode) {
-      print('MockDataSource: 멤버 위치 업데이트 - $memberId, ($latitude, $longitude)');
+      print('MockDataSource: 멤버 위치 업데이트 - $userId, ($latitude, $longitude)');
     }
 
     // 해당 그룹에 대한 위치 정보가 없으면 생성
@@ -37,13 +37,13 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
     // 해당 멤버의 위치 정보 찾기
     final index = _groupLocations[groupId]!.indexWhere(
-      (location) => location.memberId == memberId,
+      (location) => location.userId == userId,
     );
 
     // 위치 정보 업데이트 또는 생성
     final updatedLocation = GroupMemberLocationDto(
-      memberId: memberId,
-      nickname: '그룹 멤버 $memberId',
+      userId: userId,
+      nickname: '그룹 멤버 $userId',
       imageUrl: 'https://randomuser.me/api/portraits/men/0.jpg',
       latitude: latitude,
       longitude: longitude,
@@ -204,7 +204,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
       // 멤버 추가
       locations.add(
         GroupMemberLocationDto(
-          memberId: 'member_${i + 1}',
+          userId: 'member_${i + 1}',
           nickname: info['nickname']! as String,
           imageUrl: info['imageUrl']! as String,
           latitude:
@@ -241,7 +241,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
           // 위치 업데이트
           final updatedLocation = GroupMemberLocationDto(
-            memberId: location.memberId,
+            userId: location.userId,
             nickname: location.nickname,
             imageUrl: location.imageUrl,
             latitude: (location.latitude?.toDouble() ?? 0.0) + latOffset,
@@ -257,7 +257,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
           if (kDebugMode) {
             print(
-              'MockDataSource: 랜덤 위치 업데이트 - ${location.memberId}, '
+              'MockDataSource: 랜덤 위치 업데이트 - ${location.userId}, '
               '(${updatedLocation.latitude}, ${updatedLocation.longitude})',
             );
           }

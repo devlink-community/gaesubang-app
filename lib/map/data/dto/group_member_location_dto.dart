@@ -1,12 +1,12 @@
-import 'package:json_annotation/json_annotation.dart';
 import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'group_member_location_dto.g.dart';
 
 @JsonSerializable()
 class GroupMemberLocationDto {
   const GroupMemberLocationDto({
-    this.memberId,
+    this.userId,
     this.nickname,
     this.imageUrl,
     this.latitude,
@@ -15,7 +15,7 @@ class GroupMemberLocationDto {
     this.isOnline,
   });
 
-  final String? memberId;
+  final String? userId;
   final String? nickname;
   final String? imageUrl;
   final num? latitude;

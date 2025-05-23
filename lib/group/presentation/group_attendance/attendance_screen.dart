@@ -364,7 +364,7 @@ class AttendanceScreen extends StatelessWidget {
       );
 
       // 참여 멤버 수
-      final memberCount = dayAttendances.map((a) => a.memberId).toSet().length;
+      final memberCount = dayAttendances.map((a) => a.userId).toSet().length;
 
       // 멤버 수와 총 시간을 고려한 색상 결정
       if (memberCount >= 3 && totalMinutes >= 240) {

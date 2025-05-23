@@ -5,7 +5,7 @@ abstract interface class GroupLocationRepository {
   /// 그룹 멤버의 위치 정보 업데이트
   Future<Result<void>> updateMemberLocation(
     String groupId,
-    String memberId,
+    String userId,
     double latitude,
     double longitude,
   );

@@ -12,7 +12,7 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
   @override
   Future<void> updateMemberLocation(
     String groupId,
-    String memberId,
+    String userId,
     double latitude,
     double longitude,
   ) async {
@@ -21,9 +21,9 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
           .collection('groups')
           .doc(groupId)
           .collection('locations')
-          .doc(memberId)
+          .doc(userId)
           .set({
-            'memberId': memberId,
+            'userId': userId,
             'latitude': latitude,
             'longitude': longitude,
             'lastUpdated': FieldValue.serverTimestamp(),
