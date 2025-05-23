@@ -30,6 +30,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   final _tagController = TextEditingController();
   final _memberCountController = TextEditingController();
 
+  // 🔧 새로 추가: 멤버 목록 스크롤 컨트롤러
+  final _memberScrollController = ScrollController();
+
   // 최대 설명 길이 상수
   static const int _maxDescriptionLength = 1000;
 
@@ -37,6 +40,7 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
   void initState() {
     super.initState();
     _updateTextControllers();
+    _setupMemberScrollListener(); // 🔧 스크롤 리스너 설정
   }
 
   @override
@@ -61,12 +65,27 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     _memberCountController.text = widget.state.limitMemberCount.toString();
   }
 
+  // 🔧 새로 추가: 멤버 목록 스크롤 리스너 설정
+  void _setupMemberScrollListener() {
+    _memberScrollController.addListener(() {
+      // 스크롤이 하단 80% 지점에 도달하면 추가 로딩
+      if (_memberScrollController.position.pixels >=
+          _memberScrollController.position.maxScrollExtent * 0.8) {
+
+        if (widget.state.canLoadMoreMembers) {
+          widget.onAction(const GroupSettingsAction.loadMoreMembers());
+        }
+      }
+    });
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     _tagController.dispose();
     _memberCountController.dispose();
+    _memberScrollController.dispose(); // 🔧 스크롤 컨트롤러 dispose
     super.dispose();
   }
 
@@ -81,11 +100,11 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     final currentDescriptionLength = _descriptionController.text.length;
     // 글자 수에 따른 색상 설정
     final Color counterColor =
-        currentDescriptionLength > _maxDescriptionLength * 0.9
-            ? (currentDescriptionLength >= _maxDescriptionLength
-                ? Colors.red
-                : Colors.orange)
-            : AppColorStyles.gray80;
+    currentDescriptionLength > _maxDescriptionLength * 0.9
+        ? (currentDescriptionLength >= _maxDescriptionLength
+        ? Colors.red
+        : Colors.orange)
+        : AppColorStyles.gray80;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -104,24 +123,24 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               margin: const EdgeInsets.only(right: 16),
               child: TextButton(
                 onPressed:
-                    isLoading
-                        ? null
-                        : () {
-                          if (isEditing) {
-                            widget.onAction(const GroupSettingsAction.save());
-                          } else {
-                            widget.onAction(
-                              const GroupSettingsAction.toggleEditMode(),
-                            );
-                          }
-                        },
+                isLoading
+                    ? null
+                    : () {
+                  if (isEditing) {
+                    widget.onAction(const GroupSettingsAction.save());
+                  } else {
+                    widget.onAction(
+                      const GroupSettingsAction.toggleEditMode(),
+                    );
+                  }
+                },
                 style: TextButton.styleFrom(
                   backgroundColor:
-                      isEditing
-                          ? AppColorStyles.primary100
-                          : AppColorStyles.primary100.withValues(alpha: 0.1),
+                  isEditing
+                      ? AppColorStyles.primary100
+                      : AppColorStyles.primary100.withValues(alpha: 0.1),
                   foregroundColor:
-                      isEditing ? Colors.white : AppColorStyles.primary100,
+                  isEditing ? Colors.white : AppColorStyles.primary100,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -142,277 +161,277 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
         ],
       ),
       body:
-          isLoading
-              ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text(
-                      '그룹 정보를 불러오는 중...',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
-                    ),
-                  ],
-                ),
-              )
-              : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 에러 메시지
-                          if (widget.state.errorMessage != null)
-                            _buildErrorMessage(),
+      isLoading
+          ? const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              '그룹 정보를 불러오는 중...',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+          ],
+        ),
+      )
+          : CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 에러 메시지
+                  if (widget.state.errorMessage != null)
+                    _buildErrorMessage(),
 
-                          // 썸네일 선택기
-                          _buildImageSelectorWithUploadStatus(),
-                          const SizedBox(height: 32),
+                  // 썸네일 선택기
+                  _buildImageSelectorWithUploadStatus(),
+                  const SizedBox(height: 32),
 
-                          // 그룹 이름 - 트렌디한 텍스트 필드로 교체
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 4,
-                                  bottom: 8,
-                                ),
-                                child: Text(
-                                  '그룹 이름',
-                                  style: AppTextStyles.subtitle1Bold.copyWith(
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: TextField(
-                                  controller: _nameController,
-                                  style: AppTextStyles.body1Regular,
-                                  enabled: isEditing,
-                                  decoration: InputDecoration(
-                                    hintText: '그룹 이름을 입력하세요',
-                                    hintStyle: AppTextStyles.body1Regular
-                                        .copyWith(color: AppColorStyles.gray60),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 16,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    suffixIcon:
-                                        isEditing &&
-                                                _nameController.text.isNotEmpty
-                                            ? IconButton(
-                                              icon: const Icon(
-                                                Icons.cancel,
-                                                color: AppColorStyles.gray60,
-                                                size: 18,
-                                              ),
-                                              onPressed: () {
-                                                _nameController.clear();
-                                                widget.onAction(
-                                                  const GroupSettingsAction.nameChanged(
-                                                    '',
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                            : null,
-                                  ),
-                                  onChanged:
-                                      (value) => widget.onAction(
-                                        GroupSettingsAction.nameChanged(value),
-                                      ),
-                                ),
-                              ),
-                            ],
+                  // 그룹 이름 - 트렌디한 텍스트 필드로 교체
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 4,
+                          bottom: 8,
+                        ),
+                        child: Text(
+                          '그룹 이름',
+                          style: AppTextStyles.subtitle1Bold.copyWith(
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 24),
-
-                          // 그룹 설명 - 트렌디한 텍스트 영역으로 교체
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 4,
-                                  bottom: 8,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      '그룹 설명',
-                                      style: AppTextStyles.subtitle1Bold
-                                          .copyWith(fontSize: 16),
-                                    ),
-                                    // 글자 수 카운터
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: counterColor.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        '$currentDescriptionLength/$_maxDescriptionLength',
-                                        style: TextStyle(
-                                          color: counterColor,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: 0.05,
                               ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: TextField(
-                                  controller: _descriptionController,
-                                  style: AppTextStyles.body1Regular,
-                                  maxLines: 5,
-                                  maxLength: _maxDescriptionLength,
-                                  enabled: isEditing,
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        '그룹에 대한 설명을 입력하세요 (최대 $_maxDescriptionLength자)',
-                                    hintStyle: AppTextStyles.body1Regular
-                                        .copyWith(color: AppColorStyles.gray60),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 16,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    counterText: '',
-                                    // 기본 카운터 숨김
-                                    suffixIcon:
-                                        isEditing &&
-                                                _descriptionController
-                                                    .text
-                                                    .isNotEmpty
-                                            ? IconButton(
-                                              icon: const Icon(
-                                                Icons.cancel,
-                                                color: AppColorStyles.gray60,
-                                                size: 18,
-                                              ),
-                                              onPressed: () {
-                                                _descriptionController.clear();
-                                                setState(() {}); // UI 업데이트
-                                                widget.onAction(
-                                                  const GroupSettingsAction.descriptionChanged(
-                                                    '',
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                            : null,
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _nameController,
+                          style: AppTextStyles.body1Regular,
+                          enabled: isEditing,
+                          decoration: InputDecoration(
+                            hintText: '그룹 이름을 입력하세요',
+                            hintStyle: AppTextStyles.body1Regular
+                                .copyWith(color: AppColorStyles.gray60),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            suffixIcon:
+                            isEditing &&
+                                _nameController.text.isNotEmpty
+                                ? IconButton(
+                              icon: const Icon(
+                                Icons.cancel,
+                                color: AppColorStyles.gray60,
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                _nameController.clear();
+                                widget.onAction(
+                                  const GroupSettingsAction.nameChanged(
+                                    '',
                                   ),
-                                  onChanged: (value) {
-                                    setState(() {}); // 글자 수 카운터 업데이트
-                                    widget.onAction(
-                                      GroupSettingsAction.descriptionChanged(
-                                        value,
-                                      ),
-                                    );
-                                  },
-                                  inputFormatters: [
-                                    LengthLimitingTextInputFormatter(
-                                      _maxDescriptionLength,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                );
+                              },
+                            )
+                                : null,
                           ),
-                          const SizedBox(height: 32),
+                          onChanged:
+                              (value) => widget.onAction(
+                            GroupSettingsAction.nameChanged(value),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
-                          // 멤버 제한
-                          _buildMemberLimitSection(),
-                          const SizedBox(height: 32),
-
-                          // 태그 입력 영역
-                          _buildTagInputSection(isEditing),
-                          const SizedBox(height: 32),
-
-                          // 멤버 목록 (읽기 전용) - 편집 모드가 아닐 때만 표시
-                          if (!isEditing) _buildMemberList(),
-                          const SizedBox(height: 32),
-
-                          // 그룹 탈퇴 버튼
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 32),
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  () => widget.onAction(
-                                    const GroupSettingsAction.leaveGroup(),
-                                  ),
-                              icon: const Icon(Icons.exit_to_app, size: 20),
-                              label: const Text('그룹 탈퇴'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade600,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
+                  // 그룹 설명 - 트렌디한 텍스트 영역으로 교체
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 4,
+                          bottom: 8,
+                        ),
+                        child: Row(
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '그룹 설명',
+                              style: AppTextStyles.subtitle1Bold
+                                  .copyWith(fontSize: 16),
+                            ),
+                            // 글자 수 카운터
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: counterColor.withValues(
+                                  alpha: 0.1,
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '$currentDescriptionLength/$_maxDescriptionLength',
+                                style: TextStyle(
+                                  color: counterColor,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
                                 ),
-                                elevation: 0,
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                alpha: 0.05,
+                              ),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _descriptionController,
+                          style: AppTextStyles.body1Regular,
+                          maxLines: 5,
+                          maxLength: _maxDescriptionLength,
+                          enabled: isEditing,
+                          decoration: InputDecoration(
+                            hintText:
+                            '그룹에 대한 설명을 입력하세요 (최대 $_maxDescriptionLength자)',
+                            hintStyle: AppTextStyles.body1Regular
+                                .copyWith(color: AppColorStyles.gray60),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            counterText: '',
+                            // 기본 카운터 숨김
+                            suffixIcon:
+                            isEditing &&
+                                _descriptionController
+                                    .text
+                                    .isNotEmpty
+                                ? IconButton(
+                              icon: const Icon(
+                                Icons.cancel,
+                                color: AppColorStyles.gray60,
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                _descriptionController.clear();
+                                setState(() {}); // UI 업데이트
+                                widget.onAction(
+                                  const GroupSettingsAction.descriptionChanged(
+                                    '',
+                                  ),
+                                );
+                              },
+                            )
+                                : null,
                           ),
-                        ],
+                          onChanged: (value) {
+                            setState(() {}); // 글자 수 카운터 업데이트
+                            widget.onAction(
+                              GroupSettingsAction.descriptionChanged(
+                                value,
+                              ),
+                            );
+                          },
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(
+                              _maxDescriptionLength,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // 멤버 제한
+                  _buildMemberLimitSection(),
+                  const SizedBox(height: 32),
+
+                  // 태그 입력 영역
+                  _buildTagInputSection(isEditing),
+                  const SizedBox(height: 32),
+
+                  // 🔧 수정: 페이지네이션된 멤버 목록 (편집 모드가 아닐 때만 표시)
+                  if (!isEditing) _buildPaginatedMemberList(),
+                  const SizedBox(height: 32),
+
+                  // 그룹 탈퇴 버튼
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 32),
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          () => widget.onAction(
+                        const GroupSettingsAction.leaveGroup(),
+                      ),
+                      icon: const Icon(Icons.exit_to_app, size: 20),
+                      label: const Text('그룹 탈퇴'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -430,73 +449,73 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                 shape: const CircleBorder(),
                 child: GestureDetector(
                   onTap:
-                      widget.state.isEditing &&
-                              widget.state.isOwner &&
-                              !widget.state.isImageProcessing
-                          ? () => widget.onAction(
-                            const GroupSettingsAction.selectImage(),
-                          )
-                          : null,
+                  widget.state.isEditing &&
+                      widget.state.isOwner &&
+                      !widget.state.isImageProcessing
+                      ? () => widget.onAction(
+                    const GroupSettingsAction.selectImage(),
+                  )
+                      : null,
                   child: Container(
                     width: 160,
                     height: 160,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient:
-                          widget.state.displayImagePath == null
-                              ? LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppColorStyles.primary60.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  AppColorStyles.primary100.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                ],
-                              )
-                              : null,
+                      widget.state.displayImagePath == null
+                          ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColorStyles.primary60.withValues(
+                            alpha: 0.2,
+                          ),
+                          AppColorStyles.primary100.withValues(
+                            alpha: 0.3,
+                          ),
+                        ],
+                      )
+                          : null,
                       border: Border.all(color: Colors.white, width: 4),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(80),
                       child:
-                          widget.state.displayImagePath == null
-                              ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.add_photo_alternate_rounded,
-                                      size: 36,
-                                      color: AppColorStyles.primary100,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    widget.state.isEditing &&
-                                            widget.state.isOwner
-                                        ? '그룹 이미지 추가'
-                                        : '그룹 이미지',
-                                    style: TextStyle(
-                                      color: AppColorStyles.primary100,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              )
-                              : _buildImageBySourceType(
-                                widget.state.displayImagePath!,
+                      widget.state.displayImagePath == null
+                          ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(
+                                alpha: 0.8,
                               ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.add_photo_alternate_rounded,
+                              size: 36,
+                              color: AppColorStyles.primary100,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.state.isEditing &&
+                                widget.state.isOwner
+                                ? '그룹 이미지 추가'
+                                : '그룹 이미지',
+                            style: TextStyle(
+                              color: AppColorStyles.primary100,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                          : _buildImageBySourceType(
+                        widget.state.displayImagePath!,
+                      ),
                     ),
                   ),
                 ),
@@ -602,8 +621,8 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                         TextButton(
                           onPressed:
                               () => widget.onAction(
-                                const GroupSettingsAction.selectImage(),
-                              ),
+                            const GroupSettingsAction.selectImage(),
+                          ),
                           child: const Text(
                             '다시 시도',
                             style: TextStyle(
@@ -633,15 +652,15 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             style: TextStyle(
               fontSize: 14,
               color:
-                  widget.state.isImageUploadFailed
-                      ? Colors.red
-                      : widget.state.isImageUploadCompleted
-                      ? Colors.green
-                      : AppColorStyles.gray80,
+              widget.state.isImageUploadFailed
+                  ? Colors.red
+                  : widget.state.isImageUploadCompleted
+                  ? Colors.green
+                  : AppColorStyles.gray80,
               fontWeight:
-                  widget.state.isImageProcessing
-                      ? FontWeight.w500
-                      : FontWeight.normal,
+              widget.state.isImageProcessing
+                  ? FontWeight.w500
+                  : FontWeight.normal,
             ),
           ),
 
@@ -714,17 +733,17 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             divisions: 48,
             label: widget.state.limitMemberCount.toString(),
             onChanged:
-                widget.state.isEditing
-                    ? (value) {
-                      // 슬라이더 변경 시 컨트롤러 업데이트
-                      _memberCountController.text = value.toInt().toString();
-                      widget.onAction(
-                        GroupSettingsAction.limitMemberCountChanged(
-                          value.toInt(),
-                        ),
-                      );
-                    }
-                    : null,
+            widget.state.isEditing
+                ? (value) {
+              // 슬라이더 변경 시 컨트롤러 업데이트
+              _memberCountController.text = value.toInt().toString();
+              widget.onAction(
+                GroupSettingsAction.limitMemberCountChanged(
+                  value.toInt(),
+                ),
+              );
+            }
+                : null,
           ),
         ),
 
@@ -750,19 +769,19 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               _buildMemberCountButton(
                 icon: Icons.remove,
                 onPressed:
-                    widget.state.isEditing && widget.state.limitMemberCount > 2
-                        ? () {
-                          final newValue = widget.state.limitMemberCount - 1;
-                          // 컨트롤러 업데이트 먼저
-                          _memberCountController.text = newValue.toString();
-                          // 그다음 상태 업데이트
-                          widget.onAction(
-                            GroupSettingsAction.limitMemberCountChanged(
-                              newValue,
-                            ),
-                          );
-                        }
-                        : null,
+                widget.state.isEditing && widget.state.limitMemberCount > 2
+                    ? () {
+                  final newValue = widget.state.limitMemberCount - 1;
+                  // 컨트롤러 업데이트 먼저
+                  _memberCountController.text = newValue.toString();
+                  // 그다음 상태 업데이트
+                  widget.onAction(
+                    GroupSettingsAction.limitMemberCountChanged(
+                      newValue,
+                    ),
+                  );
+                }
+                    : null,
               ),
 
               // 인원수 입력창
@@ -873,19 +892,19 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               _buildMemberCountButton(
                 icon: Icons.add,
                 onPressed:
-                    widget.state.isEditing && widget.state.limitMemberCount < 50
-                        ? () {
-                          final newValue = widget.state.limitMemberCount + 1;
-                          // 컨트롤러 업데이트 먼저
-                          _memberCountController.text = newValue.toString();
-                          // 그다음 상태 업데이트
-                          widget.onAction(
-                            GroupSettingsAction.limitMemberCountChanged(
-                              newValue,
-                            ),
-                          );
-                        }
-                        : null,
+                widget.state.isEditing && widget.state.limitMemberCount < 50
+                    ? () {
+                  final newValue = widget.state.limitMemberCount + 1;
+                  // 컨트롤러 업데이트 먼저
+                  _memberCountController.text = newValue.toString();
+                  // 그다음 상태 업데이트
+                  widget.onAction(
+                    GroupSettingsAction.limitMemberCountChanged(
+                      newValue,
+                    ),
+                  );
+                }
+                    : null,
               ),
 
               const SizedBox(width: 4),
@@ -905,19 +924,19 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color:
-            onPressed != null
-                ? AppColorStyles.primary100
-                : AppColorStyles.gray60.withValues(alpha: 0.3),
+        onPressed != null
+            ? AppColorStyles.primary100
+            : AppColorStyles.gray60.withValues(alpha: 0.3),
         boxShadow:
-            onPressed != null
-                ? [
-                  BoxShadow(
-                    color: AppColorStyles.primary100.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-                : null,
+        onPressed != null
+            ? [
+          BoxShadow(
+            color: AppColorStyles.primary100.withValues(alpha: 0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ]
+            : null,
       ),
       child: IconButton(
         icon: Icon(icon, color: Colors.white, size: 16),
@@ -964,58 +983,58 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             ],
           ),
           child:
-              isEditing
-                  ? TagInputField(
-                    tags: widget.state.hashTags,
-                    onAddTag:
-                        (value) => widget.onAction(
-                          GroupSettingsAction.hashTagAdded(value),
-                        ),
-                    onRemoveTag:
-                        (value) => widget.onAction(
-                          GroupSettingsAction.hashTagRemoved(value),
-                        ),
-                    hintText: '#태그를 입력 후 추가하세요',
-                  )
-                  : widget.state.hashTags.isEmpty
-                  ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24.0),
-                      child: Text(
-                        '등록된 태그가 없습니다',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  )
-                  : Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        widget.state.hashTags
-                            .map(
-                              (tag) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColorStyles.primary60.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '#${tag.content}',
-                                  style: TextStyle(
-                                    color: AppColorStyles.primary100,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
+          isEditing
+              ? TagInputField(
+            tags: widget.state.hashTags,
+            onAddTag:
+                (value) => widget.onAction(
+              GroupSettingsAction.hashTagAdded(value),
+            ),
+            onRemoveTag:
+                (value) => widget.onAction(
+              GroupSettingsAction.hashTagRemoved(value),
+            ),
+            hintText: '#태그를 입력 후 추가하세요',
+          )
+              : widget.state.hashTags.isEmpty
+              ? const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24.0),
+              child: Text(
+                '등록된 태그가 없습니다',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          )
+              : Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+            widget.state.hashTags
+                .map(
+                  (tag) => Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColorStyles.primary60.withValues(
+                    alpha: 0.1,
                   ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '#${tag.content}',
+                  style: TextStyle(
+                    color: AppColorStyles.primary100,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            )
+                .toList(),
+          ),
         ),
       ],
     );
@@ -1115,9 +1134,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
     }
   }
 
-  Widget _buildMemberList() {
+  // 🔧 새로 추가: 페이지네이션된 멤버 목록
+  Widget _buildPaginatedMemberList() {
     final group = widget.state.group.valueOrNull;
-    final members = widget.state.members;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1130,7 +1149,6 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           ),
         ),
         Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -1145,94 +1163,255 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '참여 현황',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: AppColorStyles.gray100,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${group?.memberCount ?? 0}명 / ${widget.state.limitMemberCount}명',
+              // 헤더: 참여 현황
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '참여 현황',
                       style: TextStyle(
-                        color: AppColorStyles.primary100,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColorStyles.gray100,
                       ),
                     ),
-                  ),
-                ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColorStyles.primary100.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${group?.memberCount ?? 0}명 / ${widget.state.limitMemberCount}명',
+                        style: TextStyle(
+                          color: AppColorStyles.primary100,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
-              const SizedBox(height: 16),
 
-              // 멤버 목록 표시
-              switch (members) {
-                AsyncLoading() => const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-                AsyncError(:final error) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 40,
-                          color: Colors.red[400],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '멤버 정보를 불러올 수 없습니다\n$error',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                AsyncData(:final value) =>
-                  value.isEmpty
-                      ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Text(
-                            '멤버가 없습니다',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ),
-                      )
-                      : Column(
-                        children:
-                            value
-                                .map((member) => _buildMemberItem(member))
-                                .toList(),
-                      ),
-                _ => const SizedBox.shrink(), // Handle any other cases
-              },
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+              ),
+
+              // 🔧 새로 추가: 고정 높이 멤버 목록 컨테이너
+              SizedBox(
+                height: 300, // 고정 높이 설정
+                child: _buildMemberListContent(),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  // 🔧 새로 추가: 멤버 목록 내용 (페이지네이션 포함)
+  Widget _buildMemberListContent() {
+    // 초기 로딩 상태
+    if (widget.state.members.isLoading && widget.state.paginatedMembers.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // 초기 로딩 에러
+    if (widget.state.hasMemberError && widget.state.paginatedMembers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 40,
+                color: Colors.red[400],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                widget.state.friendlyMemberErrorMessage ?? '멤버 정보를 불러올 수 없습니다',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => widget.onAction(
+                  const GroupSettingsAction.retryLoadMembers(),
+                ),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('다시 시도'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColorStyles.primary100,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 멤버가 없는 경우
+    if (widget.state.paginatedMembers.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Text(
+            '멤버가 없습니다',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    // 페이지네이션된 멤버 목록 표시
+    return ListView.builder(
+      controller: _memberScrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: widget.state.paginatedMembers.length +
+          (widget.state.hasMoreMembers || widget.state.isLoadingMoreMembers ? 1 : 0),
+      itemBuilder: (context, index) {
+        // 마지막 아이템: 로딩 인디케이터 또는 더보기 버튼
+        if (index == widget.state.paginatedMembers.length) {
+          return _buildLoadMoreItem();
+        }
+
+        // 실제 멤버 아이템
+        final member = widget.state.paginatedMembers[index];
+        return _buildMemberItem(member);
+      },
+    );
+  }
+
+  // 🔧 새로 추가: 더 로드하기 아이템
+  Widget _buildLoadMoreItem() {
+    // 추가 로딩 중
+    if (widget.state.isLoadingMoreMembers) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        child: const Center(
+          child: Column(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '멤버 정보를 더 불러오는 중...',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 더 로드할 수 있는 경우
+    if (widget.state.hasMoreMembers) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: TextButton.icon(
+            onPressed: () => widget.onAction(
+              const GroupSettingsAction.loadMoreMembers(),
+            ),
+            icon: const Icon(Icons.expand_more, size: 18),
+            label: const Text('더 보기'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColorStyles.primary100,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: AppColorStyles.primary100.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 에러가 있는 경우 재시도 버튼
+    if (widget.state.hasMemberError) {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Column(
+            children: [
+              Text(
+                widget.state.friendlyMemberErrorMessage ?? '오류가 발생했습니다',
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => widget.onAction(
+                  const GroupSettingsAction.retryLoadMembers(),
+                ),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('재시도'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 모든 멤버를 로드한 경우
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Text(
+          '모든 멤버를 확인했습니다 (${widget.state.totalDisplayedMembers}명)',
+          style: TextStyle(
+            color: AppColorStyles.gray80,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1259,28 +1438,28 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
               color: AppColorStyles.primary100.withValues(alpha: 0.1),
             ),
             child:
-                member.profileUrl?.isNotEmpty == true
-                    ? ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.network(
-                        member.profileUrl!,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.person,
-                            color: AppColorStyles.primary100,
-                            size: 24,
-                          );
-                        },
-                      ),
-                    )
-                    : Icon(
-                      Icons.person,
-                      color: AppColorStyles.primary100,
-                      size: 24,
-                    ),
+            member.profileUrl?.isNotEmpty == true
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                member.profileUrl!,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.person,
+                    color: AppColorStyles.primary100,
+                    size: 24,
+                  );
+                },
+              ),
+            )
+                : Icon(
+              Icons.person,
+              color: AppColorStyles.primary100,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
 
@@ -1336,9 +1515,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color:
-                  member.isActive == true
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : AppColorStyles.gray40.withValues(alpha: 0.3),
+              member.isActive == true
+                  ? Colors.green.withValues(alpha: 0.1)
+                  : AppColorStyles.gray40.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -1350,9 +1529,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color:
-                        member.isActive == true
-                            ? Colors.green
-                            : AppColorStyles.gray60,
+                    member.isActive == true
+                        ? Colors.green
+                        : AppColorStyles.gray60,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -1360,9 +1539,9 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
                   member.isActive == true ? '활성' : '비활성',
                   style: TextStyle(
                     color:
-                        member.isActive == true
-                            ? Colors.green[700]
-                            : AppColorStyles.gray80,
+                    member.isActive == true
+                        ? Colors.green[700]
+                        : AppColorStyles.gray80,
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
