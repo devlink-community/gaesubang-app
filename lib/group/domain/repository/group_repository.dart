@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 
 abstract interface class GroupRepository {
   Future<Result<List<Group>>> getGroupList();
@@ -63,4 +64,10 @@ abstract interface class GroupRepository {
     String groupId,
     DateTime timestamp,
   );
+
+  /// 현재 로그인한 사용자가 가입한 모든 그룹 중 최대 연속 출석일 조회
+  Future<Result<UserStreak>> getUserMaxStreakDays();
+
+  // 주간 공부 누적량
+  Future<Result<int>> getWeeklyStudyTimeMinutes();
 }

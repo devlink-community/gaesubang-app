@@ -7,9 +7,6 @@ sealed class HomeAction with _$HomeAction {
   /// 데이터 새로고침
   const factory HomeAction.refresh() = RefreshHome;
 
-  /// 공지사항 클릭
-  const factory HomeAction.onTapNotice(String noticeId) = OnTapNotice;
-
   /// 그룹 클릭
   const factory HomeAction.onTapGroup(String groupId) = OnTapGroup;
 
@@ -21,4 +18,7 @@ sealed class HomeAction with _$HomeAction {
 
   /// 알림 버튼 클릭
   const factory HomeAction.onTapNotification() = OnTapNotification;
+
+  ///그룹 생성하기 클릭
+  const factory HomeAction.onTapCreateGroup() = OnTapCreateGroup;
 }

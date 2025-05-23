@@ -90,4 +90,10 @@ abstract interface class GroupDataSource {
     String groupId,
     DateTime timestamp,
   );
+
+  /// 현재 로그인한 사용자가 가입한 모든 그룹 중 최대 연속 출석일 조회
+  Future<Map<String, dynamic>> fetchUserMaxStreakDays();
+
+  /// 현재 사용자의 이번 주 공부 시간 조회 (분 단위) - 내부에서 현재 사용자 정보 처리
+  Future<int> fetchWeeklyStudyTimeMinutes();
 }
