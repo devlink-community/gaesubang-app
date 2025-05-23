@@ -13,6 +13,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -140,7 +141,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final startTime = DateTime.now();
 
       AppLogger.logState('로그인 요청 정보', {
-        'email': email,
+        'email': PrivacyMaskUtil.maskEmail(email), // 변경
         'password_length': password.length,
         'auth_environment': AppConfig.useMockAuth ? 'mock' : 'firebase',
       });
@@ -239,8 +240,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final startTime = DateTime.now();
 
       AppLogger.logState('회원가입 요청 정보', {
-        'email': email,
-        'nickname': nickname,
+        'email': PrivacyMaskUtil.maskEmail(email), // 변경
+        'nickname': PrivacyMaskUtil.maskNickname(nickname), // 변경
         'password_length': password.length,
         'agreed_terms_id': agreedTermsId,
         'auth_environment': AppConfig.useMockAuth ? 'mock' : 'firebase',
@@ -307,8 +308,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
         AppLogger.authInfo('현재 사용자 조회 성공: ${member.nickname}');
         AppLogger.logState('현재 사용자 정보', {
-          'user_id': member.uid,
-          'nickname': member.nickname,
+          'user_id': PrivacyMaskUtil.maskUserId(member.uid), // 변경
+          'nickname': PrivacyMaskUtil.maskNickname(member.nickname), // 변경
           'streak_days': member.streakDays,
           'total_focus_minutes': member.focusStats?.totalMinutes ?? 0,
         });
