@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -143,7 +144,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap('FirebaseAuth.fetchLogin', () async {
       AppLogger.logBanner('Firebase 로그인 시작');
       AppLogger.logState('Firebase 로그인 요청', {
-        'email': email,
+        'email': PrivacyMaskUtil.maskEmail(email), // 변경
         'password_length': password.length,
       });
 
@@ -195,8 +196,8 @@ class AuthFirebaseDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap('FirebaseAuth.createUser', () async {
       AppLogger.logBanner('Firebase 회원가입 시작');
       AppLogger.logState('Firebase 회원가입 요청', {
-        'email': email,
-        'nickname': nickname,
+        'email': PrivacyMaskUtil.maskEmail(email), // 변경
+        'nickname': PrivacyMaskUtil.maskNickname(nickname), // 변경
         'password_length': password.length,
         'agreed_terms_id': agreedTermsId,
       });
