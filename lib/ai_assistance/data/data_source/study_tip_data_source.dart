@@ -1,6 +1,6 @@
 // lib/ai_assistance/data/data_source/study_tip_data_source.dart
 
-import 'package:flutter/foundation.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../module/quiz_prompt.dart';
 import '../../module/vertex_client.dart';
 import 'fallback_service.dart';
@@ -28,12 +28,28 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
     try {
       // Firebase AI SDK를 통한 간단한 호출
       final result = await _firebaseAIClient.callTextModel(prompt);
-      debugPrint('학습 팁 생성 성공: ${result["title"]}');
+
+      AppLogger.info(
+        '학습 팁 생성 성공: ${result["title"]}',
+        tag: 'StudyTipAI',
+      );
+
       return result;
     } catch (e) {
-      debugPrint('학습 팁 생성 API 호출 실패: $e');
+      AppLogger.error(
+        '학습 팁 생성 API 호출 실패',
+        tag: 'StudyTipAI',
+        error: e,
+      );
+
       // 폴백 서비스 활용
       final skill = _extractSkillFromPrompt(prompt);
+
+      AppLogger.info(
+        '폴백 서비스로 학습 팁 생성: $skill',
+        tag: 'StudyTipAI',
+      );
+
       return _fallbackService.getFallbackStudyTip(skill);
     }
   }
@@ -44,10 +60,25 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
       // 프롬프트 생성 서비스 활용하여 프롬프트 생성
       final prompt = _promptService.createStudyTipPrompt(skill);
 
+      AppLogger.debug(
+        '스킬 기반 학습 팁 프롬프트 생성: $skill',
+        tag: 'StudyTipAI',
+      );
+
       // 생성된 프롬프트로 API 호출
       return await generateStudyTipWithPrompt(prompt);
     } catch (e) {
-      debugPrint('스킬 기반 학습 팁 생성 실패: $e');
+      AppLogger.error(
+        '스킬 기반 학습 팁 생성 실패',
+        tag: 'StudyTipAI',
+        error: e,
+      );
+
+      AppLogger.info(
+        '폴백 서비스로 스킬 기반 학습 팁 생성: $skill',
+        tag: 'StudyTipAI',
+      );
+
       return _fallbackService.getFallbackStudyTip(skill);
     }
   }
@@ -60,10 +91,22 @@ class StudyTipDataSourceImpl implements StudyTipDataSource {
     final match = skillPattern.firstMatch(firstLine);
 
     if (match != null && match.groupCount >= 1) {
-      return match.group(1)?.trim() ?? '프로그래밍 기초';
+      final extractedSkill = match.group(1)?.trim() ?? '프로그래밍 기초';
+
+      AppLogger.debug(
+        '프롬프트에서 스킬 추출 성공: $extractedSkill',
+        tag: 'SkillExtractor',
+      );
+
+      return extractedSkill;
     }
 
     // 추출 실패 시 기본값 반환
+    AppLogger.debug(
+      '프롬프트에서 스킬 추출 실패, 기본값 사용: 프로그래밍 기초',
+      tag: 'SkillExtractor',
+    );
+
     return '프로그래밍 기초';
   }
 }
