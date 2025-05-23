@@ -3,19 +3,26 @@ import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 
+// lib/group/data/mapper/group_member_mapper.dart 수정
+
 extension GroupMemberDtoMapper on GroupMemberDto {
   /// DTO를 모델로 변환 (타이머 상태 포함)
   GroupMember toModel(GroupTimerActivityDto? timerActivity) {
-    // 타이머 활동에 따라 isActive 설정 (기본값은 비활성)
-    final isActive = timerActivity?.type == 'start';
+    // 타이머 활동에 따라 isActive 설정
+    // start 또는 resume인 경우 활성화
+    final isActive =
+        timerActivity?.type == 'start' || timerActivity?.type == 'resume';
+
     DateTime? startTime;
     int elapsedMinutes = 0;
+    int elapsedSeconds = 0;
 
     // 활성 상태인 경우 시작 시간과 경과 시간 계산
     if (isActive && timerActivity?.timestamp != null) {
       startTime = timerActivity?.timestamp;
       final now = DateTime.now();
-      elapsedMinutes = now.difference(startTime!).inMinutes;
+      elapsedSeconds = now.difference(startTime!).inSeconds;
+      elapsedMinutes = (elapsedSeconds / 60).floor();
     }
 
     return GroupMember(
@@ -25,9 +32,10 @@ extension GroupMemberDtoMapper on GroupMemberDto {
       profileUrl: profileUrl,
       role: role ?? 'member',
       joinedAt: joinedAt ?? DateTime.now(),
-      isActive: isActive, // 기본값은 false
-      timerStartTime: startTime, // 비활성 시 null
-      elapsedMinutes: elapsedMinutes, // 비활성 시 0
+      isActive: isActive,
+      timerStartTime: startTime,
+      elapsedMinutes: elapsedMinutes,
+      elapsedSeconds: elapsedSeconds,
     );
   }
 }

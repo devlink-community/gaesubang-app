@@ -63,4 +63,31 @@ abstract interface class GroupDataSource {
     int month, {
     int preloadMonths = 0, // 이전 몇 개월의 데이터를 함께 가져올지
   });
+
+  // ===== 새로 추가되는 메서드들 =====
+
+  /// 특정 시간으로 타이머 활동 기록 - 내부에서 현재 사용자 정보 처리
+  Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
+    String groupId,
+    String activityType, // 'start', 'pause', 'resume', 'end'
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 시작 기록
+  Future<Map<String, dynamic>> startMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 일시정지 기록
+  Future<Map<String, dynamic>> pauseMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 종료 기록
+  Future<Map<String, dynamic>> stopMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  );
 }
