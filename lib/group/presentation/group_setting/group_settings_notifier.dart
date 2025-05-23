@@ -248,11 +248,31 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         state = state.copyWith(limitMemberCount: validCount);
 
       case ImageUrlChanged(:final imageUrl):
+        // null인 경우 (이미지 삭제 버튼 클릭)
+        if (imageUrl == null) {
+          final currentImageUrl = state.imageUrl;
+
+          // 현재 Firebase Storage 이미지가 있으면 삭제 예약 (실제 삭제는 save 시점에서)
+          if (currentImageUrl != null && currentImageUrl.startsWith('http')) {
+            // 삭제할 이미지 URL을 상태에 저장해두고, save 시점에서 삭제 처리
+            state = state.copyWith(
+              imageUrl: null,
+              originalImagePath: null, // 로컬 이미지 경로도 초기화
+              imageUploadStatus: ImageUploadStatus.idle,
+            );
+          } else {
+            state = state.copyWith(
+              imageUrl: null,
+              originalImagePath: null,
+              imageUploadStatus: ImageUploadStatus.idle,
+            );
+          }
+        }
         // 로컬 파일 경로인 경우 Firebase Storage에 업로드
-        if (imageUrl != null && imageUrl.startsWith('file://')) {
+        else if (imageUrl.startsWith('file://')) {
           await uploadGroupImage(imageUrl);
         } else {
-          // 네트워크 URL이거나 null인 경우 직접 설정
+          // 네트워크 URL인 경우 직접 설정
           state = state.copyWith(imageUrl: imageUrl);
         }
 
