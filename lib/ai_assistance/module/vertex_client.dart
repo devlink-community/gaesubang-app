@@ -96,7 +96,6 @@ class FirebaseAIClient {
     try {
       if (!_initialized) await initialize();
 
-      // 캐시 방지를 위한 고유 ID 추가
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
@@ -104,12 +103,10 @@ class FirebaseAIClient {
         'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
       );
 
-      // Firebase AI SDK를 사용한 간단한 호출
       final response = await _generativeModel.generateContent([
         Content.text(enhancedPrompt),
       ]);
 
-      // 응답 텍스트 추출
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
         throw Exception('응답이 비어있습니다');
@@ -119,8 +116,12 @@ class FirebaseAIClient {
         'Gemini API 응답 수신: ${responseText.substring(0, min(100, responseText.length))}...',
       );
 
-      // JSON 추출 및 반환
-      return _extractJsonFromText(responseText);
+      // 🔧 수정: 항상 일반 텍스트로 처리
+      return {
+        'content': responseText.trim(),
+        'text': responseText.trim(),
+        'response': responseText.trim(),
+      };
     } catch (e) {
       debugPrint('Gemini API 호출 실패: $e');
       rethrow;
