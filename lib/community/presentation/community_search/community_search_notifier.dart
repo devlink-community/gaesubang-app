@@ -13,32 +13,58 @@ part 'community_search_notifier.g.dart';
 class CommunitySearchNotifier extends _$CommunitySearchNotifier {
   late final SearchPostsUseCase _searchPostsUseCase;
 
+  // ✅ 중복 로드 방지를 위한 플래그
+  bool _isLoadingHistory = false;
+  bool _historyInitialized = false;
+
   @override
   CommunitySearchState build() {
     _searchPostsUseCase = ref.watch(searchPostsUseCaseProvider);
 
-    // 🔄 페이지 재진입 시에도 상태 복원
-    _restoreStateIfNeeded();
+    // ✅ Notifier 해제 시 플래그 초기화 (올바른 방법)
+    ref.onDispose(() {
+      _isLoadingHistory = false;
+      _historyInitialized = false;
+      AppLogger.debug('CommunitySearchNotifier 해제됨');
+    });
 
     AppLogger.communityInfo('CommunitySearchNotifier 초기화 완료');
+
+    // ✅ 초기 상태를 먼저 반환한 후, 비동기로 히스토리 로드
+    Future.microtask(() => _loadSearchHistoryIfNeeded());
+
     return const CommunitySearchState();
   }
 
-  /// 페이지 재진입 시 상태 복원
-  Future<void> _restoreStateIfNeeded() async {
-    // 이미 데이터가 있으면 복원 안 함
-    if (state.recentSearches.isNotEmpty || state.popularSearches.isNotEmpty) {
-      AppLogger.debug('검색 히스토리 이미 존재 - 복원 생략');
+  /// 필요한 경우에만 히스토리 로드 (한 번만 실행)
+  Future<void> _loadSearchHistoryIfNeeded() async {
+    // 이미 로딩 중이거나 초기화됨
+    if (_isLoadingHistory || _historyInitialized) {
+      AppLogger.debug('검색 히스토리 로드 스킵 - 이미 처리됨');
       return;
     }
 
-    AppLogger.debug('페이지 재진입 - 검색 상태 복원 시작');
-    // 검색어 히스토리 로드
+    // 이미 데이터가 있으면 로드 안 함
+    if (state.recentSearches.isNotEmpty || state.popularSearches.isNotEmpty) {
+      AppLogger.debug('검색 히스토리 이미 존재 - 로드 생략');
+      _historyInitialized = true;
+      return;
+    }
+
+    AppLogger.debug('검색 히스토리 초기 로드 시작');
     await _loadSearchHistory();
   }
 
-  /// 검색어 히스토리 로드 (최근 + 인기) - 에러 수정
+  /// 검색어 히스토리 로드 (최근 + 인기) - 무한 루프 방지
   Future<void> _loadSearchHistory() async {
+    // ✅ 중복 로딩 방지
+    if (_isLoadingHistory) {
+      AppLogger.debug('검색 히스토리 로드 중복 요청 무시');
+      return;
+    }
+
+    _isLoadingHistory = true;
+
     try {
       // 로딩 상태 표시
       state = state.copyWith(isLoading: true);
@@ -78,6 +104,9 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         isLoading: false,
       );
 
+      // ✅ 초기화 완료 표시
+      _historyInitialized = true;
+
       AppLogger.info(
         '검색 히스토리 로드 완료: 최근 ${recentSearches.length}개, 인기 ${popularSearches.length}개',
       );
@@ -90,6 +119,12 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         popularSearches: [],
         isLoading: false,
       );
+
+      // ✅ 에러가 나도 초기화 완료로 처리 (무한 루프 방지)
+      _historyInitialized = true;
+    } finally {
+      // ✅ 로딩 플래그 해제
+      _isLoadingHistory = false;
     }
   }
 
@@ -184,7 +219,7 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     }
   }
 
-  /// 검색어 히스토리에 추가 (빈도수 관리) - 에러 처리 개선
+  /// 검색어 히스토리에 추가 (빈도수 관리) - 무한 루프 방지
   Future<void> _addToSearchHistory(String query) async {
     try {
       AppLogger.debug('검색어 히스토리 추가: "$query"');
@@ -197,11 +232,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
 
       // ⭐ 즉시 상태 업데이트 (로컬에서 빠르게 반영)
       _updateLocalHistory(query);
-
-      // 백그라운드에서 전체 히스토리 다시 로드 (에러 무시)
-      _loadSearchHistory().catchError((e, st) {
-        AppLogger.warning('백그라운드 히스토리 로드 실패 (무시됨)', error: e, stackTrace: st);
-      });
 
       AppLogger.info('검색어 히스토리 추가 완료: "$query"');
     } catch (e, st) {
@@ -258,8 +288,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       );
     } catch (e, st) {
       AppLogger.error('검색어 삭제 실패: "$query"', error: e, stackTrace: st);
-      // 실패 시 다시 로드하여 동기화
-      await _loadSearchHistory();
     }
   }
 
@@ -282,8 +310,6 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       AppLogger.info('모든 검색어 삭제 완료');
     } catch (e, st) {
       AppLogger.error('모든 검색어 삭제 실패', error: e, stackTrace: st);
-      // 실패 시 다시 로드하여 동기화
-      await _loadSearchHistory();
     }
   }
 
@@ -309,9 +335,17 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     }
   }
 
-  /// 🔧 수동으로 상태 새로고침 (필요 시 호출)
+  /// 🔧 수동으로 상태 새로고침 (외부 호출용, 중복 방지)
   Future<void> refreshSearchHistory() async {
+    if (_isLoadingHistory) {
+      AppLogger.debug('이미 검색 히스토리 로드 중 - 새로고침 스킵');
+      return;
+    }
+
     AppLogger.info('검색 히스토리 수동 새로고침');
+
+    // ✅ 강제 새로고침이므로 초기화 플래그 재설정
+    _historyInitialized = false;
     await _loadSearchHistory();
   }
 
