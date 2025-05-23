@@ -631,7 +631,6 @@ exports.cleanupExpiredFCMTokens = functions.pubsub
       return { error: error.message };
     }
   });
-
 // === 사용자 통계 업데이트 (매일 새벽 1시 실행) ===
 exports.updateUserStatistics = functions.pubsub
   .schedule('0 1 * * *') // 매일 새벽 1시 (KST)
@@ -664,7 +663,7 @@ exports.updateUserStatistics = functions.pubsub
           const userId = userDoc.id;
           const userData = userDoc.data();
           
-          // 어제의 타이머 활동 조회 (start/end 쌍 계산)
+          // 어제의 타이머 활동 조회
           const activitiesSnapshot = await admin.firestore()
             .collection('users')
             .doc(userId)
@@ -674,28 +673,8 @@ exports.updateUserStatistics = functions.pubsub
             .orderBy('timestamp')
             .get();
           
-          let dailyFocusMinutes = 0;
-          let startTime = null;
-          
-          // start/end 활동 쌍으로 총 집중 시간 계산
-          activitiesSnapshot.docs.forEach(doc => {
-            const activity = doc.data();
-            
-            if (activity.type === 'start') {
-              startTime = activity.timestamp;
-            } else if (activity.type === 'end' && startTime) {
-              const endTime = activity.timestamp;
-              const durationMinutes = Math.floor(
-                (endTime.seconds - startTime.seconds) / 60
-              );
-              
-              if (durationMinutes > 0 && durationMinutes <= 300) { // 최대 5시간 제한
-                dailyFocusMinutes += durationMinutes;
-              }
-              
-              startTime = null;
-            }
-          });
+          // 🔧 개선된 집중 시간 계산 (resume 포함)
+          const dailyFocusMinutes = calculateDailyFocusTime(activitiesSnapshot.docs);
           
           // 연속 학습일 계산
           let newStreakDays = userData.streakDays || 0;
@@ -745,3 +724,107 @@ exports.updateUserStatistics = functions.pubsub
       return { error: error.message };
     }
   });
+
+// 🔧 새로 추가: resume을 포함한 집중 시간 계산 함수
+function calculateDailyFocusTime(activityDocs) {
+  let totalFocusMinutes = 0;
+  let currentSessionStart = null;
+  let isPaused = false;
+  
+  console.log(`총 ${activityDocs.length}개의 활동 처리 중...`);
+  
+  activityDocs.forEach((doc, index) => {
+    const activity = doc.data();
+    const activityType = activity.type;
+    const timestamp = activity.timestamp;
+    
+    console.log(`활동 ${index + 1}: ${activityType} at ${timestamp.toDate().toISOString()}`);
+    
+    switch (activityType) {
+      case 'start':
+        // 새로운 세션 시작
+        currentSessionStart = timestamp;
+        isPaused = false;
+        console.log('  → 새 세션 시작');
+        break;
+        
+      case 'pause':
+        // 현재 세션 일시정지
+        if (currentSessionStart && !isPaused) {
+          const sessionMinutes = Math.floor(
+            (timestamp.seconds - currentSessionStart.seconds) / 60
+          );
+          
+          // 유효한 세션 시간만 추가 (최대 5시간 제한)
+          if (sessionMinutes > 0 && sessionMinutes <= 300) {
+            totalFocusMinutes += sessionMinutes;
+            console.log(`  → 세션 일시정지: ${sessionMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+          } else {
+            console.log(`  → 비정상 세션 시간 무시: ${sessionMinutes}분`);
+          }
+          
+          isPaused = true;
+        } else {
+          console.log('  → 일시정지 무시 (시작 시간 없음 또는 이미 일시정지됨)');
+        }
+        break;
+        
+      case 'resume':
+        // 세션 재개 - 새로운 시작점으로 설정
+        if (isPaused) {
+          currentSessionStart = timestamp;
+          isPaused = false;
+          console.log('  → 세션 재개');
+        } else {
+          console.log('  → 재개 무시 (일시정지 상태가 아님)');
+        }
+        break;
+        
+      case 'end':
+        // 현재 세션 종료
+        if (currentSessionStart && !isPaused) {
+          const sessionMinutes = Math.floor(
+            (timestamp.seconds - currentSessionStart.seconds) / 60
+          );
+          
+          // 유효한 세션 시간만 추가
+          if (sessionMinutes > 0 && sessionMinutes <= 300) {
+            totalFocusMinutes += sessionMinutes;
+            console.log(`  → 세션 종료: ${sessionMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+          } else {
+            console.log(`  → 비정상 세션 시간 무시: ${sessionMinutes}분`);
+          }
+        } else {
+          console.log('  → 종료 무시 (시작 시간 없음 또는 이미 일시정지됨)');
+        }
+        
+        // 세션 상태 초기화
+        currentSessionStart = null;
+        isPaused = false;
+        break;
+        
+      default:
+        console.log(`  → 알 수 없는 활동 타입: ${activityType}`);
+        break;
+    }
+  });
+  
+  // 🔧 하루가 끝났는데 아직 진행 중인 세션이 있는 경우 처리
+  if (currentSessionStart && !isPaused) {
+    // 다음 날 00:00:00까지의 시간을 계산
+    const endOfDay = new Date(currentSessionStart.toDate());
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const remainingMinutes = Math.floor(
+      (endOfDay.getTime() - currentSessionStart.toDate().getTime()) / (1000 * 60)
+    );
+    
+    if (remainingMinutes > 0 && remainingMinutes <= 300) {
+      totalFocusMinutes += remainingMinutes;
+      console.log(`미완료 세션 처리: ${remainingMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+    }
+  }
+  
+  console.log(`최종 집중 시간: ${totalFocusMinutes}분`);
+  return totalFocusMinutes;
+}
