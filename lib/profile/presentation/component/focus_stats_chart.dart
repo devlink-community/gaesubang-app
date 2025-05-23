@@ -55,16 +55,31 @@ class _FocusStatsChartState extends State<FocusStatsChart>
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🚀 FocusStatsChart: 받은 stats = ${widget.stats}');
+    debugPrint(
+      '🚀 FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
+    );
+    debugPrint(
+      '🚀 FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
+    );
+
     // 1) 원본 데이터 정렬
     final entries =
         widget.stats.weeklyMinutes.entries.toList()..sort(
           (a, b) => _weekdayIndex(a.key).compareTo(_weekdayIndex(b.key)),
         );
 
-    // 2) 최대값 계산
+    debugPrint('🚀 FocusStatsChart: 정렬된 entries = $entries');
+
+    // 2) 최대값 계산 - 모든 값이 0이면 기본값 설정
     final maxVal = entries
         .map((e) => e.value.toDouble())
         .fold<double>(0, (prev, curr) => max(prev, curr));
+
+    // ✅ 모든 값이 0일 때 기본 높이 설정 (빈 차트 표시용)
+    final chartMaxY = maxVal > 0 ? maxVal : 60.0; // 60분을 기본 최대값으로 설정
+
+    debugPrint('🚀 FocusStatsChart: maxVal = $maxVal, chartMaxY = $chartMaxY');
 
     // 3) 색상 정의 - 살짝 더 깊은 파란색 계열로 수정
     final fillColor = const Color(0xFF4355F9);
@@ -80,7 +95,7 @@ class _FocusStatsChartState extends State<FocusStatsChart>
           height: 200,
           child: BarChart(
             BarChartData(
-              maxY: maxVal,
+              maxY: chartMaxY,
               // 터치 툴팁 가독성 설정
               barTouchData: BarTouchData(
                 touchTooltipData: BarTouchTooltipData(
@@ -175,7 +190,7 @@ class _FocusStatsChartState extends State<FocusStatsChart>
                           ),
                           backDrawRodData: BackgroundBarChartRodData(
                             show: true,
-                            toY: maxVal,
+                            toY: chartMaxY,
                             color: bgColor,
                           ),
                         ),

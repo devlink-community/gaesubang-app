@@ -35,15 +35,23 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   // 메시지 입력 컨트롤러
   late TextEditingController _textController;
 
+  // 🆕 멤버 검색 입력 컨트롤러
+  late TextEditingController _searchController;
+
   // 포커스 노드
   late FocusNode _focusNode;
+
+  // 🆕 검색 포커스 노드
+  late FocusNode _searchFocusNode;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _textController = TextEditingController();
+    _searchController = TextEditingController(); // 🆕 검색 컨트롤러 초기화
     _focusNode = FocusNode();
+    _searchFocusNode = FocusNode(); // 🆕 검색 포커스 노드 초기화
 
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
@@ -59,7 +67,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   void dispose() {
     _scrollController.dispose();
     _textController.dispose();
+    _searchController.dispose(); // 🆕 검색 컨트롤러 해제
     _focusNode.dispose();
+    _searchFocusNode.dispose(); // 🆕 검색 포커스 노드 해제
     super.dispose();
   }
 
@@ -86,6 +96,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (widget.state.currentMessage.isEmpty &&
         _textController.text.isNotEmpty) {
       _textController.clear();
+    }
+
+    // 🆕 검색어 상태 동기화
+    if (widget.state.memberSearchQuery != _searchController.text) {
+      _searchController.text = widget.state.memberSearchQuery;
     }
   }
 
@@ -147,7 +162,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 멤버 목록 드로어 위젯 - 개선된 버전
+  // 🆕 개선된 멤버 목록 드로어 위젯
   Widget _buildMembersDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
@@ -173,7 +188,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       children: [
                         CircleAvatar(
                           radius: 24,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
                           child: const Icon(
                             Icons.people,
                             color: Colors.white,
@@ -195,7 +210,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                               Text(
                                 '현재 그룹 멤버 목록',
                                 style: AppTextStyles.body1Regular.copyWith(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
                             ],
@@ -204,18 +219,20 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // 멤버 수 표시 추가
+                    // 멤버 수 표시 (필터링된 결과 반영)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '총 ${_getMemberCount()} 명',
+                        widget.state.memberSearchQuery.isEmpty
+                            ? '총 ${_getTotalMemberCount()}명'
+                            : '검색 결과: ${widget.state.filteredMembers.length}명',
                         style: AppTextStyles.captionRegular.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -227,31 +244,89 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
             ),
           ),
-          // 검색창 추가
+
+          // 🆕 개선된 검색창
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColorStyles.background,
-                borderRadius: BorderRadius.circular(20),
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              decoration: InputDecoration(
+                hintText: '멤버 이름 검색',
+                hintStyle: AppTextStyles.body2Regular.copyWith(
+                  color: AppColorStyles.gray80,
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: AppColorStyles.gray80,
+                  size: 20,
+                ),
+                suffixIcon:
+                    widget.state.memberSearchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: AppColorStyles.gray80,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            widget.onAction(
+                              const GroupChatAction.clearMemberSearch(),
+                            );
+                            _searchFocusNode.unfocus();
+                          },
+                        )
+                        : null,
+                filled: true,
+                fillColor: AppColorStyles.background,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: AppColorStyles.primary100,
+                    width: 2,
+                  ),
+                ),
               ),
+              onChanged: (value) {
+                widget.onAction(GroupChatAction.searchMembers(value));
+              },
+              textInputAction: TextInputAction.search,
+            ),
+          ),
+
+          // 🆕 검색 결과 정보 표시
+          if (widget.state.memberSearchQuery.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Row(
                 children: [
-                  const SizedBox(width: 12),
-                  Icon(Icons.search, color: AppColorStyles.gray80, size: 20),
-                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.filter_list,
+                    size: 16,
+                    color: AppColorStyles.primary100,
+                  ),
+                  const SizedBox(width: 6),
                   Text(
-                    '멤버 검색',
-                    style: AppTextStyles.body2Regular.copyWith(
-                      color: AppColorStyles.gray80,
+                    '"${widget.state.memberSearchQuery}" 검색 중',
+                    style: AppTextStyles.captionRegular.copyWith(
+                      color: AppColorStyles.primary100,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          // 활성 멤버 섹션 추가
+
+          // 활성 멤버 섹션
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
@@ -276,9 +351,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ),
           ),
           const Divider(height: 24),
-          // 멤버 목록
-          Expanded(child: _buildMembersList()),
-          // 하단 버튼 영역 추가
+
+          // 🆕 수정된 멤버 목록 (필터링 적용)
+          Expanded(child: _buildFilteredMembersList()),
+
+          // 하단 버튼 영역
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -286,7 +363,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, -1),
                 ),
@@ -322,18 +399,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 멤버 수 가져오기 헬퍼 메서드
-  int _getMemberCount() {
-    if (widget.state.groupMembersResult is AsyncData) {
-      final AsyncData<List<GroupMember>> data =
-          widget.state.groupMembersResult as AsyncData<List<GroupMember>>;
-      return data.value.length;
-    }
-    return 0;
-  }
-
-  // 멤버 목록 위젯
-  Widget _buildMembersList() {
+  // 🆕 필터링된 멤버 목록 위젯
+  Widget _buildFilteredMembersList() {
     return switch (widget.state.groupMembersResult) {
       AsyncLoading() => const Center(child: CircularProgressIndicator()),
       AsyncError(:final error) => Center(
@@ -342,7 +409,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 16),
-            Text('멤버 목록을 불러오는데 실패했습니다'),
+            const Text('멤버 목록을 불러오는데 실패했습니다'),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed:
@@ -354,37 +421,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         ),
       ),
       AsyncData(:final value) =>
-        value.isEmpty ? _buildEmptyMembersList() : _buildMembersListView(value),
+        value.isEmpty
+            ? _buildEmptyMembersList()
+            : _buildFilteredMembersListView(),
       _ => const Center(child: Text('메시지를 불러올 수 없습니다')),
     };
   }
 
-  // 멤버가 없을 때 표시할 위젯
-  Widget _buildEmptyMembersList() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.group_off, size: 64, color: AppColorStyles.gray60),
-          const SizedBox(height: 16),
-          Text(
-            '멤버가 없습니다',
-            style: AppTextStyles.subtitle1Medium.copyWith(
-              color: AppColorStyles.gray80,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // 🆕 필터링된 멤버 ListView
+  Widget _buildFilteredMembersListView() {
+    final filteredMembers = widget.state.filteredMembers;
 
-  // 멤버 목록 ListView - 개선된 버전
-  Widget _buildMembersListView(List<GroupMember> members) {
+    // 검색 결과가 없는 경우
+    if (widget.state.memberSearchQuery.isNotEmpty && filteredMembers.isEmpty) {
+      return _buildNoSearchResults();
+    }
+
     return ListView.builder(
-      itemCount: members.length,
+      itemCount: filteredMembers.length,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemBuilder: (context, index) {
-        final member = members[index];
+        final member = filteredMembers[index];
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -392,7 +449,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             decoration: BoxDecoration(
               color:
                   member.isActive
-                      ? AppColorStyles.primary60.withOpacity(0.1)
+                      ? AppColorStyles.primary60.withValues(alpha: 0.1)
                       : null,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -436,9 +493,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     ),
                 ],
               ),
-              title: Text(
-                member.userName,
-                style: AppTextStyles.subtitle1Medium,
+              title: RichText(
+                text: _buildHighlightedText(
+                  member.userName,
+                  widget.state.memberSearchQuery,
+                ),
               ),
               subtitle: Row(
                 children: [
@@ -451,7 +510,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     decoration: BoxDecoration(
                       color:
                           member.isOwner
-                              ? AppColorStyles.primary100.withOpacity(0.1)
+                              ? AppColorStyles.primary100.withValues(alpha: 0.1)
                               : AppColorStyles.gray40,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -536,6 +595,138 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
+  // 🆕 검색 결과 없음 위젯
+  Widget _buildNoSearchResults() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: AppColorStyles.gray60,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '검색 결과가 없습니다',
+            style: AppTextStyles.subtitle1Medium.copyWith(
+              color: AppColorStyles.gray80,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '"${widget.state.memberSearchQuery}"와 일치하는 멤버가 없습니다',
+            style: AppTextStyles.body2Regular.copyWith(
+              color: AppColorStyles.gray60,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: () {
+              _searchController.clear();
+              widget.onAction(const GroupChatAction.clearMemberSearch());
+            },
+            icon: const Icon(Icons.clear),
+            label: const Text('검색 초기화'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🆕 텍스트 하이라이트 기능
+  TextSpan _buildHighlightedText(String text, String query) {
+    if (query.isEmpty) {
+      return TextSpan(
+        text: text,
+        style: AppTextStyles.subtitle1Medium,
+      );
+    }
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+
+    if (!lowerText.contains(lowerQuery)) {
+      return TextSpan(
+        text: text,
+        style: AppTextStyles.subtitle1Medium,
+      );
+    }
+
+    final List<TextSpan> spans = [];
+    int start = 0;
+    int index = lowerText.indexOf(lowerQuery);
+
+    while (index != -1) {
+      // 매칭 전 텍스트 추가
+      if (index > start) {
+        spans.add(
+          TextSpan(
+            text: text.substring(start, index),
+            style: AppTextStyles.subtitle1Medium,
+          ),
+        );
+      }
+
+      // 하이라이트된 텍스트 추가
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: AppTextStyles.subtitle1Medium.copyWith(
+            backgroundColor: AppColorStyles.primary100.withValues(alpha: 0.3),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+
+      start = index + query.length;
+      index = lowerText.indexOf(lowerQuery, start);
+    }
+
+    // 나머지 텍스트 추가
+    if (start < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(start),
+          style: AppTextStyles.subtitle1Medium,
+        ),
+      );
+    }
+
+    return TextSpan(children: spans);
+  }
+
+  // 전체 멤버 수 가져오기 헬퍼 메서드
+  int _getTotalMemberCount() {
+    if (widget.state.groupMembersResult is AsyncData) {
+      final AsyncData<List<GroupMember>> data =
+          widget.state.groupMembersResult as AsyncData<List<GroupMember>>;
+      return data.value.length;
+    }
+    return 0;
+  }
+
+  // 멤버가 없을 때 표시할 위젯
+  Widget _buildEmptyMembersList() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.group_off, size: 64, color: AppColorStyles.gray60),
+          const SizedBox(height: 16),
+          Text(
+            '멤버가 없습니다',
+            style: AppTextStyles.subtitle1Medium.copyWith(
+              color: AppColorStyles.gray80,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 기존 메서드들은 그대로 유지...
   // 메시지 목록 위젯
   Widget _buildMessageList() {
     return switch (widget.state.messagesResult) {
@@ -592,8 +783,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        final bool isMe =
-            message.senderId == widget.state.currentUserId; // 실제 사용자 ID로 대체 필요
+        final bool isMe = message.senderId == widget.state.currentUserId;
 
         // 날짜 구분선 표시 로직
         final showDateDivider =
