@@ -231,6 +231,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
               '이전 활동 토글: ${_showOlderNotifications ? "펼침" : "닫힘"}',
               tag: 'NotificationUI',
             );
+            
+            // 펼쳐질 때 디버그 로깅
+            if (_showOlderNotifications) {
+              AppLogger.debug('이전 알림 ${olderNotifications.length}개 표시', tag: 'NotificationUI');
+            }
           },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -257,8 +262,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
 
         // 펼쳐진 상태일 때만 이전 알림 표시
-        if (_showOlderNotifications) ...[
-          AppLogger.debug('이전 알림 ${olderNotifications.length}개 표시', tag: 'NotificationUI'),
+        if (_showOlderNotifications) 
           ...olderNotifications.map(
             (notification) => NotificationItem(
               notification: notification,
@@ -280,7 +284,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ),
         ],
-      ],
     );
   }
 
