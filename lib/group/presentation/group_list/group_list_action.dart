@@ -11,4 +11,5 @@ sealed class GroupListAction with _$GroupListAction {
   const factory GroupListAction.onTapSearch() = OnTapSearch;
   const factory GroupListAction.onCloseDialog() = OnCloseDialog;
   const factory GroupListAction.onTapCreateGroup() = OnTapCreateGroup;
+  const factory GroupListAction.onShowFullGroupDialog() = OnShowFullGroupDialog;
 }
