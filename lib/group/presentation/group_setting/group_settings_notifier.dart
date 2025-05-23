@@ -108,8 +108,8 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       final result = await _getGroupMembersUseCase.execute(groupId);
 
       switch (result) {
-        case AsyncData(:final allMembers):
-          _handleMemberPageSuccess(allMembers, isInitialLoad);
+        case AsyncData(:final value):
+          _handleMemberPageSuccess(value, isInitialLoad);
 
         case AsyncError(:final error):
           _handleMemberPageError(error, isInitialLoad);
