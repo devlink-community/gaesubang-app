@@ -84,18 +84,6 @@ class ProfileNotifier extends _$ProfileNotifier {
             debugPrint(
               '✅ ProfileNotifier: 통계 데이터 설정 완료 (totalMinutes: ${focusStats.totalMinutes})',
             );
-          }
-
-          // 최종 상태 업데이트 - 단일 호출로 두 상태 모두 업데이트
-          // 요청 ID가 여전히 유효한지 한 번 더 확인
-          if (state.activeRequestId == currentRequestId) {
-            state = state.copyWith(
-              userProfile: userProfileResult,
-              focusStats: AsyncData(focusStats),
-              activeRequestId: null, // 요청 완료 후 ID 초기화
-            );
-
-            debugPrint('✅ ProfileNotifier: 모든 데이터 로드 완료 (최적화됨)');
           } else {
             debugPrint(
               '⚠️ ProfileNotifier: 요청 완료 시점에 다른 요청이 진행 중이므로 상태 업데이트 무시',
