@@ -72,8 +72,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     ref.onDispose(() {
       print('🗑️ GroupDetailNotifier dispose - 모든 리소스 정리');
-      _cleanupAllTimers();
       mounted = false;
+      _cleanupAllTimers(); // 메서드 호출로 통합
     });
 
     return const GroupDetailState();
@@ -90,34 +90,40 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
   }
 
-  // 🔧 모든 타이머 정리
+  // 🔧 모든 타이머 정리 (수정)
   void _cleanupAllTimers() {
+    print('🧹 모든 타이머 및 스트림 정리 시작');
+
     _timer?.cancel();
     _timer = null;
 
-    _timerStatusSubscription?.cancel();
-    _timerStatusSubscription = null;
+    // 스트림 정지 (개선된 메서드 호출)
+    _stopRealTimeTimerStatusStream();
 
-    _reconnectionTimer?.cancel();
-    _reconnectionTimer = null;
-
-    _healthCheckTimer?.cancel();
-    _healthCheckTimer = null;
-
-    _midnightTimer?.cancel(); // 추가: 자정 타이머 정리
+    _midnightTimer?.cancel();
     _midnightTimer = null;
+
+    print('✅ 모든 타이머 및 스트림 정리 완료');
   }
 
   // 🔧 화면 활성 상태 관리
   void setScreenActive(bool isActive) {
+    if (!mounted) {
+      print('⚠️ Notifier가 mounted 상태가 아니어서 setScreenActive 무시');
+      return;
+    }
     if (state.isScreenActive == isActive) return;
 
     print('📱 화면 활성 상태 변경: ${state.isScreenActive} -> $isActive');
 
-    state = state.copyWith(isScreenActive: isActive);
+    try {
+      state = state.copyWith(isScreenActive: isActive);
 
-    if (_groupId.isNotEmpty) {
-      _updateStreamSubscription();
+      if (_groupId.isNotEmpty) {
+        _updateStreamSubscription();
+      }
+    } catch (e) {
+      print('❌ setScreenActive 에러: $e');
     }
   }
 
@@ -185,20 +191,28 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 🔧 실시간 스트림 정지
   void _stopRealTimeTimerStatusStream() {
     print('🔴 실시간 타이머 상태 스트림 정지');
-
-    _timerStatusSubscription?.cancel();
+    // 1. 먼저 스트림을 null로 설정하여 새 이벤트 차단
+    final subscription = _timerStatusSubscription;
     _timerStatusSubscription = null;
 
+    // 2. 타이머들 취소
     _reconnectionTimer?.cancel();
     _reconnectionTimer = null;
 
     _healthCheckTimer?.cancel();
     _healthCheckTimer = null;
 
-    state = state.copyWith(
-      streamConnectionStatus: StreamConnectionStatus.disconnected,
-      reconnectionAttempts: 0,
-    );
+    // 3. 상태 업데이트 (mounted 체크)
+    if (mounted) {
+      state = state.copyWith(
+        streamConnectionStatus: StreamConnectionStatus.disconnected,
+        reconnectionAttempts: 0,
+      );
+    }
+
+    // 4. 마지막에 스트림 구독 취소
+    subscription?.cancel();
+    print('✅ 스트림 구독 취소 완료');
   }
 
   // 화면 재진입 시 데이터 갱신
@@ -427,9 +441,14 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Future<void> _loadInitialGroupMembers() async {
     print('📥 최초 멤버 정보 로드 시작');
 
-    if (!mounted) return; // 시작 전 체크
-
-    state = state.copyWith(groupMembersResult: const AsyncValue.loading());
+    if (!mounted) {
+      print('⚠️ Notifier가 mounted 상태가 아니어서 로드 취소');
+      return;
+    }
+    // Loading 상태 설정 전 체크
+    if (mounted) {
+      state = state.copyWith(groupMembersResult: const AsyncValue.loading());
+    }
 
     try {
       final result = await _getGroupMembersUseCase?.execute(_groupId);
@@ -457,10 +476,16 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
   }
 
-  // 🔧 실시간 스트림 시작
+  // 🔧 실시간 스트림 시작 (더 안전하게 수정)
   void _startRealTimeTimerStatusStream() {
     if (_timerStatusSubscription != null) {
       print('⚠️ 이미 활성화된 스트림이 있어서 시작을 건너뜁니다');
+      return;
+    }
+
+    // mounted 체크
+    if (!mounted) {
+      print('⚠️ Notifier가 mounted 상태가 아니어서 스트림 시작을 건너뜁니다');
       return;
     }
 
@@ -471,10 +496,19 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       errorMessage: null,
     );
 
+    // 스트림 구독 전에 한번 더 체크
+    if (!mounted || _timerStatusSubscription != null) return;
+
     _timerStatusSubscription = _streamGroupMemberTimerStatusUseCase
         ?.execute(_groupId)
         .listen(
           (asyncValue) {
+            // null 체크 추가
+            if (_timerStatusSubscription == null) {
+              print('🔇 스트림이 이미 취소되어 데이터 무시');
+              return;
+            }
+
             if (!mounted || !state.isActive) {
               print('🔇 화면 비활성 상태로 스트림 데이터 무시');
               return;
@@ -483,16 +517,24 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
             _handleStreamData(asyncValue);
           },
           onError: (error) {
+            if (_timerStatusSubscription == null || !mounted || !state.isActive)
+              return;
+
             print('❌ 실시간 스트림 구독 에러: $error');
             _handleStreamError(error);
           },
           onDone: () {
             print('✅ 실시간 스트림 완료');
-            _timerStatusSubscription = null;
-            state = state.copyWith(
-              streamConnectionStatus: StreamConnectionStatus.disconnected,
-            );
+            if (_timerStatusSubscription != null) {
+              _timerStatusSubscription = null;
+              if (mounted) {
+                state = state.copyWith(
+                  streamConnectionStatus: StreamConnectionStatus.disconnected,
+                );
+              }
+            }
           },
+          cancelOnError: false,
         );
 
     _startStreamHealthCheck();
@@ -521,37 +563,42 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 🔧 스트림 데이터 처리
   void _handleStreamData(AsyncValue<List<GroupMember>> asyncValue) {
-    if (!mounted) {
+    if (!mounted || !state.isActive || _timerStatusSubscription == null) {
       print('🔇 Notifier가 dispose되어 스트림 데이터 무시');
       return;
     }
-    print('🔄 실시간 타이머 상태 업데이트 수신: ${asyncValue.runtimeType}');
 
-    switch (asyncValue) {
-      case AsyncData(:final value):
-        // 추가: 스트림 데이터 수신 시 타이머 검증
-        // _validateCurrentUserTimerState(value);
+    try {
+      print('🔄 실시간 타이머 상태 업데이트 수신: ${asyncValue.runtimeType}');
 
-        final mergedMembers = _mergeLocalTimerStateWithRemoteData(value);
+      switch (asyncValue) {
+        case AsyncData(:final value):
+          // 한번 더 체크
+          if (!mounted || _timerStatusSubscription == null) return;
 
-        _safeSetState(
-          () => state.copyWith(
-            groupMembersResult: AsyncData(mergedMembers),
-            streamConnectionStatus: StreamConnectionStatus.connected,
-            lastStreamUpdateTime: DateTime.now(),
-            errorMessage: null,
-            reconnectionAttempts: 0,
-          ),
-        );
+          final mergedMembers = _mergeLocalTimerStateWithRemoteData(value);
 
-        print('✅ 실시간 멤버 상태 업데이트 완료 (${mergedMembers.length}명)');
+          _safeSetState(
+            () => state.copyWith(
+              groupMembersResult: AsyncData(mergedMembers),
+              streamConnectionStatus: StreamConnectionStatus.connected,
+              lastStreamUpdateTime: DateTime.now(),
+              errorMessage: null,
+              reconnectionAttempts: 0,
+            ),
+          );
 
-      case AsyncError(:final error):
-        print('⚠️ 실시간 스트림 데이터 에러: $error');
-        _handleStreamError(error);
+          print('✅ 실시간 멤버 상태 업데이트 완료 (${mergedMembers.length}명)');
 
-      case AsyncLoading():
-        print('🔄 실시간 스트림 로딩 중');
+        case AsyncError(:final error):
+          print('⚠️ 실시간 스트림 데이터 에러: $error');
+          _handleStreamError(error);
+
+        case AsyncLoading():
+          print('🔄 실시간 스트림 로딩 중');
+      }
+    } catch (e) {
+      print('❌ _handleStreamData 예외 발생: $e');
     }
   }
 
