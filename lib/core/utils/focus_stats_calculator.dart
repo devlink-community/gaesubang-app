@@ -2,7 +2,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/profile/domain/model/focus_time_stats.dart';
+import 'package:intl/intl.dart';
 
 class FocusStatsCalculator {
   const FocusStatsCalculator._();
@@ -212,207 +214,188 @@ class FocusStatsCalculator {
     return calculateFocusMinutesInPeriod(activities, startOfWeekDay, endOfWeek);
   }
 
-  /// 그룹 타이머 활동에서 출석 기록 계산 (수정된 부분)
+  /// 타이머 활동들로부터 출석 기록 계산
   static List<Attendance> calculateAttendancesFromActivities(
     String groupId,
-    List<dynamic> activities,
+    List<Map<String, dynamic>> activities,
   ) {
-    try {
-      if (activities.isEmpty) {
-        return [];
-      }
+    // 멤버별, 날짜별로 활동 그룹화
+    final Map<String, Map<String, List<Map<String, dynamic>>>>
+    memberDateActivities = {};
 
-      // 날짜별, 멤버별 활동 시간을 집계할 맵
-      final Map<String, Map<String, int>> memberDailyMinutes = {};
+    for (final activity in activities) {
+      final memberId = activity['memberId'] as String?;
+      final timestamp = activity['timestamp'];
+      if (memberId == null || timestamp == null) continue;
 
-      // 멤버 정보를 저장할 맵 (memberId -> (name, profileUrl))
-      final Map<String, (String, String?)> memberInfoMap = {};
+      final date = _parseTimestamp(timestamp);
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
 
-      // 시작 시간을 저장할 임시 맵 (memberId -> 시작 시간)
-      final Map<String, DateTime> memberStartTimes = {};
+      memberDateActivities[memberId] ??= {};
+      memberDateActivities[memberId]![dateKey] ??= [];
+      memberDateActivities[memberId]![dateKey]!.add(activity);
+    }
 
-      // 🔧 잘못된 데이터 필터링: timestamp가 null인 활동 제거
-      final validActivities =
-          activities.where((activity) {
-            final timestamp = _extractDateTime(activity['timestamp']);
-            return timestamp != null;
-          }).toList();
+    // 각 멤버의 일별 총 활동 시간 계산
+    final List<Attendance> attendances = [];
 
-      // 활동 시간순 정렬 (개선된 null 처리)
-      validActivities.sort((a, b) {
-        final aTime = _extractDateTime(a['timestamp']);
-        final bTime = _extractDateTime(b['timestamp']);
-
-        // 파싱 실패(=null) 시 뒤로 보내기
-        if (aTime == null && bTime == null) return 0;
-        if (aTime == null) return 1;
-        if (bTime == null) return -1;
-        return aTime.compareTo(bTime);
-      });
-
-      // 모든 활동 로그를 순회하며 분석
-      for (final activity in validActivities) {
-        final memberId = activity['memberId'];
-        final timestamp = _extractDateTime(activity['timestamp']);
-        final type = activity['type'] as String?;
-
-        // 🔧 필수 데이터 검증: null이면 스킵
-        if (memberId == null || timestamp == null || type == null) {
-          print('⚠️ 잘못된 활동 데이터 스킵: $activity');
-          continue;
-        }
-
-        // 멤버 정보 저장 (이름, 프로필 이미지 URL)
-        if (activity['memberName'] != null) {
-          memberInfoMap[memberId] = (
-            activity['memberName'],
-            activity['profileUrl'],
-          );
-        }
-
-        // 날짜(YYYY-MM-DD) 추출
-        final dateKey = _formatDate(timestamp);
-
-        if (type == 'start') {
-          // 타이머 시작 - 시작 시간 저장
-          memberStartTimes[memberId] = timestamp;
-        } else if (type == 'pause' && memberStartTimes.containsKey(memberId)) {
-          // 타이머 일시정지 - 시작 시간부터 일시정지까지의 시간 계산
-          final startTime = memberStartTimes[memberId]!;
-          final durationMinutes = timestamp.difference(startTime).inMinutes;
-
-          // 🔧 음수 duration 방지: 시간이 0 이상인 경우에만 기록
-          if (durationMinutes > 0) {
-            // 멤버별 날짜별 맵 초기화
-            memberDailyMinutes[memberId] ??= {};
-            memberDailyMinutes[memberId]![dateKey] ??= 0;
-
-            // 해당 날짜에 시간 추가
-            memberDailyMinutes[memberId]![dateKey] =
-                memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
-          } else {
-            print('⚠️ 음수 duration 발견, 스킵: start=$startTime, pause=$timestamp');
-          }
-
-          // 시작 시간 제거 (다음 start까지 기다림)
-          memberStartTimes.remove(memberId);
-        } else if (type == 'end' && memberStartTimes.containsKey(memberId)) {
-          // 타이머 정지 - 시작 시간부터 종료까지의 시간 계산
-          final startTime = memberStartTimes[memberId]!;
-          final durationMinutes = timestamp.difference(startTime).inMinutes;
-
-          // 🔧 음수 duration 방지: 시간이 0 이상인 경우에만 기록
-          if (durationMinutes > 0) {
-            // 멤버별 날짜별 맵 초기화
-            memberDailyMinutes[memberId] ??= {};
-            memberDailyMinutes[memberId]![dateKey] ??= 0;
-
-            // 해당 날짜에 시간 추가
-            memberDailyMinutes[memberId]![dateKey] =
-                memberDailyMinutes[memberId]![dateKey]! + durationMinutes;
-          } else {
-            print('⚠️ 음수 duration 발견, 스킵: start=$startTime, end=$timestamp');
-          }
-
-          // 시작 시간 제거 (다음 계산을 위해)
-          memberStartTimes.remove(memberId);
-        }
-      }
-
-      // 집계된 시간 데이터를 Attendance 모델로 변환
-      final List<Attendance> attendances = [];
-
-      memberDailyMinutes.forEach((memberId, dailyMinutes) {
-        final memberInfo = memberInfoMap[memberId] ?? ('Unknown', null);
-
-        dailyMinutes.forEach((dateKey, minutes) {
-          final dateParts = dateKey.split('-');
-          if (dateParts.length == 3) {
-            try {
-              final date = DateTime(
-                int.parse(dateParts[0]),
-                int.parse(dateParts[1]),
-                int.parse(dateParts[2]),
-              );
-
-              // 🔧 최소 학습 시간 검증: 1분 이상만 출석으로 간주
-              if (minutes >= 1) {
-                attendances.add(
-                  Attendance(
-                    groupId: groupId,
-                    memberId: memberId,
-                    memberName: memberInfo.$1,
-                    profileUrl: memberInfo.$2,
-                    date: date,
-                    timeInMinutes: minutes,
-                  ),
-                );
-              }
-            } catch (e) {
-              // 날짜 파싱 오류 시 스킵
-              print('⚠️ 날짜 파싱 오류 스킵: $dateKey - $e');
-            }
-          }
+    memberDateActivities.forEach((memberId, dateActivities) {
+      dateActivities.forEach((dateKey, dayActivities) {
+        // 시간순 정렬
+        dayActivities.sort((a, b) {
+          final timeA = _parseTimestamp(a['timestamp']);
+          final timeB = _parseTimestamp(b['timestamp']);
+          return timeA.compareTo(timeB);
         });
-      });
 
-      // 날짜별로 정렬
-      attendances.sort((a, b) => a.date.compareTo(b.date));
+        // 세션별 시간 계산
+        int totalMinutes = 0;
+        DateTime? sessionStartTime;
+        DateTime? lastPauseTime;
 
-      return attendances;
-    } catch (e, st) {
-      print('❌ 출석 기록 계산 오류: $e');
-      print('StackTrace: $st');
-      return [];
-    }
-  }
+        for (final activity in dayActivities) {
+          final typeString = activity['type'] as String;
+          final type = TimerActivityType.fromString(typeString);
+          final timestamp = _parseTimestamp(activity['timestamp']);
 
-  /// Firebase Timestamp 또는 DateTime을 DateTime으로 안전하게 변환 (수정된 부분)
-  /// 🔧 파싱 실패 시 null 반환으로 변경
-  static DateTime? _extractDateTime(dynamic timestamp) {
-    if (timestamp == null) {
-      return null;
-    }
+          switch (type) {
+            case TimerActivityType.start:
+              sessionStartTime = timestamp;
+              lastPauseTime = null;
+              break;
 
-    try {
-      // Firebase Timestamp인 경우
-      if (timestamp is Timestamp) {
-        return timestamp.toDate();
-      }
+            case TimerActivityType.resume:
+              // resume은 이전 pause 시점부터 계속
+              if (lastPauseTime != null) {
+                // pause-resume 간격은 계산하지 않음
+                sessionStartTime = timestamp;
+              }
+              break;
 
-      // 이미 DateTime인 경우
-      if (timestamp is DateTime) {
-        return timestamp;
-      }
+            case TimerActivityType.pause:
+              if (sessionStartTime != null) {
+                // start/resume부터 pause까지의 시간 계산
+                final duration = timestamp.difference(sessionStartTime);
+                totalMinutes += duration.inMinutes;
+                lastPauseTime = timestamp;
+                sessionStartTime = null;
+              }
+              break;
 
-      // 문자열인 경우
-      if (timestamp is String) {
-        return DateTime.tryParse(timestamp);
-      }
+            case TimerActivityType.end:
+              if (sessionStartTime != null) {
+                // start/resume부터 end까지의 시간 계산
+                final duration = timestamp.difference(sessionStartTime);
+                totalMinutes += duration.inMinutes;
+              } else if (lastPauseTime != null) {
+                // pause 상태에서 end된 경우 (자동 종료 등)
+                // 이미 pause까지의 시간은 계산되었으므로 추가 계산 없음
+              }
+              sessionStartTime = null;
+              lastPauseTime = null;
+              break;
+          }
+        }
 
-      // Map 형태의 Timestamp (Firestore에서 가끔 이런 형태로 옴)
-      if (timestamp is Map<String, dynamic>) {
-        final seconds = timestamp['_seconds'] as int?;
-        final nanoseconds = timestamp['_nanoseconds'] as int?;
+        // 마지막 활동이 start/resume인 경우 (세션이 진행 중)
+        if (sessionStartTime != null) {
+          final now = DateTime.now();
+          final date = DateFormat('yyyy-MM-dd').parse(dateKey);
 
-        if (seconds != null) {
-          return DateTime.fromMillisecondsSinceEpoch(
-            seconds * 1000 + (nanoseconds ?? 0) ~/ 1000000,
+          // 오늘이면 현재 시간까지, 과거면 그날 23:59:59까지
+          final endTime =
+              _isSameDay(date, now)
+                  ? now
+                  : DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+          final duration = endTime.difference(sessionStartTime);
+          totalMinutes += duration.inMinutes;
+        }
+
+        if (totalMinutes > 0) {
+          final memberName = dayActivities.first['memberName'] as String? ?? '';
+          final profileUrl = dayActivities.first['profileUrl'] as String?;
+
+          attendances.add(
+            Attendance(
+              groupId: groupId,
+              memberId: memberId,
+              memberName: memberName,
+              profileUrl: profileUrl,
+              date: DateFormat('yyyy-MM-dd').parse(dateKey),
+              timeInMinutes: totalMinutes,
+            ),
           );
         }
-      }
-    } catch (e) {
-      print('⚠️ timestamp 변환 실패: $timestamp, error: $e');
-    }
+      });
+    });
 
-    // 🔧 모든 변환 시도 실패 시 null 반환
-    return null;
+    return attendances;
   }
 
-  /// DateTime을 YYYY-MM-DD 형식 문자열로 변환
-  static String _formatDate(DateTime dateTime) {
-    return '${dateTime.year.toString().padLeft(4, '0')}-'
-        '${dateTime.month.toString().padLeft(2, '0')}-'
-        '${dateTime.day.toString().padLeft(2, '0')}';
+  // /// Firebase Timestamp 또는 DateTime을 DateTime으로 안전하게 변환 (수정된 부분)
+  // /// 🔧 파싱 실패 시 null 반환으로 변경
+  // static DateTime? _extractDateTime(dynamic timestamp) {
+  //   if (timestamp == null) {
+  //     return null;
+  //   }
+  //
+  //   try {
+  //     // Firebase Timestamp인 경우
+  //     if (timestamp is Timestamp) {
+  //       return timestamp.toDate();
+  //     }
+  //
+  //     // 이미 DateTime인 경우
+  //     if (timestamp is DateTime) {
+  //       return timestamp;
+  //     }
+  //
+  //     // 문자열인 경우
+  //     if (timestamp is String) {
+  //       return DateTime.tryParse(timestamp);
+  //     }
+  //
+  //     // Map 형태의 Timestamp (Firestore에서 가끔 이런 형태로 옴)
+  //     if (timestamp is Map<String, dynamic>) {
+  //       final seconds = timestamp['_seconds'] as int?;
+  //       final nanoseconds = timestamp['_nanoseconds'] as int?;
+  //
+  //       if (seconds != null) {
+  //         return DateTime.fromMillisecondsSinceEpoch(
+  //           seconds * 1000 + (nanoseconds ?? 0) ~/ 1000000,
+  //         );
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('⚠️ timestamp 변환 실패: $timestamp, error: $e');
+  //   }
+  //
+  //   // 🔧 모든 변환 시도 실패 시 null 반환
+  //   return null;
+  // }
+  //
+  // /// DateTime을 YYYY-MM-DD 형식 문자열로 변환
+  // static String _formatDate(DateTime dateTime) {
+  //   return '${dateTime.year.toString().padLeft(4, '0')}-'
+  //       '${dateTime.month.toString().padLeft(2, '0')}-'
+  //       '${dateTime.day.toString().padLeft(2, '0')}';
+  // }
+
+  static DateTime _parseTimestamp(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    } else if (timestamp is String) {
+      return DateTime.parse(timestamp);
+    } else if (timestamp is DateTime) {
+      return timestamp;
+    }
+    throw ArgumentError('Invalid timestamp type: ${timestamp.runtimeType}');
+  }
+
+  static bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 }

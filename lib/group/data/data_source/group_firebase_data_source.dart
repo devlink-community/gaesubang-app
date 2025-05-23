@@ -1357,4 +1357,90 @@ class GroupFirebaseDataSource implements GroupDataSource {
       },
     );
   }
+
+  // ===== 타임스탬프 지정 가능한 메서드들 추가 =====
+
+  @override
+  Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
+    String groupId,
+    String activityType,
+    DateTime timestamp,
+  ) async {
+    return ApiCallDecorator.wrap(
+      'GroupFirebase.recordTimerActivityWithTimestamp',
+      () async {
+        try {
+          // 현재 사용자 정보 가져오기
+          final userInfo = await _getCurrentUserInfo();
+          final memberId = userInfo['userId']!;
+          final memberName = userInfo['userName']!;
+
+          // 그룹 존재 확인
+          final groupDoc = await _groupsCollection.doc(groupId).get();
+          if (!groupDoc.exists) {
+            throw Exception(GroupErrorMessages.notFound);
+          }
+
+          // 타이머 활동 데이터 준비
+          final activityData = {
+            'memberId': memberId,
+            'memberName': memberName,
+            'type': activityType,
+            'timestamp': Timestamp.fromDate(timestamp), // 특정 시간으로 설정
+            'groupId': groupId,
+            'metadata': {
+              'isManualTimestamp': true, // 수동으로 설정된 타임스탬프 표시
+              'recordedAt': FieldValue.serverTimestamp(), // 실제 기록 시간
+            },
+          };
+
+          // Firestore에 타이머 활동 문서 추가
+          final docRef = await _groupsCollection
+              .doc(groupId)
+              .collection('timerActivities')
+              .add(activityData);
+
+          // 생성된 문서 ID와 함께 데이터 반환
+          final result = {...activityData};
+          result['id'] = docRef.id;
+
+          print('✅ 타이머 활동 기록 완료: $activityType at $timestamp');
+
+          return result;
+        } catch (e) {
+          print('타이머 활동 기록 오류: $e');
+          throw Exception(GroupErrorMessages.operationFailed);
+        }
+      },
+      params: {
+        'groupId': groupId,
+        'activityType': activityType,
+        'timestamp': timestamp.toIso8601String(),
+      },
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> startMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+  }
+
+  @override
+  Future<Map<String, dynamic>> pauseMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+  }
+
+  @override
+  Future<Map<String, dynamic>> stopMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+  }
 }

@@ -35,11 +35,20 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   @override
   void initState() {
     super.initState();
+
+    print('🚀 GroupDetailScreenRoot initState - groupId: ${widget.groupId}');
+
     WidgetsBinding.instance.addObserver(this);
     _isInitializing = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeScreen();
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _initializeScreen();
+    // });
+    // addPostFrameCallback 대신 Future.microtask 사용
+    Future.microtask(() {
+      if (mounted) {
+        _initializeScreen();
+      }
     });
   }
 
@@ -129,26 +138,37 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     }
   }
 
-  // 🔥 Root 역할: 화면 초기화
   Future<void> _initializeScreen() async {
+    // 중복 초기화 방지
     if (_isInitialized) return;
 
     print('🚀 화면 초기화 시작 - groupId: ${widget.groupId}');
 
-    if (mounted) {
+    try {
       final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
-      // 🔧 화면 활성 상태 설정
+      // 1. 먼저 화면 활성 상태 설정 (await 없이)
       notifier.setScreenActive(true);
       notifier.setAppForeground(true);
 
-      await notifier.onAction(GroupDetailAction.setGroupId(widget.groupId));
-      await _requestNotificationPermission();
-    }
+      // 2. 약간의 지연을 주어 Widget 트리가 안정화되도록 함
+      await Future.delayed(const Duration(milliseconds: 100));
 
-    _isInitialized = true;
-    _isInitializing = false;
-    print('✅ 화면 초기화 완료');
+      // 3. 그룹 ID 설정 및 데이터 로드
+      if (mounted) {
+        await notifier.onAction(GroupDetailAction.setGroupId(widget.groupId));
+
+        // 4. 알림 권한 요청
+        await _requestNotificationPermission();
+      }
+
+      _isInitialized = true;
+      _isInitializing = false;
+      print('✅ 화면 초기화 완료');
+    } catch (e) {
+      print('❌ 화면 초기화 실패: $e');
+      _isInitializing = false;
+    }
   }
 
   // 🔧 상태 메시지 처리

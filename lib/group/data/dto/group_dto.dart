@@ -12,13 +12,14 @@ class GroupDto {
     this.description,
     this.imageUrl,
     this.createdAt,
-    this.ownerId, // createdBy를 ownerId로 변경
-    this.ownerNickname, // 추가: 방장 닉네임
-    this.ownerProfileImage, // 추가: 방장 프로필 이미지
+    this.ownerId,
+    this.ownerNickname,
+    this.ownerProfileImage,
     this.maxMemberCount,
     this.hashTags,
     this.memberCount,
     this.isJoinedByCurrentUser = false,
+    this.pauseTimeLimit, // 추가
   });
 
   final String? id;
@@ -31,7 +32,7 @@ class GroupDto {
   )
   final DateTime? createdAt;
 
-  @JsonKey(name: 'createdBy') // Firestore 필드명은 그대로 유지
+  @JsonKey(name: 'createdBy')
   final String? ownerId;
 
   final String? ownerNickname;
@@ -41,15 +42,16 @@ class GroupDto {
   final List<String>? hashTags;
   final int? memberCount;
 
-  // UI 전용 필드 - Firestore에는 저장하지 않음
   @JsonKey(includeFromJson: false, includeToJson: false)
   final bool? isJoinedByCurrentUser;
+
+  final int? pauseTimeLimit; // 추가: 일시정지 제한시간 (분 단위)
 
   factory GroupDto.fromJson(Map<String, dynamic> json) =>
       _$GroupDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupDtoToJson(this);
 
-  // 필드 업데이트를 위한 copyWith 메서드
+  // copyWith 메서드 수정
   GroupDto copyWith({
     String? id,
     String? name,
@@ -63,6 +65,7 @@ class GroupDto {
     List<String>? hashTags,
     int? memberCount,
     bool? isJoinedByCurrentUser,
+    int? pauseTimeLimit, // 추가
   }) {
     return GroupDto(
       id: id ?? this.id,
@@ -78,6 +81,7 @@ class GroupDto {
       memberCount: memberCount ?? this.memberCount,
       isJoinedByCurrentUser:
           isJoinedByCurrentUser ?? this.isJoinedByCurrentUser,
+      pauseTimeLimit: pauseTimeLimit ?? this.pauseTimeLimit, // 추가
     );
   }
 }
