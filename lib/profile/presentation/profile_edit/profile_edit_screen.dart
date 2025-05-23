@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -45,6 +46,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.info('ProfileEditScreen 초기화', tag: 'ProfileEditUI');
     _updateTextControllers();
   }
 
@@ -52,6 +54,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   void didUpdateWidget(covariant ProfileEditScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state != widget.state) {
+      AppLogger.debug('ProfileEditScreen 상태 업데이트', tag: 'ProfileEditUI');
       _updateTextControllersIfNeeded();
     }
   }
@@ -64,6 +67,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     // 현재 컨트롤러 값과 상태 값이 다를 때만 업데이트
     if (_nicknameController.text != member.nickname) {
+      AppLogger.debug('닉네임 컨트롤러 업데이트', tag: 'ProfileEditUI');
       _nicknameController.value = _nicknameController.value.copyWith(
         text: member.nickname,
         selection: TextSelection.collapsed(offset: member.nickname.length),
@@ -71,6 +75,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
 
     if (_descriptionController.text != member.description) {
+      AppLogger.debug('소개글 컨트롤러 업데이트', tag: 'ProfileEditUI');
       _descriptionController.value = _descriptionController.value.copyWith(
         text: member.description,
         selection: TextSelection.collapsed(offset: member.description.length),
@@ -79,6 +84,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     final position = member.position ?? '';
     if (_positionController.text != position) {
+      AppLogger.debug('직무 컨트롤러 업데이트', tag: 'ProfileEditUI');
       _positionController.value = _positionController.value.copyWith(
         text: position,
         selection: TextSelection.collapsed(offset: position.length),
@@ -87,6 +93,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     final skills = member.skills ?? '';
     if (_skillsController.text != skills) {
+      AppLogger.debug('스킬 컨트롤러 업데이트', tag: 'ProfileEditUI');
       _skillsController.value = _skillsController.value.copyWith(
         text: skills,
         selection: TextSelection.collapsed(offset: skills.length),
@@ -102,6 +109,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   void _updateTextControllers() {
     final member = widget.state.editingProfile;
     if (member != null) {
+      AppLogger.debug('초기 텍스트 컨트롤러 설정', tag: 'ProfileEditUI');
       _nicknameController.text = member.nickname;
       _descriptionController.text = member.description;
       _positionController.text = member.position ?? '';
@@ -115,6 +123,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     _nicknameDebouncer?.cancel();
     _nicknameDebouncer = Timer(const Duration(milliseconds: 300), () {
+      AppLogger.debug('닉네임 변경: $value', tag: 'ProfileEditForm');
       widget.onAction(ProfileEditAction.onChangeNickname(value));
     });
   }
@@ -124,6 +133,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     _descriptionDebouncer?.cancel();
     _descriptionDebouncer = Timer(const Duration(milliseconds: 300), () {
+      AppLogger.debug('소개글 변경: ${value.length}자', tag: 'ProfileEditForm');
       widget.onAction(ProfileEditAction.onChangeDescription(value));
     });
   }
@@ -133,6 +143,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     _positionDebouncer?.cancel();
     _positionDebouncer = Timer(const Duration(milliseconds: 300), () {
+      AppLogger.debug('직무 변경: $value', tag: 'ProfileEditForm');
       widget.onAction(ProfileEditAction.onChangePosition(value));
     });
   }
@@ -142,12 +153,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     _skillsDebouncer?.cancel();
     _skillsDebouncer = Timer(const Duration(milliseconds: 300), () {
+      AppLogger.debug('스킬 변경: $value', tag: 'ProfileEditForm');
       widget.onAction(ProfileEditAction.onChangeSkills(value));
     });
   }
 
   @override
   void dispose() {
+    AppLogger.debug('ProfileEditScreen dispose', tag: 'ProfileEditUI');
     _nicknameController.dispose();
     _descriptionController.dispose();
     _positionController.dispose();
@@ -171,7 +184,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            AppLogger.info('프로필 편집 화면 뒤로가기', tag: 'ProfileEditUI');
+            context.pop();
+          },
         ),
       ),
       body: _buildBody(),
@@ -181,6 +197,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _buildBody() {
     // 로딩 상태 처리
     if (widget.state.isLoading) {
+      AppLogger.debug('로딩 상태 표시', tag: 'ProfileEditUI');
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -194,6 +211,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Widget _buildErrorView() {
+    AppLogger.warning('프로필 편집 에러 화면 표시', tag: 'ProfileEditUI');
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -207,7 +225,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => context.pop(),
+            onPressed: () {
+              AppLogger.info('에러 화면에서 뒤로가기', tag: 'ProfileEditUI');
+              context.pop();
+            },
             child: const Text('뒤로 가기'),
           ),
         ],
@@ -342,28 +363,41 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     if (member.image.isNotEmpty) {
       if (member.image.startsWith('/')) {
         // 로컬 파일 경로
+        AppLogger.debug('로컬 이미지 표시: ${member.image}', tag: 'ProfileEditUI');
         return CircleAvatar(
           radius: 50,
           backgroundImage: FileImage(File(member.image)),
           backgroundColor: Colors.grey.shade200,
           onBackgroundImageError: (exception, stackTrace) {
-            debugPrint('로컬 이미지 로딩 오류: $exception');
+            AppLogger.error(
+              '로컬 이미지 로딩 오류',
+              tag: 'ProfileEditUI',
+              error: exception,
+              stackTrace: stackTrace,
+            );
           },
         );
       } else {
         // 네트워크 이미지 URL
+        AppLogger.debug('네트워크 이미지 표시', tag: 'ProfileEditUI');
         return CircleAvatar(
           radius: 50,
           backgroundImage: NetworkImage(member.image),
           backgroundColor: Colors.grey.shade200,
           onBackgroundImageError: (exception, stackTrace) {
-            debugPrint('네트워크 이미지 로딩 오류: $exception');
+            AppLogger.error(
+              '네트워크 이미지 로딩 오류',
+              tag: 'ProfileEditUI',
+              error: exception,
+              stackTrace: stackTrace,
+            );
           },
         );
       }
     }
 
     // 이미지가 없는 경우 기본 아이콘 표시
+    AppLogger.debug('기본 프로필 아이콘 표시', tag: 'ProfileEditUI');
     return CircleAvatar(
       radius: 50,
       backgroundColor: Colors.grey.shade100,
@@ -386,7 +420,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       onPressed:
           isDisabled
               ? null
-              : () => widget.onAction(const ProfileEditAction.saveProfile()),
+              : () {
+                AppLogger.info('프로필 저장 버튼 클릭', tag: 'ProfileEditAction');
+                widget.onAction(const ProfileEditAction.saveProfile());
+              },
       child:
           isDisabled
               ? Row(
@@ -423,7 +460,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _pickImage() async {
-    if (widget.state.isImageUploading) return; // 업로드 중이면 무시
+    if (widget.state.isImageUploading) {
+      AppLogger.debug('이미지 업로드 중 - 선택 무시', tag: 'ProfileEditAction');
+      return; // 업로드 중이면 무시
+    }
+
+    AppLogger.info('이미지 선택 시작', tag: 'ProfileEditAction');
 
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(
@@ -434,8 +476,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
 
     if (image != null) {
+      AppLogger.info('이미지 선택 완료: ${image.path}', tag: 'ProfileEditAction');
       // 이미지 선택 시 액션 실행 - Future 기반 업로드 완료 감지
       widget.onAction(ProfileEditAction.onChangeImage(File(image.path)));
+    } else {
+      AppLogger.debug('이미지 선택 취소', tag: 'ProfileEditAction');
     }
   }
 }
