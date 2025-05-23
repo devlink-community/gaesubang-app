@@ -50,18 +50,18 @@ extension GroupMemberDtoListMapper on List<GroupMemberDto>? {
 
     // 각 멤버의 가장 최근 타이머 활동 찾기
     for (final activity in timerActivities) {
-      final memberId = activity.memberId;
-      if (memberId == null) continue;
+      final userId = activity.userId;
+      if (userId == null) continue;
 
       // 이미 해당 멤버의 활동이 있고, 현재 활동이 더 오래된 경우 스킵
-      if (timerMap.containsKey(memberId) &&
+      if (timerMap.containsKey(userId) &&
           activity.timestamp != null &&
-          timerMap[memberId]!.timestamp != null &&
-          activity.timestamp!.isBefore(timerMap[memberId]!.timestamp!)) {
+          timerMap[userId]!.timestamp != null &&
+          activity.timestamp!.isBefore(timerMap[userId]!.timestamp!)) {
         continue;
       }
 
-      timerMap[memberId] = activity;
+      timerMap[userId] = activity;
     }
 
     // 각 멤버를 타이머 상태와 함께 변환

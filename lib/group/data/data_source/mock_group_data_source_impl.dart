@@ -110,7 +110,7 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     }
 
     // 멤버별로 가장 최근 활동만 필터링
-    final Map<String, Map<String, dynamic>> memberIdToActivity = {};
+    final Map<String, Map<String, dynamic>> userIdToActivity = {};
 
     // 활동을 시간순으로 정렬 (최신순)
     activities.sort((a, b) {
@@ -130,14 +130,14 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 각 멤버의 최신 활동만 수집
     for (final activity in activities) {
-      final memberId = activity['memberId'] as String?;
+      final userId = activity['userId'] as String?;
 
-      if (memberId != null && !memberIdToActivity.containsKey(memberId)) {
-        memberIdToActivity[memberId] = Map<String, dynamic>.from(activity);
+      if (userId != null && !userIdToActivity.containsKey(userId)) {
+        userIdToActivity[userId] = Map<String, dynamic>.from(activity);
       }
     }
 
-    return memberIdToActivity.values.toList();
+    return userIdToActivity.values.toList();
   }
 
   // 🔧 스트림 컨트롤러 가져오기 또는 생성
@@ -271,16 +271,15 @@ class MockGroupDataSourceImpl implements GroupDataSource {
       // 🔧 각 멤버에 대해 기본 타이머 활동 생성
       _timerActivities[groupId] = [];
       for (final member in members) {
-        final memberId = member['userId'] as String?;
-        final memberName = member['userName'] as String?;
+        final userId = member['userId'] as String?;
+        final userName = member['userName'] as String?;
 
-        if (memberId != null && memberName != null) {
+        if (userId != null && userName != null) {
           // 기본 활동 추가 (end 타입)
           _timerActivities[groupId]!.add({
-            'id':
-                'activity_${memberId}_${DateTime.now().millisecondsSinceEpoch}',
-            'memberId': memberId,
-            'memberName': memberName,
+            'id': 'activity_${userId}_${DateTime.now().millisecondsSinceEpoch}',
+            'userId': userId,
+            'userName': userName,
             'type': 'end',
             'timestamp': _dateFormat.format(
               DateTime.now().subtract(const Duration(hours: 1)),
@@ -701,8 +700,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 현재 사용자 정보 가져오기
     final userInfo = _getCurrentUserInfo();
-    final memberId = userInfo['userId']!;
-    final memberName = userInfo['userName']!;
+    final userId = userInfo['userId']!;
+    final userName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -712,11 +711,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 새 타이머 시작 활동 생성
     final now = DateTime.now();
-    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
     final activity = {
       'id': activityId,
-      'memberId': memberId,
-      'memberName': memberName,
+      'userId': userId,
+      'userName': userName,
       'type': 'start',
       'timestamp': _dateFormat.format(now),
       'groupId': groupId,
@@ -739,8 +738,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 현재 사용자 정보 가져오기
     final userInfo = _getCurrentUserInfo();
-    final memberId = userInfo['userId']!;
-    final memberName = userInfo['userName']!;
+    final userId = userInfo['userId']!;
+    final userName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -750,11 +749,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 새 타이머 종료 활동 생성
     final now = DateTime.now();
-    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
     final activity = {
       'id': activityId,
-      'memberId': memberId,
-      'memberName': memberName,
+      'userId': userId,
+      'userName': userName,
       'type': 'end',
       'timestamp': _dateFormat.format(now),
       'groupId': groupId,
@@ -777,8 +776,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 현재 사용자 정보 가져오기
     final userInfo = _getCurrentUserInfo();
-    final memberId = userInfo['userId']!;
-    final memberName = userInfo['userName']!;
+    final userId = userInfo['userId']!;
+    final userName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -788,11 +787,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 새 타이머 일시정지 활동 생성
     final now = DateTime.now();
-    final activityId = 'activity_${memberId}_${now.millisecondsSinceEpoch}';
+    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
     final activity = {
       'id': activityId,
-      'memberId': memberId,
-      'memberName': memberName,
+      'userId': userId,
+      'userName': userName,
       'type': 'pause',
       'timestamp': _dateFormat.format(now),
       'groupId': groupId,
@@ -870,8 +869,8 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
     // 현재 사용자 정보 가져오기
     final userInfo = _getCurrentUserInfo();
-    final memberId = userInfo['userId']!;
-    final memberName = userInfo['userName']!;
+    final userId = userInfo['userId']!;
+    final userName = userInfo['userName']!;
 
     // 그룹 존재 확인
     final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
@@ -880,12 +879,11 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     }
 
     // 타이머 활동 생성
-    final activityId =
-        'activity_${memberId}_${timestamp.millisecondsSinceEpoch}';
+    final activityId = 'activity_${userId}_${timestamp.millisecondsSinceEpoch}';
     final activity = {
       'id': activityId,
-      'memberId': memberId,
-      'memberName': memberName,
+      'userId': userId,
+      'userName': userName,
       'type': activityType,
       'timestamp': _dateFormat.format(timestamp), // 특정 시간으로 설정
       'groupId': groupId,

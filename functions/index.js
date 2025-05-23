@@ -221,6 +221,150 @@ exports.sendCommentNotification = functions.firestore
     }
   });
 
+  // 댓글 좋아요 알림 함수 - 에러 처리 강화
+exports.sendCommentLikeNotification = functions.firestore
+  .document('posts/{postId}/comments/{commentId}/likes/{userId}')
+  .onCreate(async (snapshot, context) => {
+    try {
+      console.log('=== 댓글 좋아요 알림 함수 시작 ===');
+      
+      const postId = context.params.postId;
+      const commentId = context.params.commentId;
+      const likerId = context.params.userId;
+      
+      console.log('게시글 ID:', postId);
+      console.log('댓글 ID:', commentId);
+      console.log('좋아요 사용자:', likerId);
+      
+      const likeData = snapshot.data();
+      console.log('좋아요 데이터:', likeData);
+      
+      // 댓글 정보 조회
+      const commentSnapshot = await admin.firestore()
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+        
+      if (!commentSnapshot.exists) {
+        console.log('댓글을 찾을 수 없습니다:', commentId);
+        return null;
+      }
+      
+      const commentData = commentSnapshot.data();
+      const commentAuthorId = commentData.userId;
+      
+      console.log('댓글 작성자:', commentAuthorId);
+      console.log('좋아요 누른 사용자:', likerId);
+      
+      // 자기 댓글에 좋아요 누른 경우 알림 전송 안함
+      if (likerId === commentAuthorId) {
+        console.log('자기 댓글 좋아요이므로 알림 전송하지 않음');
+        return null;
+      }
+      
+      // 좋아요 누른 사용자 정보 조회
+      const likerSnapshot = await admin.firestore().collection('users').doc(likerId).get();
+      if (!likerSnapshot.exists) {
+        console.log('좋아요 누른 사용자 정보를 찾을 수 없습니다:', likerId);
+        return null;
+      }
+      
+      const likerData = likerSnapshot.data();
+      
+      // 댓글 작성자의 FCM 토큰 조회
+      const fcmTokens = await getUserFCMTokens(commentAuthorId);
+      
+      // 알림 데이터 구성
+      const notification = {
+        userId: commentAuthorId,
+        type: 'like',
+        targetId: postId, // 게시글로 이동하도록 설정
+        senderId: likerId,
+        senderName: likerData.nickname || '알 수 없는 사용자',
+        senderProfileImage: likerData.image,
+        title: '댓글 좋아요 알림',
+        body: `${likerData.nickname || '사용자'}님이 회원님의 댓글에 좋아요를 눌렀습니다: "${commentData.text?.substring(0, 30) || ''}${commentData.text?.length > 30 ? '...' : ''}"`,
+        data: {
+          postId: postId,
+          commentId: commentId,
+          commentText: commentData.text?.substring(0, 100) || ''
+        }
+      };
+      
+      console.log('댓글 좋아요 알림 데이터 구성 완료:', notification);
+      
+      // 병렬로 FCM 전송과 Firestore 저장
+      await Promise.all([
+        sendFCMMessage(fcmTokens, notification),
+        saveNotificationToFirestore(notification)
+      ]);
+      
+      console.log('=== 댓글 좋아요 알림 함수 완료 ===');
+      return { success: true, notificationType: 'comment_like' };
+      
+    } catch (error) {
+      console.error('=== 댓글 좋아요 알림 처리 오류 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message };
+    }
+  });
+
+// 댓글 좋아요 취소 시 알림 삭제
+exports.removeCommentLikeNotification = functions.firestore
+  .document('posts/{postId}/comments/{commentId}/likes/{userId}')
+  .onDelete(async (snapshot, context) => {
+    try {
+      console.log('=== 댓글 좋아요 취소 알림 삭제 시작 ===');
+      
+      const postId = context.params.postId;
+      const commentId = context.params.commentId;
+      const likerId = context.params.userId;
+      
+      // 댓글 정보 조회
+      const commentSnapshot = await admin.firestore()
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .get();
+        
+      if (!commentSnapshot.exists) {
+        return null;
+      }
+      
+      const commentData = commentSnapshot.data();
+      const commentAuthorId = commentData.userId;
+      
+      // 해당 댓글 좋아요 알림 찾아서 삭제
+      const notificationsSnapshot = await admin.firestore()
+        .collection('notifications')
+        .doc(commentAuthorId)
+        .collection('items')
+        .where('type', '==', 'like')
+        .where('targetId', '==', postId)
+        .where('senderId', '==', likerId)
+        .where('data.commentId', '==', commentId)
+        .get();
+      
+      if (!notificationsSnapshot.empty) {
+        const batch = admin.firestore().batch();
+        notificationsSnapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log('댓글 좋아요 취소로 인한 알림 삭제 완료');
+      }
+      
+      return { success: true, action: 'comment_like_notification_removed' };
+      
+    } catch (error) {
+      console.error('댓글 좋아요 알림 삭제 오류:', error);
+      return { error: error.message };
+    }
+  });
+
 // 좋아요 알림 함수 - 에러 처리 강화
 exports.sendLikeNotification = functions.firestore
   .document('posts/{postId}/likes/{userId}')
@@ -343,3 +487,344 @@ exports.removeLikeNotification = functions.firestore
       return { error: error.message };
     }
   });
+
+// === 30일 지난 알림 자동 삭제 (매일 자정 실행) ===
+exports.cleanupOldNotifications = functions.pubsub
+  .schedule('0 0 * * *') // 매일 자정 (KST)
+  .timeZone('Asia/Seoul')
+  .onRun(async (context) => {
+    try {
+      console.log('=== 오래된 알림 정리 시작 ===');
+      
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+      
+      console.log('기준 날짜:', thirtyDaysAgo.toISOString());
+      
+      let totalDeletedCount = 0;
+      let processedUserCount = 0;
+      
+      // 모든 사용자의 알림 컬렉션 조회
+      const notificationsCollectionGroup = admin.firestore().collectionGroup('items');
+      const oldNotificationsSnapshot = await notificationsCollectionGroup
+        .where('createdAt', '<', thirtyDaysAgoTimestamp)
+        .get();
+      
+      if (oldNotificationsSnapshot.empty) {
+        console.log('삭제할 오래된 알림이 없습니다.');
+        return { success: true, deletedCount: 0 };
+      }
+      
+      console.log('삭제 대상 알림 수:', oldNotificationsSnapshot.docs.length);
+      
+      // 배치 단위로 삭제 (Firestore 배치는 최대 500개)
+      const batchSize = 500;
+      const batches = [];
+      
+      for (let i = 0; i < oldNotificationsSnapshot.docs.length; i += batchSize) {
+        const batch = admin.firestore().batch();
+        const batchDocs = oldNotificationsSnapshot.docs.slice(i, i + batchSize);
+        
+        batchDocs.forEach(doc => {
+          batch.delete(doc.ref);
+          totalDeletedCount++;
+        });
+        
+        batches.push(batch.commit());
+      }
+      
+      // 모든 배치 실행
+      await Promise.all(batches);
+      
+      console.log('=== 오래된 알림 정리 완료 ===');
+      console.log('총 삭제된 알림 수:', totalDeletedCount);
+      
+      return { 
+        success: true, 
+        deletedCount: totalDeletedCount,
+        processedUsers: processedUserCount,
+        cutoffDate: thirtyDaysAgo.toISOString()
+      };
+      
+    } catch (error) {
+      console.error('=== 오래된 알림 정리 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message };
+    }
+  });
+
+// === FCM 토큰 정리 (매주 일요일 새벽 2시 실행) ===
+exports.cleanupExpiredFCMTokens = functions.pubsub
+  .schedule('0 2 * * 0') // 매주 일요일 새벽 2시 (KST)
+  .timeZone('Asia/Seoul')
+  .onRun(async (context) => {
+    try {
+      console.log('=== 만료된 FCM 토큰 정리 시작 ===');
+      
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const ninetyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(ninetyDaysAgo);
+      
+      console.log('기준 날짜 (90일 전):', ninetyDaysAgo.toISOString());
+      
+      let totalDeletedTokens = 0;
+      let processedUserCount = 0;
+      
+      // 모든 사용자 조회
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      
+      console.log('검사할 사용자 수:', usersSnapshot.docs.length);
+      
+      for (const userDoc of usersSnapshot.docs) {
+        try {
+          const userId = userDoc.id;
+          
+          // 만료된 FCM 토큰 조회
+          const expiredTokensSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('private')
+            .doc('fcmTokens')
+            .collection('tokens')
+            .where('lastUsed', '<', ninetyDaysAgoTimestamp)
+            .get();
+          
+          if (!expiredTokensSnapshot.empty) {
+            const batch = admin.firestore().batch();
+            
+            expiredTokensSnapshot.docs.forEach(tokenDoc => {
+              batch.delete(tokenDoc.ref);
+              totalDeletedTokens++;
+            });
+            
+            await batch.commit();
+            
+            console.log(`사용자 ${userId}: ${expiredTokensSnapshot.docs.length}개 만료된 토큰 삭제`);
+          }
+          
+          processedUserCount++;
+          
+          // 너무 많은 사용자를 한번에 처리하지 않도록 제한
+          if (processedUserCount % 100 === 0) {
+            console.log(`진행 상황: ${processedUserCount}/${usersSnapshot.docs.length} 사용자 처리 완료`);
+          }
+          
+        } catch (userError) {
+          console.error(`사용자 ${userDoc.id} FCM 토큰 정리 실패:`, userError.message);
+          // 개별 사용자 실패는 전체 프로세스를 중단하지 않음
+        }
+      }
+      
+      console.log('=== 만료된 FCM 토큰 정리 완료 ===');
+      console.log('총 삭제된 토큰 수:', totalDeletedTokens);
+      console.log('처리된 사용자 수:', processedUserCount);
+      
+      return { 
+        success: true, 
+        deletedTokens: totalDeletedTokens,
+        processedUsers: processedUserCount,
+        cutoffDate: ninetyDaysAgo.toISOString()
+      };
+      
+    } catch (error) {
+      console.error('=== FCM 토큰 정리 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message };
+    }
+  });
+// === 사용자 통계 업데이트 (매일 새벽 1시 실행) ===
+exports.updateUserStatistics = functions.pubsub
+  .schedule('0 1 * * *') // 매일 새벽 1시 (KST)
+  .timeZone('Asia/Seoul')
+  .onRun(async (context) => {
+    try {
+      console.log('=== 사용자 통계 업데이트 시작 ===');
+      
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const yesterdayTimestamp = admin.firestore.Timestamp.fromDate(yesterday);
+      const todayTimestamp = admin.firestore.Timestamp.fromDate(today);
+      
+      console.log('어제 날짜:', yesterday.toISOString());
+      console.log('오늘 날짜:', today.toISOString());
+      
+      let processedUserCount = 0;
+      let updatedUserCount = 0;
+      
+      // 모든 사용자 조회
+      const usersSnapshot = await admin.firestore().collection('users').get();
+      
+      for (const userDoc of usersSnapshot.docs) {
+        try {
+          const userId = userDoc.id;
+          const userData = userDoc.data();
+          
+          // 어제의 타이머 활동 조회
+          const activitiesSnapshot = await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('timerActivities')
+            .where('timestamp', '>=', yesterdayTimestamp)
+            .where('timestamp', '<', todayTimestamp)
+            .orderBy('timestamp')
+            .get();
+          
+          // 🔧 개선된 집중 시간 계산 (resume 포함)
+          const dailyFocusMinutes = calculateDailyFocusTime(activitiesSnapshot.docs);
+          
+          // 연속 학습일 계산
+          let newStreakDays = userData.streakDays || 0;
+          
+          if (dailyFocusMinutes >= 30) { // 최소 30분 집중해야 연속일로 인정
+            newStreakDays += 1;
+          } else {
+            newStreakDays = 0; // 연속 중단
+          }
+          
+          // 사용자 정보 업데이트 (변경사항이 있는 경우에만)
+          if (newStreakDays !== (userData.streakDays || 0)) {
+            await admin.firestore()
+              .collection('users')
+              .doc(userId)
+              .update({
+                streakDays: newStreakDays,
+                lastActivityDate: admin.firestore.FieldValue.serverTimestamp()
+              });
+            
+            updatedUserCount++;
+            
+            console.log(`사용자 ${userId}: 연속일 ${userData.streakDays || 0} → ${newStreakDays} (어제 집중시간: ${dailyFocusMinutes}분)`);
+          }
+          
+          processedUserCount++;
+          
+        } catch (userError) {
+          console.error(`사용자 ${userDoc.id} 통계 업데이트 실패:`, userError.message);
+        }
+      }
+      
+      console.log('=== 사용자 통계 업데이트 완료 ===');
+      console.log('처리된 사용자 수:', processedUserCount);
+      console.log('업데이트된 사용자 수:', updatedUserCount);
+      
+      return { 
+        success: true, 
+        processedUsers: processedUserCount,
+        updatedUsers: updatedUserCount,
+        date: yesterday.toISOString().split('T')[0]
+      };
+      
+    } catch (error) {
+      console.error('=== 사용자 통계 업데이트 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message };
+    }
+  });
+
+// 🔧 새로 추가: resume을 포함한 집중 시간 계산 함수
+function calculateDailyFocusTime(activityDocs) {
+  let totalFocusMinutes = 0;
+  let currentSessionStart = null;
+  let isPaused = false;
+  
+  console.log(`총 ${activityDocs.length}개의 활동 처리 중...`);
+  
+  activityDocs.forEach((doc, index) => {
+    const activity = doc.data();
+    const activityType = activity.type;
+    const timestamp = activity.timestamp;
+    
+    console.log(`활동 ${index + 1}: ${activityType} at ${timestamp.toDate().toISOString()}`);
+    
+    switch (activityType) {
+      case 'start':
+        // 새로운 세션 시작
+        currentSessionStart = timestamp;
+        isPaused = false;
+        console.log('  → 새 세션 시작');
+        break;
+        
+      case 'pause':
+        // 현재 세션 일시정지
+        if (currentSessionStart && !isPaused) {
+          const sessionMinutes = Math.floor(
+            (timestamp.seconds - currentSessionStart.seconds) / 60
+          );
+          
+          // 유효한 세션 시간만 추가 (최대 5시간 제한)
+          if (sessionMinutes > 0 && sessionMinutes <= 300) {
+            totalFocusMinutes += sessionMinutes;
+            console.log(`  → 세션 일시정지: ${sessionMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+          } else {
+            console.log(`  → 비정상 세션 시간 무시: ${sessionMinutes}분`);
+          }
+          
+          isPaused = true;
+        } else {
+          console.log('  → 일시정지 무시 (시작 시간 없음 또는 이미 일시정지됨)');
+        }
+        break;
+        
+      case 'resume':
+        // 세션 재개 - 새로운 시작점으로 설정
+        if (isPaused) {
+          currentSessionStart = timestamp;
+          isPaused = false;
+          console.log('  → 세션 재개');
+        } else {
+          console.log('  → 재개 무시 (일시정지 상태가 아님)');
+        }
+        break;
+        
+      case 'end':
+        // 현재 세션 종료
+        if (currentSessionStart && !isPaused) {
+          const sessionMinutes = Math.floor(
+            (timestamp.seconds - currentSessionStart.seconds) / 60
+          );
+          
+          // 유효한 세션 시간만 추가
+          if (sessionMinutes > 0 && sessionMinutes <= 300) {
+            totalFocusMinutes += sessionMinutes;
+            console.log(`  → 세션 종료: ${sessionMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+          } else {
+            console.log(`  → 비정상 세션 시간 무시: ${sessionMinutes}분`);
+          }
+        } else {
+          console.log('  → 종료 무시 (시작 시간 없음 또는 이미 일시정지됨)');
+        }
+        
+        // 세션 상태 초기화
+        currentSessionStart = null;
+        isPaused = false;
+        break;
+        
+      default:
+        console.log(`  → 알 수 없는 활동 타입: ${activityType}`);
+        break;
+    }
+  });
+  
+  // 🔧 하루가 끝났는데 아직 진행 중인 세션이 있는 경우 처리
+  if (currentSessionStart && !isPaused) {
+    // 다음 날 00:00:00까지의 시간을 계산
+    const endOfDay = new Date(currentSessionStart.toDate());
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const remainingMinutes = Math.floor(
+      (endOfDay.getTime() - currentSessionStart.toDate().getTime()) / (1000 * 60)
+    );
+    
+    if (remainingMinutes > 0 && remainingMinutes <= 300) {
+      totalFocusMinutes += remainingMinutes;
+      console.log(`미완료 세션 처리: ${remainingMinutes}분 추가 (누적: ${totalFocusMinutes}분)`);
+    }
+  }
+  
+  console.log(`최종 집중 시간: ${totalFocusMinutes}분`);
+  return totalFocusMinutes;
+}

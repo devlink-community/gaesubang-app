@@ -14,10 +14,8 @@ class GroupCreateAction with _$GroupCreateAction {
   const factory GroupCreateAction.hashTagRemoved(String tag) = HashTagRemoved;
   const factory GroupCreateAction.imageUrlChanged(String? imageUrl) =
       ImageUrlChanged;
-  const factory GroupCreateAction.memberInvited(String memberId) =
-      MemberInvited;
-  const factory GroupCreateAction.memberRemoved(String memberId) =
-      MemberRemoved;
+  const factory GroupCreateAction.memberInvited(String userId) = MemberInvited;
+  const factory GroupCreateAction.memberRemoved(String userId) = MemberRemoved;
   const factory GroupCreateAction.submit() = Submit;
   const factory GroupCreateAction.cancel() = Cancel;
   const factory GroupCreateAction.selectImage() = SelectImage;

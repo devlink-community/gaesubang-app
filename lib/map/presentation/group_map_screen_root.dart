@@ -44,9 +44,9 @@ class _GroupMapScreenRootState extends ConsumerState<GroupMapScreenRoot> {
       state: state,
       onAction: (action) {
         switch (action) {
-          case NavigateToMemberProfile(:final memberId):
+          case NavigateToMemberProfile(:final userId):
             // 멤버 프로필 화면으로 이동
-            context.push('/user/$memberId/profile');
+            context.push('/user/$userId/profile');
           default:
             // 기타 액션은 Notifier에 위임
             notifier.onAction(action);

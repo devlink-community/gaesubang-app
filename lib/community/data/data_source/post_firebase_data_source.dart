@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/community/data/dto/post_comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -24,34 +25,47 @@ class PostFirebaseDataSource implements PostDataSource {
   CollectionReference<Map<String, dynamic>> get _postsCollection =>
       _firestore.collection('posts');
 
-  // 현재 사용자 확인 헬퍼 메서드
+  // 헬퍼 메서드들
   String _getCurrentUserId() {
     final user = _auth.currentUser;
     if (user == null) {
+      AppLogger.authInfo('인증되지 않은 사용자 접근 시도');
       throw Exception(AuthErrorMessages.noLoggedInUser);
     }
+    AppLogger.debug('현재 사용자 ID: ${user.uid}');
     return user.uid;
+  }
+
+  String _truncateText(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
   }
 
   @override
   Future<List<PostDto>> fetchPostList() async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostList', () async {
-      try {
-        // 내부에서 현재 사용자 ID 처리
-        // final userId = _getCurrentUserId();
+      AppLogger.logStep(1, 4, 'Firebase 게시글 목록 조회 시작');
+      final startTime = DateTime.now();
 
+      try {
         // 1. 게시글 목록 조회 (최신순 정렬)
+        AppLogger.logStep(2, 4, 'Firestore에서 게시글 쿼리 실행');
         final querySnapshot =
             await _postsCollection.orderBy('createdAt', descending: true).get();
 
         if (querySnapshot.docs.isEmpty) {
+          AppLogger.info('조회된 게시글이 없음');
           return [];
         }
 
+        AppLogger.debug('조회된 게시글 수: ${querySnapshot.docs.length}개');
+
         // 2. 게시글 ID 목록 추출
         final postIds = querySnapshot.docs.map((doc) => doc.id).toList();
+        AppLogger.logStep(3, 4, '게시글 ID 목록 추출 완료: ${postIds.length}개');
 
         // 3. 좋아요/북마크 상태 일괄 조회
+        AppLogger.debug('사용자 상호작용 상태 조회 시작');
         final results = await Future.wait<dynamic>([
           checkUserLikeStatus(postIds),
           checkUserBookmarkStatus(postIds),
@@ -61,7 +75,15 @@ class PostFirebaseDataSource implements PostDataSource {
         final Map<String, bool> bookmarkStatuses =
             results[1] as Map<String, bool>;
 
+        AppLogger.debug(
+          '좋아요 상태: ${likeStatuses.values.where((v) => v).length}개',
+        );
+        AppLogger.debug(
+          '북마크 상태: ${bookmarkStatuses.values.where((v) => v).length}개',
+        );
+
         // 4. 각 게시글 정보로 DTO 생성
+        AppLogger.logStep(4, 4, 'DTO 변환 및 상태 적용');
         final posts =
             querySnapshot.docs.map((doc) {
               final data = doc.data();
@@ -82,9 +104,16 @@ class PostFirebaseDataSource implements PostDataSource {
               );
             }).toList();
 
+        // 성능 로깅
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 목록 조회', duration);
+        AppLogger.communityInfo('게시글 목록 조회 완료: ${posts.length}개');
+
         return posts;
-      } catch (e) {
-        print('게시글 목록 로드 오류: $e');
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 목록 조회 실패', duration);
+        AppLogger.networkError('게시글 목록 로드 실패', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.postLoadFailed);
       }
     });
@@ -93,10 +122,15 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<PostDto> fetchPostDetail(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostDetail', () async {
+      AppLogger.logBox('게시글 상세 조회', '게시글 ID: $postId');
+      final startTime = DateTime.now();
+
       try {
+        AppLogger.logStep(1, 5, 'Firestore 문서 조회');
         final docSnapshot = await _postsCollection.doc(postId).get();
 
         if (!docSnapshot.exists) {
+          AppLogger.warning('존재하지 않는 게시글: $postId');
           throw Exception(CommunityErrorMessages.postNotFound);
         }
 
@@ -106,6 +140,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 내부에서 현재 사용자 ID 처리
         final userId = _getCurrentUserId();
 
+        AppLogger.logStep(2, 5, '게시글 통계 정보 수집');
         // 좋아요 수와 댓글 수 가져오기
         int likeCount = 0;
         int commentCount = 0;
@@ -113,22 +148,29 @@ class PostFirebaseDataSource implements PostDataSource {
         // 필드가 있고 null이 아닌 경우 해당 값 사용
         if (data.containsKey('likeCount') && data['likeCount'] != null) {
           likeCount = data['likeCount'] as int;
+          AppLogger.debug('캐시된 likeCount 사용: $likeCount');
         } else {
           // 값이 없거나 null인 경우에만 실제 계산
+          AppLogger.debug('likeCount 실시간 계산 중...');
           final likesSnapshot =
               await docSnapshot.reference.collection('likes').get();
           likeCount = likesSnapshot.size;
+          AppLogger.debug('실시간 계산된 likeCount: $likeCount');
         }
 
         if (data.containsKey('commentCount') && data['commentCount'] != null) {
           commentCount = data['commentCount'] as int;
+          AppLogger.debug('캐시된 commentCount 사용: $commentCount');
         } else {
           // 값이 없거나 null인 경우에만 실제 계산
+          AppLogger.debug('commentCount 실시간 계산 중...');
           final commentsSnapshot =
               await docSnapshot.reference.collection('comments').get();
           commentCount = commentsSnapshot.size;
+          AppLogger.debug('실시간 계산된 commentCount: $commentCount');
         }
 
+        AppLogger.logStep(3, 5, '사용자 상호작용 상태 확인');
         // 현재 사용자의 좋아요/북마크 상태 확인
         bool isLikedByCurrentUser = false;
         bool isBookmarkedByCurrentUser = false;
@@ -137,6 +179,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final userLikeDoc =
             await docSnapshot.reference.collection('likes').doc(userId).get();
         isLikedByCurrentUser = userLikeDoc.exists;
+        AppLogger.debug('사용자 좋아요 상태: $isLikedByCurrentUser');
 
         // 북마크 상태 확인
         final userBookmarkDoc =
@@ -147,25 +190,48 @@ class PostFirebaseDataSource implements PostDataSource {
                 .doc(postId)
                 .get();
         isBookmarkedByCurrentUser = userBookmarkDoc.exists;
+        AppLogger.debug('사용자 북마크 상태: $isBookmarkedByCurrentUser');
 
+        AppLogger.logStep(4, 5, 'DTO 생성 및 필드 업데이트');
         // DTO 생성 및 추가 정보 설정
         final postDto = data.toPostDto();
-        return postDto.copyWith(
+        final result = postDto.copyWith(
           likeCount: likeCount,
           commentCount: commentCount,
           isLikedByCurrentUser: isLikedByCurrentUser,
           isBookmarkedByCurrentUser: isBookmarkedByCurrentUser,
         );
+
+        AppLogger.logStep(5, 5, '게시글 상세 조회 완료');
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 상세 조회', duration);
+
+        AppLogger.logState('PostDetailResult', {
+          'postId': postId,
+          'likeCount': likeCount,
+          'commentCount': commentCount,
+          'isLiked': isLikedByCurrentUser,
+          'isBookmarked': isBookmarkedByCurrentUser,
+        });
+
+        return result;
       } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 상세 조회 실패', duration);
+
         // ✅ 예외 구분 처리
         if (e is Exception &&
             e.toString().contains(CommunityErrorMessages.postNotFound)) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('게시글 상세 비즈니스 로직 오류: $e');
+          AppLogger.warning('게시글 상세 비즈니스 로직 오류: $postId', error: e);
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('게시글 상세 Firebase 통신 오류: $e\n$st');
+          AppLogger.networkError(
+            '게시글 상세 Firebase 통신 오류: $postId',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }
@@ -175,24 +241,36 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<PostDto> toggleLike(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleLike', () async {
+      AppLogger.logBox('좋아요 토글', '게시글: $postId');
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 정보 처리
         final currentUser = _auth.currentUser;
         if (currentUser == null) {
+          AppLogger.authInfo('인증되지 않은 사용자의 좋아요 시도');
           throw Exception(AuthErrorMessages.noLoggedInUser);
         }
 
         final currentUserId = currentUser.uid;
         final currentUserName = currentUser.displayName ?? '';
 
+        AppLogger.debug('좋아요 토글 사용자: $currentUserId ($currentUserName)');
+
         // 게시글 문서 참조
         final postRef = _postsCollection.doc(postId);
 
+        AppLogger.logStep(1, 3, 'Firebase 트랜잭션 시작');
         // 트랜잭션 사용하여 좋아요 카운터와 문서를 원자적으로 업데이트
-        return _firestore.runTransaction<PostDto>((transaction) async {
+        final result = await _firestore.runTransaction<PostDto>((
+          transaction,
+        ) async {
+          AppLogger.debug('트랜잭션 내부: 현재 상태 조회');
+
           // 현재 게시글 상태 조회
           final postDoc = await transaction.get(postRef);
           if (!postDoc.exists) {
+            AppLogger.warning('트랜잭션 중 게시글 없음: $postId');
             throw Exception(CommunityErrorMessages.postNotFound);
           }
 
@@ -204,12 +282,18 @@ class PostFirebaseDataSource implements PostDataSource {
           final data = postDoc.data()!;
           final currentLikeCount = data['likeCount'] as int? ?? 0;
 
+          AppLogger.debug(
+            '현재 좋아요 수: $currentLikeCount, 사용자 좋아요 존재: ${likeDoc.exists}',
+          );
+
           if (likeDoc.exists) {
             // 이미 좋아요가 있으면 삭제 및 카운터 감소
+            AppLogger.debug('좋아요 제거 처리');
             transaction.delete(likeRef);
             transaction.update(postRef, {'likeCount': currentLikeCount - 1});
           } else {
             // 좋아요가 없으면 추가 및 카운터 증가
+            AppLogger.debug('좋아요 추가 처리');
             transaction.set(likeRef, {
               'userId': currentUserId,
               'userName': currentUserName,
@@ -222,14 +306,32 @@ class PostFirebaseDataSource implements PostDataSource {
           data['id'] = postDoc.id;
 
           // DTO 생성 및 필드 업데이트
-          return data.toPostDto().copyWith(
+          final updatedDto = data.toPostDto().copyWith(
             likeCount:
                 likeDoc.exists ? currentLikeCount - 1 : currentLikeCount + 1,
             isLikedByCurrentUser: !likeDoc.exists, // 토글 결과 반영
           );
+
+          AppLogger.debug('트랜잭션 완료 - 새 좋아요 수: ${updatedDto.likeCount}');
+          return updatedDto;
         });
-      } catch (e) {
-        print('좋아요 토글 오류: $e');
+
+        AppLogger.logStep(2, 3, '트랜잭션 성공');
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 좋아요 토글', duration);
+
+        // ✅ nullable 값 처리
+        final action = (result.isLikedByCurrentUser ?? false) ? '추가' : '제거';
+        AppLogger.communityInfo(
+          '좋아요 $action 완료: $postId (총 ${result.likeCount ?? 0}개)',
+        );
+
+        AppLogger.logStep(3, 3, '좋아요 토글 완료');
+        return result;
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 좋아요 토글 실패', duration);
+        AppLogger.networkError('좋아요 토글 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.likeFailed);
       }
     }, params: {'postId': postId});
@@ -238,22 +340,32 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<PostDto> toggleBookmark(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleBookmark', () async {
+      AppLogger.logBox('북마크 토글', '게시글: $postId');
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 ID 처리
         final currentUserId = _getCurrentUserId();
+        AppLogger.debug('북마크 토글 사용자: $currentUserId');
 
         // 사용자 북마크 컬렉션 및 게시글 참조
         final userRef = _firestore.collection('users').doc(currentUserId);
         final bookmarkRef = userRef.collection('bookmarks').doc(postId);
         final postRef = _postsCollection.doc(postId);
 
+        AppLogger.logStep(1, 3, 'Firebase 트랜잭션 시작');
         // 트랜잭션 사용하여 북마크 상태 원자적으로 업데이트
-        return _firestore.runTransaction<PostDto>((transaction) async {
+        final result = await _firestore.runTransaction<PostDto>((
+          transaction,
+        ) async {
+          AppLogger.debug('트랜잭션 내부: 현재 상태 조회');
+
           // 현재 게시글 및 북마크 상태 조회
           final postDoc = await transaction.get(postRef);
           final bookmarkDoc = await transaction.get(bookmarkRef);
 
           if (!postDoc.exists) {
+            AppLogger.warning('트랜잭션 중 게시글 없음: $postId');
             throw Exception(CommunityErrorMessages.postNotFound);
           }
 
@@ -261,12 +373,16 @@ class PostFirebaseDataSource implements PostDataSource {
           final data = postDoc.data()!;
           data['id'] = postDoc.id;
 
+          AppLogger.debug('현재 북마크 상태: ${bookmarkDoc.exists}');
+
           // 북마크 상태 토글
           if (bookmarkDoc.exists) {
             // 이미 북마크가 있으면 삭제 (취소)
+            AppLogger.debug('북마크 제거 처리');
             transaction.delete(bookmarkRef);
           } else {
             // 북마크가 없으면 추가
+            AppLogger.debug('북마크 추가 처리');
             transaction.set(bookmarkRef, {
               'postId': postId,
               'timestamp': FieldValue.serverTimestamp(),
@@ -278,14 +394,33 @@ class PostFirebaseDataSource implements PostDataSource {
           final commentCount = data['commentCount'] as int? ?? 0;
 
           // DTO 생성 및 필드 업데이트 (북마크 상태만 토글)
-          return data.toPostDto().copyWith(
+          final updatedDto = data.toPostDto().copyWith(
             likeCount: likeCount,
             commentCount: commentCount,
             isBookmarkedByCurrentUser: !bookmarkDoc.exists, // 토글 결과 반영
           );
+
+          AppLogger.debug(
+            '트랜잭션 완료 - 북마크 상태: ${updatedDto.isBookmarkedByCurrentUser}',
+          );
+          return updatedDto;
         });
-      } catch (e) {
-        print('북마크 토글 오류: $e');
+
+        AppLogger.logStep(2, 3, '트랜잭션 성공');
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 북마크 토글', duration);
+
+        // ✅ nullable 값 처리
+        final action =
+            (result.isBookmarkedByCurrentUser ?? false) ? '추가' : '제거';
+        AppLogger.communityInfo('북마크 $action 완료: $postId');
+
+        AppLogger.logStep(3, 3, '북마크 토글 완료');
+        return result;
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 북마크 토글 실패', duration);
+        AppLogger.networkError('북마크 토글 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.bookmarkFailed);
       }
     }, params: {'postId': postId});
@@ -294,10 +429,11 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<List<PostCommentDto>> fetchComments(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchComments', () async {
-      try {
-        // 내부에서 현재 사용자 ID 처리
-        // final userId = _getCurrentUserId();
+      AppLogger.logBox('댓글 목록 조회', '게시글: $postId');
+      final startTime = DateTime.now();
 
+      try {
+        AppLogger.logStep(1, 5, '댓글 목록 Firestore 쿼리');
         // 1. 댓글 목록 조회 (최신순 정렬)
         final querySnapshot =
             await _postsCollection
@@ -307,15 +443,21 @@ class PostFirebaseDataSource implements PostDataSource {
                 .get();
 
         if (querySnapshot.docs.isEmpty) {
+          AppLogger.info('댓글이 없음: $postId');
           return [];
         }
 
+        AppLogger.debug('조회된 댓글 수: ${querySnapshot.docs.length}개');
+
+        AppLogger.logStep(2, 5, '댓글 ID 목록 추출');
         // 2. 댓글 ID 목록 추출
         final commentIds = querySnapshot.docs.map((doc) => doc.id).toList();
 
+        AppLogger.logStep(3, 5, '댓글 좋아요 상태 조회');
         // 3. 좋아요 상태 일괄 조회
         final likeStatusesFuture = checkCommentsLikeStatus(postId, commentIds);
 
+        AppLogger.logStep(4, 5, '댓글 DTO 변환 및 카운트 처리');
         // 4. 병렬 처리로 각 댓글의 처리를 수행
         final commentsFuture = Future.wait(
           querySnapshot.docs.map((doc) async {
@@ -329,6 +471,7 @@ class PostFirebaseDataSource implements PostDataSource {
             int? likeCount = commentDto.likeCount;
             if (likeCount == null) {
               // 필요한 경우에만 추가 쿼리 (성능 최적화)
+              AppLogger.debug('댓글 ${doc.id} likeCount 실시간 계산');
               final likesSnapshot =
                   await doc.reference.collection('likes').get();
               likeCount = likesSnapshot.size;
@@ -348,6 +491,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final List<PostCommentDto> commentDtos =
             results[1] as List<PostCommentDto>;
 
+        AppLogger.logStep(5, 5, '좋아요 상태 적용 및 최종 결과 생성');
         // 6. 좋아요 상태 적용
         final finalComments =
             commentDtos.map((dto) {
@@ -356,9 +500,27 @@ class PostFirebaseDataSource implements PostDataSource {
               return dto.copyWith(isLikedByCurrentUser: isLiked);
             }).toList();
 
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 댓글 목록 조회', duration);
+
+        // ✅ nullable 값 처리
+        final likedCommentsCount =
+            finalComments
+                .where((c) => (c.isLikedByCurrentUser ?? false))
+                .length;
+        AppLogger.communityInfo(
+          '댓글 목록 조회 완료: $postId (${finalComments.length}개, $likedCommentsCount개 좋아요)',
+        );
+
         return finalComments;
-      } catch (e) {
-        print('댓글 목록 로드 오류: $e');
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 댓글 목록 조회 실패', duration);
+        AppLogger.networkError(
+          '댓글 목록 로드 실패: $postId',
+          error: e,
+          stackTrace: st,
+        );
         throw Exception(CommunityErrorMessages.commentLoadFailed);
       }
     }, params: {'postId': postId});
@@ -370,10 +532,15 @@ class PostFirebaseDataSource implements PostDataSource {
     required String content,
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.createComment', () async {
+      final contentPreview = _truncateText(content, 30);
+      AppLogger.logBox('댓글 작성', '게시글: $postId, 내용: "$contentPreview"');
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 정보 처리
         final currentUser = _auth.currentUser;
         if (currentUser == null) {
+          AppLogger.authInfo('인증되지 않은 사용자의 댓글 작성 시도');
           throw Exception(AuthErrorMessages.noLoggedInUser);
         }
 
@@ -381,24 +548,32 @@ class PostFirebaseDataSource implements PostDataSource {
         final currentUserName = currentUser.displayName ?? '';
         final currentUserProfileImage = currentUser.photoURL ?? '';
 
+        AppLogger.debug('댓글 작성자: $currentUserId ($currentUserName)');
+
         // 게시글 및 댓글 컬렉션 참조
         final postRef = _postsCollection.doc(postId);
         final commentRef = postRef.collection('comments');
 
         // 새 댓글 ID 미리 생성
         final newCommentId = commentRef.doc().id;
+        AppLogger.debug('새 댓글 ID 생성: $newCommentId');
 
+        AppLogger.logStep(1, 3, 'Firebase 트랜잭션 시작');
         // 트랜잭션 사용하여 댓글 추가와 commentCount 증가를 원자적으로 처리
         await _firestore.runTransaction((transaction) async {
+          AppLogger.debug('트랜잭션 내부: 게시글 상태 확인');
+
           // 1. 현재 게시글 상태 확인
           final postDoc = await transaction.get(postRef);
           if (!postDoc.exists) {
+            AppLogger.warning('트랜잭션 중 게시글 없음: $postId');
             throw Exception(CommunityErrorMessages.postNotFound);
           }
 
           // 2. 현재 댓글 수 가져오기 (null이면 0으로 초기화)
           final data = postDoc.data()!;
           final currentCommentCount = data['commentCount'] as int? ?? 0;
+          AppLogger.debug('현재 댓글 수: $currentCommentCount');
 
           // 3. 댓글 데이터 생성
           final commentData = {
@@ -410,17 +585,32 @@ class PostFirebaseDataSource implements PostDataSource {
             'likeCount': 0,
           };
 
+          AppLogger.debug('댓글 데이터 생성 완료');
+
           // 4. 트랜잭션에 댓글 추가 및 카운터 증가 작업 포함
           transaction.set(commentRef.doc(newCommentId), commentData);
           transaction.update(postRef, {
             'commentCount': currentCommentCount + 1,
           });
+
+          AppLogger.debug('트랜잭션 작업 등록 완료');
         });
 
+        AppLogger.logStep(2, 3, '트랜잭션 성공');
+
+        AppLogger.logStep(3, 3, '업데이트된 댓글 목록 조회');
         // 5. 업데이트된 댓글 목록 반환
-        return await fetchComments(postId);
-      } catch (e) {
-        print('댓글 작성 오류: $e');
+        final result = await fetchComments(postId);
+
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 댓글 작성', duration);
+        AppLogger.communityInfo('댓글 작성 완료: $postId (총 ${result.length}개)');
+
+        return result;
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 댓글 작성 실패', duration);
+        AppLogger.networkError('댓글 작성 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.commentCreateFailed);
       }
     }, params: {'postId': postId});
@@ -434,15 +624,21 @@ class PostFirebaseDataSource implements PostDataSource {
     return ApiCallDecorator.wrap(
       'PostFirebase.toggleCommentLike',
       () async {
+        AppLogger.logBox('댓글 좋아요 토글', '게시글: $postId, 댓글: $commentId');
+        final startTime = DateTime.now();
+
         try {
           // 내부에서 현재 사용자 정보 처리
           final currentUser = _auth.currentUser;
           if (currentUser == null) {
+            AppLogger.authInfo('인증되지 않은 사용자의 댓글 좋아요 시도');
             throw Exception(AuthErrorMessages.noLoggedInUser);
           }
 
           final currentUserId = currentUser.uid;
           final currentUserName = currentUser.displayName ?? '';
+
+          AppLogger.debug('댓글 좋아요 토글 사용자: $currentUserId ($currentUserName)');
 
           // 댓글 및 좋아요 참조
           final commentRef = _postsCollection
@@ -451,13 +647,19 @@ class PostFirebaseDataSource implements PostDataSource {
               .doc(commentId);
           final likeRef = commentRef.collection('likes').doc(currentUserId);
 
+          AppLogger.logStep(1, 3, 'Firebase 트랜잭션 시작');
           // 트랜잭션 사용하여 좋아요 토글 및 카운터 원자적으로 업데이트
-          return _firestore.runTransaction<PostCommentDto>((transaction) async {
+          final result = await _firestore.runTransaction<PostCommentDto>((
+            transaction,
+          ) async {
+            AppLogger.debug('트랜잭션 내부: 현재 상태 조회');
+
             // 현재 댓글 및 좋아요 상태 조회
             final commentDoc = await transaction.get(commentRef);
             final likeDoc = await transaction.get(likeRef);
 
             if (!commentDoc.exists) {
+              AppLogger.warning('트랜잭션 중 댓글 없음: $commentId');
               throw Exception(CommunityErrorMessages.commentLoadFailed);
             }
 
@@ -468,15 +670,21 @@ class PostFirebaseDataSource implements PostDataSource {
             // likeCount 필드 가져오기 (없으면 0으로 초기화)
             final currentLikeCount = commentData['likeCount'] as int? ?? 0;
 
+            AppLogger.debug(
+              '현재 댓글 좋아요 수: $currentLikeCount, 사용자 좋아요 존재: ${likeDoc.exists}',
+            );
+
             // 좋아요 상태 토글
             if (likeDoc.exists) {
               // 이미 좋아요가 있으면 삭제 및 카운터 감소
+              AppLogger.debug('댓글 좋아요 제거 처리');
               transaction.delete(likeRef);
               transaction.update(commentRef, {
                 'likeCount': currentLikeCount > 0 ? currentLikeCount - 1 : 0,
               });
             } else {
               // 좋아요가 없으면 추가 및 카운터 증가
+              AppLogger.debug('댓글 좋아요 추가 처리');
               transaction.set(likeRef, {
                 'userId': currentUserId,
                 'userName': currentUserName,
@@ -488,14 +696,36 @@ class PostFirebaseDataSource implements PostDataSource {
             }
 
             // DTO 생성 및 필드 업데이트
-            return commentData.toPostCommentDto().copyWith(
+            final updatedDto = commentData.toPostCommentDto().copyWith(
               likeCount:
                   likeDoc.exists ? currentLikeCount - 1 : currentLikeCount + 1,
               isLikedByCurrentUser: !likeDoc.exists, // 토글 결과 반영
             );
+
+            AppLogger.debug('트랜잭션 완료 - 새 댓글 좋아요 수: ${updatedDto.likeCount}');
+            return updatedDto;
           });
-        } catch (e) {
-          print('댓글 좋아요 토글 오류: $e');
+
+          AppLogger.logStep(2, 3, '트랜잭션 성공');
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 댓글 좋아요 토글', duration);
+
+          // ✅ nullable 값 처리
+          final action = (result.isLikedByCurrentUser ?? false) ? '추가' : '취소';
+          AppLogger.communityInfo(
+            '댓글 좋아요 $action 완료: $commentId (총 ${result.likeCount ?? 0}개)',
+          );
+
+          AppLogger.logStep(3, 3, '댓글 좋아요 토글 완료');
+          return result;
+        } catch (e, st) {
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 댓글 좋아요 토글 실패', duration);
+          AppLogger.networkError(
+            '댓글 좋아요 토글 실패: $postId/$commentId',
+            error: e,
+            stackTrace: st,
+          );
           throw Exception(CommunityErrorMessages.likeFailed);
         }
       },
@@ -511,6 +741,9 @@ class PostFirebaseDataSource implements PostDataSource {
     return ApiCallDecorator.wrap(
       'PostFirebase.checkCommentsLikeStatus',
       () async {
+        AppLogger.debug('댓글 좋아요 상태 일괄 조회: $postId (${commentIds.length}개)');
+        final startTime = DateTime.now();
+
         try {
           // 내부에서 현재 사용자 ID 처리
           final userId = _getCurrentUserId();
@@ -530,9 +763,25 @@ class PostFirebaseDataSource implements PostDataSource {
           });
 
           final entries = await Future.wait(futures);
-          return Map.fromEntries(entries);
-        } catch (e) {
-          print('댓글 좋아요 상태 확인 오류: $e');
+          final result = Map.fromEntries(entries);
+
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 댓글 좋아요 상태 조회', duration);
+
+          final likedCount = result.values.where((liked) => liked).length;
+          AppLogger.debug(
+            '댓글 좋아요 상태 조회 완료: $postId ($likedCount/${commentIds.length}개 좋아요)',
+          );
+
+          return result;
+        } catch (e, st) {
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 댓글 좋아요 상태 조회 실패', duration);
+          AppLogger.networkError(
+            '댓글 좋아요 상태 확인 실패: $postId',
+            error: e,
+            stackTrace: st,
+          );
           throw Exception(CommunityErrorMessages.dataLoadFailed);
         }
       },
@@ -543,17 +792,19 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<List<PostDto>> searchPosts(String query) async {
     return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
+      AppLogger.logBox('게시글 검색', '검색어: "$query"');
+      final startTime = DateTime.now();
+
       try {
         if (query.trim().isEmpty) {
+          AppLogger.warning('빈 검색어로 검색 시도');
           return [];
         }
-
-        // 내부에서 현재 사용자 ID 처리
-        // final userId = _getCurrentUserId();
 
         final lowercaseQuery = query.toLowerCase();
         final List<PostDto> searchResults = [];
 
+        AppLogger.logStep(1, 4, '서버 측 필터링 시작');
         // 1. 서버 측 필터링 최대한 활용 (부분 일치 검색은 제한적)
         // 제목 기반 검색 (접두사 검색만 가능)
         final titleResults =
@@ -573,6 +824,10 @@ class PostFirebaseDataSource implements PostDataSource {
                 .limit(20)
                 .get();
 
+        AppLogger.debug('제목 검색 결과: ${titleResults.docs.length}개');
+        AppLogger.debug('내용 검색 결과: ${contentResults.docs.length}개');
+
+        AppLogger.logStep(2, 4, '검색 결과 합치기 및 해시태그 검색');
         // 해시태그 검색은 배열 필드에 대한 부분 일치가 불가능하므로 클라이언트 필터링 필요
         // 검색 결과 합치기 (Set으로 변환하여 중복 제거)
         final Set<DocumentSnapshot<Map<String, dynamic>>> mergedDocs = {};
@@ -581,6 +836,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
         // 검색 결과가 충분하지 않으면 추가로 모든 게시글 검색 (해시태그 검색용)
         if (mergedDocs.length < 10) {
+          AppLogger.debug('해시태그 검색을 위한 추가 쿼리 실행');
           final allPosts =
               await _postsCollection
                   .orderBy('createdAt', descending: true)
@@ -605,9 +861,13 @@ class PostFirebaseDataSource implements PostDataSource {
 
         // 검색 결과가 없으면 빈 리스트 반환
         if (mergedDocs.isEmpty) {
+          AppLogger.info('검색 결과 없음: "$query"');
           return [];
         }
 
+        AppLogger.debug('최종 검색 결과: ${mergedDocs.length}개');
+
+        AppLogger.logStep(3, 4, '사용자 상호작용 상태 일괄 조회');
         // 2. 검색 결과에 대한 문서 ID 추출
         final postIds = mergedDocs.map((doc) => doc.id).toList();
 
@@ -618,6 +878,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 북마크 상태 일괄 조회
         final bookmarkStatuses = await checkUserBookmarkStatus(postIds);
 
+        AppLogger.logStep(4, 4, '검색 결과 DTO 변환 및 정렬');
         // 4. 좋아요 수 및 댓글 수 일괄 가져오기 (병렬 처리)
         final countFutures = mergedDocs.map((doc) async {
           final docId = doc.id;
@@ -667,9 +928,15 @@ class PostFirebaseDataSource implements PostDataSource {
           ),
         );
 
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 검색', duration);
+        AppLogger.searchInfo(query, searchResults.length);
+
         return searchResults;
-      } catch (e) {
-        print('게시글 검색 오류: $e');
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 검색 실패', duration);
+        AppLogger.networkError('게시글 검색 실패: "$query"', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.searchFailed);
       }
     }, params: {'query': query});
@@ -684,10 +951,21 @@ class PostFirebaseDataSource implements PostDataSource {
     required List<Uri> imageUris,
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.createPost', () async {
+      final titlePreview = _truncateText(title, 30);
+      AppLogger.logBox(
+        '게시글 작성',
+        '제목: "$titlePreview" | '
+            '내용: ${content.length}자 | '
+            '태그: ${hashTags.length}개 | '
+            '이미지: ${imageUris.length}개',
+      );
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 정보 처리
         final currentUser = _auth.currentUser;
         if (currentUser == null) {
+          AppLogger.authInfo('인증되지 않은 사용자의 게시글 작성 시도');
           throw Exception(AuthErrorMessages.noLoggedInUser);
         }
 
@@ -695,9 +973,12 @@ class PostFirebaseDataSource implements PostDataSource {
         final currentUserNickname = currentUser.displayName ?? '';
         final currentUserProfileImage = currentUser.photoURL ?? '';
 
+        AppLogger.debug('게시글 작성자: $currentUserId ($currentUserNickname)');
+
         // 전달받은 ID로 문서 참조
         final postRef = _postsCollection.doc(postId);
 
+        AppLogger.logStep(1, 2, '게시글 데이터 생성');
         // 게시글 데이터 생성 (현재 사용자 정보 사용)
         final postData = {
           'authorId': currentUserId,
@@ -713,13 +994,21 @@ class PostFirebaseDataSource implements PostDataSource {
           'commentCount': 0, // 댓글 수 초기화
         };
 
+        AppLogger.logStep(2, 2, 'Firestore에 게시글 저장');
         // 게시글 추가
         await postRef.set(postData);
 
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 작성', duration);
+        AppLogger.logBanner('새 게시글 생성 완료! 🎉');
+        AppLogger.communityInfo('게시글 생성 성공: $postId');
+
         // 생성된 게시글 ID 반환
         return postId;
-      } catch (e) {
-        print('게시글 생성 오류: $e');
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 작성 실패', duration);
+        AppLogger.networkError('게시글 생성 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.postCreateFailed);
       }
     }, params: {'postId': postId});
@@ -729,6 +1018,9 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<Map<String, bool>> checkUserLikeStatus(List<String> postIds) async {
     return ApiCallDecorator.wrap('PostFirebase.checkUserLikeStatus', () async {
+      AppLogger.debug('좋아요 상태 일괄 조회: ${postIds.length}개');
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 ID 처리
         final userId = _getCurrentUserId();
@@ -748,9 +1040,19 @@ class PostFirebaseDataSource implements PostDataSource {
 
         // 모든 미래 값을 기다려서 Map으로 변환
         final entries = await Future.wait(futures);
-        return Map.fromEntries(entries);
-      } catch (e) {
-        print('좋아요 상태 일괄 조회 오류: $e');
+        final result = Map.fromEntries(entries);
+
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 좋아요 상태 일괄 조회', duration);
+
+        final likedCount = result.values.where((liked) => liked).length;
+        AppLogger.debug('좋아요 상태 일괄 조회 완료: $likedCount/${postIds.length}개 좋아요');
+
+        return result;
+      } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 좋아요 상태 일괄 조회 실패', duration);
+        AppLogger.networkError('좋아요 상태 일괄 조회 실패', error: e, stackTrace: st);
         // 오류 발생 시 모든 게시글에 대해 false 반환
         return {for (final id in postIds) id: false};
       }
@@ -765,6 +1067,9 @@ class PostFirebaseDataSource implements PostDataSource {
     return ApiCallDecorator.wrap(
       'PostFirebase.checkUserBookmarkStatus',
       () async {
+        AppLogger.debug('북마크 상태 일괄 조회: ${postIds.length}개');
+        final startTime = DateTime.now();
+
         try {
           // 내부에서 현재 사용자 ID 처리
           final userId = _getCurrentUserId();
@@ -785,9 +1090,22 @@ class PostFirebaseDataSource implements PostDataSource {
 
           // 모든 미래 값을 기다려서 Map으로 변환
           final entries = await Future.wait(futures);
-          return Map.fromEntries(entries);
-        } catch (e) {
-          print('북마크 상태 일괄 조회 오류: $e');
+          final result = Map.fromEntries(entries);
+
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 북마크 상태 일괄 조회', duration);
+
+          final bookmarkedCount =
+              result.values.where((bookmarked) => bookmarked).length;
+          AppLogger.debug(
+            '북마크 상태 일괄 조회 완료: $bookmarkedCount/${postIds.length}개 북마크',
+          );
+
+          return result;
+        } catch (e, st) {
+          final duration = DateTime.now().difference(startTime);
+          AppLogger.logPerformance('Firebase 북마크 상태 일괄 조회 실패', duration);
+          AppLogger.networkError('북마크 상태 일괄 조회 실패', error: e, stackTrace: st);
           // 오류 발생 시 모든 게시글에 대해 false 반환
           return {for (final id in postIds) id: false};
         }
@@ -805,6 +1123,17 @@ class PostFirebaseDataSource implements PostDataSource {
     required List<Uri> imageUris,
   }) async {
     return ApiCallDecorator.wrap('PostFirebase.updatePost', () async {
+      final titlePreview = _truncateText(title, 30);
+      AppLogger.logBox(
+        '게시글 수정',
+        '게시글: $postId | '
+            '제목: "$titlePreview" | '
+            '내용: ${content.length}자 | '
+            '태그: ${hashTags.length}개 | '
+            '이미지: ${imageUris.length}개',
+      );
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 정보 처리
         final currentUserId = _getCurrentUserId();
@@ -812,18 +1141,24 @@ class PostFirebaseDataSource implements PostDataSource {
         // 게시글 참조
         final postRef = _postsCollection.doc(postId);
 
+        AppLogger.logStep(1, 3, '게시글 존재 및 권한 확인');
         // 게시글 존재 확인
         final doc = await postRef.get();
         if (!doc.exists) {
+          AppLogger.warning('수정하려는 게시글이 존재하지 않음: $postId');
           throw Exception(CommunityErrorMessages.postNotFound);
         }
 
         // 권한 확인 (작성자만 수정 가능)
         final data = doc.data()!;
         if (data['authorId'] != currentUserId) {
+          AppLogger.warning(
+            '게시글 수정 권한 없음: $postId (작성자: ${data['authorId']}, 요청자: $currentUserId)',
+          );
           throw Exception(CommunityErrorMessages.noPermissionEdit);
         }
 
+        AppLogger.logStep(2, 3, '업데이트 데이터 준비');
         // 업데이트할 데이터 준비
         final Map<String, dynamic> updateData = {
           'title': title,
@@ -834,11 +1169,20 @@ class PostFirebaseDataSource implements PostDataSource {
           // 작성 시점의 정보를 유지
         };
 
+        AppLogger.logStep(3, 3, 'Firestore 게시글 업데이트');
         // 게시글 업데이트
         await postRef.update(updateData);
 
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 수정', duration);
+        AppLogger.logBanner('게시글 수정 완료! ✨');
+        AppLogger.communityInfo('게시글 수정 성공: $postId');
+
         return postId;
       } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 수정 실패', duration);
+
         // ✅ 예외 구분 처리
         if (e is Exception &&
             (e.toString().contains(CommunityErrorMessages.postNotFound) ||
@@ -846,11 +1190,15 @@ class PostFirebaseDataSource implements PostDataSource {
                   CommunityErrorMessages.noPermissionEdit,
                 ))) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('게시글 수정 비즈니스 로직 오류: $e');
+          AppLogger.warning('게시글 수정 비즈니스 로직 오류: $postId', error: e);
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('게시글 수정 Firebase 통신 오류: $e\n$st');
+          AppLogger.networkError(
+            '게시글 수정 Firebase 통신 오류: $postId',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }
@@ -860,6 +1208,9 @@ class PostFirebaseDataSource implements PostDataSource {
   @override
   Future<bool> deletePost(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.deletePost', () async {
+      AppLogger.logBox('게시글 삭제', '게시글 ID: $postId');
+      final startTime = DateTime.now();
+
       try {
         // 내부에서 현재 사용자 ID 처리
         final currentUserId = _getCurrentUserId();
@@ -867,42 +1218,66 @@ class PostFirebaseDataSource implements PostDataSource {
         // 게시글 참조
         final postRef = _postsCollection.doc(postId);
 
+        AppLogger.logStep(1, 4, '게시글 존재 및 권한 확인');
         // 게시글 존재 및 권한 확인
         final doc = await postRef.get();
         if (!doc.exists) {
+          AppLogger.warning('삭제하려는 게시글이 존재하지 않음: $postId');
           throw Exception(CommunityErrorMessages.postNotFound);
         }
 
         // 권한 확인 (작성자만 삭제 가능)
         final data = doc.data()!;
         if (data['authorId'] != currentUserId) {
+          AppLogger.warning(
+            '게시글 삭제 권한 없음: $postId (작성자: ${data['authorId']}, 요청자: $currentUserId)',
+          );
           throw Exception(CommunityErrorMessages.noPermissionDelete);
         }
 
+        AppLogger.logStep(2, 4, '댓글 및 좋아요 데이터 삭제');
         // 단계별로 삭제 (트랜잭션 없이)
         // 1. 댓글 컬렉션 내 문서들 삭제
         final commentsSnapshot = await postRef.collection('comments').get();
+        AppLogger.debug('삭제할 댓글 수: ${commentsSnapshot.docs.length}개');
+
         for (final commentDoc in commentsSnapshot.docs) {
           // 댓글 내 좋아요 컬렉션도 삭제
           final likesSnapshot =
               await commentDoc.reference.collection('likes').get();
+          AppLogger.debug(
+            '댓글 ${commentDoc.id}의 좋아요 수: ${likesSnapshot.docs.length}개',
+          );
+
           for (final likeDoc in likesSnapshot.docs) {
             await likeDoc.reference.delete();
           }
           await commentDoc.reference.delete();
         }
 
+        AppLogger.logStep(3, 4, '게시글 좋아요 데이터 삭제');
         // 2. 좋아요 컬렉션 내 문서들 삭제
         final likesSnapshot = await postRef.collection('likes').get();
+        AppLogger.debug('삭제할 게시글 좋아요 수: ${likesSnapshot.docs.length}개');
+
         for (final likeDoc in likesSnapshot.docs) {
           await likeDoc.reference.delete();
         }
 
+        AppLogger.logStep(4, 4, '게시글 문서 삭제');
         // 3. 게시글 문서 자체 삭제
         await postRef.delete();
 
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 삭제', duration);
+        AppLogger.logBanner('게시글 삭제 완료! 🗑️');
+        AppLogger.communityInfo('게시글 삭제 성공: $postId');
+
         return true;
       } catch (e, st) {
+        final duration = DateTime.now().difference(startTime);
+        AppLogger.logPerformance('Firebase 게시글 삭제 실패', duration);
+
         // ✅ 예외 구분 처리
         if (e is Exception &&
             (e.toString().contains(CommunityErrorMessages.postNotFound) ||
@@ -910,11 +1285,15 @@ class PostFirebaseDataSource implements PostDataSource {
                   CommunityErrorMessages.noPermissionDelete,
                 ))) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('게시글 삭제 비즈니스 로직 오류: $e');
+          AppLogger.warning('게시글 삭제 비즈니스 로직 오류: $postId', error: e);
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('게시글 삭제 Firebase 통신 오류: $e\n$st');
+          AppLogger.networkError(
+            '게시글 삭제 Firebase 통신 오류: $postId',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }

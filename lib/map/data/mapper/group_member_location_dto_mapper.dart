@@ -4,7 +4,7 @@ import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 extension GroupMemberLocationDtoMapper on GroupMemberLocationDto {
   GroupMemberLocation toModel() {
     return GroupMemberLocation(
-      memberId: memberId ?? '',
+      userId: userId ?? '',
       nickname: nickname ?? '이름 없음',
       imageUrl: imageUrl ?? '',
       latitude: latitude?.toDouble() ?? 0.0,

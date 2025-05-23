@@ -54,24 +54,24 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
       case ImageUrlChanged(:final imageUrl):
         state = state.copyWith(imageUrl: imageUrl);
 
-      case MemberInvited(:final memberId):
+      case MemberInvited(userId: final memberUserId):
         // 실제 구현에서는 멤버 조회 API 호출 등이 필요
         final mockMember = Member(
-          id: memberId,
-          email: 'user$memberId@example.com',
-          nickname: 'User $memberId',
-          uid: 'uid_$memberId',
+          id: memberUserId,
+          email: 'user$memberUserId@example.com',
+          nickname: 'User $memberUserId',
+          uid: 'uid_$memberUserId',
         );
-        if (!state.invitedMembers.any((m) => m.id == memberId)) {
+        if (!state.invitedMembers.any((m) => m.id == memberUserId)) {
           state = state.copyWith(
             invitedMembers: [...state.invitedMembers, mockMember],
           );
         }
 
-      case MemberRemoved(:final memberId):
+      case MemberRemoved(:final userId):
         state = state.copyWith(
           invitedMembers:
-              state.invitedMembers.where((m) => m.id != memberId).toList(),
+              state.invitedMembers.where((m) => m.id != userId).toList(),
         );
 
       case Submit():

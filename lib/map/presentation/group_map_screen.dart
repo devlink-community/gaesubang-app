@@ -117,7 +117,7 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
                 onProfileTap:
                     () => widget.onAction(
                       GroupMapAction.navigateToMemberProfile(
-                        widget.state.selectedMember!.memberId,
+                        widget.state.selectedMember!.userId,
                       ),
                     ),
                 onClose:
@@ -145,7 +145,7 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -340,7 +340,7 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
         try {
           // 그룹 멤버 마커는 기본 마커로 추가
           final marker = NMarker(
-            id: member.memberId,
+            id: member.userId,
             position: NLatLng(member.latitude, member.longitude),
           );
 

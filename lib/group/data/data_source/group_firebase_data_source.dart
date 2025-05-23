@@ -261,13 +261,13 @@ class GroupFirebaseDataSource implements GroupDataSource {
   }
 
   // 그룹 멤버 목록 조회 (내부 헬퍼 메서드)
-  Future<List<String>> _getGroupMemberIds(String groupId) async {
+  Future<List<String>> _getGroupMemberUserIds(String groupId) async {
     try {
       // 🔧 멤버 정보 캐시 확인
       List<Map<String, dynamic>> members;
 
       if (_cachedGroupMembers != null && _lastGroupId == groupId) {
-        print('🔍 Using cached group members for memberIds');
+        print('🔍 Using cached group members for memberUserIds');
         members = _cachedGroupMembers!;
       } else {
         final membersSnapshot =
@@ -1040,19 +1040,19 @@ class GroupFirebaseDataSource implements GroupDataSource {
           }
 
           // 🔧 개선: 멤버별 최신 활동만 효율적으로 조회
-          final memberIds = await _getGroupMemberIds(groupId);
+          final memberUserIds = await _getGroupMemberUserIds(groupId);
 
-          if (memberIds.isEmpty) {
+          if (memberUserIds.isEmpty) {
             return [];
           }
 
           // 멤버별로 최신 1개씩만 병렬 조회
-          final futures = memberIds.map((memberId) async {
+          final futures = memberUserIds.map((userId) async {
             final activitySnapshot =
                 await _groupsCollection
                     .doc(groupId)
                     .collection('timerActivities')
-                    .where('memberId', isEqualTo: memberId)
+                    .where('userId', isEqualTo: userId)
                     .orderBy('timestamp', descending: true)
                     .limit(1)
                     .get();
@@ -1128,10 +1128,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         for (final doc in activitiesSnapshot.docs) {
           final activity = doc.data();
-          final memberId = activity['memberId'] as String?;
+          final userId = activity['userId'] as String?;
 
-          if (memberId != null && !memberLastActivities.containsKey(memberId)) {
-            memberLastActivities[memberId] = {
+          if (userId != null && !memberLastActivities.containsKey(userId)) {
+            memberLastActivities[userId] = {
               ...activity,
               'id': doc.id,
             };
@@ -1175,8 +1175,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
     final result = <Map<String, dynamic>>[];
 
     for (final member in members) {
-      final memberId = member['userId'] as String?;
-      if (memberId == null) {
+      final userId = member['userId'] as String?;
+      if (userId == null) {
         // userId가 없는 멤버는 그대로 추가 (타이머 상태 없음)
         result.add({
           'memberDto': member,
@@ -1186,7 +1186,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
       }
 
       // 해당 멤버의 최신 타이머 활동 찾기
-      final lastActivity = memberLastActivities[memberId];
+      final lastActivity = memberLastActivities[userId];
 
       // 멤버 DTO와 타이머 활동 DTO를 분리하여 저장
       result.add({
@@ -1206,8 +1206,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
         try {
           // 현재 사용자 정보 가져오기
           final userInfo = await _getCurrentUserInfo();
-          final memberId = userInfo['userId']!;
-          final memberName = userInfo['userName']!;
+          final userId = userInfo['userId']!;
+          final userName = userInfo['userName']!;
 
           // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -1220,8 +1220,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 새 타이머 활동 데이터 준비
           final activityData = {
-            'memberId': memberId,
-            'memberName': memberName,
+            'userId': userId,
+            'userName': userName,
             'type': 'start',
             'timestamp': now,
             'groupId': groupId,
@@ -1257,8 +1257,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
         try {
           // 현재 사용자 정보 가져오기
           final userInfo = await _getCurrentUserInfo();
-          final memberId = userInfo['userId']!;
-          final memberName = userInfo['userName']!;
+          final userId = userInfo['userId']!;
+          final userName = userInfo['userName']!;
 
           // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -1271,8 +1271,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 새 타이머 활동 데이터 준비
           final activityData = {
-            'memberId': memberId,
-            'memberName': memberName,
+            'userId': userId,
+            'userName': userName,
             'type': 'pause',
             'timestamp': now,
             'groupId': groupId,
@@ -1308,8 +1308,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
         try {
           // 현재 사용자 정보 가져오기
           final userInfo = await _getCurrentUserInfo();
-          final memberId = userInfo['userId']!;
-          final memberName = userInfo['userName']!;
+          final userId = userInfo['userId']!;
+          final userName = userInfo['userName']!;
 
           // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -1322,8 +1322,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 새 타이머 활동 데이터 준비
           final activityData = {
-            'memberId': memberId,
-            'memberName': memberName,
+            'userId': userId,
+            'userName': userName,
             'type': 'end',
             'timestamp': now,
             'groupId': groupId,
@@ -1431,8 +1431,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
         try {
           // 현재 사용자 정보 가져오기
           final userInfo = await _getCurrentUserInfo();
-          final memberId = userInfo['userId']!;
-          final memberName = userInfo['userName']!;
+          final userId = userInfo['userId']!;
+          final userName = userInfo['userName']!;
 
           // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -1442,8 +1442,8 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           // 타이머 활동 데이터 준비
           final activityData = {
-            'memberId': memberId,
-            'memberName': memberName,
+            'userId': userId,
+            'userName': userName,
             'type': activityType,
             'timestamp': Timestamp.fromDate(timestamp), // 특정 시간으로 설정
             'groupId': groupId,

@@ -8,8 +8,8 @@ part 'group_timer_activity_dto.g.dart';
 class GroupTimerActivityDto {
   const GroupTimerActivityDto({
     this.id,
-    this.memberId,
-    this.memberName,
+    this.userId,
+    this.userName,
     this.type,
     this.timestamp,
     this.groupId,
@@ -17,8 +17,8 @@ class GroupTimerActivityDto {
   });
 
   final String? id;
-  final String? memberId;
-  final String? memberName;
+  final String? userId;
+  final String? userName;
   final String? type; // "start", "end" 등 타이머 액션 타입
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
@@ -35,8 +35,8 @@ class GroupTimerActivityDto {
   // 필드 업데이트를 위한 copyWith 메서드
   GroupTimerActivityDto copyWith({
     String? id,
-    String? memberId,
-    String? memberName,
+    String? userId,
+    String? userName,
     String? type,
     DateTime? timestamp,
     String? groupId,
@@ -44,8 +44,8 @@ class GroupTimerActivityDto {
   }) {
     return GroupTimerActivityDto(
       id: id ?? this.id,
-      memberId: memberId ?? this.memberId,
-      memberName: memberName ?? this.memberName,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
       type: type ?? this.type,
       timestamp: timestamp ?? this.timestamp,
       groupId: groupId ?? this.groupId,

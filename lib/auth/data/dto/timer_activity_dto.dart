@@ -7,14 +7,14 @@ part 'timer_activity_dto.g.dart';
 class TimerActivityDto {
   const TimerActivityDto({
     this.id,
-    this.memberId,
+    this.userId,
     this.type,
     this.timestamp,
     this.metadata,
   });
 
   final String? id;
-  final String? memberId;
+  final String? userId;
   final String? type; // "start", "pause", "resume", "end"
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,

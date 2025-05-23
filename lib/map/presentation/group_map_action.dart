@@ -1,6 +1,5 @@
 // lib/map/presentation/group_map_action.dart
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
-import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -52,7 +51,7 @@ sealed class GroupMapAction with _$GroupMapAction {
       UpdateSearchRadius;
 
   // 그룹 멤버 프로필로 이동
-  const factory GroupMapAction.navigateToMemberProfile(String memberId) =
+  const factory GroupMapAction.navigateToMemberProfile(String userId) =
       NavigateToMemberProfile;
 
   // 위치 공유 동의 액션
