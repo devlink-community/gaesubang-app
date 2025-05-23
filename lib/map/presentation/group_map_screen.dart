@@ -1,5 +1,6 @@
 // lib/map/presentation/group_map_screen.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/presentation/components/group_map_member_card.dart';
@@ -187,7 +188,7 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
       ),
       onMapReady: (controller) {
         _mapController = controller; // 컨트롤러 저장
-        print('네이버 맵 준비 완료: 컨트롤러 저장됨');
+        AppLogger.debug('네이버 맵 준비 완료: 컨트롤러 저장됨', tag: 'GroupMapScreen');
         widget.onAction(GroupMapAction.onMapInitialized(controller));
       },
       onMapTapped: (point, latLng) {
@@ -309,16 +310,14 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
     );
   }
 
-  // lib/map/presentation/group_map_screen.dart의 _addMarkers 메서드 수정
-
   void _addMarkers() {
     if (_mapController == null) {
-      print('마커 추가 실패: 맵 컨트롤러가 null입니다.');
+      AppLogger.warning('마커 추가 실패: 맵 컨트롤러가 null입니다.', tag: 'GroupMapScreen');
       return;
     }
 
     // 디버깅을 위한 로그 추가
-    print('마커 추가 시작: 기존 오버레이 삭제');
+    AppLogger.debug('마커 추가 시작: 기존 오버레이 삭제', tag: 'GroupMapScreen');
 
     // 현재 모든 오버레이 삭제
     _mapController!.clearOverlays();
@@ -329,12 +328,16 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
           (widget.state.memberLocations as AsyncData<List<GroupMemberLocation>>)
               .value;
 
-      print('그룹 멤버 위치 데이터 개수: ${locations.length}');
+      AppLogger.debug(
+        '그룹 멤버 위치 데이터 개수: ${locations.length}',
+        tag: 'GroupMapScreen',
+      );
 
       // 마커 추가
       for (final member in locations) {
-        print(
+        AppLogger.debug(
           '그룹 멤버 마커 추가: ${member.nickname} (${member.latitude}, ${member.longitude})',
+          tag: 'GroupMapScreen',
         );
 
         try {
@@ -346,18 +349,28 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
 
           // 마커 탭 이벤트 설정
           marker.setOnTapListener((_) {
-            print('그룹 멤버 마커 탭됨: ${member.nickname}');
+            AppLogger.debug(
+              '그룹 멤버 마커 탭됨: ${member.nickname}',
+              tag: 'GroupMapScreen',
+            );
             widget.onAction(GroupMapAction.onMemberMarkerTap(member));
           });
 
           // 마커 추가
           _mapController!.addOverlay(marker);
         } catch (e) {
-          print('그룹 멤버 마커 추가 중 오류: $e');
+          AppLogger.error(
+            '그룹 멤버 마커 추가 중 오류',
+            tag: 'GroupMapScreen',
+            error: e,
+          );
         }
       }
     } else {
-      print('그룹 멤버 위치 데이터가 없습니다: ${widget.state.memberLocations}');
+      AppLogger.debug(
+        '그룹 멤버 위치 데이터가 없습니다: ${widget.state.memberLocations}',
+        tag: 'GroupMapScreen',
+      );
     }
 
     // 현재 사용자 위치에 마커 추가 (사용자 위치가 있는 경우)
@@ -365,7 +378,10 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
       final location =
           (widget.state.currentLocation as AsyncData<Location>).value;
 
-      print('현재 사용자 위치 마커 추가: (${location.latitude}, ${location.longitude})');
+      AppLogger.debug(
+        '현재 사용자 위치 마커 추가: (${location.latitude}, ${location.longitude})',
+        tag: 'GroupMapScreen',
+      );
 
       try {
         // 현재 사용자 마커 - 다른 아이콘 형태로 추가
@@ -377,10 +393,17 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
         // 마커 추가
         _mapController!.addOverlay(userMarker);
       } catch (e) {
-        print('현재 사용자 위치 마커 추가 중 오류: $e');
+        AppLogger.error(
+          '현재 사용자 위치 마커 추가 중 오류',
+          tag: 'GroupMapScreen',
+          error: e,
+        );
       }
     } else {
-      print('현재 사용자 위치 데이터가 없습니다: ${widget.state.currentLocation}');
+      AppLogger.debug(
+        '현재 사용자 위치 데이터가 없습니다: ${widget.state.currentLocation}',
+        tag: 'GroupMapScreen',
+      );
     }
 
     // 모든 마커를 보이게 지도 영역 조정
@@ -441,9 +464,13 @@ class _GroupMapScreenState extends State<GroupMapScreen> {
       final update = NCameraUpdate.fitBounds(bounds);
       _mapController!.updateCamera(update);
 
-      print('카메라 영역을 모든 마커가 보이도록 조정');
+      AppLogger.debug('카메라 영역을 모든 마커가 보이도록 조정', tag: 'GroupMapScreen');
     } catch (e) {
-      print('카메라 영역 조정 중 오류: $e');
+      AppLogger.error(
+        '카메라 영역 조정 중 오류',
+        tag: 'GroupMapScreen',
+        error: e,
+      );
     }
   }
 
