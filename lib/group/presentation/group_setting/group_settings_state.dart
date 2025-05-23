@@ -16,6 +16,14 @@ enum ImageUploadStatus {
   failed, // 업로드 실패
 }
 
+/// 그룹 설정 화면에서 수행 중인 작업 타입
+enum GroupAction {
+  none, // 작업 없음
+  imageUpload, // 이미지 업로드
+  save, // 그룹 정보 저장
+  leave, // 그룹 탈퇴
+}
+
 @freezed
 class GroupSettingsState with _$GroupSettingsState {
   const GroupSettingsState({
@@ -42,6 +50,8 @@ class GroupSettingsState with _$GroupSettingsState {
     this.isLoadingMoreMembers = false,
     this.paginatedMembers = const [],
     this.memberLoadError,
+
+    this.currentAction = GroupAction.none,
   });
 
   final AsyncValue<Group> group;
@@ -70,12 +80,14 @@ class GroupSettingsState with _$GroupSettingsState {
   final List<GroupMember> paginatedMembers; // 페이지네이션된 멤버 목록
   final String? memberLoadError; // 멤버 로딩 전용 에러 메시지
 
+  final GroupAction currentAction;
+
   // 헬퍼 메서드들
 
   /// 이미지 업로드 중인지 확인
   bool get isImageUploading =>
       imageUploadStatus == ImageUploadStatus.compressing ||
-          imageUploadStatus == ImageUploadStatus.uploading;
+      imageUploadStatus == ImageUploadStatus.uploading;
 
   /// 이미지 압축 중인지 확인
   bool get isImageCompressing =>
@@ -98,8 +110,8 @@ class GroupSettingsState with _$GroupSettingsState {
   /// 현재 이미지가 업로드된 네트워크 이미지인지 확인
   bool get hasUploadedImage =>
       imageUrl != null &&
-          imageUrl!.startsWith('http') &&
-          !imageUrl!.startsWith('file://');
+      imageUrl!.startsWith('http') &&
+      !imageUrl!.startsWith('file://');
 
   /// 업로드 진행률 백분율 (0 ~ 100)
   int get uploadProgressPercent => (uploadProgress * 100).round();
@@ -129,9 +141,9 @@ class GroupSettingsState with _$GroupSettingsState {
   /// 저장 가능한지 확인 (편집 중이면서 이미지 처리가 완료된 상태)
   bool get canSave =>
       isEditing &&
-          !isImageProcessing &&
-          name.trim().isNotEmpty &&
-          description.trim().isNotEmpty;
+      !isImageProcessing &&
+      name.trim().isNotEmpty &&
+      description.trim().isNotEmpty;
 
   /// 현재 표시할 이미지 URL 또는 경로
   String? get displayImagePath {
