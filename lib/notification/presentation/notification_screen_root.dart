@@ -1,7 +1,9 @@
+// lib/notification/presentation/notification_screen_root.dart
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_notifier.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -16,7 +18,10 @@ class NotificationScreenRoot extends ConsumerWidget {
     final notifier = ref.watch(notificationNotifierProvider.notifier);
 
     // 디버깅 로그
-    print('ScreenRoot: current state type: ${state.notifications.runtimeType}');
+    AppLogger.debug(
+      '현재 state.notifications 타입: ${state.notifications.runtimeType}',
+      tag: 'NotificationScreenRoot',
+    );
 
     return NotificationScreen(
       state: state,
@@ -46,6 +51,10 @@ class NotificationScreenRoot extends ConsumerWidget {
         (notification) => notification.id == notificationId,
       );
     } catch (e) {
+      AppLogger.warning(
+        '알림을 찾을 수 없습니다: $notificationId',
+        tag: 'NotificationScreenRoot',
+      );
       return; // 알림을 찾지 못함
     }
 
