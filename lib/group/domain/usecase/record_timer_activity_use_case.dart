@@ -1,5 +1,6 @@
 // lib/group/domain/usecase/record_timer_activity_use_case.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -14,11 +15,11 @@ class RecordTimerActivityUseCase {
   /// 현재 시간으로 타이머 활동 기록
   Future<AsyncValue<void>> execute({
     required String groupId,
-    required String activityType, // 'start', 'pause', 'resume', 'end'
+    required TimerActivityType activityType,
   }) async {
     final result = await _repository.recordTimerActivityWithTimestamp(
       groupId,
-      activityType,
+      activityType.value,
       DateTime.now(), // 현재 시간 사용
     );
 
@@ -34,12 +35,12 @@ class RecordTimerActivityUseCase {
   /// 특정 시간으로 타이머 활동 기록
   Future<AsyncValue<void>> executeWithTimestamp({
     required String groupId,
-    required String activityType,
+    required TimerActivityType activityType,
     required DateTime timestamp,
   }) async {
     final result = await _repository.recordTimerActivityWithTimestamp(
       groupId,
-      activityType,
+      activityType.value,
       timestamp,
     );
 
@@ -54,22 +55,22 @@ class RecordTimerActivityUseCase {
 
   /// 타이머 시작
   Future<AsyncValue<void>> start(String groupId) async {
-    return execute(groupId: groupId, activityType: 'start');
+    return execute(groupId: groupId, activityType: TimerActivityType.start);
   }
 
   /// 타이머 일시정지
   Future<AsyncValue<void>> pause(String groupId) async {
-    return execute(groupId: groupId, activityType: 'pause');
+    return execute(groupId: groupId, activityType: TimerActivityType.pause);
   }
 
   /// 타이머 재개
   Future<AsyncValue<void>> resume(String groupId) async {
-    return execute(groupId: groupId, activityType: 'resume');
+    return execute(groupId: groupId, activityType: TimerActivityType.resume);
   }
 
   /// 타이머 종료
   Future<AsyncValue<void>> stop(String groupId) async {
-    return execute(groupId: groupId, activityType: 'end');
+    return execute(groupId: groupId, activityType: TimerActivityType.end);
   }
 
   /// 특정 시간으로 타이머 시작
@@ -79,7 +80,7 @@ class RecordTimerActivityUseCase {
   ) async {
     return executeWithTimestamp(
       groupId: groupId,
-      activityType: 'start',
+      activityType: TimerActivityType.start,
       timestamp: timestamp,
     );
   }
@@ -91,7 +92,7 @@ class RecordTimerActivityUseCase {
   ) async {
     return executeWithTimestamp(
       groupId: groupId,
-      activityType: 'pause',
+      activityType: TimerActivityType.pause,
       timestamp: timestamp,
     );
   }
@@ -103,7 +104,7 @@ class RecordTimerActivityUseCase {
   ) async {
     return executeWithTimestamp(
       groupId: groupId,
-      activityType: 'resume',
+      activityType: TimerActivityType.resume,
       timestamp: timestamp,
     );
   }
@@ -115,7 +116,7 @@ class RecordTimerActivityUseCase {
   ) async {
     return executeWithTimestamp(
       groupId: groupId,
-      activityType: 'end',
+      activityType: TimerActivityType.end,
       timestamp: timestamp,
     );
   }

@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/record_timer_activity_use_case.dart';
@@ -851,7 +852,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _updateCurrentUserInMemberList(isActive: false);
 
     // API 호출 (특정 시간으로 end 기록)
-    await _recordTimerActivityWithTimestamp('end', endTime);
+    await _recordTimerActivityWithTimestamp(TimerActivityType.end, endTime);
 
     // 서버 비정상 종료는 알림 없음, 화면 내 메시지만 표시
     final elapsedTime = DateTime.now().difference(lastActiveTime);
@@ -902,7 +903,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _updateCurrentUserInMemberList(isActive: false);
 
     // API 호출 (특정 시간으로 end 기록)
-    await _recordTimerActivityWithTimestamp('end', endTime);
+    await _recordTimerActivityWithTimestamp(TimerActivityType.end, endTime);
 
     // 서버에서 발견된 경우 알림 없음, 화면 내 메시지만 표시
     final pauseLimit =
@@ -965,14 +966,20 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 1. 어제 23:59:59로 pause 기록
     final yesterdayLastSecond = TimeFormatter.getYesterdayLastSecond();
-    await _recordTimerActivityWithTimestamp('pause', yesterdayLastSecond);
+    await _recordTimerActivityWithTimestamp(
+      TimerActivityType.pause,
+      yesterdayLastSecond,
+    );
 
     // 잠시 대기 (순서 보장)
     await Future.delayed(const Duration(milliseconds: 100));
 
     // 2. 오늘 00:00:00로 resume 기록 (start가 아닌 resume)
     final todayFirstSecond = TimeFormatter.getTodayFirstSecond();
-    await _recordTimerActivityWithTimestamp('resume', todayFirstSecond);
+    await _recordTimerActivityWithTimestamp(
+      TimerActivityType.resume,
+      todayFirstSecond,
+    );
 
     // 로컬 타이머 시작 시간 업데이트
     _localTimerStartTime = todayFirstSecond;
@@ -982,7 +989,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 🔧 특정 시간으로 타이머 활동 기록
   Future<void> _recordTimerActivityWithTimestamp(
-    String type,
+    TimerActivityType type,
     DateTime timestamp,
   ) async {
     print('📝 타이머 활동 기록: type=$type, timestamp=$timestamp');

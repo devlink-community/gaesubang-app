@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/profile/domain/model/focus_time_stats.dart';
 import 'package:intl/intl.dart';
 
@@ -253,16 +254,17 @@ class FocusStatsCalculator {
         DateTime? lastPauseTime;
 
         for (final activity in dayActivities) {
-          final type = activity['type'] as String;
+          final typeString = activity['type'] as String;
+          final type = TimerActivityType.fromString(typeString);
           final timestamp = _parseTimestamp(activity['timestamp']);
 
           switch (type) {
-            case 'start':
+            case TimerActivityType.start:
               sessionStartTime = timestamp;
               lastPauseTime = null;
               break;
 
-            case 'resume':
+            case TimerActivityType.resume:
               // resume은 이전 pause 시점부터 계속
               if (lastPauseTime != null) {
                 // pause-resume 간격은 계산하지 않음
@@ -270,7 +272,7 @@ class FocusStatsCalculator {
               }
               break;
 
-            case 'pause':
+            case TimerActivityType.pause:
               if (sessionStartTime != null) {
                 // start/resume부터 pause까지의 시간 계산
                 final duration = timestamp.difference(sessionStartTime);
@@ -280,7 +282,7 @@ class FocusStatsCalculator {
               }
               break;
 
-            case 'end':
+            case TimerActivityType.end:
               if (sessionStartTime != null) {
                 // start/resume부터 end까지의 시간 계산
                 final duration = timestamp.difference(sessionStartTime);
