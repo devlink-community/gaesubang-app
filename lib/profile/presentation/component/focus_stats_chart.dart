@@ -55,14 +55,24 @@ class _FocusStatsChartState extends State<FocusStatsChart>
 
   @override
   Widget build(BuildContext context) {
-    // 🚀 디버그 로그 추가
-    debugPrint('🚀 FocusStatsChart: 받은 stats = ${widget.stats}');
-    debugPrint(
-      '🚀 FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
-    );
-    debugPrint(
-      '🚀 FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
-    );
+    // 🚀 디버그 로그 추가 - 차트 컴포넌트가 받은 데이터
+    debugPrint('🚀 FocusStatsChart: 컴포넌트가 받은 stats 데이터');
+    debugPrint('  - totalMinutes: ${widget.stats.totalMinutes}');
+
+    if (widget.stats.weeklyMinutes.isEmpty) {
+      debugPrint('  ❌ weeklyMinutes가 비어있음!');
+    } else {
+      debugPrint('  - weeklyMinutes: ${widget.stats.weeklyMinutes}');
+      widget.stats.weeklyMinutes.forEach((day, minutes) {
+        debugPrint('    > $day: $minutes분');
+      });
+    }
+
+    if (widget.stats.dailyMinutes.isEmpty) {
+      debugPrint('  ❌ dailyMinutes가 비어있음!');
+    } else {
+      debugPrint('  - dailyMinutes 항목 수: ${widget.stats.dailyMinutes.length}');
+    }
 
     // 1) 원본 데이터 정렬
     final entries =

@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:flutter/foundation.dart';
 
 class CalculateUserFocusStatsUseCase {
   final AuthRepository _authRepository;
@@ -18,13 +19,13 @@ class CalculateUserFocusStatsUseCase {
   /// 사용자가 참여한 모든 그룹의 출석 데이터를 합산해서 통계 계산
   Future<Result<UserFocusStats>> execute(String userId) async {
     try {
-      print('🔍 CalculateUserFocusStatsUseCase: 사용자 통계 계산 시작');
-      print('🔍 userId: $userId');
+      debugPrint('🔍 CalculateUserFocusStatsUseCase: 사용자 통계 계산 시작');
+      debugPrint('🔍 userId: $userId');
 
       // 1. 사용자 정보 조회 (참여 그룹 목록 포함)
       final userResult = await _authRepository.getUserProfile(userId);
       if (userResult case Error(:final failure)) {
-        print('❌ 사용자 정보 조회 실패: $failure');
+        debugPrint('❌ 사용자 정보 조회 실패: $failure');
         return Error(failure);
       }
 
@@ -36,11 +37,11 @@ class CalculateUserFocusStatsUseCase {
               .cast<String>()
               .toList();
 
-      print('✅ 사용자 참여 그룹: ${joinedGroupIds.length}개');
+      debugPrint('✅ 사용자 참여 그룹: ${joinedGroupIds.length}개');
 
       if (joinedGroupIds.isEmpty) {
         // 참여한 그룹이 없으면 빈 통계 반환
-        print('📊 참여한 그룹이 없어서 빈 통계 반환');
+        debugPrint('📊 참여한 그룹이 없어서 빈 통계 반환');
         return Success(UserFocusStats.empty());
       }
 
@@ -50,20 +51,21 @@ class CalculateUserFocusStatsUseCase {
         joinedGroupIds,
       );
 
-      print('📊 총 출석 데이터: ${allAttendances.length}개');
+      debugPrint('📊 총 출석 데이터: ${allAttendances.length}개');
 
       // 3. 통계 계산
       final stats = _calculateStatsFromAttendances(allAttendances);
 
-      print('✅ 사용자 통계 계산 완료');
-      print('📊 총 집중시간: ${stats.totalFocusMinutes}분');
-      print('📅 이번 주: ${stats.weeklyFocusMinutes}분');
-      print('🔥 연속 학습일: ${stats.streakDays}일');
+      debugPrint('✅ 사용자 통계 계산 완료');
+      debugPrint('📊 총 집중시간: ${stats.totalFocusMinutes}분');
+      debugPrint('📅 이번 주: ${stats.weeklyFocusMinutes}분');
+      debugPrint('🔥 연속 학습일: ${stats.streakDays}일');
+      debugPrint('📊 일별 데이터: ${stats.dailyFocusMinutes.length}개 항목');
 
       return Success(stats);
     } catch (e, stackTrace) {
-      print('❌ CalculateUserFocusStatsUseCase 실행 중 오류: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('❌ CalculateUserFocusStatsUseCase 실행 중 오류: $e');
+      debugPrint('Stack trace: $stackTrace');
       return Error(
         Failure(
           FailureType.unknown,
@@ -125,24 +127,66 @@ class CalculateUserFocusStatsUseCase {
       if (result case Success(:final data)) {
         return data;
       } else {
-        print('⚠️ 그룹 $groupId의 $year-$month 출석 데이터 조회 실패');
+        debugPrint('⚠️ 그룹 $groupId의 $year-$month 출석 데이터 조회 실패');
         return <Attendance>[];
       }
     } catch (e) {
-      print('⚠️ 그룹 $groupId의 $year-$month 출석 데이터 조회 중 오류: $e');
+      debugPrint('⚠️ 그룹 $groupId의 $year-$month 출석 데이터 조회 중 오류: $e');
       return <Attendance>[];
     }
   }
 
   /// 출석 데이터로부터 UserFocusStats 계산
   UserFocusStats _calculateStatsFromAttendances(List<Attendance> attendances) {
-    // 총 집중시간 계산
-    final totalMinutes = attendances.fold<int>(
+    debugPrint('🔍 출석 데이터 기반 통계 계산 시작');
+    debugPrint('📋 총 출석 데이터: ${attendances.length}개');
+
+    // 1. 일별 데이터 계산
+    final dailyFocusMinutes = <String, int>{};
+
+    // 📌 출석 데이터 상세 로그
+    attendances.forEach((attendance) {
+      debugPrint(
+        '  → 출석 데이터: ${UserFocusStats.formatDateKey(attendance.date)}, ${attendance.timeInMinutes}분, 그룹: ${attendance.groupId}',
+      );
+    });
+
+    for (final attendance in attendances) {
+      if (attendance.timeInMinutes <= 0) {
+        debugPrint(
+          '  ⚠️ 출석 데이터 무시됨 (시간 <= 0): ${UserFocusStats.formatDateKey(attendance.date)}',
+        );
+        continue;
+      }
+
+      final dateKey = UserFocusStats.formatDateKey(attendance.date);
+      dailyFocusMinutes[dateKey] =
+          (dailyFocusMinutes[dateKey] ?? 0) + attendance.timeInMinutes;
+
+      debugPrint(
+        '  ✅ 출석 데이터 추가: $dateKey, +${attendance.timeInMinutes}분, 그룹: ${attendance.groupId}',
+      );
+    }
+
+    // 📌 일별 데이터 결과 로그
+    debugPrint('📊 일별 데이터 계산 결과:');
+    if (dailyFocusMinutes.isEmpty) {
+      debugPrint('  ⚠️ 일별 데이터가 비어있습니다!');
+    } else {
+      dailyFocusMinutes.forEach((date, minutes) {
+        debugPrint('  → $date: $minutes분');
+      });
+    }
+
+    // 2. 총 집중시간 계산
+    final totalMinutes = dailyFocusMinutes.values.fold<int>(
       0,
-      (sum, attendance) => sum + attendance.timeInMinutes,
+      (sum, minutes) => sum + minutes,
     );
 
-    // 이번 주 집중시간 계산 (최근 7일)
+    debugPrint('📊 총 집중시간: $totalMinutes분');
+
+    // 3. 이번 주 집중시간 계산 (최근 7일)
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1)); // 이번 주 월요일
     final weekStartDate = DateTime(
@@ -151,68 +195,123 @@ class CalculateUserFocusStatsUseCase {
       weekStart.day,
     );
 
-    final weeklyMinutes = attendances
-        .where(
-          (attendance) =>
-              attendance.date.isAfter(weekStartDate) ||
-              attendance.date.isAtSameMomentAs(weekStartDate),
-        )
-        .fold<int>(0, (sum, attendance) => sum + attendance.timeInMinutes);
+    int weeklyMinutes = 0;
+    for (int i = 0; i < 7; i++) {
+      final date = weekStartDate.add(Duration(days: i));
+      final dateKey = UserFocusStats.formatDateKey(date);
+      final dayMinutes = dailyFocusMinutes[dateKey] ?? 0;
+      weeklyMinutes += dayMinutes;
 
-    // 연속 학습일 계산
-    final streakDays = _calculateStreakDays(attendances);
+      debugPrint(
+        '  → 주간 계산: ${_getWeekdayName(date.weekday)} ($dateKey): $dayMinutes분',
+      );
+    }
+
+    debugPrint('📊 이번 주 집중시간: $weeklyMinutes분');
+
+    // 4. 연속 학습일 계산
+    final streakDays = _calculateStreakDays(dailyFocusMinutes);
+
+    debugPrint('📊 연속 학습일: $streakDays일');
 
     return UserFocusStats(
       totalFocusMinutes: totalMinutes,
       weeklyFocusMinutes: weeklyMinutes,
       streakDays: streakDays,
       lastUpdated: DateTime.now(),
+      dailyFocusMinutes: dailyFocusMinutes,
     );
   }
 
   /// 연속 학습일 계산
-  int _calculateStreakDays(
-    List<Attendance> attendances, {
-    int minMinutes = 25,
-  }) {
-    if (attendances.isEmpty) return 0;
+  int _calculateStreakDays(Map<String, int> dailyData) {
+    debugPrint('🔍 연속 학습일 계산 시작');
 
-    // 유효한 학습일만 필터링 (최소 25분 이상)
-    final validStudyDays =
-        attendances
-            .where((attendance) => attendance.timeInMinutes >= minMinutes)
-            .map((attendance) => attendance.date)
-            .toSet() // 중복 제거 (같은 날 여러 그룹 활동)
-            .toList()
-          ..sort((a, b) => b.compareTo(a)); // 최신순
+    if (dailyData.isEmpty) {
+      debugPrint('  ⚠️ 일별 데이터가 비어있어 연속 학습일은 0일');
+      return 0;
+    }
 
-    if (validStudyDays.isEmpty) return 0;
+    // 날짜 키를 정렬 (최신순)
+    final sortedDates = dailyData.keys.toList()..sort((a, b) => b.compareTo(a));
 
-    // 오늘부터 역순으로 연속일 계산
+    debugPrint('  📅 정렬된 날짜: $sortedDates');
+
+    // 최소 학습 시간 기준 (예: 1분 이상) - 💥 5분→1분으로 수정
+    const minStudyMinutes = 1;
+
+    // 유효한 학습일만 필터링
+    final validDates =
+        sortedDates
+            .where((dateKey) {
+              final minutes = dailyData[dateKey] ?? 0;
+              final isValid = minutes >= minStudyMinutes;
+              debugPrint(
+                '  → $dateKey: $minutes분 (${isValid ? "유효" : "유효하지 않음"})',
+              );
+              return isValid;
+            })
+            .map((dateKey) => DateTime.parse(dateKey))
+            .toList();
+
+    if (validDates.isEmpty) {
+      debugPrint('  ⚠️ 유효한 학습일이 없어 연속 학습일은 0일');
+      return 0;
+    }
+
+    debugPrint('  📅 유효한 학습일: ${validDates.length}일');
+
+    // 오늘 기준으로 연속일 계산
     final today = DateTime.now();
     final todayDateOnly = DateTime(today.year, today.month, today.day);
 
-    int streakDays = 0;
+    debugPrint('  📅 오늘 날짜: ${UserFocusStats.formatDateKey(todayDateOnly)}');
+
+    int streak = 0;
     DateTime checkDate = todayDateOnly;
 
-    for (final studyDate in validStudyDays) {
-      final studyDateOnly = DateTime(
-        studyDate.year,
-        studyDate.month,
-        studyDate.day,
-      );
+    // 오늘부터 거꾸로 검사
+    for (int i = 0; i < 100; i++) {
+      // 안전장치: 최대 100일까지만 확인
+      final checkDateKey = UserFocusStats.formatDateKey(checkDate);
+      final minutes = dailyData[checkDateKey] ?? 0;
 
-      if (studyDateOnly.isAtSameMomentAs(checkDate)) {
-        // 연속된 날짜 발견
-        streakDays++;
+      debugPrint('  → 확인일: $checkDateKey, 집중시간: $minutes분');
+
+      if (minutes >= minStudyMinutes) {
+        streak++;
+        debugPrint('  ✅ 연속일 증가: $streak일');
         checkDate = checkDate.subtract(const Duration(days: 1));
-      } else if (studyDateOnly.isBefore(checkDate)) {
-        // 날짜가 건너뛰어짐 - 연속 끊어짐
-        break;
+      } else {
+        debugPrint('  ❌ 연속 끊김: $checkDateKey에 집중 기록 없음');
+        break; // 연속이 끊기면 종료
       }
-      // studyDate가 checkDate보다 미래면 건너뜀
     }
 
-    return streakDays;
+    debugPrint('📊 최종 연속 학습일: $streak일');
+
+    return streak;
+  }
+
+  // 요일 이름 가져오기 헬퍼 메서드
+  String _getWeekdayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return '월';
+      case 2:
+        return '화';
+      case 3:
+        return '수';
+      case 4:
+        return '목';
+      case 5:
+        return '금';
+      case 6:
+        return '토';
+      case 7:
+        return '일';
+      default:
+        return '?';
+    }
   }
 }

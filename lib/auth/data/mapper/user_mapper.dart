@@ -5,6 +5,7 @@ import '../../../core/utils/focus_stats_calculator.dart';
 import '../../../profile/domain/model/focus_time_stats.dart';
 import '../../domain/model/member.dart';
 import '../../domain/model/terms_agreement.dart';
+import '../../domain/model/user_focus_stats.dart'; // 🆕 UserFocusStats 임포트 추가
 import '../dto/joined_group_dto.dart';
 import '../dto/timer_activity_dto.dart';
 
@@ -48,31 +49,41 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
     // 기본 Member 정보 변환
     final member = toMember();
 
-    // 🚀 1. Firebase User 문서에 저장된 통계 확인
-    final firebaseTotalMinutes = this['totalFocusMinutes'] as int? ?? 0;
-    final firebaseWeeklyMinutes = this['weeklyFocusMinutes'] as int? ?? 0;
-    final firebaseStreakDays = this['streakDays'] as int? ?? 0;
+    // 🚀 1. Firebase User 문서에 저장된 통계 데이터 확인
+    final userFocusStats = _extractUserFocusStats();
 
-    // 🚀 2. Firebase 통계가 있으면 우선 사용
-    if (firebaseTotalMinutes > 0 ||
-        firebaseWeeklyMinutes > 0 ||
-        firebaseStreakDays > 0) {
+    // 🚀 2. UserFocusStats가 유효하면 FocusTimeStats로 변환
+    if (userFocusStats.hasValidData) {
       debugPrint('🚀 Firebase 저장된 통계 사용:');
-      debugPrint('  - totalFocusMinutes: $firebaseTotalMinutes');
-      debugPrint('  - weeklyFocusMinutes: $firebaseWeeklyMinutes');
-      debugPrint('  - streakDays: $firebaseStreakDays');
-
-      final focusStats = _createFocusStatsFromFirebaseData(
-        totalMinutes: firebaseTotalMinutes,
-        weeklyMinutes: firebaseWeeklyMinutes,
+      debugPrint('  - totalFocusMinutes: ${userFocusStats.totalFocusMinutes}');
+      debugPrint(
+        '  - weeklyFocusMinutes: ${userFocusStats.weeklyFocusMinutes}',
       );
+      debugPrint('  - streakDays: ${userFocusStats.streakDays}');
+      debugPrint(
+        '  - dailyFocusMinutes: ${userFocusStats.dailyFocusMinutes.length}개 항목',
+      );
+
+      // UserFocusStats를 FocusTimeStats로 변환
+      final focusStats = userFocusStats.toFocusTimeStats();
+
+      // 디버그 출력 추가
+      debugPrint('🚀 변환된 FocusTimeStats:');
+      debugPrint('  - totalMinutes: ${focusStats.totalMinutes}');
+      debugPrint('  - weeklyMinutes: ${focusStats.weeklyMinutes}');
+      debugPrint('  - dailyMinutes: ${focusStats.dailyMinutes.length}개 항목');
+
+      // 상세 로그 추가
+      focusStats.weeklyMinutes.forEach((day, minutes) {
+        debugPrint('    > $day: ${minutes}분');
+      });
 
       return member.copyWith(
         focusStats: focusStats,
-        totalFocusMinutes: firebaseTotalMinutes,
-        weeklyFocusMinutes: firebaseWeeklyMinutes,
-        streakDays: firebaseStreakDays,
-        lastStatsUpdated: _parseTimestamp(this['lastStatsUpdated']),
+        totalFocusMinutes: userFocusStats.totalFocusMinutes,
+        weeklyFocusMinutes: userFocusStats.weeklyFocusMinutes,
+        streakDays: userFocusStats.streakDays,
+        lastStatsUpdated: userFocusStats.lastUpdated,
       );
     }
 
@@ -91,8 +102,8 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
               )
               .toList();
 
-      // FocusStats 계산
-      final focusStats = FocusStatsCalculator.calculateFromActivities(
+      // FocusStats 계산 - 일별 데이터도 포함하도록 수정
+      final focusStats = FocusStatsCalculator.calculateFromActivitiesWithDaily(
         activities,
       );
 
@@ -103,38 +114,43 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
     // 🚀 4. 둘 다 없으면 기본 통계 반환
     debugPrint('🚀 기본 통계 반환 (데이터 없음)');
     return member.copyWith(
-      focusStats: const FocusTimeStats(
-        totalMinutes: 0,
-        weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
-      ),
+      focusStats: FocusTimeStats.empty(),
     );
   }
 
-  /// 🚀 Firebase 통계 데이터로 FocusTimeStats 생성
-  FocusTimeStats _createFocusStatsFromFirebaseData({
-    required int totalMinutes,
-    required int weeklyMinutes,
-  }) {
-    // 요일별 분배 (간단한 균등 분배)
-    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final weeklyMinutesMap = <String, int>{};
+  /// 🚀 Firebase 통계 데이터에서 UserFocusStats 객체 추출
+  UserFocusStats _extractUserFocusStats() {
+    // 1. Firebase 저장된 통계 기본 필드
+    final totalFocusMinutes = this['totalFocusMinutes'] as int? ?? 0;
+    final weeklyFocusMinutes = this['weeklyFocusMinutes'] as int? ?? 0;
+    final streakDays = this['streakDays'] as int? ?? 0;
 
-    if (weeklyMinutes > 0) {
-      final avgPerDay = weeklyMinutes ~/ 7;
-      final remainder = weeklyMinutes % 7;
+    // 2. 일별 데이터 추출
+    final rawDailyData = this['dailyFocusMinutes'];
+    final dailyFocusMinutes = <String, int>{};
 
-      for (int i = 0; i < weekdays.length; i++) {
-        weeklyMinutesMap[weekdays[i]] = avgPerDay + (i < remainder ? 1 : 0);
-      }
+    if (rawDailyData != null && rawDailyData is Map) {
+      debugPrint('🔍 일별 데이터 발견! ${rawDailyData.length}개 항목');
+      rawDailyData.forEach((key, value) {
+        if (value is num) {
+          dailyFocusMinutes[key.toString()] = value.toInt();
+          debugPrint('  → $key: ${value.toInt()}분');
+        }
+      });
     } else {
-      for (final day in weekdays) {
-        weeklyMinutesMap[day] = 0;
-      }
+      debugPrint('⚠️ 일별 데이터가 없거나 유효하지 않음: $rawDailyData');
     }
 
-    return FocusTimeStats(
-      totalMinutes: totalMinutes,
-      weeklyMinutes: weeklyMinutesMap,
+    // 3. lastStatsUpdated 처리
+    final lastStatsUpdated = _parseTimestamp(this['lastStatsUpdated']);
+
+    // 4. UserFocusStats 객체 생성
+    return UserFocusStats(
+      totalFocusMinutes: totalFocusMinutes,
+      weeklyFocusMinutes: weeklyFocusMinutes,
+      streakDays: streakDays,
+      lastUpdated: lastStatsUpdated,
+      dailyFocusMinutes: dailyFocusMinutes,
     );
   }
 
@@ -154,25 +170,19 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
 
   /// 별도의 FocusStats만 계산 (캐싱된 Member가 있을 때 통계만 업데이트하는 경우)
   FocusTimeStats? toFocusStats() {
-    // 🚀 1. Firebase 통계 먼저 확인
-    final firebaseTotalMinutes = this['totalFocusMinutes'] as int? ?? 0;
-    final firebaseWeeklyMinutes = this['weeklyFocusMinutes'] as int? ?? 0;
+    // 🚀 1. UserFocusStats 추출
+    final userFocusStats = _extractUserFocusStats();
 
-    if (firebaseTotalMinutes > 0 || firebaseWeeklyMinutes > 0) {
-      return _createFocusStatsFromFirebaseData(
-        totalMinutes: firebaseTotalMinutes,
-        weeklyMinutes: firebaseWeeklyMinutes,
-      );
+    // 🚀 2. 유효한 데이터가 있으면 FocusTimeStats로 변환
+    if (userFocusStats.hasValidData) {
+      return userFocusStats.toFocusTimeStats();
     }
 
-    // 🚀 2. Firebase 통계가 없으면 타이머 활동에서 계산
+    // 🚀 3. Firebase 통계가 없으면 타이머 활동에서 계산
     final timerActivitiesData = this['timerActivities'] as List<dynamic>?;
 
     if (timerActivitiesData == null || timerActivitiesData.isEmpty) {
-      return const FocusTimeStats(
-        totalMinutes: 0,
-        weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
-      );
+      return FocusTimeStats.empty();
     }
 
     final activities =
@@ -183,7 +193,7 @@ extension MapToMemberWithStatsMapper on Map<String, dynamic> {
             )
             .toList();
 
-    return FocusStatsCalculator.calculateFromActivities(activities);
+    return FocusStatsCalculator.calculateFromActivitiesWithDaily(activities);
   }
 }
 
@@ -243,29 +253,29 @@ extension MapToTermsAgreementMapper on Map<String, dynamic> {
       agreedAt: _parseTimestamp(this['agreedAt']),
     );
   }
+}
 
-  // 안전한 Timestamp 파싱 헬퍼
-  DateTime? _parseTimestamp(dynamic timestamp) {
-    if (timestamp == null) return null;
+// 안전한 Timestamp 파싱 헬퍼
+DateTime? _parseTimestamp(dynamic timestamp) {
+  if (timestamp == null) return null;
 
-    if (timestamp is String) {
-      try {
-        return DateTime.parse(timestamp);
-      } catch (e) {
-        return null;
-      }
+  if (timestamp is String) {
+    try {
+      return DateTime.parse(timestamp);
+    } catch (e) {
+      return null;
     }
-
-    // Firebase Timestamp 처리 (import 필요시)
-    if (timestamp.toString().contains('Timestamp')) {
-      try {
-        // Firebase Timestamp의 toDate() 메서드 호출
-        return (timestamp as dynamic).toDate() as DateTime?;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    return null;
   }
+
+  // Firebase Timestamp 처리 (import 필요시)
+  if (timestamp.toString().contains('Timestamp')) {
+    try {
+      // Firebase Timestamp의 toDate() 메서드 호출
+      return (timestamp as dynamic).toDate() as DateTime?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  return null;
 }

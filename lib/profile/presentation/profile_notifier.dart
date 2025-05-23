@@ -1,5 +1,4 @@
-// lib/profile/presentation/profile_notifier.dart 수정사항
-
+// lib/profile/presentation/profile_notifier.dart
 import 'package:flutter/cupertino.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -69,19 +68,55 @@ class ProfileNotifier extends _$ProfileNotifier {
       switch (userProfileResult) {
         case AsyncData(:final value):
           debugPrint('✅ ProfileNotifier: 사용자 프로필 로드 완료');
-          debugPrint('📊 Firebase 통계 - 총 집중시간: ${value.totalFocusMinutes}분');
-          debugPrint('📊 Firebase 통계 - 이번 주: ${value.weeklyFocusMinutes}분');
-          debugPrint('🔥 Firebase 통계 - 연속일: ${value.streakDays}일');
+          debugPrint('📊 Firebase 통계 원본 데이터:');
+          debugPrint('  - 총 집중시간: ${value.totalFocusMinutes}분');
+          debugPrint('  - 이번 주: ${value.weeklyFocusMinutes}분');
+          debugPrint('  - 연속일: ${value.streakDays}일');
+
+          // 📌 원본 데이터 검사 추가
+          if (value.focusStats == null) {
+            debugPrint('⚠️ Member.focusStats가 null입니다!');
+          }
 
           // 🚀 Member에 포함된 FocusStats 사용
           final focusStats = value.focusStats ?? _getDefaultStats();
 
-          debugPrint('📊 FocusStats 확인:');
+          debugPrint('📊 FocusStats 상세 로그:');
           debugPrint('  - totalMinutes: ${focusStats.totalMinutes}');
-          debugPrint('  - weeklyMinutes: ${focusStats.weeklyMinutes}');
+          debugPrint('  - dailyMinutes: ${focusStats.dailyMinutes.length}개 항목');
+
+          // 📌 상세 데이터 검사 추가
+          debugPrint('  - dailyMinutes 상세:');
+          if (focusStats.dailyMinutes.isEmpty) {
+            debugPrint('    ❌ dailyMinutes가 비어있습니다!');
+          } else {
+            focusStats.dailyMinutes.forEach((date, minutes) {
+              debugPrint('    > $date: $minutes분');
+            });
+          }
+
+          debugPrint('  - weeklyMinutes 상세:');
+          if (focusStats.weeklyMinutes.isEmpty) {
+            debugPrint('    ❌ weeklyMinutes가 비어있습니다!');
+          } else {
+            focusStats.weeklyMinutes.forEach((day, minutes) {
+              debugPrint('    > $day: $minutes분');
+            });
+          }
 
           // 최종 상태 업데이트
           if (state.activeRequestId == currentRequestId) {
+            // 📌 데이터가 없는 경우 확인 로직 추가
+            if (focusStats.totalMinutes == 0 &&
+                focusStats.weeklyMinutes.values.every((m) => m == 0) &&
+                focusStats.dailyMinutes.isEmpty) {
+              debugPrint('⚠️ 모든 통계 데이터가 0이거나 비어 있습니다!');
+            }
+
+            debugPrint('📊 차트에 전달되는 데이터:');
+            debugPrint('  - 총 시간: ${focusStats.totalMinutes}분');
+            debugPrint('  - 요일별 데이터: ${focusStats.weeklyMinutes}');
+
             state = state.copyWith(
               userProfile: userProfileResult,
               focusStats: AsyncData(focusStats),
@@ -89,7 +124,6 @@ class ProfileNotifier extends _$ProfileNotifier {
             );
 
             debugPrint('✅ ProfileNotifier: Firebase 통계 기반 데이터 로드 완료');
-            debugPrint('📊 차트에 전달된 데이터: ${focusStats.totalMinutes}분');
           } else {
             debugPrint(
               '⚠️ ProfileNotifier: 요청 완료 시점에 다른 요청이 진행 중이므로 상태 업데이트 무시',
@@ -114,6 +148,7 @@ class ProfileNotifier extends _$ProfileNotifier {
       }
     } catch (e, st) {
       debugPrint('❌ ProfileNotifier: 데이터 로드 중 예외 발생: $e');
+      debugPrint('Stack trace: $st');
 
       // 예외 발생 시에도 요청 ID 확인
       final currentRequestId = state.activeRequestId;
@@ -129,10 +164,8 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   /// 기본 통계 반환 (데이터가 없을 때 사용)
   FocusTimeStats _getDefaultStats() {
-    return const FocusTimeStats(
-      totalMinutes: 0,
-      weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
-    );
+    debugPrint('ℹ️ 기본 통계 생성 (데이터 없음)');
+    return FocusTimeStats.empty();
   }
 
   /// 화면 액션 처리

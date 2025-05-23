@@ -1,16 +1,23 @@
 // lib/core/utils/focus_stats_calculator.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
-import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
-import 'package:devlink_mobile_app/profile/domain/model/focus_time_stats.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../auth/data/dto/timer_activity_dto.dart';
+import '../../group/domain/model/attendance.dart';
+import '../../profile/domain/model/focus_time_stats.dart';
+
+/// 타이머 활동 데이터로부터 집중 시간 통계를 계산하는 유틸리티
 class FocusStatsCalculator {
   const FocusStatsCalculator._();
 
-  /// 타이머 활동 로그를 기반으로 집중 통계 계산
+  /// 타이머 활동 목록에서 집중 시간 통계 계산
   static FocusTimeStats calculateFromActivities(
     List<TimerActivityDto> activities,
   ) {
+    if (activities.isEmpty) {
+      return FocusTimeStats.empty();
+    }
+
     // 총 집중 시간 계산
     int totalMinutes = 0;
 
@@ -47,6 +54,7 @@ class FocusStatsCalculator {
         case 'start':
           // 새 타이머 세션 시작
           startTime = timestamp;
+          break;
 
         case 'pause':
           // 현재 실행 중인 타이머가 있는 경우에만 처리
@@ -66,6 +74,7 @@ class FocusStatsCalculator {
             // 시작 시간 초기화 (일시정지 후에는 새로운 start가 와야 함)
             startTime = null;
           }
+          break;
 
         case 'end':
           // 타이머가 실행 중인 경우에만 처리
@@ -85,13 +94,220 @@ class FocusStatsCalculator {
             // 시작 시간 초기화
             startTime = null;
           }
+          break;
       }
     }
 
     return FocusTimeStats(
       totalMinutes: totalMinutes,
       weeklyMinutes: weeklyMinutes,
+      dailyMinutes: {}, // 기존 호환성을 위해 빈 맵 전달
     );
+  }
+
+  /// 🆕 타이머 활동 목록에서 일별 상세 데이터를 포함한 집중 시간 통계 계산
+  static FocusTimeStats calculateFromActivitiesWithDaily(
+    List<TimerActivityDto> activities,
+  ) {
+    if (activities.isEmpty) {
+      return FocusTimeStats.empty();
+    }
+
+    // 1. 일별 집중 시간 계산
+    final dailyMinutes = _calculateDailyMinutes(activities);
+
+    // 2. 일별 데이터에서 요일별 데이터 생성
+    final weeklyMinutes = FocusTimeStats.calculateWeeklyFromDaily(dailyMinutes);
+
+    // 3. 총 시간 계산
+    final totalMinutes = dailyMinutes.values.fold(0, (sum, mins) => sum + mins);
+
+    debugPrint('🔄 일별 통계 계산 결과:');
+    debugPrint('  - 총 시간: $totalMinutes분');
+    debugPrint('  - 일별 데이터: ${dailyMinutes.length}개 항목');
+    debugPrint('  - 요일별 데이터: $weeklyMinutes');
+
+    return FocusTimeStats(
+      totalMinutes: totalMinutes,
+      weeklyMinutes: weeklyMinutes,
+      dailyMinutes: dailyMinutes,
+    );
+  }
+
+  /// 🆕 타이머 활동에서 일별 집중 시간 계산 (YYYY-MM-DD => 분)
+  static Map<String, int> _calculateDailyMinutes(
+    List<TimerActivityDto> activities,
+  ) {
+    final dailyMinutes = <String, int>{};
+
+    // 타입과 시간순으로 정렬
+    final sortedActivities = List<TimerActivityDto>.from(activities)
+      ..sort((a, b) {
+        if (a.timestamp == null || b.timestamp == null) return 0;
+        return a.timestamp!.compareTo(b.timestamp!);
+      });
+
+    TimerActivityDto? startActivity;
+
+    for (final activity in sortedActivities) {
+      if (activity.timestamp == null) continue;
+
+      // 날짜 키 생성 (YYYY-MM-DD)
+      final dateKey = _formatDateKey(activity.timestamp!);
+
+      switch (activity.type) {
+        case 'start':
+          startActivity = activity;
+          break;
+
+        case 'end':
+          if (startActivity != null && startActivity.timestamp != null) {
+            // 같은 날짜에 속하는 경우만 계산
+            final startDateKey = _formatDateKey(startActivity.timestamp!);
+
+            if (dateKey == startDateKey) {
+              // 시작-종료 사이의 시간 계산 (분 단위)
+              final durationMinutes =
+                  activity.timestamp!
+                      .difference(startActivity.timestamp!)
+                      .inMinutes;
+
+              // 유효한 시간만 추가 (1분 이상)
+              if (durationMinutes > 0) {
+                dailyMinutes[dateKey] =
+                    (dailyMinutes[dateKey] ?? 0) + durationMinutes;
+                debugPrint('📊 $dateKey: +$durationMinutes분 추가 (start-end 페어)');
+              }
+            } else {
+              // 다른 날짜에 걸친 경우, 각 날짜에 적절히 분배
+              _distributeMinutesAcrossDays(
+                startActivity.timestamp!,
+                activity.timestamp!,
+                dailyMinutes,
+              );
+            }
+
+            startActivity = null;
+          }
+          break;
+
+        case 'pause':
+          if (startActivity != null && startActivity.timestamp != null) {
+            // 일시정지 시점까지의 시간 계산
+            final durationMinutes =
+                activity.timestamp!
+                    .difference(startActivity.timestamp!)
+                    .inMinutes;
+
+            if (durationMinutes > 0) {
+              dailyMinutes[dateKey] =
+                  (dailyMinutes[dateKey] ?? 0) + durationMinutes;
+              debugPrint('📊 $dateKey: +$durationMinutes분 추가 (start-pause)');
+            }
+
+            startActivity = null;
+          }
+          break;
+
+        case 'resume':
+          startActivity = activity;
+          break;
+      }
+    }
+
+    // 마지막 start/resume 후 end가 없는 경우 처리 (현재 시간까지 계산)
+    if (startActivity != null && startActivity.timestamp != null) {
+      final now = DateTime.now();
+      final dateKey = _formatDateKey(startActivity.timestamp!);
+      final nowDateKey = _formatDateKey(now);
+
+      if (dateKey == nowDateKey) {
+        // 같은 날짜에 속하는 경우
+        final durationMinutes =
+            now.difference(startActivity.timestamp!).inMinutes;
+
+        if (durationMinutes > 0 && durationMinutes < 480) {
+          // 8시간 이상은 제외 (비정상 케이스)
+          dailyMinutes[dateKey] =
+              (dailyMinutes[dateKey] ?? 0) + durationMinutes;
+          debugPrint('📊 $dateKey: +$durationMinutes분 추가 (start-now)');
+        }
+      } else {
+        // 다른 날짜에 걸친 경우
+        _distributeMinutesAcrossDays(
+          startActivity.timestamp!,
+          now,
+          dailyMinutes,
+        );
+      }
+    }
+
+    return dailyMinutes;
+  }
+
+  /// 🆕 날짜를 넘어가는 경우 각 날짜에 시간 분배
+  static void _distributeMinutesAcrossDays(
+    DateTime start,
+    DateTime end,
+    Map<String, int> dailyMinutes,
+  ) {
+    // 시작일의 끝 시간 (23:59:59)
+    final startDayEnd = DateTime(
+      start.year,
+      start.month,
+      start.day,
+      23,
+      59,
+      59,
+    );
+
+    // 시작일에 할당할 시간 (분)
+    if (startDayEnd.isAfter(start)) {
+      final startDayMinutes =
+          startDayEnd.difference(start).inMinutes + 1; // 23:59:59까지이므로 +1분
+
+      if (startDayMinutes > 0) {
+        final startDateKey = _formatDateKey(start);
+        dailyMinutes[startDateKey] =
+            (dailyMinutes[startDateKey] ?? 0) + startDayMinutes;
+        debugPrint('📊 $startDateKey: +$startDayMinutes분 추가 (날짜 경계 - 시작일)');
+      }
+    }
+
+    // 중간 날짜들 처리 (시작일+1부터 종료일-1까지)
+    var currentDate = DateTime(start.year, start.month, start.day + 1);
+
+    while (currentDate.year < end.year ||
+        (currentDate.year == end.year && currentDate.month < end.month) ||
+        (currentDate.year == end.year &&
+            currentDate.month == end.month &&
+            currentDate.day < end.day)) {
+      final dateKey = _formatDateKey(currentDate);
+      // 하루 전체 (24시간 = 1440분)
+      dailyMinutes[dateKey] = (dailyMinutes[dateKey] ?? 0) + 1440;
+      debugPrint('📊 $dateKey: +1440분 추가 (날짜 경계 - 중간일)');
+
+      // 다음 날로 이동
+      currentDate = DateTime(
+        currentDate.year,
+        currentDate.month,
+        currentDate.day + 1,
+      );
+    }
+
+    // 종료일에 할당할 시간
+    final endDayStart = DateTime(end.year, end.month, end.day, 0, 0, 0);
+
+    if (end.isAfter(endDayStart)) {
+      final endDayMinutes = end.difference(endDayStart).inMinutes;
+
+      if (endDayMinutes > 0) {
+        final endDateKey = _formatDateKey(end);
+        dailyMinutes[endDateKey] =
+            (dailyMinutes[endDateKey] ?? 0) + endDayMinutes;
+        debugPrint('📊 $endDateKey: +$endDayMinutes분 추가 (날짜 경계 - 종료일)');
+      }
+    }
   }
 
   /// 특정 기간의 집중 시간 계산
@@ -133,6 +349,7 @@ class FocusStatsCalculator {
         case 'start':
           // 새 타이머 세션 시작
           startTime = timestamp;
+          break;
 
         case 'pause':
           // 현재 실행 중인 타이머가 있는 경우에만 처리
@@ -147,6 +364,7 @@ class FocusStatsCalculator {
             // 시작 시간 초기화 (일시정지 후에는 새로운 start가 와야 함)
             startTime = null;
           }
+          break;
 
         case 'end':
           // 타이머가 실행 중인 경우에만 처리
@@ -161,32 +379,11 @@ class FocusStatsCalculator {
             // 시작 시간 초기화
             startTime = null;
           }
+          break;
       }
     }
 
     return totalMinutes;
-  }
-
-  /// 요일 숫자를 한글 요일로 변환
-  static String _getKoreanWeekday(int weekday) {
-    switch (weekday) {
-      case 1:
-        return '월';
-      case 2:
-        return '화';
-      case 3:
-        return '수';
-      case 4:
-        return '목';
-      case 5:
-        return '금';
-      case 6:
-        return '토';
-      case 7:
-        return '일';
-      default:
-        return '월';
-    }
   }
 
   /// 오늘의 집중 시간 계산
@@ -414,5 +611,32 @@ class FocusStatsCalculator {
     return '${dateTime.year.toString().padLeft(4, '0')}-'
         '${dateTime.month.toString().padLeft(2, '0')}-'
         '${dateTime.day.toString().padLeft(2, '0')}';
+  }
+
+  /// 요일 숫자를 한글 요일로 변환
+  static String _getKoreanWeekday(int weekday) {
+    switch (weekday) {
+      case 1:
+        return '월';
+      case 2:
+        return '화';
+      case 3:
+        return '수';
+      case 4:
+        return '목';
+      case 5:
+        return '금';
+      case 6:
+        return '토';
+      case 7:
+        return '일';
+      default:
+        return '월';
+    }
+  }
+
+  /// 🆕 날짜를 키 형식으로 변환 (YYYY-MM-DD)
+  static String _formatDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
