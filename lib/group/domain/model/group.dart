@@ -18,7 +18,7 @@ class Group with _$Group {
     required this.hashTags,
     required this.memberCount,
     this.isJoinedByCurrentUser = false,
-    this.pauseTimeLimit = 120, // 추가: 기본값 120분 (2시간)
+    this.pauseTimeLimit = 1, // 추가: 기본값 120분 (2시간)
   });
 
   final String id;

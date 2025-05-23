@@ -69,7 +69,7 @@ abstract interface class GroupDataSource {
   /// 특정 시간으로 타이머 활동 기록 - 내부에서 현재 사용자 정보 처리
   Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
     String groupId,
-    String activityType, // 'start', 'pause', 'end'
+    String activityType, // 'start', 'pause', 'resume', 'end'
     DateTime timestamp,
   );
 

@@ -14,7 +14,7 @@ class RecordTimerActivityUseCase {
   /// 현재 시간으로 타이머 활동 기록
   Future<AsyncValue<void>> execute({
     required String groupId,
-    required String activityType, // 'start', 'pause', 'end'
+    required String activityType, // 'start', 'pause', 'resume', 'end'
   }) async {
     final result = await _repository.recordTimerActivityWithTimestamp(
       groupId,
@@ -62,6 +62,11 @@ class RecordTimerActivityUseCase {
     return execute(groupId: groupId, activityType: 'pause');
   }
 
+  /// 타이머 재개
+  Future<AsyncValue<void>> resume(String groupId) async {
+    return execute(groupId: groupId, activityType: 'resume');
+  }
+
   /// 타이머 종료
   Future<AsyncValue<void>> stop(String groupId) async {
     return execute(groupId: groupId, activityType: 'end');
@@ -87,6 +92,18 @@ class RecordTimerActivityUseCase {
     return executeWithTimestamp(
       groupId: groupId,
       activityType: 'pause',
+      timestamp: timestamp,
+    );
+  }
+
+  /// 특정 시간으로 타이머 재개
+  Future<AsyncValue<void>> resumeWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return executeWithTimestamp(
+      groupId: groupId,
+      activityType: 'resume',
       timestamp: timestamp,
     );
   }
