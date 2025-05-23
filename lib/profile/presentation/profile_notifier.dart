@@ -69,6 +69,22 @@ class ProfileNotifier extends _$ProfileNotifier {
 
           // Member에 이미 포함된 focusStats 활용
           final focusStats = value.focusStats ?? _getDefaultStats();
+          debugPrint('📊 최종 FocusStats:');
+          debugPrint('  - totalMinutes: ${focusStats.totalMinutes}');
+          debugPrint('  - weeklyMinutes: ${focusStats.weeklyMinutes}');
+
+          // ✅ 데이터가 0이어도 정상적으로 AsyncData로 설정
+          if (state.activeRequestId == currentRequestId) {
+            state = state.copyWith(
+              userProfile: userProfileResult,
+              focusStats: AsyncData(focusStats), // 항상 AsyncData로 설정
+              activeRequestId: null,
+            );
+
+            debugPrint(
+              '✅ ProfileNotifier: 통계 데이터 설정 완료 (totalMinutes: ${focusStats.totalMinutes})',
+            );
+          }
 
           // 최종 상태 업데이트 - 단일 호출로 두 상태 모두 업데이트
           // 요청 ID가 여전히 유효한지 한 번 더 확인
@@ -119,6 +135,7 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   /// 기본 통계 반환 (데이터가 없을 때 사용)
   FocusTimeStats _getDefaultStats() {
+    debugPrint('🔧 ProfileNotifier: 기본(빈) 통계 생성 중');
     return const FocusTimeStats(
       totalMinutes: 0,
       weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
