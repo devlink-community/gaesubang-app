@@ -9,7 +9,6 @@ import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart'
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_notifier.g.dart';
