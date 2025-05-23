@@ -91,12 +91,42 @@ class FirebaseAIClient {
     }
   }
 
+  Future<String> callTextModelForChat(String prompt) async {
+    try {
+      if (!_initialized) await initialize();
+
+      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
+
+      debugPrint(
+        'Gemini 챗봇 API 호출: ${prompt.substring(0, min(50, prompt.length))}...',
+      );
+
+      final response = await _generativeModel.generateContent([
+        Content.text(enhancedPrompt),
+      ]);
+
+      final responseText = response.text;
+      if (responseText == null || responseText.isEmpty) {
+        throw Exception('응답이 비어있습니다');
+      }
+
+      debugPrint(
+        'Gemini 챗봇 응답: ${responseText.substring(0, min(100, responseText.length))}...',
+      );
+
+      return responseText.trim();
+    } catch (e) {
+      debugPrint('Gemini 챗봇 API 호출 실패: $e');
+      rethrow;
+    }
+  }
+
   /// 텍스트 생성 API 호출 - 단일 JSON 객체 반환
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
       if (!_initialized) await initialize();
 
-      // 캐시 방지를 위한 고유 ID 추가
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
@@ -104,12 +134,10 @@ class FirebaseAIClient {
         'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
       );
 
-      // Firebase AI SDK를 사용한 간단한 호출
       final response = await _generativeModel.generateContent([
         Content.text(enhancedPrompt),
       ]);
 
-      // 응답 텍스트 추출
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
         throw Exception('응답이 비어있습니다');

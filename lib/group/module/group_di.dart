@@ -29,6 +29,8 @@ import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../domain/usecase/send_bot_use_case.dart';
+
 part 'group_di.g.dart';
 
 // ==================== 그룹 관련 DI ====================
@@ -170,3 +172,7 @@ RecordTimerActivityUseCase recordTimerActivityUseCase(Ref ref) {
     repository: ref.watch(groupRepositoryProvider),
   );
 }
+
+@riverpod
+SendBotMessageUseCase sendBotMessageUseCase(Ref ref) =>
+    SendBotMessageUseCase(repository: ref.watch(groupChatRepositoryProvider));
