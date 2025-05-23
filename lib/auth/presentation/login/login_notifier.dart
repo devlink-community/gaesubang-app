@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -20,12 +21,17 @@ class LoginNotifier extends _$LoginNotifier {
   @override
   LoginState build() {
     _loginUseCase = ref.watch(loginUseCaseProvider);
+
     AppLogger.authInfo('LoginNotifier 초기화 완료');
+
     return const LoginState(loginUserResult: null);
   }
 
   Future<void> onAction(LoginAction action) async {
-    AppLogger.debug('LoginAction 수신: ${action.runtimeType}');
+    AppLogger.debug(
+      'LoginAction 수신: ${action.runtimeType}',
+      tag: 'LoginNotifier',
+    );
 
     switch (action) {
       case LoginPressed(:final email, :final password):
@@ -45,15 +51,21 @@ class LoginNotifier extends _$LoginNotifier {
   }
 
   Future<void> _handleLogin(String email, String password) async {
-    AppLogger.logBox('로그인 시도', '이메일: ${_maskEmail(email)}');
+    final maskedEmail = PrivacyMaskUtil.maskEmail(email);
     final startTime = DateTime.now();
+
+    AppLogger.logBox('로그인 시도', '이메일: $maskedEmail');
 
     try {
       // 1. 입력값 기본 검증
       AppLogger.logStep(1, 4, '입력값 유효성 검사');
       final validationResult = _validateLoginInput(email, password);
       if (validationResult != null) {
-        AppLogger.warning('로그인 입력값 검증 실패: $validationResult');
+        AppLogger.warning(
+          '로그인 입력값 검증 실패: $validationResult',
+          tag: 'LoginValidation',
+        );
+
         state = state.copyWith(
           loginErrorMessage: validationResult,
           loginUserResult: null,
@@ -65,7 +77,11 @@ class LoginNotifier extends _$LoginNotifier {
       AppLogger.logStep(2, 4, '이메일 형식 검증');
       final emailError = AuthValidator.validateEmail(email);
       if (emailError != null) {
-        AppLogger.warning('이메일 형식 오류: $emailError');
+        AppLogger.warning(
+          '이메일 형식 오류: $emailError',
+          tag: 'LoginValidation',
+        );
+
         state = state.copyWith(
           loginErrorMessage: emailError,
           loginUserResult: null,
@@ -92,7 +108,13 @@ class LoginNotifier extends _$LoginNotifier {
     } catch (e, st) {
       final duration = DateTime.now().difference(startTime);
       AppLogger.logPerformance('로그인 처리 실패', duration);
-      AppLogger.error('로그인 처리 중 예외 발생', error: e, stackTrace: st);
+
+      AppLogger.error(
+        '로그인 처리 중 예외 발생',
+        tag: 'LoginProcess',
+        error: e,
+        stackTrace: st,
+      );
 
       state = state.copyWith(
         loginErrorMessage: AuthErrorMessages.loginFailed,
@@ -103,27 +125,63 @@ class LoginNotifier extends _$LoginNotifier {
 
   /// 로그인 입력값 검증
   String? _validateLoginInput(String email, String password) {
+    AppLogger.debug(
+      '입력값 검증 시작',
+      tag: 'LoginValidation',
+    );
+
     if (email.isEmpty && password.isEmpty) {
+      AppLogger.debug(
+        '이메일과 비밀번호 모두 비어있음',
+        tag: 'LoginValidation',
+      );
       return AuthErrorMessages.formValidationFailed;
     }
+
     if (email.isEmpty) {
+      AppLogger.debug(
+        '이메일이 비어있음',
+        tag: 'LoginValidation',
+      );
       return AuthErrorMessages.emailRequired;
     }
+
     if (password.isEmpty) {
+      AppLogger.debug(
+        '비밀번호가 비어있음',
+        tag: 'LoginValidation',
+      );
       return AuthErrorMessages.passwordRequired;
     }
+
+    AppLogger.debug(
+      '입력값 검증 통과',
+      tag: 'LoginValidation',
+    );
+
     return null;
   }
 
   /// 로그인 결과 처리 (AsyncValue 기반)
   void _processLoginResult(AsyncValue<Member> asyncResult, String email) {
     final startTime = DateTime.now();
+    final maskedEmail = PrivacyMaskUtil.maskEmail(email);
+
+    AppLogger.debug(
+      '로그인 결과 처리 시작',
+      tag: 'LoginProcess',
+    );
 
     // AsyncValue의 hasError와 hasValue 사용
     if (asyncResult.hasError) {
       // ✅ 에러 발생 시 처리
       final error = asyncResult.error;
-      AppLogger.error('로그인 실패', error: error);
+
+      AppLogger.error(
+        '로그인 실패',
+        tag: 'LoginProcess',
+        error: error,
+      );
 
       // 에러 타입에 따른 사용자 친화적 메시지 처리
       String friendlyMessage = AuthErrorMessages.loginFailed;
@@ -132,7 +190,10 @@ class LoginNotifier extends _$LoginNotifier {
         switch (error.type) {
           case FailureType.unauthorized:
             friendlyMessage = error.message;
-            AppLogger.warning('로그인 인증 실패: ${_maskEmail(email)}');
+            AppLogger.warning(
+              '로그인 인증 실패: $maskedEmail',
+              tag: 'LoginAuth',
+            );
             break;
           case FailureType.network:
             friendlyMessage = AuthErrorMessages.networkError;
@@ -140,11 +201,17 @@ class LoginNotifier extends _$LoginNotifier {
             break;
           case FailureType.timeout:
             friendlyMessage = AuthErrorMessages.timeoutError;
-            AppLogger.warning('로그인 타임아웃');
+            AppLogger.warning(
+              '로그인 타임아웃',
+              tag: 'LoginProcess',
+            );
             break;
           default:
             friendlyMessage = error.message;
-            AppLogger.error('기타 로그인 오류: ${error.type}');
+            AppLogger.error(
+              '기타 로그인 오류: ${error.type}',
+              tag: 'LoginProcess',
+            );
         }
       }
 
@@ -167,37 +234,30 @@ class LoginNotifier extends _$LoginNotifier {
 
       final duration = DateTime.now().difference(startTime);
       AppLogger.logPerformance('로그인 성공 처리', duration);
+
       AppLogger.logBanner('로그인 성공! 🎉');
-      AppLogger.authInfo('로그인 성공: ${_maskEmail(email)}');
-      AppLogger.logState('LoginSuccess', {
-        'userId': member.uid,
-        'nickname': member.nickname,
-        'email': _maskEmail(email),
-        'streakDays': member.streakDays,
-        'totalFocusMinutes': member.focusStats?.totalMinutes ?? 0,
-      });
+      AppLogger.authInfo('로그인 성공: $maskedEmail');
+
+      // 개인정보 보호를 위한 안전한 로깅
+      final safeUserInfo = PrivacyMaskUtil.createSafeUserInfo(
+        userId: member.uid,
+        email: email,
+        nickname: member.nickname,
+        additionalInfo: {
+          'streakDays': member.streakDays,
+          'totalFocusMinutes': member.focusStats?.totalMinutes ?? 0,
+        },
+      );
+
+      AppLogger.logState('LoginSuccess', safeUserInfo);
     }
-  }
-
-  /// 이메일 마스킹 (로깅용)
-  String _maskEmail(String email) {
-    if (email.length <= 3) return email;
-    final parts = email.split('@');
-    if (parts.length != 2) return email;
-
-    final username = parts[0];
-    final domain = parts[1];
-
-    if (username.length <= 3) {
-      return '$username***@$domain';
-    }
-
-    return '${username.substring(0, 3)}***@$domain';
   }
 
   void logout() {
     AppLogger.authInfo('로그아웃 요청');
+
     state = const LoginState();
+
     AppLogger.authInfo('로그인 상태 초기화 완료');
   }
 }
