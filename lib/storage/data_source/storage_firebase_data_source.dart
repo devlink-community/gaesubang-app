@@ -36,6 +36,12 @@ class StorageFirebaseDataSource implements StorageDataSource {
               .ref(storagePath)
               .putData(Uint8List.fromList(bytes), settableMetadata);
 
+          // 업로드 진행 상황 모니터링
+          uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+            final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+            debugPrint('🔥 업로드 진행률: ${(progress * 100).toStringAsFixed(1)}%');
+          });
+
           // 업로드 완료 대기
           final taskSnapshot = await uploadTask;
 
