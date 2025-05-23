@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../auth/domain/usecase/get_current_user_use_case.dart';
 import '../../auth/module/auth_di.dart';
+import '../../core/utils/app_logger.dart';
 import 'home_action.dart';
 import 'home_notifier.dart';
 import 'home_screen.dart';
@@ -34,11 +34,19 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
       data: (user) {
         setState(() {
           userSkills = user.skills;
-          debugPrint('HomeScreenRoot: 사용자 스킬 정보 로드 - $userSkills');
+          AppLogger.info(
+            '사용자 스킬 정보 로드 완료: $userSkills',
+            tag: 'HomeScreenRoot',
+          );
         });
       },
       error: (error, stackTrace) {
-        debugPrint('HomeScreenRoot: 사용자 정보 로드 실패 - $error');
+        AppLogger.error(
+          '사용자 정보 로드 실패',
+          tag: 'HomeScreenRoot',
+          error: error,
+          stackTrace: stackTrace,
+        );
       },
       loading: () {},
     );
