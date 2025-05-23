@@ -2,6 +2,7 @@ import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/app_initialization_service.dart';
 import 'package:devlink_mobile_app/core/styles/app_theme.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -14,6 +15,9 @@ void main() async {
 
   // API 로깅 초기화 (필요시)
   _initializeApiLogging();
+
+  // 로거 초기화
+  AppLogger.initialize();
 
   // 앱 실행
   runApp(const ProviderScope(child: MyApp()));
