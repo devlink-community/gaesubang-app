@@ -46,8 +46,7 @@ class _GroupListScreenState extends State<GroupListScreen> {
 
   @override
   void dispose() {
-    // 화면 이탈 시 드롭다운 닫기
-    _isSortDropdownVisible = false;
+    _removeDropdown();
     super.dispose();
   }
 
