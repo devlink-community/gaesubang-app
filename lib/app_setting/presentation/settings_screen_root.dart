@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/component/custom_alert_dialog.dart';
+import '../../core/utils/app_logger.dart';
 import 'settings_action.dart';
 import 'settings_notifier.dart';
 import 'settings_screen.dart';
@@ -90,7 +91,11 @@ class SettingsScreenRoot extends ConsumerWidget {
         throw Exception('Could not launch $url');
       }
     } catch (e) {
-      debugPrint('Error launching URL: $e');
+      AppLogger.error(
+        'URL 실행 오류',
+        tag: 'SettingsScreenRoot',
+        error: e,
+      );
     }
   }
 
@@ -183,7 +188,10 @@ class SettingsScreenRoot extends ConsumerWidget {
     } else if (Platform.isIOS) {
       _launchUrl(iosUrl);
     } else {
-      debugPrint('지원되지 않는 플랫폼입니다.');
+      AppLogger.warning(
+        '지원되지 않는 플랫폼입니다',
+        tag: 'SettingsScreenRoot',
+      );
     }
   }
 }
