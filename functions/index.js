@@ -1354,3 +1354,249 @@ exports.cleanupUserData = functions.firestore
       return { error: error.message, userId: context.params.userId };
     }
   });
+
+  // === 6. 그룹 삭제 시 관련 데이터 정리 ===
+exports.cleanupGroupData = functions.firestore
+  .document('groups/{groupId}')
+  .onDelete(async (snapshot, context) => {
+    try {
+      console.log('=== 그룹 삭제 데이터 정리 시작 ===');
+      
+      const groupId = context.params.groupId;
+      const groupData = snapshot.data();
+      
+      console.log('삭제된 그룹 ID:', groupId);
+      console.log('삭제된 그룹명:', groupData.name);
+      
+      let totalProcessed = 0;
+      
+      // === 1. 그룹 멤버 및 사용자 joingroup 정리 ===
+      console.log('1. 그룹 멤버 및 사용자 joingroup 정리 시작');
+      
+      try {
+        const membersSnapshot = await admin.firestore()
+          .collection('groups')
+          .doc(groupId)
+          .collection('members')
+          .get();
+        
+        if (!membersSnapshot.empty) {
+          const batch1 = admin.firestore().batch();
+          const memberUserIds = [];
+          
+          // 멤버 문서 삭제
+          membersSnapshot.docs.forEach(memberDoc => {
+            const memberData = memberDoc.data();
+            memberUserIds.push(memberData.userId);
+            batch1.delete(memberDoc.ref);
+          });
+          
+          // 각 멤버의 joingroup 배열에서 해당 그룹 제거
+          for (const userId of memberUserIds) {
+            try {
+              // 🔧 수정: group_id 기준으로 배열에서 제거
+              batch1.update(admin.firestore().collection('users').doc(userId), {
+                joingroup: admin.firestore.FieldValue.arrayRemove({
+                  group_id: groupId,  // 🔧 추가: group_id 기준으로 제거
+                  group_name: groupData.name,
+                  group_image: groupData.imageUrl || ''
+                })
+              });
+            } catch (memberUpdateError) {
+              console.error(`멤버 ${userId} joingroup 업데이트 실패:`, memberUpdateError);
+            }
+          }
+          
+          await batch1.commit();
+          totalProcessed += membersSnapshot.docs.length + memberUserIds.length;
+          console.log('그룹 멤버 및 joingroup 정리 완료:', membersSnapshot.docs.length, '개 멤버');
+        }
+      } catch (memberError) {
+        console.error('그룹 멤버 정리 중 오류:', memberError);
+      }
+      
+      // === 2. 그룹 타이머 활동 모두 삭제 ===
+      console.log('2. 그룹 타이머 활동 삭제 시작');
+      
+      try {
+        const timerActivitiesSnapshot = await admin.firestore()
+          .collection('groups')
+          .doc(groupId)
+          .collection('timerActivities')
+          .get();
+        
+        if (!timerActivitiesSnapshot.empty) {
+          // 🔧 수정: 대량 데이터 처리를 위한 배치 분할
+          const batchSize = 450;
+          
+          for (let i = 0; i < timerActivitiesSnapshot.docs.length; i += batchSize) {
+            const batch2 = admin.firestore().batch();
+            const batchDocs = timerActivitiesSnapshot.docs.slice(i, i + batchSize);
+            
+            batchDocs.forEach(activityDoc => {
+              batch2.delete(activityDoc.ref);
+            });
+            
+            await batch2.commit();
+            totalProcessed += batchDocs.length;
+          }
+          
+          console.log('그룹 타이머 활동 삭제 완료:', timerActivitiesSnapshot.docs.length, '개');
+        }
+      } catch (activityError) {
+        console.error('그룹 타이머 활동 삭제 중 오류:', activityError);
+      }
+      
+      // === 3. 그룹 관련 알림 삭제 (최근 30일) ===
+      console.log('3. 그룹 관련 알림 삭제 시작');
+      
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+        
+        // 🔧 수정: 그룹 관련 알림을 더 정확히 찾기 위해 여러 조건으로 검색
+        const groupNotificationsSnapshot = await admin.firestore()
+          .collectionGroup('items')
+          .where('data.groupId', '==', groupId)  // 🔧 수정: 그룹 관련 알림 검색 조건 개선
+          .where('createdAt', '>=', thirtyDaysAgoTimestamp)
+          .get();
+        
+        if (!groupNotificationsSnapshot.empty) {
+          const batch3 = admin.firestore().batch();
+          
+          groupNotificationsSnapshot.docs.forEach(notificationDoc => {
+            batch3.delete(notificationDoc.ref);
+          });
+          
+          await batch3.commit();
+          totalProcessed += groupNotificationsSnapshot.docs.length;
+          console.log('그룹 관련 알림 삭제 완료:', groupNotificationsSnapshot.docs.length, '개');
+        }
+      } catch (notificationError) {
+        console.error('그룹 관련 알림 삭제 중 오류:', notificationError);
+      }
+      
+      console.log('=== 그룹 삭제 데이터 정리 완료 ===');
+      console.log('총 처리된 문서 수:', totalProcessed);
+      
+      return { 
+        success: true, 
+        groupId: groupId,
+        groupName: groupData.name,
+        processedDocuments: totalProcessed
+      };
+      
+    } catch (error) {
+      console.error('=== 그룹 삭제 데이터 정리 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message, groupId: context.params.groupId };
+    }
+  });
+
+// === 7. 그룹 정보 변경 시 관련 데이터 동기화 ===
+exports.syncGroupChanges = functions.firestore
+  .document('groups/{groupId}')
+  .onUpdate(async (change, context) => {
+    try {
+      console.log('=== 그룹 정보 변경 동기화 시작 ===');
+      
+      const groupId = context.params.groupId;
+      const beforeData = change.before.data();
+      const afterData = change.after.data();
+      
+      console.log('그룹 ID:', groupId);
+      console.log('변경 전 그룹명:', beforeData.name);
+      console.log('변경 후 그룹명:', afterData.name);
+      console.log('변경 전 이미지:', beforeData.imageUrl ? '있음' : '없음');
+      console.log('변경 후 이미지:', afterData.imageUrl ? '있음' : '없음');
+      
+      // 이름이나 이미지가 변경되지 않은 경우 처리 안함
+      const nameChanged = beforeData.name !== afterData.name;
+      const imageChanged = beforeData.imageUrl !== afterData.imageUrl;
+      
+      if (!nameChanged && !imageChanged) {
+        console.log('그룹명과 이미지 모두 변경되지 않음 - 동기화 건너뜀');
+        return { skipped: true, reason: 'no_changes' };
+      }
+      
+      console.log('변경 사항:', {
+        name: nameChanged,
+        image: imageChanged
+      });
+      
+      let totalUpdated = 0;
+      
+      // === 1. 멤버들의 joingroup 배열 업데이트 ===
+      console.log('1. 멤버들의 joingroup 배열 업데이트 시작');
+      
+      try {
+        const membersSnapshot = await admin.firestore()
+          .collection('groups')
+          .doc(groupId)
+          .collection('members')
+          .get();
+        
+        console.log('그룹 멤버 수:', membersSnapshot.docs.length);
+        
+        if (!membersSnapshot.empty) {
+          const batch1 = admin.firestore().batch();
+          
+          for (const memberDoc of membersSnapshot.docs) {
+            const memberData = memberDoc.data();
+            const userId = memberData.userId;
+            
+            try {
+              // 🔧 수정: 더 정확한 배열 업데이트 방식
+              // 기존 항목 제거
+              batch1.update(admin.firestore().collection('users').doc(userId), {
+                joingroup: admin.firestore.FieldValue.arrayRemove({
+                  group_id: groupId,
+                  group_name: beforeData.name,
+                  group_image: beforeData.imageUrl || ''
+                })
+              });
+              
+              // 새 항목 추가
+              batch1.update(admin.firestore().collection('users').doc(userId), {
+                joingroup: admin.firestore.FieldValue.arrayUnion({
+                  group_id: groupId,
+                  group_name: afterData.name,
+                  group_image: afterData.imageUrl || ''
+                })
+              });
+              
+              console.log(`사용자 ${userId}의 joingroup 업데이트 예약`);
+            } catch (userError) {
+              console.error(`사용자 ${userId} joingroup 업데이트 실패:`, userError);
+            }
+          }
+          
+          await batch1.commit();
+          totalUpdated += membersSnapshot.docs.length * 2; // 제거 + 추가
+          console.log('멤버 joingroup 업데이트 완료:', membersSnapshot.docs.length, '명');
+        }
+      } catch (memberError) {
+        console.error('멤버 joingroup 업데이트 중 오류:', memberError);
+      }
+      
+      console.log('=== 그룹 정보 변경 동기화 완료 ===');
+      console.log('총 업데이트된 문서 수:', totalUpdated);
+      
+      return { 
+        success: true, 
+        groupId: groupId,
+        changes: {
+          name: nameChanged,
+          image: imageChanged
+        },
+        updatedDocuments: totalUpdated,
+        newGroupName: afterData.name,
+        newImageUrl: afterData.imageUrl || null
+      };
+      
+    } catch (error) {
+      console.error('=== 그룹 정보 변경 동기화 실패 ===');
+      console.error('에러 상세:', error);
+      return { error: error.message, groupId: context.params.groupId };
+    }
+  });
