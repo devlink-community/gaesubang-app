@@ -1,3 +1,4 @@
+// lib/group/domain/repository/group_repository.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
@@ -34,5 +35,32 @@ abstract interface class GroupRepository {
     String groupId,
     int year,
     int month,
+  );
+
+  // ===== 새로 추가되는 메서드들 =====
+
+  /// 특정 시간으로 타이머 활동 기록
+  Future<Result<void>> recordTimerActivityWithTimestamp(
+    String groupId,
+    String activityType,
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 시작 기록
+  Future<Result<void>> startMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 일시정지 기록
+  Future<Result<void>> pauseMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  );
+
+  /// 특정 시간으로 타이머 종료 기록
+  Future<Result<void>> stopMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
   );
 }

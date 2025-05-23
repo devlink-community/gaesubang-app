@@ -3,12 +3,11 @@ import 'dart:async';
 
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/record_timer_activity_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
@@ -31,9 +30,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   final NotificationService _notificationService = NotificationService();
 
   // UseCase 의존성들
-  StartTimerUseCase? _startTimerUseCase;
-  StopTimerUseCase? _stopTimerUseCase;
-  PauseTimerUseCase? _pauseTimerUseCase;
+  RecordTimerActivityUseCase?
+  _recordTimerActivityUseCase; // UseCase 의존성을 하나로 통합
   GetGroupDetailUseCase? _getGroupDetailUseCase;
   GetGroupMembersUseCase? _getGroupMembersUseCase;
   StreamGroupMemberTimerStatusUseCase? _streamGroupMemberTimerStatusUseCase;
@@ -44,15 +42,20 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   DateTime? _localTimerStartTime;
   bool mounted = true;
 
+  // 🔧 타이머 조건 관련 추가 변수
+  Timer? _midnightTimer; // 자정 감지 타이머
+  String? _lastProcessedActivityKey; // 중복 처리 방지용
+  DateTime? _lastValidatedPauseTime; // 마지막 검증한 일시정지 시간
+
   @override
   GroupDetailState build() {
     print('🏗️ GroupDetailNotifier build() 호출');
     mounted = true;
 
-    if (_startTimerUseCase == null) {
-      _startTimerUseCase = ref.watch(startTimerUseCaseProvider);
-      _stopTimerUseCase = ref.watch(stopTimerUseCaseProvider);
-      _pauseTimerUseCase = ref.watch(pauseTimerUseCaseProvider);
+    if (_recordTimerActivityUseCase == null) {
+      _recordTimerActivityUseCase = ref.watch(
+        recordTimerActivityUseCaseProvider,
+      );
       _getGroupDetailUseCase = ref.watch(getGroupDetailUseCaseProvider);
       _getGroupMembersUseCase = ref.watch(getGroupMembersUseCaseProvider);
       _streamGroupMemberTimerStatusUseCase = ref.watch(
@@ -87,6 +90,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     _healthCheckTimer?.cancel();
     _healthCheckTimer = null;
+
+    _midnightTimer?.cancel(); // 추가: 자정 타이머 정리
+    _midnightTimer = null;
   }
 
   // 🔧 화면 활성 상태 관리
@@ -273,13 +279,14 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // API 호출 (실패해도 로컬 상태는 유지)
     try {
-      await _startTimerUseCase?.execute(_groupId);
+      await _recordTimerActivityUseCase?.start(_groupId);
     } catch (e) {
       print('⚠️ StartTimer API 호출 실패: $e');
       // 로컬 상태는 그대로 유지 (사용자 경험 우선)
     }
 
     _startTimerCountdown();
+    _startMidnightDetection(); // 추가: 자정 감지 시작
   }
 
   // 🔧 타이머 일시정지 처리
@@ -293,7 +300,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // API 호출 (실패해도 로컬 상태는 유지)
     try {
-      await _pauseTimerUseCase?.execute(_groupId);
+      await _recordTimerActivityUseCase?.pause(_groupId);
     } catch (e) {
       print('⚠️ PauseTimer API 호출 실패: $e');
     }
@@ -312,6 +319,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     );
 
     _startTimerCountdown();
+    _startMidnightDetection(); // 추가: 자정 감지 재시작
   }
 
   // 🔧 타이머 정지 처리 (재시도 포함)
@@ -322,6 +330,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 1. 즉시 로컬 상태 변경 (중복 호출 방지)
     _timer?.cancel();
+    _midnightTimer?.cancel(); // 추가: 자정 타이머 취소
     _localTimerStartTime = null;
 
     state = state.copyWith(
@@ -338,7 +347,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 🔧 StopTimer API 재시도 로직
   Future<void> _stopTimerWithRetry({int attempt = 0}) async {
     try {
-      await _stopTimerUseCase?.execute(_groupId);
+      await _recordTimerActivityUseCase?.stop(_groupId);
       print('✅ StopTimer API 호출 성공');
     } catch (e) {
       if (attempt < 2) {
@@ -355,6 +364,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 🔧 타이머 리셋 처리
   Future<void> _handleResetTimer() async {
     _timer?.cancel();
+    _midnightTimer?.cancel(); // 추가: 자정 타이머 취소
     _localTimerStartTime = null;
 
     state = state.copyWith(timerStatus: TimerStatus.stop, elapsedSeconds: 0);
@@ -400,6 +410,11 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       if (result != null) {
         state = state.copyWith(groupMembersResult: result);
         print('✅ 최초 멤버 정보 로드 완료');
+
+        // 추가: 초기 로드 시 타이머 상태 검증
+        if (result is AsyncData<List<GroupMember>>) {
+          _validateCurrentUserTimerState(result.value);
+        }
       }
     } catch (e) {
       print('❌ 최초 멤버 정보 로드 실패: $e');
@@ -477,6 +492,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     switch (asyncValue) {
       case AsyncData(:final value):
+        // 추가: 스트림 데이터 수신 시 타이머 검증
+        _validateCurrentUserTimerState(value);
+
         final mergedMembers = _mergeLocalTimerStateWithRemoteData(value);
 
         state = state.copyWith(
@@ -741,6 +759,156 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       if (result is AsyncData && result.value != null) {
         _groupName = result.value!.name;
       }
+    }
+  }
+
+  // ===== 타이머 조건 로직 추가 =====
+
+  // 🔧 현재 사용자의 타이머 상태 검증
+  void _validateCurrentUserTimerState(List<GroupMember> members) {
+    if (_currentUserId == null) return;
+
+    final currentUserMember = members.firstWhere(
+      (member) => member.userId == _currentUserId,
+      orElse: () => members.first, // 기본값 처리
+    );
+
+    // 현재 사용자가 멤버 리스트에 없으면 스킵
+    if (currentUserMember.userId != _currentUserId) return;
+
+    // 이미 활성 상태이거나 타이머 시작 시간이 없으면 스킵
+    if (currentUserMember.isActive ||
+        currentUserMember.timerStartTime == null) {
+      return;
+    }
+
+    // 이미 검증한 일시정지 시간이면 스킵 (중복 처리 방지)
+    if (_lastValidatedPauseTime == currentUserMember.timerStartTime) {
+      return;
+    }
+
+    // 일시정지 제한 시간 확인
+    final pauseLimit =
+        state.groupDetailResult.whenOrNull(
+          data: (group) => group.pauseTimeLimit,
+        ) ??
+        120; // 기본값 120분
+
+    if (TimeFormatter.isPauseTimeExceeded(
+      currentUserMember.timerStartTime!,
+      pauseLimit,
+    )) {
+      print('⏰ 일시정지 제한 시간 초과 감지 - 자동 종료 처리');
+      _handleAutoEnd(currentUserMember.timerStartTime!);
+      _lastValidatedPauseTime = currentUserMember.timerStartTime;
+    }
+  }
+
+  // 🔧 자동 종료 처리
+  Future<void> _handleAutoEnd(DateTime pauseTime) async {
+    // 중복 처리 방지
+    final activityKey = 'auto_end_${pauseTime.millisecondsSinceEpoch}';
+    if (_lastProcessedActivityKey == activityKey) {
+      print('⚠️ 이미 처리된 자동 종료 이벤트입니다: $activityKey');
+      return;
+    }
+
+    _lastProcessedActivityKey = activityKey;
+
+    // pause 시간 + 1마이크로밀리초로 end 시간 계산
+    final endTime = TimeFormatter.getAutoEndTime(pauseTime);
+
+    print('🔧 자동 종료 처리: pauseTime=$pauseTime, endTime=$endTime');
+
+    // 로컬 상태 업데이트
+    _timer?.cancel();
+    _midnightTimer?.cancel();
+    _localTimerStartTime = null;
+
+    state = state.copyWith(
+      timerStatus: TimerStatus.stop,
+      elapsedSeconds: 0,
+    );
+
+    _updateCurrentUserInMemberList(isActive: false);
+
+    // API 호출 (특정 시간으로 end 기록)
+    await _recordTimerActivityWithTimestamp('end', endTime);
+
+    // 알림 표시
+    _notificationService.showTimerEndedNotification(
+      groupName: _groupName,
+      elapsedSeconds: pauseTime.difference(DateTime.now()).inSeconds.abs(),
+      titlePrefix: '[타이머 자동 종료] ',
+    );
+  }
+
+  // 🔧 자정 감지 시작
+  void _startMidnightDetection() {
+    _midnightTimer?.cancel();
+
+    final timeUntilMidnight = TimeFormatter.timeUntilMidnight();
+
+    print('🌙 자정 감지 타이머 시작: ${timeUntilMidnight.inMinutes}분 후');
+
+    _midnightTimer = Timer(timeUntilMidnight, () async {
+      if (state.timerStatus == TimerStatus.running) {
+        print('🌙 자정 감지 - 날짜 변경 처리');
+        await _handleDateChange();
+      }
+
+      // 다음 자정 감지를 위해 재시작
+      _startMidnightDetection();
+    });
+  }
+
+  // 🔧 날짜 변경 처리
+  Future<void> _handleDateChange() async {
+    // 중복 처리 방지
+    final dateKey = 'date_change_${TimeFormatter.formatDate(DateTime.now())}';
+    if (_lastProcessedActivityKey == dateKey) {
+      print('⚠️ 이미 처리된 날짜 변경 이벤트입니다: $dateKey');
+      return;
+    }
+
+    _lastProcessedActivityKey = dateKey;
+
+    print('📅 날짜 변경 처리 시작');
+
+    // 1. 어제 23:59:59로 pause 기록
+    final yesterdayLastSecond = TimeFormatter.getYesterdayLastSecond();
+    await _recordTimerActivityWithTimestamp('pause', yesterdayLastSecond);
+
+    // 잠시 대기 (순서 보장)
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // 2. 오늘 00:00:00로 start 기록
+    final todayFirstSecond = TimeFormatter.getTodayFirstSecond();
+    await _recordTimerActivityWithTimestamp('start', todayFirstSecond);
+
+    // 로컬 타이머 시작 시간 업데이트
+    _localTimerStartTime = todayFirstSecond;
+
+    print('✅ 날짜 변경 처리 완료');
+  }
+
+  // 🔧 특정 시간으로 타이머 활동 기록
+  Future<void> _recordTimerActivityWithTimestamp(
+    String type,
+    DateTime timestamp,
+  ) async {
+    print('📝 타이머 활동 기록: type=$type, timestamp=$timestamp');
+
+    final result = await _recordTimerActivityUseCase?.executeWithTimestamp(
+      groupId: _groupId,
+      activityType: type,
+      timestamp: timestamp,
+    );
+
+    if (result is AsyncError) {
+      print('❌ 타이머 활동 기록 실패: ${result.error}');
+    } else {
+      print('✅ 타이머 활동 기록 성공');
     }
   }
 }

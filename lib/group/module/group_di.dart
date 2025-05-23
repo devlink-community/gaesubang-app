@@ -19,11 +19,9 @@ import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_c
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/mark_messages_as_read_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/pause_timer_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/record_timer_activity_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/start_timer_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/stop_timer_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -133,18 +131,6 @@ GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) =>
       repository: ref.watch(groupRepositoryProvider),
     );
 
-@riverpod
-StartTimerUseCase startTimerUseCase(Ref ref) =>
-    StartTimerUseCase(repository: ref.watch(groupRepositoryProvider));
-
-@riverpod
-StopTimerUseCase stopTimerUseCase(Ref ref) =>
-    StopTimerUseCase(repository: ref.watch(groupRepositoryProvider));
-
-@riverpod
-PauseTimerUseCase pauseTimerUseCase(Ref ref) =>
-    PauseTimerUseCase(repository: ref.watch(groupRepositoryProvider));
-
 // 🔧 새로운 실시간 스트림 UseCase Provider 추가
 @riverpod
 StreamGroupMemberTimerStatusUseCase streamGroupMemberTimerStatusUseCase(
@@ -174,3 +160,13 @@ MarkMessagesAsReadUseCase markMessagesAsReadUseCase(Ref ref) =>
     MarkMessagesAsReadUseCase(
       repository: ref.watch(groupChatRepositoryProvider),
     );
+
+// 기존 개별 UseCase Providers를 제거하고 통합 Provider로 교체
+
+// ===== 통합 타이머 UseCase Provider =====
+@riverpod
+RecordTimerActivityUseCase recordTimerActivityUseCase(Ref ref) {
+  return RecordTimerActivityUseCase(
+    repository: ref.watch(groupRepositoryProvider),
+  );
+}

@@ -12,13 +12,14 @@ extension GroupDtoMapper on GroupDto {
       description: description ?? '',
       imageUrl: imageUrl,
       createdAt: createdAt ?? DateTime.now(),
-      ownerId: ownerId ?? '', // createdBy → ownerId로 변경
-      ownerNickname: ownerNickname, // 추가 필드
-      ownerProfileImage: ownerProfileImage, // 추가 필드
+      ownerId: ownerId ?? '',
+      ownerNickname: ownerNickname,
+      ownerProfileImage: ownerProfileImage,
       maxMemberCount: maxMemberCount ?? 10,
       hashTags: hashTags ?? [],
       memberCount: memberCount ?? 0,
       isJoinedByCurrentUser: isJoinedByCurrentUser ?? false,
+      pauseTimeLimit: pauseTimeLimit ?? 120, // 추가: 기본값 120분
     );
   }
 }
@@ -32,13 +33,14 @@ extension GroupModelMapper on Group {
       description: description,
       imageUrl: imageUrl,
       createdAt: createdAt,
-      ownerId: ownerId, // createdBy → ownerId로 변경
-      ownerNickname: ownerNickname, // 추가 필드
-      ownerProfileImage: ownerProfileImage, // 추가 필드
+      ownerId: ownerId,
+      ownerNickname: ownerNickname,
+      ownerProfileImage: ownerProfileImage,
       maxMemberCount: maxMemberCount,
       hashTags: hashTags,
       memberCount: memberCount,
       isJoinedByCurrentUser: isJoinedByCurrentUser,
+      pauseTimeLimit: pauseTimeLimit, // 추가
     );
   }
 }
@@ -91,7 +93,8 @@ extension MapListToGroupListMapper on List<Map<String, dynamic>>? {
         maxMemberCount: dto.maxMemberCount ?? 10,
         hashTags: dto.hashTags ?? [],
         memberCount: dto.memberCount ?? 0,
-        isJoinedByCurrentUser: isJoined, // 🔧 원본 데이터에서 직접 가져온 값 사용
+        isJoinedByCurrentUser: isJoined,
+        pauseTimeLimit: dto.pauseTimeLimit ?? 120, // 추가: 기본값 120분
       );
     }).toList();
   }
@@ -111,6 +114,7 @@ extension JoinedGroupDtoToGroupMapper on JoinedGroupDto {
       hashTags: const [], // 빈 리스트 사용
       memberCount: 0, // 기본값 사용
       isJoinedByCurrentUser: true, // 이미 가입된 그룹이므로 true
+      pauseTimeLimit: 120, // 추가: 기본값 120분 (간소화된 버전에서는 정보가 없으므로)
     );
   }
 }

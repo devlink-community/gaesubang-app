@@ -108,4 +108,93 @@ class TimeFormatter {
     final now = DateTime.now();
     return now.add(Duration(hours: hours, minutes: minutes, seconds: seconds));
   }
+
+  // ===== 새로 추가되는 헬퍼 메서드들 =====
+
+  /// 일시정지 경과 시간이 제한 시간을 초과했는지 확인
+  ///
+  /// [pauseTime] 일시정지 시작 시간
+  /// [limitMinutes] 제한 시간 (분 단위)
+  /// 반환: 초과 여부
+  static bool isPauseTimeExceeded(DateTime pauseTime, int limitMinutes) {
+    final now = DateTime.now();
+    final pauseDuration = now.difference(pauseTime);
+    return pauseDuration.inMinutes >= limitMinutes;
+  }
+
+  /// 일시정지 경과 시간 계산 (분 단위)
+  ///
+  /// [pauseTime] 일시정지 시작 시간
+  /// 반환: 경과 시간 (분)
+  static int getPauseElapsedMinutes(DateTime pauseTime) {
+    final now = DateTime.now();
+    final pauseDuration = now.difference(pauseTime);
+    return pauseDuration.inMinutes;
+  }
+
+  /// 자정까지 남은 시간 계산
+  ///
+  /// 반환: 현재 시간부터 다음날 00:00:00까지의 Duration
+  static Duration timeUntilMidnight() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    return tomorrow.difference(now);
+  }
+
+  /// 어제의 마지막 시간 (23:59:59) 반환
+  ///
+  /// 반환: 어제 23:59:59의 DateTime
+  static DateTime getYesterdayLastSecond() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day - 1, 23, 59, 59);
+  }
+
+  /// 오늘의 첫 시간 (00:00:00) 반환
+  ///
+  /// 반환: 오늘 00:00:00의 DateTime
+  static DateTime getTodayFirstSecond() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, 0, 0, 0);
+  }
+
+  /// 주어진 날짜가 오늘인지 확인
+  ///
+  /// [date] 확인할 날짜
+  /// 반환: 오늘 여부
+  static bool isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  /// 주어진 날짜가 어제인지 확인
+  ///
+  /// [date] 확인할 날짜
+  /// 반환: 어제 여부
+  static bool isYesterday(DateTime date) {
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    return date.year == yesterday.year &&
+        date.month == yesterday.month &&
+        date.day == yesterday.day;
+  }
+
+  /// 두 날짜가 같은 날인지 확인
+  ///
+  /// [date1] 첫 번째 날짜
+  /// [date2] 두 번째 날짜
+  /// 반환: 같은 날 여부
+  static bool isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  /// 타이머 자동 종료 시간 계산
+  ///
+  /// [pauseTime] 일시정지 시간
+  /// 반환: 일시정지 시간 + 1초
+  static DateTime getAutoEndTime(DateTime pauseTime) {
+    return pauseTime.add(const Duration(microseconds: 1));
+  }
 }
