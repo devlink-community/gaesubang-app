@@ -1,6 +1,7 @@
 // lib/group/presentation/group_detail/group_detail_notifier.dart
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
@@ -778,14 +779,24 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   void _validateCurrentUserTimerState(List<GroupMember> members) {
     if (_currentUserId == null) return;
 
-    final currentUserMember = members.firstWhere(
+    // 빈 리스트 체크
+    if (members.isEmpty) {
+      print('⚠️ 멤버 리스트가 비어있어 타이머 상태 검증을 건너뜁니다');
+      return;
+    }
+
+    // 현재 사용자 찾기 (안전하게)
+    final currentUserMember = members.firstWhereOrNull(
       (member) => member.userId == _currentUserId,
-      orElse: () => members.first, // 기본값 처리
     );
 
     // 현재 사용자가 멤버 리스트에 없으면 스킵
-    if (currentUserMember.userId != _currentUserId) return;
+    if (currentUserMember == null) {
+      print('⚠️ 현재 사용자가 멤버 리스트에 없어 타이머 상태 검증을 건너뜁니다');
+      return;
+    }
 
+    // 이제 안전하게 currentUserMember 사용
     // 1. 활성 상태(start/resume)인데 비정상 종료된 경우
     if (currentUserMember.isActive &&
         currentUserMember.timerStartTime != null) {
