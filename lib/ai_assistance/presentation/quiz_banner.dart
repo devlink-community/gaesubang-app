@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -251,13 +252,21 @@ class DailyQuizBanner extends ConsumerWidget {
     final limitedSkills =
         skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
 
-    debugPrint('파싱된 스킬 목록(최대 3개): $limitedSkills (${limitedSkills.length}개)');
+    AppLogger.debug(
+      '파싱된 스킬 목록(최대 3개): $limitedSkills (${limitedSkills.length}개)',
+      tag: 'QuizSkillParser',
+    );
+
     return limitedSkills.isEmpty ? ['컴퓨터 기초'] : limitedSkills;
   }
 
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
-    // 디버그 로그 추가
-    debugPrint('퀴즈 생성 시작: skills=$skills');
+    final startTime = DateTime.now();
+
+    AppLogger.info(
+      '퀴즈 생성 시작: skills=$skills',
+      tag: 'QuizGeneration',
+    );
 
     // 원본 스킬 목록 파싱 (제한 없이)
     final originalSkillList =
@@ -273,6 +282,11 @@ class DailyQuizBanner extends ConsumerWidget {
 
     // 원본 스킬이 3개를 초과하는 경우 경고 표시
     if (originalSkillList.length > 3 && context.mounted) {
+      AppLogger.warning(
+        '스킬 개수 제한: ${originalSkillList.length}개 → 3개로 제한됨',
+        tag: 'QuizSkillParser',
+      );
+
       // 간단한 스낵바로 알림
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -284,7 +298,11 @@ class DailyQuizBanner extends ConsumerWidget {
       );
     }
 
-    debugPrint('파싱된 스킬 목록(최대 3개): $skillList (${skillList.length}개)');
+    AppLogger.logState('파싱된 스킬 정보', {
+      '원본 스킬 개수': originalSkillList.length,
+      '제한된 스킬 개수': skillList.length,
+      '제한된 스킬 목록': skillList,
+    });
 
     // 무작위 스킬 선택
     String selectedSkill;
@@ -298,11 +316,18 @@ class DailyQuizBanner extends ConsumerWidget {
           selectedSkill.contains('{') ||
           selectedSkill.contains('}') ||
           selectedSkill.contains(':')) {
+        AppLogger.warning(
+          '비정상적인 스킬명 감지: $selectedSkill → Flutter로 대체',
+          tag: 'QuizSkillParser',
+        );
         selectedSkill = 'Flutter';
       }
     }
 
-    debugPrint('선택된 스킬: $selectedSkill');
+    AppLogger.info(
+      '선택된 스킬: $selectedSkill',
+      tag: 'QuizGeneration',
+    );
 
     // 타임스탬프를 추가하여 캐시 방지
     final currentTime = DateTime.now().millisecondsSinceEpoch;
@@ -316,6 +341,11 @@ class DailyQuizBanner extends ConsumerWidget {
 
     // 로딩 다이얼로그에 고유 키 부여
     final loadingDialogKey = UniqueKey();
+
+    AppLogger.info(
+      '퀴즈 로딩 다이얼로그 표시 시작',
+      tag: 'QuizUI',
+    );
 
     // 퀴즈 로딩 중 표시할 다이얼로그
     showDialog(
@@ -358,6 +388,13 @@ class DailyQuizBanner extends ConsumerWidget {
 
     // 타임아웃 설정 (20초)
     loadingTimer = Timer(const Duration(seconds: 20), () {
+      final duration = DateTime.now().difference(startTime);
+
+      AppLogger.warning(
+        '퀴즈 로딩 타임아웃 (${duration.inSeconds}초)',
+        tag: 'QuizGeneration',
+      );
+
       _closeLoadingDialog(loadingDialogContext);
 
       if (context.mounted) {
@@ -369,6 +406,10 @@ class DailyQuizBanner extends ConsumerWidget {
         );
 
         // 백업 퀴즈 표시 - 선택된 스킬 전달
+        AppLogger.info(
+          '타임아웃으로 인한 백업 퀴즈 표시: $selectedSkill',
+          tag: 'QuizFallback',
+        );
         _showBackupQuiz(context, ref, selectedSkill);
       }
     });
@@ -381,7 +422,10 @@ class DailyQuizBanner extends ConsumerWidget {
       final currentTime = DateTime.now().millisecondsSinceEpoch;
       final quizPrompt = '$selectedSkill-$currentTime';
 
-      debugPrint('퀴즈 생성 요청: $quizPrompt');
+      AppLogger.info(
+        '퀴즈 생성 요청: $quizPrompt',
+        tag: 'QuizGeneration',
+      );
 
       // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
       final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);
@@ -392,23 +436,38 @@ class DailyQuizBanner extends ConsumerWidget {
       // 로딩 다이얼로그 닫기
       _closeLoadingDialog(loadingDialogContext);
 
+      final duration = DateTime.now().difference(startTime);
+
       // 퀴즈 결과 처리
       asyncQuizResult.when(
         data: (quiz) {
-          if (context.mounted && quiz != null) {
-            debugPrint(
+          if (context.mounted) {
+            AppLogger.logPerformance('퀴즈 생성 성공', duration);
+            AppLogger.info(
               '퀴즈 생성 성공 (${quiz.relatedSkill}): ${quiz.question.substring(0, min(30, quiz.question.length))}...',
+              tag: 'QuizGeneration',
             );
 
             // 퀴즈 표시 - 원본 skills 목록 전달
             _showQuizDialog(context, ref, quiz);
           } else {
+            AppLogger.logPerformance('퀴즈 생성 실패 (quiz null)', duration);
+            AppLogger.warning(
+              '퀴즈 생성 결과가 null입니다',
+              tag: 'QuizGeneration',
+            );
+
             // 백업 퀴즈 표시
             _showBackupQuiz(context, ref, selectedSkill);
           }
         },
         error: (error, _) {
-          debugPrint('퀴즈 생성 오류: $error');
+          AppLogger.logPerformance('퀴즈 생성 오류', duration);
+          AppLogger.error(
+            '퀴즈 생성 오류',
+            tag: 'QuizGeneration',
+            error: error,
+          );
 
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -420,11 +479,20 @@ class DailyQuizBanner extends ConsumerWidget {
             );
 
             // 백업 퀴즈 표시
+            AppLogger.info(
+              '오류로 인한 백업 퀴즈 표시: $selectedSkill',
+              tag: 'QuizFallback',
+            );
             _showBackupQuiz(context, ref, selectedSkill);
           }
         },
         loading: () {
           // 일반적으로 여기에 도달하지 않지만, 도달했다면 백업 퀴즈 표시
+          AppLogger.warning(
+            '예상치 못한 로딩 상태 발생',
+            tag: 'QuizGeneration',
+          );
+
           _closeLoadingDialog(loadingDialogContext);
           _showBackupQuiz(context, ref, selectedSkill);
         },
@@ -434,7 +502,13 @@ class DailyQuizBanner extends ConsumerWidget {
       loadingTimer.cancel();
       _closeLoadingDialog(loadingDialogContext);
 
-      debugPrint('퀴즈 생성 예외 발생: $e');
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.logPerformance('퀴즈 생성 예외 발생', duration);
+      AppLogger.error(
+        '퀴즈 생성 예외 발생',
+        tag: 'QuizGeneration',
+        error: e,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -446,6 +520,10 @@ class DailyQuizBanner extends ConsumerWidget {
         );
 
         // 백업 퀴즈 표시
+        AppLogger.info(
+          '예외로 인한 백업 퀴즈 표시: $selectedSkill',
+          tag: 'QuizFallback',
+        );
         _showBackupQuiz(context, ref, selectedSkill);
       }
     }
@@ -455,6 +533,11 @@ class DailyQuizBanner extends ConsumerWidget {
   void _closeLoadingDialog(BuildContext? dialogContext) {
     if (dialogContext != null && Navigator.of(dialogContext).canPop()) {
       Navigator.of(dialogContext).pop();
+
+      AppLogger.debug(
+        '퀴즈 로딩 다이얼로그 닫기 완료',
+        tag: 'QuizUI',
+      );
     }
   }
 
@@ -462,6 +545,11 @@ class DailyQuizBanner extends ConsumerWidget {
   void _showQuizDialog(BuildContext context, WidgetRef ref, Quiz quiz) {
     // StatefulWidget의 상태를 초기화하기 위한 키 생성
     final uniqueKey = UniqueKey();
+
+    AppLogger.info(
+      '퀴즈 다이얼로그 표시: ${quiz.question.substring(0, min(30, quiz.question.length))}...',
+      tag: 'QuizUI',
+    );
 
     showDialog(
       context: context,
@@ -491,8 +579,18 @@ class DailyQuizBanner extends ConsumerWidget {
               quiz: quiz,
               skills: skills,
               onAction: (action) {
+                AppLogger.debug(
+                  'QuizScreen 액션 수신: ${action.runtimeType}',
+                  tag: 'QuizUI',
+                );
+
                 switch (action) {
                   case LoadQuiz(:final skills):
+                    AppLogger.info(
+                      '새 퀴즈 로드 요청: $skills',
+                      tag: 'QuizUI',
+                    );
+
                     // 현재 다이얼로그 닫기
                     Navigator.of(dialogContext).pop();
 
@@ -506,10 +604,17 @@ class DailyQuizBanner extends ConsumerWidget {
                     break;
 
                   case SubmitAnswer(:final answerIndex):
-                    // 답변 제출은 QuizScreen에서 로컬로 처리
+                    AppLogger.info(
+                      '퀴즈 답변 제출: 인덱스 $answerIndex',
+                      tag: 'QuizAnswer',
+                    );
                     break;
 
                   case CloseQuiz():
+                    AppLogger.info(
+                      '퀴즈 다이얼로그 닫기',
+                      tag: 'QuizUI',
+                    );
                     Navigator.of(dialogContext).pop();
                     break;
                 }
@@ -523,7 +628,10 @@ class DailyQuizBanner extends ConsumerWidget {
 
   // 백업 퀴즈 표시 메서드
   void _showBackupQuiz(BuildContext context, WidgetRef ref, String skillArea) {
-    debugPrint('백업 퀴즈 표시: 스킬=$skillArea');
+    AppLogger.info(
+      '백업 퀴즈 표시: 스킬=$skillArea',
+      tag: 'QuizFallback',
+    );
 
     final fallbackQuiz = _generateFallbackQuiz(skillArea);
     _showQuizDialog(context, ref, fallbackQuiz);
@@ -531,9 +639,16 @@ class DailyQuizBanner extends ConsumerWidget {
 
   // 백업 퀴즈 생성 메서드
   Quiz _generateFallbackQuiz(String skillArea) {
+    AppLogger.debug(
+      '백업 퀴즈 생성 시작: $skillArea',
+      tag: 'QuizFallback',
+    );
+
+    Quiz fallbackQuiz;
+
     // 해당 스킬에 맞는 퀴즈 생성
     if (skillArea.toLowerCase().contains('python')) {
-      return Quiz(
+      fallbackQuiz = Quiz(
         question: "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
         options: [
           "메모리 사용량 증가",
@@ -548,7 +663,7 @@ class DailyQuizBanner extends ConsumerWidget {
       );
     } else if (skillArea.toLowerCase().contains('flutter') ||
         skillArea.toLowerCase().contains('dart')) {
-      return Quiz(
+      fallbackQuiz = Quiz(
         question: "Flutter에서 StatefulWidget과 StatelessWidget의 주요 차이점은 무엇인가요?",
         options: [
           "StatefulWidget만 빌드 메서드를 가짐",
@@ -563,7 +678,7 @@ class DailyQuizBanner extends ConsumerWidget {
       );
     } else if (skillArea.toLowerCase().contains('javascript') ||
         skillArea.toLowerCase().contains('js')) {
-      return Quiz(
+      fallbackQuiz = Quiz(
         question: "JavaScript에서 const와 let의 주요 차이점은 무엇인가요?",
         options: [
           "const는 객체를 불변으로 만들지만, let은 가변 객체를 선언합니다.",
@@ -577,7 +692,7 @@ class DailyQuizBanner extends ConsumerWidget {
         relatedSkill: "JavaScript",
       );
     } else if (skillArea.toLowerCase().contains('react')) {
-      return Quiz(
+      fallbackQuiz = Quiz(
         question: "React에서 hooks의 주요 규칙 중 하나는 무엇인가요?",
         options: [
           "클래스 컴포넌트에서만 사용 가능하다",
@@ -590,15 +705,22 @@ class DailyQuizBanner extends ConsumerWidget {
         correctOptionIndex: 2,
         relatedSkill: "React",
       );
+    } else {
+      // 기본 컴퓨터 기초 퀴즈
+      fallbackQuiz = Quiz(
+        question: "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
+        options: ["4비트", "8비트", "16비트", "32비트"],
+        explanation: "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
+        correctOptionIndex: 1,
+        relatedSkill: skillArea,
+      );
     }
 
-    // 기본 컴퓨터 기초 퀴즈
-    return Quiz(
-      question: "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
-      options: ["4비트", "8비트", "16비트", "32비트"],
-      explanation: "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
-      correctOptionIndex: 1,
-      relatedSkill: skillArea,
+    AppLogger.info(
+      '백업 퀴즈 생성 완료: ${fallbackQuiz.relatedSkill} - ${fallbackQuiz.question.substring(0, min(30, fallbackQuiz.question.length))}...',
+      tag: 'QuizFallback',
     );
+
+    return fallbackQuiz;
   }
 }
