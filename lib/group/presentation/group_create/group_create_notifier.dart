@@ -1,4 +1,6 @@
 // lib/group/presentation/group_create/group_create_notifier.dart
+import 'dart:io';
+
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
@@ -7,6 +9,8 @@ import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.da
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_state.dart';
+import 'package:devlink_mobile_app/storage/module/storage_di.dart';
+import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_create_notifier.g.dart';
@@ -14,10 +18,12 @@ part 'group_create_notifier.g.dart';
 @riverpod
 class GroupCreateNotifier extends _$GroupCreateNotifier {
   late final CreateGroupUseCase _createGroupUseCase;
+  late final UploadImageUseCase _uploadImageUseCase;
 
   @override
   GroupCreateState build() {
     _createGroupUseCase = ref.watch(createGroupUseCaseProvider);
+    _uploadImageUseCase = ref.watch(uploadImageUseCaseProvider);
     return const GroupCreateState();
   }
 
@@ -54,7 +60,6 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
       case ImageUrlChanged(:final imageUrl):
         state = state.copyWith(imageUrl: imageUrl);
 
-      // 🆕 추가: 일시정지 제한시간 변경 액션
       case PauseTimeLimitChanged(:final minutes):
         final validMinutes =
             minutes < 30 ? 30 : (minutes > 480 ? 480 : minutes); // 30분~8시간
@@ -91,7 +96,6 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         // Root에서 처리
         break;
 
-      // 🆕 추가: 새로운 액션들 처리
       case ClearError():
         clearError();
 
@@ -103,11 +107,18 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
 
       case ValidateForm():
         _validateForm();
+
+      // 🆕 추가: 새로운 이미지 관련 액션들
+      case ClearImageUploadError():
+        clearImageUploadError();
+
+      case ResetImageUploadState():
+        resetImageUploadState();
     }
   }
 
   Future<void> _submit() async {
-    // 🔧 수정: 입력 검증 강화
+    // 입력 검증
     if (state.name.trim().isEmpty) {
       state = state.copyWith(errorMessage: '그룹 이름을 입력하세요');
       return;
@@ -148,7 +159,6 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
       return;
     }
 
-    // 🆕 추가: 일시정지 제한시간 검증
     if (state.pauseTimeLimit < 30) {
       state = state.copyWith(errorMessage: '일시정지 제한시간은 최소 30분이어야 합니다');
       return;
@@ -186,24 +196,114 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         return;
       }
 
-      // 🔧 수정: 새로운 Group 모델 구조에 맞게 생성
+      // 🆕 추가: 이미지 업로드 처리
+      String? uploadedImageUrl;
+      if (state.imageUrl != null && state.imageUrl!.startsWith('file://')) {
+        try {
+          // 이미지 업로드 시작 상태로 변경
+          state = state.copyWith(
+            isUploadingImage: true,
+            imageUploadProgress: 0.0,
+            imageUploadError: null,
+          );
+
+          // 로컬 파일 경로에서 file:// 제거
+          final localPath = state.imageUrl!.replaceFirst('file://', '');
+          final file = File(localPath);
+
+          // 파일 존재 확인
+          if (!await file.exists()) {
+            state = state.copyWith(
+              isSubmitting: false,
+              isUploadingImage: false,
+              imageUploadError: '선택한 이미지 파일을 찾을 수 없습니다',
+            );
+            return;
+          }
+
+          // 업로드 진행률 업데이트 (파일 읽기 시작)
+          state = state.copyWith(imageUploadProgress: 0.2);
+
+          // 파일을 바이트로 읽기
+          final imageBytes = await file.readAsBytes();
+
+          // 업로드 진행률 업데이트 (파일 읽기 완료)
+          state = state.copyWith(imageUploadProgress: 0.4);
+
+          // 파일명 생성 (타임스탬프 + 원본 파일명)
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final originalFileName = localPath.split('/').last;
+          final fileName = '${timestamp}_$originalFileName';
+
+          // 업로드 진행률 업데이트 (업로드 시작)
+          state = state.copyWith(imageUploadProgress: 0.6);
+
+          // Firebase Storage에 업로드
+          final uploadResult = await _uploadImageUseCase.execute(
+            folderPath: 'groups/images',
+            fileName: fileName,
+            bytes: imageBytes,
+            metadata: {
+              'contentType': 'image/jpeg',
+              'uploadedBy': currentUser.id,
+              'uploadedAt': DateTime.now().toIso8601String(),
+            },
+          );
+
+          // 업로드 진행률 업데이트 (업로드 완료)
+          state = state.copyWith(imageUploadProgress: 1.0);
+
+          switch (uploadResult) {
+            case AsyncData(:final value):
+              uploadedImageUrl = value;
+              // 이미지 업로드 완료 상태로 변경
+              state = state.copyWith(
+                isUploadingImage: false,
+                imageUploadProgress: 1.0,
+                imageUrl: uploadedImageUrl, // 업로드된 URL로 업데이트
+              );
+              break;
+            case AsyncError(:final error):
+              state = state.copyWith(
+                isSubmitting: false,
+                isUploadingImage: false,
+                imageUploadProgress: 0.0,
+                imageUploadError: '이미지 업로드에 실패했습니다: ${error.toString()}',
+              );
+              return;
+            case AsyncLoading():
+              // 로딩 상태는 이미 isUploadingImage로 처리됨
+              break;
+          }
+        } catch (e) {
+          state = state.copyWith(
+            isSubmitting: false,
+            isUploadingImage: false,
+            imageUploadProgress: 0.0,
+            imageUploadError: '이미지 업로드 중 오류가 발생했습니다: ${e.toString()}',
+          );
+          return;
+        }
+      } else if (state.imageUrl != null && state.imageUrl!.startsWith('http')) {
+        // 이미 업로드된 URL인 경우 그대로 사용
+        uploadedImageUrl = state.imageUrl;
+      }
+
+      // Group 모델 생성 (업로드된 이미지 URL 사용)
       final group = Group(
         id: 'temp_id', // 서버에서 생성될 ID
         name: state.name.trim(),
         description: state.description.trim(),
-        ownerId: currentUser.id, // owner 객체 대신 ownerId 문자열 사용
-        ownerNickname: currentUser.nickname, // 방장 닉네임 추가
-        ownerProfileImage: currentUser.image, // 방장 프로필 이미지 추가
-        hashTags:
-            state.hashTags
-                .map((tag) => tag.content)
-                .toList(), // HashTag 객체 리스트 → 문자열 리스트로 변환
+        ownerId: currentUser.id,
+        ownerNickname: currentUser.nickname,
+        ownerProfileImage: currentUser.image,
+        hashTags: state.hashTags.map((tag) => tag.content).toList(),
         maxMemberCount: state.limitMemberCount,
-        imageUrl: state.imageUrl,
+        imageUrl: uploadedImageUrl, // 🔧 수정: 업로드된 URL 사용
         createdAt: DateTime.now(),
-        memberCount: 1 + state.invitedMembers.length, // 방장 + 초대된 멤버 수
-        isJoinedByCurrentUser: true, // 생성자는 자동으로 그룹에 가입됨
-        pauseTimeLimit: state.pauseTimeLimit, // 🆕 추가: 일시정지 제한시간
+        memberCount: 1 + state.invitedMembers.length,
+        isJoinedByCurrentUser: true,
+        pauseTimeLimit: state.pauseTimeLimit,
       );
 
       // UseCase 호출하여 그룹 생성
@@ -218,7 +318,6 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
             successMessage: '그룹이 성공적으로 생성되었습니다!',
           );
         case AsyncError(:final error):
-          // 🔧 수정: 에러 메시지 개선
           String errorMessage = '그룹 생성에 실패했습니다';
 
           if (error.toString().contains('이미 사용 중인 그룹 이름')) {
@@ -240,7 +339,6 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
           break;
       }
     } catch (e) {
-      // 🔧 수정: 예외 처리 개선
       String errorMessage = '그룹 생성 중 알 수 없는 오류가 발생했습니다';
 
       if (e.toString().contains('FormatException')) {
@@ -361,11 +459,30 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         state.hashTags.length <= 10;
   }
 
-  /// 에러 메시지 초기화
+  /// 에러 메시지 초기화 (이미지 업로드 에러 포함)
   void clearError() {
-    if (state.errorMessage != null) {
-      state = state.copyWith(errorMessage: null);
+    if (state.errorMessage != null || state.imageUploadError != null) {
+      state = state.copyWith(
+        errorMessage: null,
+        imageUploadError: null,
+      );
     }
+  }
+
+  /// 이미지 업로드 에러만 초기화
+  void clearImageUploadError() {
+    if (state.imageUploadError != null) {
+      state = state.copyWith(imageUploadError: null);
+    }
+  }
+
+  /// 이미지 업로드 상태 초기화
+  void resetImageUploadState() {
+    state = state.copyWith(
+      isUploadingImage: false,
+      imageUploadProgress: 0.0,
+      imageUploadError: null,
+    );
   }
 
   /// 성공 메시지 초기화
