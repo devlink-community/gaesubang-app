@@ -78,7 +78,12 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed:
+              widget
+                      .state
+                      .isWorking // 🔧 수정: 작업 중일 때 뒤로가기 비활성화
+                  ? null
+                  : () => Navigator.of(context).pop(),
         ),
         title: Text('새 그룹 만들기', style: AppTextStyles.heading6Bold),
         actions: [
@@ -87,16 +92,20 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
             margin: const EdgeInsets.only(right: 16),
             child: TextButton(
               onPressed:
-                  isLoading
-                      ? null
-                      : () => widget.onAction(const GroupCreateAction.submit()),
+                  widget
+                          .state
+                          .canSubmit // 🔧 수정: canSubmit 사용 (이미지 업로드 중일 때도 비활성화)
+                      ? () => widget.onAction(const GroupCreateAction.submit())
+                      : null,
               style: TextButton.styleFrom(
                 backgroundColor:
-                    isLoading
-                        ? Colors.grey.shade200
-                        : AppColorStyles.primary100.withValues(alpha: 0.1),
+                    widget.state.canSubmit
+                        ? AppColorStyles.primary100.withValues(alpha: 0.1)
+                        : Colors.grey.shade200,
                 foregroundColor:
-                    isLoading ? Colors.grey : AppColorStyles.primary100,
+                    widget.state.canSubmit
+                        ? AppColorStyles.primary100
+                        : Colors.grey,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -106,8 +115,10 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                 ),
               ),
               child: Text(
-                '완료',
-                style: TextStyle(
+                widget.state.isUploadingImage
+                    ? '업로드 중...'
+                    : '완료', // 🔧 수정: 상태에 따른 텍스트
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -117,7 +128,9 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         ],
       ),
       body:
-          isLoading
+          widget
+                  .state
+                  .isSubmitting // 🔧 수정: 그룹 생성 중일 때만 전체 로딩 화면 표시
               ? const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -143,7 +156,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                           _buildImageSelector(),
                           const SizedBox(height: 32),
 
-                          // 그룹 이름 - 트렌디한 텍스트 필드로 교체
+                          // 그룹 이름
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -176,6 +189,10 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                                 child: TextField(
                                   controller: _nameController,
                                   style: AppTextStyles.body1Regular,
+                                  enabled:
+                                      !widget
+                                          .state
+                                          .isWorking, // 🔧 수정: 작업 중일 때 비활성화
                                   decoration: InputDecoration(
                                     hintText: '그룹 이름을 입력하세요',
                                     hintStyle: AppTextStyles.body1Regular
@@ -189,9 +206,13 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                                       vertical: 16,
                                     ),
                                     filled: true,
-                                    fillColor: Colors.white,
+                                    fillColor:
+                                        widget.state.isWorking
+                                            ? Colors.grey.shade100
+                                            : Colors.white,
                                     suffixIcon:
-                                        _nameController.text.isNotEmpty
+                                        _nameController.text.isNotEmpty &&
+                                                !widget.state.isWorking
                                             ? IconButton(
                                               icon: const Icon(
                                                 Icons.cancel,
@@ -218,7 +239,6 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                             ],
                           ),
                           const SizedBox(height: 24),
-
                           // 그룹 설명 - 트렌디한 텍스트 영역으로 교체
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +387,13 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
             shape: const CircleBorder(),
             child: GestureDetector(
               onTap:
-                  () => widget.onAction(const GroupCreateAction.selectImage()),
+                  widget
+                          .state
+                          .isWorking // 🔧 수정: 전체 작업 상태 확인
+                      ? null
+                      : () => widget.onAction(
+                        const GroupCreateAction.selectImage(),
+                      ),
               child: Container(
                 width: 160,
                 height: 160,
@@ -388,72 +414,196 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(80),
-                  child:
-                      widget.state.imageUrl == null
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.add_photo_alternate_rounded,
-                                  size: 36,
-                                  color: AppColorStyles.primary100,
-                                ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 이미지 표시 부분
+                      if (widget.state.imageUrl == null)
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                '그룹 이미지 추가',
-                                style: TextStyle(
-                                  color: AppColorStyles.primary100,
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                ),
+                              child: Icon(
+                                Icons.add_photo_alternate_rounded,
+                                size: 36,
+                                color: AppColorStyles.primary100,
                               ),
-                            ],
-                          )
-                          : Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              widget.state.imageUrl!.startsWith('http')
-                                  ? Image.network(
-                                    widget.state.imageUrl!,
-                                    fit: BoxFit.cover,
-                                  )
-                                  : Image.file(
-                                    File(
-                                      widget.state.imageUrl!.replaceFirst(
-                                        'file://',
-                                        '',
-                                      ),
-                                    ),
-                                    fit: BoxFit.cover,
-                                  ),
-                            ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '그룹 이미지 추가',
+                              style: TextStyle(
+                                color: AppColorStyles.primary100,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (widget.state.imageUrl!.startsWith('http'))
+                        Image.network(
+                          widget.state.imageUrl!,
+                          fit: BoxFit.cover,
+                        )
+                      else
+                        Image.file(
+                          File(
+                            widget.state.imageUrl!.replaceFirst(
+                              'file://',
+                              '',
+                            ),
                           ),
+                          fit: BoxFit.cover,
+                        ),
+
+                      // 🆕 추가: 이미지 업로드 진행 표시
+                      if (widget.state.isUploadingImage)
+                        Container(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: CircularProgressIndicator(
+                                    value: widget.state.imageUploadProgress,
+                                    strokeWidth: 4,
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  '업로드 중...',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  '${(widget.state.imageUploadProgress * 100).toInt()}%',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // 작업 중일 때 비활성화 오버레이
+                      if (widget.state.isWorking &&
+                          !widget.state.isUploadingImage)
+                        Container(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          child: const Center(
+                            child: Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            '그룹을 대표하는 이미지를 선택하세요',
-            style: TextStyle(fontSize: 14, color: AppColorStyles.gray80),
-          ),
-          // 이미지가 있을 경우 삭제 버튼 추가
-          if (widget.state.imageUrl != null)
+
+          // 🔧 수정: 상태에 따른 안내 텍스트
+          if (widget.state.isUploadingImage)
+            Text(
+              widget.state.workingMessage,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColorStyles.primary100,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else
+            Text(
+              '그룹을 대표하는 이미지를 선택하세요',
+              style: TextStyle(fontSize: 14, color: AppColorStyles.gray80),
+            ),
+
+          // 🆕 추가: 이미지 업로드 에러 표시
+          if (widget.state.imageUploadError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red[700], size: 16),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        widget.state.imageUploadError!,
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap:
+                          () => widget.onAction(
+                            const GroupCreateAction.clearImageUploadError(),
+                          ),
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.red[700],
+                        size: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // 이미지가 있을 경우 삭제 버튼 추가 (업로드 중이 아닐 때만)
+          if (widget.state.hasAnyImage && !widget.state.isUploadingImage)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: TextButton.icon(
-                onPressed: () {
-                  widget.onAction(
-                    const GroupCreateAction.imageUrlChanged(null),
-                  );
-                },
+                onPressed:
+                    widget.state.isWorking
+                        ? null
+                        : () {
+                          widget.onAction(
+                            const GroupCreateAction.imageUrlChanged(null),
+                          );
+                          // 이미지 업로드 상태도 초기화
+                          widget.onAction(
+                            const GroupCreateAction.resetImageUploadState(),
+                          );
+                        },
                 icon: const Icon(Icons.delete, color: Colors.red),
                 label: const Text(
                   '이미지 삭제',

@@ -1,11 +1,9 @@
-import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_firebase_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_firebase_data_source.dart';
-import 'package:devlink_mobile_app/group/data/data_source/mock_group_data_source_impl.dart';
 import 'package:devlink_mobile_app/group/data/repository_impl/group_chat_repository_impl.dart';
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_chat_repository.dart';
@@ -35,40 +33,25 @@ part 'group_di.g.dart';
 
 // ==================== 그룹 관련 DI ====================
 
-// 🔧 수정: DataSource 프로바이더 - dispose 처리를 위해 keepAlive 제거하고 ref.onDispose 추가
+// 🔧 수정: Firebase만 사용하도록 DataSource 프로바이더 변경
 @riverpod
 GroupDataSource groupDataSource(Ref ref) {
-  GroupDataSource dataSource;
+  AppLogger.debug(
+    'GroupDataSource: GroupFirebaseDataSource 사용 (Mock 제거)',
+    tag: 'GroupDI',
+  );
 
-  // AppConfig 설정에 따라 Firebase 또는 Mock 구현체 제공
-  if (AppConfig.useMockGroup) {
-    AppLogger.debug(
-      'GroupDataSource: MockGroupDataSourceImpl 사용',
-      tag: 'GroupDI',
-    );
-    dataSource = MockGroupDataSourceImpl();
-  } else {
-    AppLogger.debug(
-      'GroupDataSource: GroupFirebaseDataSource 사용',
-      tag: 'GroupDI',
-    );
+  // Firebase 인스턴스들을 주입하여 실제 Firebase DataSource 생성
+  final dataSource = GroupFirebaseDataSource(
+    firestore: ref.watch(firebaseFirestoreProvider),
+    storage: FirebaseStorage.instance,
+    auth: ref.watch(firebaseAuthProvider),
+  );
 
-    // Firebase 인스턴스들을 주입
-    dataSource = GroupFirebaseDataSource(
-      firestore: ref.watch(firebaseFirestoreProvider),
-      storage: FirebaseStorage.instance,
-      auth: ref.watch(firebaseAuthProvider),
-    );
-  }
-
-  // 🔧 새로 추가: Provider가 dispose될 때 DataSource의 dispose 호출
+  // Provider가 dispose될 때 DataSource의 dispose 호출
   ref.onDispose(() {
     AppLogger.debug('GroupDataSource Provider: onDispose 호출', tag: 'GroupDI');
-
-    // Firebase DataSource인 경우에만 dispose 호출
-    if (dataSource is GroupFirebaseDataSource) {
-      dataSource.dispose();
-    }
+    dataSource.dispose();
   });
 
   return dataSource;
@@ -80,7 +63,7 @@ GroupChatDataSource groupChatDataSource(Ref ref) {
   return GroupChatFirebaseDataSource();
 }
 
-// Repository 프로바이더 - Ref 제거, 순수 DataSource만 주입
+// Repository 프로바이더
 @riverpod
 GroupRepository groupRepository(Ref ref) => GroupRepositoryImpl(
   dataSource: ref.watch(groupDataSourceProvider),
@@ -133,7 +116,6 @@ GetAttendancesByMonthUseCase getAttendancesByMonthUseCase(Ref ref) =>
       repository: ref.watch(groupRepositoryProvider),
     );
 
-// 🔧 새로운 실시간 스트림 UseCase Provider 추가
 @riverpod
 StreamGroupMemberTimerStatusUseCase streamGroupMemberTimerStatusUseCase(
   Ref ref,
@@ -163,9 +145,7 @@ MarkMessagesAsReadUseCase markMessagesAsReadUseCase(Ref ref) =>
       repository: ref.watch(groupChatRepositoryProvider),
     );
 
-// 기존 개별 UseCase Providers를 제거하고 통합 Provider로 교체
-
-// ===== 통합 타이머 UseCase Provider =====
+// 통합 타이머 UseCase Provider
 @riverpod
 RecordTimerActivityUseCase recordTimerActivityUseCase(Ref ref) {
   return RecordTimerActivityUseCase(

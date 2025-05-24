@@ -5,7 +5,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'group_create_state.freezed.dart';
 
-//TODO: state가 이상하게 구현되어있음
 @freezed
 class GroupCreateState with _$GroupCreateState {
   const GroupCreateState({
@@ -17,6 +16,8 @@ class GroupCreateState with _$GroupCreateState {
     this.pauseTimeLimit = 120, // 기본값 120분 = 2시간
     this.invitedMembers = const [],
     this.isSubmitting = false,
+    this.isUploadingImage = false, // 🆕 추가: 이미지 업로드 상태
+    this.imageUploadProgress = 0.0, // 🆕 추가: 이미지 업로드 진행률 (0.0 ~ 1.0)
     this.errorMessage,
     this.successMessage,
     this.createdGroupId,
@@ -24,6 +25,7 @@ class GroupCreateState with _$GroupCreateState {
     this.descriptionError,
     this.memberLimitError,
     this.pauseTimeLimitError,
+    this.imageUploadError, // 🆕 추가: 이미지 업로드 전용 에러
     this.isFormTouched = false,
     this.showValidationErrors = false,
   });
@@ -47,6 +49,10 @@ class GroupCreateState with _$GroupCreateState {
   @override
   final bool isSubmitting;
   @override
+  final bool isUploadingImage; // 🆕 추가
+  @override
+  final double imageUploadProgress; // 🆕 추가
+  @override
   final String? errorMessage;
   @override
   final String? successMessage;
@@ -61,6 +67,8 @@ class GroupCreateState with _$GroupCreateState {
   final String? memberLimitError;
   @override
   final String? pauseTimeLimitError;
+  @override
+  final String? imageUploadError; // 🆕 추가
 
   @override
   final bool isFormTouched;
@@ -81,9 +89,25 @@ extension GroupCreateStateExtension on GroupCreateState {
         hashTags.length <= 10;
   }
 
-  /// 제출 가능한지 검사
+  /// 제출 가능한지 검사 (이미지 업로드 중일 때는 제출 불가)
   bool get canSubmit {
-    return isFormValid && !isSubmitting;
+    return isFormValid && !isSubmitting && !isUploadingImage;
+  }
+
+  /// 전체 작업이 진행 중인지 확인 (그룹 생성 또는 이미지 업로드)
+  bool get isWorking {
+    return isSubmitting || isUploadingImage;
+  }
+
+  /// 현재 작업 상태 메시지
+  String get workingMessage {
+    if (isUploadingImage) {
+      return '이미지를 업로드하는 중입니다... ${(imageUploadProgress * 100).toInt()}%';
+    } else if (isSubmitting) {
+      return '그룹을 생성하는 중입니다...';
+    } else {
+      return '';
+    }
   }
 
   /// 총 예상 멤버 수 (본인 + 초대된 멤버)
@@ -117,13 +141,27 @@ extension GroupCreateStateExtension on GroupCreateState {
     return (pauseTimeLimit - minMinutes) / (maxMinutes - minMinutes);
   }
 
-  /// 에러가 있는지 확인
+  /// 에러가 있는지 확인 (이미지 업로드 에러 포함)
   bool get hasError {
     return errorMessage != null ||
         nameError != null ||
         descriptionError != null ||
         memberLimitError != null ||
-        pauseTimeLimitError != null;
+        pauseTimeLimitError != null ||
+        imageUploadError != null;
+  }
+
+  /// 이미지 관련 상태 확인
+  bool get hasLocalImage {
+    return imageUrl != null && imageUrl!.startsWith('file://');
+  }
+
+  bool get hasUploadedImage {
+    return imageUrl != null && imageUrl!.startsWith('http');
+  }
+
+  bool get hasAnyImage {
+    return imageUrl != null && imageUrl!.isNotEmpty;
   }
 
   /// 모든 에러 메시지 제거한 상태로 복사
@@ -134,6 +172,16 @@ extension GroupCreateStateExtension on GroupCreateState {
       descriptionError: null,
       memberLimitError: null,
       pauseTimeLimitError: null,
+      imageUploadError: null,
+    );
+  }
+
+  /// 이미지 업로드 관련 상태만 초기화
+  GroupCreateState clearImageUploadState() {
+    return copyWith(
+      isUploadingImage: false,
+      imageUploadProgress: 0.0,
+      imageUploadError: null,
     );
   }
 
@@ -222,5 +270,10 @@ class GroupCreateStateUtils {
     return trimmed.isNotEmpty &&
         trimmed.length <= 20 &&
         RegExp(r'^[가-힣a-zA-Z0-9\s]+$').hasMatch(trimmed);
+  }
+
+  /// 이미지 업로드 진행률을 백분율 문자열로 변환
+  static String formatUploadProgress(double progress) {
+    return '${(progress * 100).toInt()}%';
   }
 }
