@@ -1,4 +1,5 @@
 // lib/core/config/app_config.dart
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
@@ -69,15 +70,14 @@ class AppConfig {
   /// 환경 정보 출력 (디버그용)
   static void printConfig() {
     if (isDebug) {
-      print('=== AppConfig ===');
-      print('isDebug: $isDebug');
-      print('useMockAuth: $useMockAuth');
-      print('useMockGroup: $useMockGroup');
-      print('useMockCommunity: $useMockCommunity');
-      print('useFirebase: $useFirebase');
-      print('enableApiLogging: $enableApiLogging');
-      print('enableVerboseLogging: $enableVerboseLogging');
-      print('================');
+      AppLogger.logBox('앱 환경 설정', '''
+isDebug: $isDebug
+useMockAuth: $useMockAuth
+useMockGroup: $useMockGroup
+useMockCommunity: $useMockCommunity
+useFirebase: $useFirebase
+enableApiLogging: $enableApiLogging
+enableVerboseLogging: $enableVerboseLogging''');
     }
   }
 }
