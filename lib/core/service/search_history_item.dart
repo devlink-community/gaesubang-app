@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 검색어 데이터 모델 (단순화)
@@ -83,7 +84,11 @@ class SearchHistoryService {
 
       return limitedItems.map((item) => item.term).toList();
     } catch (e) {
-      print('최근 검색어 조회 오류: $e');
+      AppLogger.error(
+        '최근 검색어 조회 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
       return [];
     }
   }
@@ -120,7 +125,11 @@ class SearchHistoryService {
       // 만료된 항목 정리 (백그라운드)
       _cleanupExpiredItems(category);
     } catch (e) {
-      print('검색어 추가 오류: $e');
+      AppLogger.error(
+        '검색어 추가 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
     }
   }
 
@@ -134,7 +143,11 @@ class SearchHistoryService {
       items.removeWhere((item) => item.term == searchTerm);
       await _saveSearchHistoryItems(items, category);
     } catch (e) {
-      print('검색어 삭제 오류: $e');
+      AppLogger.error(
+        '검색어 삭제 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
     }
   }
 
@@ -155,7 +168,11 @@ class SearchHistoryService {
         await prefs.remove(category.key);
       }
     } catch (e) {
-      print('검색어 전체 삭제 오류: $e');
+      AppLogger.error(
+        '검색어 전체 삭제 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
     }
   }
 
@@ -168,7 +185,11 @@ class SearchHistoryService {
       final items = await _getSearchHistoryItems(category);
       return items.any((item) => item.term == searchTerm);
     } catch (e) {
-      print('검색어 존재 확인 오류: $e');
+      AppLogger.error(
+        '검색어 존재 확인 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
       return false;
     }
   }
@@ -202,7 +223,11 @@ class SearchHistoryService {
         'category': category.displayName,
       };
     } catch (e) {
-      print('검색어 통계 조회 오류: $e');
+      AppLogger.error(
+        '검색어 통계 조회 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
       return {};
     }
   }
@@ -222,7 +247,11 @@ class SearchHistoryService {
             final json = jsonDecode(jsonString) as Map<String, dynamic>;
             return SearchHistoryItem.fromJson(json);
           } catch (e) {
-            print('검색어 파싱 오류: $e');
+            AppLogger.error(
+              '검색어 파싱 오류',
+              tag: 'SearchHistoryItem',
+              error: e,
+            );
             return null;
           }
         })
@@ -264,10 +293,17 @@ class SearchHistoryService {
 
       if (validItems.length != items.length) {
         await _saveSearchHistoryItems(validItems, category);
-        print('만료된 검색어 ${items.length - validItems.length}개 정리 완료');
+        AppLogger.info(
+          '만료된 검색어 ${items.length - validItems.length}개 정리 완료',
+          tag: 'SearchHistoryItem',
+        );
       }
     } catch (e) {
-      print('만료된 항목 정리 오류: $e');
+      AppLogger.error(
+        '만료된 항목 정리 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
     }
   }
 
@@ -303,7 +339,11 @@ class SearchHistoryService {
         }
       }
     } catch (e) {
-      print('데이터 가져오기 오류: $e');
+      AppLogger.error(
+        '데이터 가져오기 오류',
+        tag: 'SearchHistoryItem',
+        error: e,
+      );
     }
   }
 }
