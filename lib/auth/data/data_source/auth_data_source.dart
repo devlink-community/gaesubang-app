@@ -1,5 +1,4 @@
 // lib/auth/data/data_source/auth_data_source.dart
-import '../dto/activity_dto.dart';
 import '../dto/summary_dto.dart';
 import '../dto/user_dto.dart';
 
@@ -76,34 +75,6 @@ abstract interface class AuthDataSource {
   Future<void> updateUserSummary({
     required String userId,
     required SummaryDto summary,
-  });
-
-  /// 그룹 Activity 조회
-  Future<ActivityDto?> fetchGroupActivity({
-    required String groupId,
-    required String userId,
-  });
-
-  /// 그룹 Activity 업데이트
-  Future<void> updateGroupActivity({
-    required String groupId,
-    required String userId,
-    required ActivityDto activity,
-  });
-
-  /// 그룹 Activity 실시간 스트림
-  Stream<ActivityDto> streamGroupActivity({
-    required String groupId,
-    required String userId,
-  });
-
-  /// 그룹의 모든 멤버 Activity 스트림
-  Stream<List<ActivityDto>> streamGroupMembersActivities(String groupId);
-
-  /// 월별 통계 조회
-  Future<Map<String, dynamic>?> fetchMonthlyStats({
-    required String groupId,
-    required String yearMonth,
   });
 
   // ===== Deprecated 메서드 (추후 삭제 예정) =====

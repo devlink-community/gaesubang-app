@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+import '../dto/summary_dto.dart';
 import '../dto/user_dto.dart';
 import 'auth_data_source.dart';
 
@@ -325,6 +326,27 @@ class AuthFirebaseDataSource implements AuthDataSource {
   @override
   Future<UserDto> fetchUserProfile(String userId) async {
     return await _userProfile.fetchOtherUserProfile(userId);
+  }
+
+  // ===== 새로운 Activity/Summary 관련 메서드 구현 =====
+
+  @override
+  Future<SummaryDto?> fetchUserSummary(String userId) async {
+    final summaryData = await _userActivity.fetchUserSummary(userId);
+    if (summaryData == null) return null;
+
+    return SummaryDto.fromJson(summaryData);
+  }
+
+  @override
+  Future<void> updateUserSummary({
+    required String userId,
+    required SummaryDto summary,
+  }) async {
+    await _userActivity.updateUserSummary(
+      userId: userId,
+      summary: summary,
+    );
   }
 
   /// 재시도 로직이 포함된 사용자 데이터 가져오기
