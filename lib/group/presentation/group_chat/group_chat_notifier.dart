@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:devlink_mobile_app/ai_assistance/module/ai_client_di.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_stream_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_case.dart';
@@ -37,7 +38,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
   @override
   GroupChatState build() {
-    print('🏗️ GroupChatNotifier build() 호출');
+    AppLogger.info('GroupChatNotifier build() 호출', tag: 'GroupChatNotifier');
 
     // 의존성 주입
     _getGroupMessagesUseCase = ref.watch(getGroupMessagesUseCaseProvider);
@@ -59,7 +60,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
     // 리소스 정리
     ref.onDispose(() {
-      print('🗑️ GroupChatNotifier dispose');
+      AppLogger.info('GroupChatNotifier dispose', tag: 'GroupChatNotifier');
       _messagesSubscription?.cancel();
       _timer?.cancel();
       _searchDebouncer?.cancel();
@@ -71,7 +72,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
   // 액션 처리
   Future<void> onAction(GroupChatAction action) async {
-    print('🎬 GroupChatAction: $action');
+    AppLogger.debug('GroupChatAction: $action', tag: 'GroupChatNotifier');
 
     switch (action) {
       case LoadMessages(:final groupId):
@@ -111,7 +112,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
         isBotActive: false,
         botResponseStatus: const AsyncValue.data(null),
       );
-      print('🤖 봇 비활성화');
+      AppLogger.info('봇 비활성화', tag: 'GroupChatNotifier');
     } else {
       state = state.copyWith(
         activeBotType: botType,
@@ -119,7 +120,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
         lastBotInteraction: DateTime.now(),
         botResponseStatus: const AsyncValue.data(null),
       );
-      print('🤖 봇 활성화: ${botType.displayName}');
+      AppLogger.info('봇 활성화: ${botType.displayName}', tag: 'GroupChatNotifier');
     }
   }
 
@@ -165,13 +166,20 @@ class GroupChatNotifier extends _$GroupChatNotifier {
         state = state.copyWith(errorMessage: '봇 메시지 전송에 실패했습니다');
       }
 
-      print('🤖 봇 응답 전송 완료: ${botMessage.content.substring(0, 30)}...');
+      AppLogger.info(
+        '봇 응답 전송 완료: ${botMessage.content.substring(0, 30)}...',
+        tag: 'GroupChatNotifier',
+      );
     } catch (e) {
       state = state.copyWith(
         botResponseStatus: AsyncError(e, StackTrace.current),
         errorMessage: '봇 응답 생성 중 오류가 발생했습니다',
       );
-      print('❌ 봇 응답 생성 실패: $e');
+      AppLogger.error(
+        '봇 응답 생성 실패',
+        tag: 'GroupChatNotifier',
+        error: e,
+      );
     }
   }
 
@@ -212,7 +220,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
       if (state.isBotActive &&
           state.activeBotType != null &&
           _shouldBotRespond(content)) {
-        print('🤖 봇 멘션 감지, 자동 응답 생성 중...');
+        AppLogger.info('봇 멘션 감지, 자동 응답 생성 중...', tag: 'GroupChatNotifier');
         await _handleGenerateBotResponse(content, state.activeBotType!);
       }
 
@@ -266,7 +274,10 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     }
 
     _searchDebouncer = Timer(const Duration(milliseconds: 300), () {
-      print('🔍 멤버 검색: "$query" - 결과: ${state.filteredMembers.length}개');
+      AppLogger.info(
+        '멤버 검색: "$query" - 결과: ${state.filteredMembers.length}개',
+        tag: 'GroupChatNotifier',
+      );
     });
   }
 
@@ -290,7 +301,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
   Future<void> _handleSetGroupId(String groupId) async {
     if (groupId.isEmpty || groupId == state.groupId) return;
 
-    print('📊 그룹 ID 설정: $groupId');
+    AppLogger.info('그룹 ID 설정: $groupId', tag: 'GroupChatNotifier');
     state = state.copyWith(groupId: groupId);
 
     await _subscribeToMessages(groupId);
@@ -308,7 +319,10 @@ class GroupChatNotifier extends _$GroupChatNotifier {
       state = state.copyWith(groupMembersResult: result);
 
       if (result is AsyncData) {
-        print('✅ 그룹 멤버 로드 완료: ${result.value?.length}명');
+        AppLogger.info(
+          '그룹 멤버 로드 완료: ${result.value?.length}명',
+          tag: 'GroupChatNotifier',
+        );
       }
     } catch (e) {
       state = state.copyWith(
@@ -336,7 +350,12 @@ class GroupChatNotifier extends _$GroupChatNotifier {
             try {
               await _handleMarkAsRead();
             } catch (e, st) {
-              debugPrint('❌ 메시지 읽음 처리 오류: $e\n$st');
+              AppLogger.error(
+                '메시지 읽음 처리 오류',
+                tag: 'GroupChatNotifier',
+                error: e,
+                stackTrace: st,
+              );
             }
           });
         }
@@ -372,7 +391,11 @@ class GroupChatNotifier extends _$GroupChatNotifier {
     try {
       await _markMessagesAsReadUseCase.execute(state.groupId);
     } catch (e) {
-      print('메시지 읽음 처리 실패: $e');
+      AppLogger.error(
+        '메시지 읽음 처리 실패',
+        tag: 'GroupChatNotifier',
+        error: e,
+      );
     }
   }
 
