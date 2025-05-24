@@ -219,14 +219,22 @@ class AppImage extends StatelessWidget {
 
   /// 이미지 경로에 따라 적절한 이미지 위젯 반환
   Widget _buildImageBasedOnPath() {
+    // 경로 유효성 검사
+    if (path == null || path!.trim().isEmpty) {
+      AppLogger.warning('빈 이미지 경로 감지');
+      return _buildPlaceholderImage();
+    }
+
+    final String cleanPath = path!.trim();
+
     // 최종 캐시 크기 계산
     final int? finalCacheWidth = cacheWidth ?? _calculateCacheSize(width);
     final int? finalCacheHeight = cacheHeight ?? _calculateCacheSize(height);
 
     // Asset 이미지
-    if (path!.startsWith('assets/') || path!.startsWith('asset/')) {
+    if (cleanPath.startsWith('assets/') || cleanPath.startsWith('asset/')) {
       return Image.asset(
-        path!,
+        cleanPath,
         key: imageKey != null ? Key(imageKey!) : null,
         scale: scale,
         width: width,
@@ -250,9 +258,22 @@ class AppImage extends StatelessWidget {
       );
     }
     // 네트워크 이미지
-    else if (path!.startsWith('http://') || path!.startsWith('https://')) {
+    else if (cleanPath.startsWith('http://') ||
+        cleanPath.startsWith('https://')) {
+      // URL 유효성 검사
+      try {
+        final uri = Uri.parse(cleanPath);
+        if (!uri.hasAbsolutePath || uri.host.isEmpty) {
+          AppLogger.warning('잘못된 네트워크 이미지 URL: $cleanPath');
+          return _buildImageWithFallback();
+        }
+      } catch (e) {
+        AppLogger.error('네트워크 이미지 URL 파싱 실패: $cleanPath', error: e);
+        return _buildImageWithFallback();
+      }
+
       return Image.network(
-        path!,
+        cleanPath,
         key: imageKey != null ? Key(imageKey!) : null,
         scale: scale,
         width: width,
@@ -276,10 +297,16 @@ class AppImage extends StatelessWidget {
       );
     }
     // 로컬 파일 이미지
-    else if (path!.startsWith('file://') || path!.startsWith('/')) {
-      String filePath = path!;
+    else if (cleanPath.startsWith('file://') || cleanPath.startsWith('/')) {
+      String filePath = cleanPath;
       if (filePath.startsWith('file://')) {
         filePath = filePath.replaceFirst('file://', '');
+      }
+
+      // 파일 경로 유효성 검사
+      if (filePath.isEmpty) {
+        AppLogger.warning('빈 파일 경로: $cleanPath');
+        return _buildImageWithFallback();
       }
 
       return Image.file(
@@ -305,7 +332,8 @@ class AppImage extends StatelessWidget {
       );
     }
 
-    // 기타 경우 (지원하지 않는 경로)
+    // 기타 경우 (지원하지 않는 경로 또는 잘못된 형식)
+    AppLogger.warning('지원하지 않는 이미지 경로 형식: $cleanPath');
     return _buildImageWithFallback();
   }
 
