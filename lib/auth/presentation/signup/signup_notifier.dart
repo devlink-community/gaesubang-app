@@ -14,6 +14,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'signup_notifier.g.dart';
@@ -474,8 +475,8 @@ class SignupNotifier extends _$SignupNotifier {
 
     AppLogger.logStep(3, 6, '회원가입 API 호출 시작');
     AppLogger.logState('회원가입 요청 정보', {
-      'email': state.email,
-      'nickname': state.nickname,
+      'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
+      'nickname': PrivacyMaskUtil.maskNickname(state.nickname), // 변경
       'password_length': state.password.length,
       'agreed_terms_id': state.agreedTermsId,
       'is_terms_agreed': state.isTermsAgreed,
@@ -513,7 +514,7 @@ class SignupNotifier extends _$SignupNotifier {
 
         AppLogger.logBox(
           '회원가입 성공',
-          '사용자: ${state.nickname}\n이메일: ${state.email}\n소요시간: ${duration.inSeconds}초',
+          '사용자: ${PrivacyMaskUtil.maskNickname(state.nickname)}\n이메일: ${PrivacyMaskUtil.maskEmail(state.email)}\n소요시간: ${duration.inSeconds}초', // 변경
         );
 
         // 로그인 성공 결과를 signupResult에 설정

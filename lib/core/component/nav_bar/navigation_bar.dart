@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
@@ -169,8 +170,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
   @override
   Widget build(BuildContext context) {
     if (kDebugMode) {
-      print(
+      AppLogger.debug(
         'AppBottomNavigationBar 리빌드: profileImageUrl=${widget.profileImageUrl}',
+        tag: 'NavigationBar',
       );
     }
     return Container(
@@ -305,7 +307,12 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
         backgroundImage: FileImage(File(widget.profileImageUrl!)),
         backgroundColor: Colors.grey.shade200,
         onBackgroundImageError: (exception, stackTrace) {
-          debugPrint('❌ 로컬 이미지 로딩 오류: $exception');
+          AppLogger.error(
+            '로컬 이미지 로딩 오류',
+            tag: 'NavigationBar',
+            error: exception,
+            stackTrace: stackTrace,
+          );
         },
       );
     }
@@ -316,7 +323,12 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
       backgroundImage: NetworkImage(widget.profileImageUrl!),
       backgroundColor: Colors.grey.shade200,
       onBackgroundImageError: (exception, stackTrace) {
-        debugPrint('❌ 네트워크 이미지 로딩 오류: $exception');
+        AppLogger.error(
+          '네트워크 이미지 로딩 오류',
+          tag: 'NavigationBar',
+          error: exception,
+          stackTrace: stackTrace,
+        );
       },
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
@@ -157,11 +158,18 @@ class ImageCompressionUtils {
       customFileName: customFileName,
     );
 
-    debugPrint('✅ 이미지 압축 완료: ${originalImagePath} → ${compressedFile.path}');
-    debugPrint(
-      '   원본 크기: ${await getImageFileSize(originalImagePath) ~/ 1024}KB',
+    AppLogger.info(
+      '이미지 압축 완료: ${originalImagePath} → ${compressedFile.path}',
+      tag: 'ImageCompression',
     );
-    debugPrint('   압축 크기: ${await compressedFile.length() ~/ 1024}KB');
+    
+    final originalSizeKB = await getImageFileSize(originalImagePath) ~/ 1024;
+    final compressedSizeKB = await compressedFile.length() ~/ 1024;
+    
+    AppLogger.info(
+      '압축 결과 - 원본: ${originalSizeKB}KB → 압축: ${compressedSizeKB}KB (${((originalSizeKB - compressedSizeKB) / originalSizeKB * 100).toStringAsFixed(1)}% 절약)',
+      tag: 'ImageCompression',
+    );
 
     return compressedFile;
   }

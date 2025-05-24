@@ -1,7 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-
+import '../../../core/utils/app_logger.dart';
 import '../../module/quiz_prompt.dart';
 import '../../module/vertex_client.dart';
 import 'fallback_service.dart';
@@ -43,12 +42,20 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
     try {
       // Firebase AI SDK를 통한 간단한 호출
       final result = await _firebaseAIClient.callTextModel(prompt);
-      debugPrint(
+
+      AppLogger.info(
         '퀴즈 생성 성공: ${result["question"]?.toString().substring(0, min(20, result["question"]?.toString().length ?? 0))}...',
+        tag: 'QuizAI',
       );
+
       return result;
     } catch (e) {
-      debugPrint('퀴즈 생성 API 호출 실패: $e');
+      AppLogger.error(
+        '퀴즈 생성 API 호출 실패',
+        tag: 'QuizAI',
+        error: e,
+      );
+
       // 폴백 서비스 활용
       final skill = _extractSkillFromPrompt(prompt);
       return _fallbackService.getFallbackQuiz(skill);
@@ -66,10 +73,19 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
 
       // Firebase AI SDK를 사용한 리스트 호출
       final results = await _firebaseAIClient.callTextModelForList(prompt);
-      debugPrint('스킬 기반 퀴즈 생성 성공: ${results.length}개');
+
+      AppLogger.info(
+        '스킬 기반 퀴즈 생성 성공: ${results.length}개',
+        tag: 'QuizAI',
+      );
+
       return results;
     } catch (e) {
-      debugPrint('스킬 기반 퀴즈 생성 실패: $e');
+      AppLogger.error(
+        '스킬 기반 퀴즈 생성 실패',
+        tag: 'QuizAI',
+        error: e,
+      );
 
       // 폴백: 각 스킬에 대해 하나씩 생성
       final fallbackQuizzes = <Map<String, dynamic>>[];
@@ -85,6 +101,11 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
         fallbackQuizzes.add(_fallbackService.getFallbackQuiz('컴퓨터 기초'));
       }
 
+      AppLogger.info(
+        '폴백 퀴즈로 대체: ${fallbackQuizzes.length}개 생성',
+        tag: 'QuizAI',
+      );
+
       return fallbackQuizzes;
     }
   }
@@ -97,16 +118,31 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
 
       // Firebase AI SDK를 사용한 리스트 호출
       final results = await _firebaseAIClient.callTextModelForList(prompt);
-      debugPrint('일반 퀴즈 생성 성공: ${results.length}개');
+
+      AppLogger.info(
+        '일반 퀴즈 생성 성공: ${results.length}개',
+        tag: 'QuizAI',
+      );
+
       return results;
     } catch (e) {
-      debugPrint('일반 퀴즈 생성 실패: $e');
+      AppLogger.error(
+        '일반 퀴즈 생성 실패',
+        tag: 'QuizAI',
+        error: e,
+      );
 
       // 폴백: 기본 컴퓨터 지식 퀴즈 여러 개 반환
       final fallbackQuizzes = <Map<String, dynamic>>[];
       for (int i = 0; i < count; i++) {
         fallbackQuizzes.add(_fallbackService.getFallbackQuiz('컴퓨터 기초'));
       }
+
+      AppLogger.info(
+        '일반 퀴즈 폴백으로 대체: ${fallbackQuizzes.length}개 생성',
+        tag: 'QuizAI',
+      );
+
       return fallbackQuizzes;
     }
   }
@@ -116,10 +152,20 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
     try {
       // Firebase AI SDK를 통한 간단한 호출
       final result = await _firebaseAIClient.callTextModel(prompt);
-      debugPrint('학습 팁 생성 성공: ${result["title"]}');
+
+      AppLogger.info(
+        '학습 팁 생성 성공: ${result["title"]}',
+        tag: 'StudyTipAI',
+      );
+
       return result;
     } catch (e) {
-      debugPrint('학습 팁 생성 API 호출 실패: $e');
+      AppLogger.error(
+        '학습 팁 생성 API 호출 실패',
+        tag: 'StudyTipAI',
+        error: e,
+      );
+
       // 폴백 서비스 활용
       final skill = _extractSkillFromPrompt(prompt);
       return _fallbackService.getFallbackStudyTip(skill);
@@ -143,23 +189,47 @@ class VertexAiDataSourceImpl implements FirebaseAiDataSource {
     final skillPattern = RegExp(r'주제:\s*([^()\n]+)');
     final match = skillPattern.firstMatch(prompt);
     if (match != null && match.groupCount >= 1) {
-      return match.group(1)?.trim() ?? '컴퓨터 기초';
+      final extractedSkill = match.group(1)?.trim() ?? '컴퓨터 기초';
+
+      AppLogger.debug(
+        '프롬프트에서 스킬 추출 (주제 패턴): $extractedSkill',
+        tag: 'SkillExtractor',
+      );
+
+      return extractedSkill;
     }
 
     // 기술 분야: 스킬명 형태로 되어 있는지 확인
     final fieldPattern = RegExp(r'기술 분야:\s*([^,\n]+)');
     final fieldMatch = fieldPattern.firstMatch(prompt);
     if (fieldMatch != null && fieldMatch.groupCount >= 1) {
-      return fieldMatch.group(1)?.trim() ?? '컴퓨터 기초';
+      final extractedSkill = fieldMatch.group(1)?.trim() ?? '컴퓨터 기초';
+
+      AppLogger.debug(
+        '프롬프트에서 스킬 추출 (기술 분야 패턴): $extractedSkill',
+        tag: 'SkillExtractor',
+      );
+
+      return extractedSkill;
     }
 
     // 위 패턴이 모두 없으면 첫 줄을 사용
     final firstLine = prompt.split('\n').first.trim();
     if (firstLine.isNotEmpty) {
+      AppLogger.debug(
+        '프롬프트에서 스킬 추출 (첫 줄): $firstLine',
+        tag: 'SkillExtractor',
+      );
+
       return firstLine;
     }
 
     // 기본값
+    AppLogger.debug(
+      '프롬프트에서 스킬 추출 실패, 기본값 사용: 컴퓨터 기초',
+      tag: 'SkillExtractor',
+    );
+
     return '컴퓨터 기초';
   }
 }

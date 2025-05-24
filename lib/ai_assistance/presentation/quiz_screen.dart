@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
+import '../../core/utils/app_logger.dart';
 import '../domain/model/quiz.dart';
 import 'quiz_action.dart';
 
@@ -310,7 +311,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () {
-              debugPrint('새 퀴즈 요청 - 원본 스킬 목록: ${widget.skills}');
+              AppLogger.debug(
+                '새 퀴즈 요청 - 원본 스킬 목록: ${widget.skills}',
+                tag: 'QuizScreen',
+              );
               // 새로운 퀴즈 로드 액션 트리거
               if (widget.onAction != null) {
                 widget.onAction!(
@@ -338,7 +342,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   // 답변 선택 메서드 추가
   void _selectAnswer(int index) {
-    debugPrint('답변 선택: $index');
+    AppLogger.debug('답변 선택: $index', tag: 'QuizScreen');
     setState(() {
       selectedAnswerIndex = index;
     });
@@ -346,7 +350,10 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   // 답변 확인 메서드 추가
   void _checkAnswer(int index) {
-    debugPrint('답변 제출: $index, 정답: ${widget.quiz.correctOptionIndex}');
+    AppLogger.debug(
+      '답변 제출: $index, 정답: ${widget.quiz.correctOptionIndex}',
+      tag: 'QuizScreen',
+    );
     setState(() {
       hasAnswered = true;
     });

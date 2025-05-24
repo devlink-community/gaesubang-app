@@ -21,6 +21,8 @@ class Failure {
 
   bool get isNetwork => type == FailureType.network;
   bool get isTimeout => type == FailureType.timeout;
+  bool get isNotFound => type == FailureType.notFound;
+  bool get isClient => type == FailureType.client;
 
   @override
   String toString() =>
@@ -28,7 +30,17 @@ class Failure {
 }
 
 /// 실패 유형 분류
-enum FailureType { network, unauthorized, timeout, server, parsing, validation, unknown }
+enum FailureType {
+  network,
+  unauthorized,
+  timeout,
+  server,
+  parsing,
+  validation,
+  unknown,
+  notFound, // 새로 추가 - 404 에러용
+  client, // 새로 추가 - 4xx 에러용 (400, 403 등)
+}
 
 /// Exception을 Failure로 매핑하는 유틸
 Failure mapExceptionToFailure(Object error, StackTrace stackTrace) {

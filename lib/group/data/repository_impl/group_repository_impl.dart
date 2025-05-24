@@ -1,5 +1,6 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/focus_stats_calculator.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
@@ -342,11 +343,19 @@ class GroupRepositoryImpl implements GroupRepository {
         // 🔧 기존 Mapper 사용
         final groupMembers = memberDtos.toModelList(timerActivityDtos);
 
-        print('✅ 실시간 멤버 상태 변환 완료: ${groupMembers.length}명');
+        AppLogger.info(
+          '실시간 멤버 상태 변환 완료: ${groupMembers.length}명',
+          tag: 'GroupRepository',
+        );
 
         return Result<List<GroupMember>>.success(groupMembers);
       } catch (e, st) {
-        print('❌ 실시간 멤버 상태 변환 실패: $e');
+        AppLogger.error(
+          '실시간 멤버 상태 변환 실패',
+          tag: 'GroupRepository',
+          error: e,
+          stackTrace: st,
+        );
         return Result<List<GroupMember>>.error(
           mapExceptionToFailure(e, st),
         );

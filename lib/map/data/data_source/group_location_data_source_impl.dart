@@ -1,5 +1,6 @@
 // lib/map/data/data_source/group_location_data_source_impl.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
 
@@ -30,8 +31,12 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
             'isOnline': true,
           }, SetOptions(merge: true));
     } catch (e, st) {
-      // ✅ Firebase 통신 오류: 원본 예외 정보 보존
-      print('멤버 위치 업데이트 Firebase 통신 오류: $e\n$st');
+      AppLogger.error(
+        '멤버 위치 업데이트 실패 - groupId: $groupId, userId: $userId',
+        tag: 'GroupLocationDataSource',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }
@@ -53,8 +58,12 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
         return GroupMemberLocationDto.fromJson({...data, 'id': doc.id});
       }).toList();
     } catch (e, st) {
-      // ✅ Firebase 통신 오류: 원본 예외 정보 보존
-      print('그룹 멤버 위치 조회 Firebase 통신 오류: $e\n$st');
+      AppLogger.error(
+        '그룹 멤버 위치 조회 실패 - groupId: $groupId',
+        tag: 'GroupLocationDataSource',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }
@@ -76,8 +85,12 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
             }).toList();
           });
     } catch (e, st) {
-      // ✅ Firebase 스트림 구독 오류: 원본 예외 정보 보존
-      print('그룹 멤버 위치 스트림 구독 Firebase 오류: $e\n$st');
+      AppLogger.error(
+        '그룹 멤버 위치 스트림 구독 실패 - groupId: $groupId',
+        tag: 'GroupLocationDataSource',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }

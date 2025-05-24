@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 
 import '../../../auth/domain/model/member.dart';
@@ -380,7 +381,12 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
         backgroundImage: FileImage(File(widget.member.image)),
         backgroundColor: Colors.grey.shade200,
         onBackgroundImageError: (exception, stackTrace) {
-          debugPrint('이미지 로딩 오류: $exception');
+          AppLogger.error(
+            '로컬 이미지 로딩 오류',
+            tag: 'ProfileInfoCard',
+            error: exception,
+            stackTrace: stackTrace,
+          );
           return;
         },
       );
@@ -391,7 +397,12 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
       backgroundImage: NetworkImage(widget.member.image),
       backgroundColor: Colors.grey.shade200,
       onBackgroundImageError: (exception, stackTrace) {
-        debugPrint('이미지 로딩 오류: $exception');
+        AppLogger.error(
+          '네트워크 이미지 로딩 오류',
+          tag: 'ProfileInfoCard',
+          error: exception,
+          stackTrace: stackTrace,
+        );
         return;
       },
     );

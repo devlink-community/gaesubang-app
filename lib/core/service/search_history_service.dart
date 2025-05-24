@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchHistoryService {
@@ -13,7 +14,11 @@ class SearchHistoryService {
       final searches = prefs.getStringList(_keyRecentSearches) ?? [];
       return searches;
     } catch (e) {
-      print('최근 검색어 조회 오류: $e');
+      AppLogger.error(
+        '최근 검색어 조회 오류',
+        tag: 'SearchHistory',
+        error: e,
+      );
       return [];
     }
   }
@@ -39,7 +44,11 @@ class SearchHistoryService {
 
       await prefs.setStringList(_keyRecentSearches, searches);
     } catch (e) {
-      print('검색어 추가 오류: $e');
+      AppLogger.error(
+        '검색어 추가 오류',
+        tag: 'SearchHistory',
+        error: e,
+      );
     }
   }
 
@@ -52,7 +61,11 @@ class SearchHistoryService {
       searches.remove(searchTerm);
       await prefs.setStringList(_keyRecentSearches, searches);
     } catch (e) {
-      print('검색어 삭제 오류: $e');
+      AppLogger.error(
+        '검색어 삭제 오류',
+        tag: 'SearchHistory',
+        error: e,
+      );
     }
   }
 
@@ -62,7 +75,11 @@ class SearchHistoryService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyRecentSearches);
     } catch (e) {
-      print('검색어 전체 삭제 오류: $e');
+      AppLogger.error(
+        '검색어 전체 삭제 오류',
+        tag: 'SearchHistory',
+        error: e,
+      );
     }
   }
 
@@ -72,7 +89,11 @@ class SearchHistoryService {
       final searches = await getRecentSearches();
       return searches.contains(searchTerm);
     } catch (e) {
-      print('검색어 존재 확인 오류: $e');
+      AppLogger.error(
+        '검색어 존재 확인 오류',
+        tag: 'SearchHistory',
+        error: e,
+      );
       return false;
     }
   }

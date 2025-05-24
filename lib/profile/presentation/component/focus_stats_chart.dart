@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/styles/app_color_styles.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../domain/model/focus_time_stats.dart';
 
 class FocusStatsChart extends StatefulWidget {
@@ -12,11 +13,11 @@ class FocusStatsChart extends StatefulWidget {
   final Duration animationDuration;
 
   const FocusStatsChart({
-    Key? key,
+    super.key,
     required this.stats,
     this.animate = false,
     this.animationDuration = const Duration(milliseconds: 800),
-  }) : super(key: key);
+  });
 
   @override
   State<FocusStatsChart> createState() => _FocusStatsChartState();
@@ -55,12 +56,17 @@ class _FocusStatsChartState extends State<FocusStatsChart>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🚀 FocusStatsChart: 받은 stats = ${widget.stats}');
-    debugPrint(
-      '🚀 FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
+    AppLogger.debug(
+      'FocusStatsChart: 받은 stats = ${widget.stats}',
+      tag: 'FocusStatsChart',
     );
-    debugPrint(
-      '🚀 FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
+    AppLogger.debug(
+      'FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
+      tag: 'FocusStatsChart',
+    );
+    AppLogger.debug(
+      'FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
+      tag: 'FocusStatsChart',
     );
 
     // 1) 원본 데이터 정렬
@@ -69,7 +75,10 @@ class _FocusStatsChartState extends State<FocusStatsChart>
           (a, b) => _weekdayIndex(a.key).compareTo(_weekdayIndex(b.key)),
         );
 
-    debugPrint('🚀 FocusStatsChart: 정렬된 entries = $entries');
+    AppLogger.debug(
+      'FocusStatsChart: 정렬된 entries = $entries',
+      tag: 'FocusStatsChart',
+    );
 
     // 2) 최대값 계산 - 모든 값이 0이면 기본값 설정
     final maxVal = entries
@@ -79,7 +88,10 @@ class _FocusStatsChartState extends State<FocusStatsChart>
     // ✅ 모든 값이 0일 때 기본 높이 설정 (빈 차트 표시용)
     final chartMaxY = maxVal > 0 ? maxVal : 60.0; // 60분을 기본 최대값으로 설정
 
-    debugPrint('🚀 FocusStatsChart: maxVal = $maxVal, chartMaxY = $chartMaxY');
+    AppLogger.debug(
+      'FocusStatsChart: maxVal = $maxVal, chartMaxY = $chartMaxY',
+      tag: 'FocusStatsChart',
+    );
 
     // 3) 색상 정의 - 살짝 더 깊은 파란색 계열로 수정
     final fillColor = const Color(0xFF4355F9);

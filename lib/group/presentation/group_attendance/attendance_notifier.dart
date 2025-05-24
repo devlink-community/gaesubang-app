@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:flutter/material.dart';
@@ -52,11 +53,15 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   Future<void> _handleInitializeLocale() async {
     try {
       await initializeDateFormatting('ko_KR', null);
-      print('✅ 로케일 초기화 성공');
+      AppLogger.info('로케일 초기화 성공', tag: 'AttendanceNotifier');
 
       state = state.copyWith(isLocaleInitialized: true);
     } catch (e) {
-      print('⚠️ 로케일 초기화 실패, 기본값으로 진행: $e');
+      AppLogger.warning(
+        '로케일 초기화 실패, 기본값으로 진행',
+        tag: 'AttendanceNotifier',
+        error: e,
+      );
 
       // 로케일 초기화에 실패해도 앱은 계속 동작하도록 함
       state = state.copyWith(isLocaleInitialized: true);
@@ -136,7 +141,11 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     try {
       return DateFormat(pattern, 'ko_KR').format(date);
     } catch (e) {
-      print('⚠️ 한국어 날짜 포맷팅 실패, 기본 포맷 사용: $e');
+      AppLogger.warning(
+        '한국어 날짜 포맷팅 실패, 기본 포맷 사용',
+        tag: 'AttendanceNotifier',
+        error: e,
+      );
       // 한국어 포맷팅에 실패하면 기본 포맷 사용
       return DateFormat('M월 d일').format(date);
     }

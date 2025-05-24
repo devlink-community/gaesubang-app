@@ -1,4 +1,5 @@
 // lib/group/presentation/group_chat/group_chat_screen_root.dart
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_screen.dart';
@@ -35,7 +36,10 @@ class _GroupChatScreenRootState extends ConsumerState<GroupChatScreenRoot> with 
   Future<void> _initializeScreen() async {
     if (_isInitialized) return;
 
-    print('🚀 그룹 채팅 화면 초기화 시작 - groupId: ${widget.groupId}');
+    AppLogger.info(
+      '그룹 채팅 화면 초기화 시작 - groupId: ${widget.groupId}',
+      tag: 'GroupChatScreen',
+    );
 
     if (mounted) {
       final notifier = ref.read(groupChatNotifierProvider.notifier);
@@ -43,7 +47,7 @@ class _GroupChatScreenRootState extends ConsumerState<GroupChatScreenRoot> with 
     }
 
     _isInitialized = true;
-    print('✅ 그룹 채팅 화면 초기화 완료');
+    AppLogger.info('그룹 채팅 화면 초기화 완료', tag: 'GroupChatScreen');
   }
 
   @override

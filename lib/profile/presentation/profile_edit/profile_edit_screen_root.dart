@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_notifier.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen.dart';
 import 'package:flutter/material.dart';
@@ -16,9 +17,9 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   @override
   void initState() {
     super.initState();
-    debugPrint('🔄 ProfileEditScreenRoot: initState 호출됨');
+    AppLogger.debug('ProfileEditScreenRoot: initState 호출됨', tag: 'ProfileEditScreenRoot');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('🔄 ProfileEditScreenRoot: 프로필 로드 시작');
+      AppLogger.debug('ProfileEditScreenRoot: 프로필 로드 시작', tag: 'ProfileEditScreenRoot');
       ref.read(profileEditNotifierProvider.notifier).loadProfile();
     });
   }
@@ -28,22 +29,31 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
     final state = ref.watch(profileEditNotifierProvider);
     final notifier = ref.watch(profileEditNotifierProvider.notifier);
 
-    debugPrint('🔄 ProfileEditScreenRoot: build 호출됨');
+    AppLogger.debug('ProfileEditScreenRoot: build 호출됨', tag: 'ProfileEditScreenRoot');
 
     // 저장 성공 시 단순히 뒤로 가기 (ProfileScreenRoot가 갱신을 처리함)
     ref.listen(profileEditNotifierProvider.select((s) => s.saveState), (
       previous,
       current,
     ) {
-      debugPrint('🔄 ProfileEditScreenRoot: saveState 변화 감지 - $current');
+      AppLogger.debug(
+        'ProfileEditScreenRoot: saveState 변화 감지 - $current',
+        tag: 'ProfileEditScreenRoot',
+      );
 
       if (current case AsyncData(:final value)) {
         if (value == true) {
-          debugPrint('✅ ProfileEditScreenRoot: 저장 성공! 프로필 화면으로 이동');
+          AppLogger.info(
+            'ProfileEditScreenRoot: 저장 성공! 프로필 화면으로 이동',
+            tag: 'ProfileEditScreenRoot',
+          );
           _showSuccessMessage(context);
 
           // 여기서 /profile로 이동
-          debugPrint('🔄 ProfileEditScreenRoot: context.go("/profile") 호출');
+          AppLogger.debug(
+            'ProfileEditScreenRoot: context.go("/profile") 호출',
+            tag: 'ProfileEditScreenRoot',
+          );
           context.go('/profile');
         }
       }
@@ -55,7 +65,11 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
       current,
     ) {
       if (current.hasError) {
-        debugPrint('❌ ProfileEditScreenRoot: 저장 에러 - ${current.error}');
+        AppLogger.error(
+          'ProfileEditScreenRoot: 저장 에러',
+          tag: 'ProfileEditScreenRoot',
+          error: current.error,
+        );
         _showErrorMessage(context, current.error.toString());
       }
     });
@@ -64,7 +78,10 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   }
 
   void _showSuccessMessage(BuildContext context) {
-    debugPrint('🔄 ProfileEditScreenRoot: 성공 메시지 표시');
+    AppLogger.debug(
+      'ProfileEditScreenRoot: 성공 메시지 표시',
+      tag: 'ProfileEditScreenRoot',
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('프로필이 성공적으로 저장되었습니다'),
@@ -75,7 +92,10 @@ class _ProfileEditScreenRootState extends ConsumerState<ProfileEditScreenRoot> {
   }
 
   void _showErrorMessage(BuildContext context, String message) {
-    debugPrint('🔄 ProfileEditScreenRoot: 에러 메시지 표시 - $message');
+    AppLogger.debug(
+      'ProfileEditScreenRoot: 에러 메시지 표시 - $message',
+      tag: 'ProfileEditScreenRoot',
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message.isNotEmpty ? message : '저장에 실패했습니다'),

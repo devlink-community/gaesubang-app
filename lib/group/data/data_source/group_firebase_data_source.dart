@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,14 +63,20 @@ class GroupFirebaseDataSource implements GroupDataSource {
   void _startMemberChangeDetection(String groupId) {
     // 이미 같은 그룹을 감지 중이면 무시
     if (_lastGroupId == groupId && _memberChangeSubscription != null) {
-      print('🔍 Already detecting member changes for group: $groupId');
+      AppLogger.debug(
+        'Already detecting member changes for group: $groupId',
+        tag: 'GroupFirebaseDataSource',
+      );
       return;
     }
 
     // 이전 구독 해제
     _stopMemberChangeDetection();
 
-    print('🔍 Starting member change detection for group: $groupId');
+    AppLogger.info(
+      'Starting member change detection for group: $groupId',
+      tag: 'GroupFirebaseDataSource',
+    );
 
     // 새 그룹의 멤버 변경 감지 시작
     _memberChangeSubscription = _groupsCollection
@@ -78,18 +85,31 @@ class GroupFirebaseDataSource implements GroupDataSource {
         .snapshots()
         .listen(
           (snapshot) {
-            print('🔍 Member change detected in group: $groupId');
-            print('🔍 Member count: ${snapshot.docs.length}');
+            AppLogger.debug(
+              'Member change detected in group: $groupId',
+              tag: 'GroupFirebaseDataSource',
+            );
+            AppLogger.debug(
+              'Member count: ${snapshot.docs.length}',
+              tag: 'GroupFirebaseDataSource',
+            );
 
             // 🔧 _lastGroupId가 현재 그룹과 일치할 때만 캐시 무효화
             if (_lastGroupId == groupId && _cachedGroupMembers != null) {
-              print('🗑️ Invalidating member cache due to member change');
+              AppLogger.info(
+                'Invalidating member cache due to member change',
+                tag: 'GroupFirebaseDataSource',
+              );
               _cachedGroupMembers = null;
               // _lastGroupId는 유지 (감지 중인 그룹 정보로 계속 사용)
             }
           },
           onError: (error) {
-            print('❌ Error in member change detection: $error');
+            AppLogger.error(
+              'Error in member change detection',
+              tag: 'GroupFirebaseDataSource',
+              error: error,
+            );
           },
         );
   }
@@ -97,7 +117,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
   // 🔧 새로 추가: 멤버 변경 감지 중지
   void _stopMemberChangeDetection() {
     if (_memberChangeSubscription != null) {
-      print('🔍 Stopping member change detection for group: $_lastGroupId');
+      AppLogger.info(
+        'Stopping member change detection for group: $_lastGroupId',
+        tag: 'GroupFirebaseDataSource',
+      );
       _memberChangeSubscription?.cancel();
       _memberChangeSubscription = null;
     }
@@ -105,7 +128,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
   // 🔧 새로 추가: 리소스 정리 메서드
   void dispose() {
-    print('🗑️ Disposing GroupFirebaseDataSource');
+    AppLogger.info(
+      'Disposing GroupFirebaseDataSource',
+      tag: 'GroupFirebaseDataSource',
+    );
     _stopMemberChangeDetection();
   }
 
@@ -113,20 +139,32 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<void> _deleteImageFromStorage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty || !imageUrl.startsWith('http')) {
-        print('🗑️ Invalid image URL, skipping deletion: $imageUrl');
+        AppLogger.info(
+          'Invalid image URL, skipping deletion: $imageUrl',
+          tag: 'GroupFirebaseDataSource',
+        );
         return;
       }
 
       // Firebase Storage URL에서 파일 참조 생성
       final ref = _storage.refFromURL(imageUrl);
       await ref.delete();
-      print('🗑️ Successfully deleted image from storage: $imageUrl');
+      AppLogger.info(
+        'Successfully deleted image from storage: $imageUrl',
+        tag: 'GroupFirebaseDataSource',
+      );
     } catch (e) {
-      // 이미지가 이미 삭제되었거나 존재하지 않는 경우는 무시
       if (e.toString().contains('object-not-found')) {
-        print('🗑️ Image already deleted or not found: $imageUrl');
+        AppLogger.info(
+          'Image already deleted or not found: $imageUrl',
+          tag: 'GroupFirebaseDataSource',
+        );
       } else {
-        print('❌ Failed to delete image from storage: $e');
+        AppLogger.error(
+          'Failed to delete image from storage',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         // 삭제 실패는 로그만 남기고 예외를 던지지 않음 (그룹 업데이트는 계속 진행)
       }
     }
@@ -144,9 +182,16 @@ class GroupFirebaseDataSource implements GroupDataSource {
       final deleteFutures = result.items.map((item) => item.delete());
       await Future.wait(deleteFutures);
 
-      print('🗑️ Successfully deleted group folder: groups/$groupId');
+      AppLogger.info(
+        'Successfully deleted group folder: groups/$groupId',
+        tag: 'GroupFirebaseDataSource',
+      );
     } catch (e) {
-      print('❌ Failed to delete group folder: $e');
+      AppLogger.error(
+        'Failed to delete group folder',
+        tag: 'GroupFirebaseDataSource',
+        error: e,
+      );
     }
   }
 
@@ -181,49 +226,76 @@ class GroupFirebaseDataSource implements GroupDataSource {
   Future<Set<String>> _getCurrentUserJoinedGroupIds() async {
     try {
       final userId = _getCurrentUserId();
-      print('🔍 Checking joined groups for user: $userId');
+      AppLogger.debug(
+        'Checking joined groups for user: $userId',
+        tag: 'GroupFirebaseDataSource',
+      );
 
       // 캐시 확인
       if (_cachedJoinedGroups != null && _lastUserId == userId) {
-        print('🔍 Using cached joined groups: $_cachedJoinedGroups');
+        AppLogger.debug(
+          'Using cached joined groups: $_cachedJoinedGroups',
+          tag: 'GroupFirebaseDataSource',
+        );
         return _cachedJoinedGroups!;
       }
 
       // Firestore에서 사용자 문서 조회
       final userDoc = await _usersCollection.doc(userId).get();
-      print('🔍 User document exists: ${userDoc.exists}');
+      AppLogger.debug(
+        'User document exists: ${userDoc.exists}',
+        tag: 'GroupFirebaseDataSource',
+      );
 
       if (!userDoc.exists) {
-        print('🔍 User document not found, returning empty set');
+        AppLogger.debug(
+          'User document not found, returning empty set',
+          tag: 'GroupFirebaseDataSource',
+        );
         _cachedJoinedGroups = {};
         _lastUserId = userId;
         return {};
       }
 
       final userData = userDoc.data()!;
-      print('🔍 User document data: $userData');
+      AppLogger.debug(
+        'User document data: $userData',
+        tag: 'GroupFirebaseDataSource',
+      );
 
       if (!userData.containsKey('joingroup')) {
-        print('🔍 No joingroup field found, returning empty set');
+        AppLogger.debug(
+          'No joingroup field found, returning empty set',
+          tag: 'GroupFirebaseDataSource',
+        );
         _cachedJoinedGroups = {};
         _lastUserId = userId;
         return {};
       }
 
       final joinGroups = userData['joingroup'] as List<dynamic>;
-      print('🔍 Raw joingroup data: $joinGroups');
+      AppLogger.debug(
+        'Raw joingroup data: $joinGroups',
+        tag: 'GroupFirebaseDataSource',
+      );
 
       final joinedGroupIds =
           joinGroups
               .map((group) {
-                print('🔍 Processing group: $group');
+                AppLogger.debug(
+                  'Processing group: $group',
+                  tag: 'GroupFirebaseDataSource',
+                );
                 return group['group_id'] as String?;
               })
               .where((id) => id != null)
               .cast<String>()
               .toSet();
 
-      print('🔍 Extracted joined group IDs: $joinedGroupIds');
+      AppLogger.debug(
+        'Extracted joined group IDs: $joinedGroupIds',
+        tag: 'GroupFirebaseDataSource',
+      );
 
       // 캐시 업데이트
       _cachedJoinedGroups = joinedGroupIds;
@@ -231,8 +303,12 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
       return joinedGroupIds;
     } catch (e, st) {
-      print('🔍 Error getting joined groups: $e');
-      print('🔍 StackTrace: $st');
+      AppLogger.error(
+        'Error getting joined groups',
+        tag: 'GroupFirebaseDataSource',
+        error: e,
+        stackTrace: st,
+      );
       return {};
     }
   }
@@ -240,8 +316,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
   // 🔧 그룹 ID 변경 시 멤버 캐시 무효화 (기존 메서드 수정)
   void _invalidateMemberCacheIfNeeded(String newGroupId) {
     if (_lastGroupId != null && _lastGroupId != newGroupId) {
-      print(
-        '🗑️ Group ID changed ($_lastGroupId → $newGroupId), invalidating member cache',
+      AppLogger.info(
+        'Group ID changed ($_lastGroupId → $newGroupId), invalidating member cache',
+        tag: 'GroupFirebaseDataSource',
       );
       _cachedGroupMembers = null;
       _lastGroupId = null;
@@ -253,7 +330,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
   // 🔧 멤버 정보 캐시 무효화 (기존 메서드 수정)
   void _invalidateMemberCache(String groupId) {
     if (_lastGroupId == groupId) {
-      print('🗑️ Invalidating member cache for group: $groupId');
+      AppLogger.info(
+        'Invalidating member cache for group: $groupId',
+        tag: 'GroupFirebaseDataSource',
+      );
       _cachedGroupMembers = null;
       _lastGroupId = null;
       // 🔧 멤버 감지도 중지 (멤버 정보가 변경되었으므로)
@@ -268,7 +348,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
       List<Map<String, dynamic>> members;
 
       if (_cachedGroupMembers != null && _lastGroupId == groupId) {
-        print('🔍 Using cached group members for memberUserIds');
+        AppLogger.debug(
+          'Using cached group members for memberUserIds',
+          tag: 'GroupFirebaseDataSource',
+        );
         members = _cachedGroupMembers!;
       } else {
         final membersSnapshot =
@@ -288,7 +371,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
           .cast<String>()
           .toList();
     } catch (e) {
-      print('그룹 멤버 조회 오류: $e');
+      AppLogger.error(
+        '그룹 멤버 조회 오류',
+        tag: 'GroupFirebaseDataSource',
+        error: e,
+      );
       return [];
     }
   }
@@ -304,11 +391,17 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 .get();
 
         if (querySnapshot.docs.isEmpty) {
-          print('🔍 No groups found in Firestore');
+          AppLogger.debug(
+            'No groups found in Firestore',
+            tag: 'GroupFirebaseDataSource',
+          );
           return [];
         }
 
-        print('🔍 Found ${querySnapshot.docs.length} groups in Firestore');
+        AppLogger.info(
+          'Found ${querySnapshot.docs.length} groups in Firestore',
+          tag: 'GroupFirebaseDataSource',
+        );
 
         // 2. 현재 사용자의 가입 그룹 ID 목록 조회
         final joinedGroupIds = await _getCurrentUserJoinedGroupIds();
@@ -330,7 +423,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         return groups;
       } catch (e) {
-        print('🔍 Error in fetchGroupList: $e');
+        AppLogger.error(
+          'Error in fetchGroupList',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         throw Exception(GroupErrorMessages.loadFailed);
       }
     });
@@ -365,11 +462,20 @@ class GroupFirebaseDataSource implements GroupDataSource {
         if (e is Exception &&
             e.toString().contains(GroupErrorMessages.notFound)) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('그룹 상세 비즈니스 로직 오류: $e');
+          AppLogger.error(
+            '그룹 상세 비즈니스 로직 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('그룹 상세 Firebase 통신 오류: $e\n$st');
+          AppLogger.error(
+            '그룹 상세 Firebase 통신 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }
@@ -445,11 +551,20 @@ class GroupFirebaseDataSource implements GroupDataSource {
             (e.toString().contains(GroupErrorMessages.notFound) ||
                 e.toString().contains(GroupErrorMessages.memberLimitReached))) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('그룹 가입 비즈니스 로직 오류: $e');
+          AppLogger.error(
+            '그룹 가입 비즈니스 로직 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('그룹 가입 Firebase 통신 오류: $e\n$st');
+          AppLogger.error(
+            '그룹 가입 Firebase 통신 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }
@@ -529,7 +644,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         return createdData;
       } catch (e) {
-        print('그룹 생성 오류: $e');
+        AppLogger.error(
+          '그룹 생성 오류',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         throw Exception(GroupErrorMessages.createFailed);
       }
     });
@@ -554,7 +673,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
             if (currentImageUrl != null &&
                 currentImageUrl.isNotEmpty &&
                 currentImageUrl != updateData['imageUrl']) {
-              print('🗑️ Deleting previous group image: $currentImageUrl');
+              AppLogger.info(
+                'Deleting previous group image: $currentImageUrl',
+                tag: 'GroupFirebaseDataSource',
+              );
               await _deleteImageFromStorage(currentImageUrl);
             }
           }
@@ -645,7 +767,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
           _invalidateMemberCache(groupId);
         }
       } catch (e) {
-        print('그룹 업데이트 오류: $e');
+        AppLogger.error(
+          '그룹 업데이트 오류',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         throw Exception(GroupErrorMessages.updateFailed);
       }
     }, params: {'groupId': groupId});
@@ -728,11 +854,20 @@ class GroupFirebaseDataSource implements GroupDataSource {
                 e.toString().contains(GroupErrorMessages.notMember) ||
                 e.toString().contains(GroupErrorMessages.ownerCannotLeave))) {
           // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-          print('그룹 탈퇴 비즈니스 로직 오류: $e');
+          AppLogger.error(
+            '그룹 탈퇴 비즈니스 로직 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           rethrow;
         } else {
           // Firebase 통신 오류: 원본 예외 정보 보존
-          print('그룹 탈퇴 Firebase 통신 오류: $e\n$st');
+          AppLogger.error(
+            '그룹 탈퇴 Firebase 통신 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+            stackTrace: st,
+          );
           rethrow;
         }
       }
@@ -745,11 +880,17 @@ class GroupFirebaseDataSource implements GroupDataSource {
       try {
         // 🔧 캐시 확인
         if (_cachedGroupMembers != null && _lastGroupId == groupId) {
-          print('🔍 Using cached group members');
+          AppLogger.debug(
+            'Using cached group members',
+            tag: 'GroupFirebaseDataSource',
+          );
           return List<Map<String, dynamic>>.from(_cachedGroupMembers!);
         }
 
-        print('🔍 Fetching group members from Firestore');
+        AppLogger.info(
+          'Fetching group members from Firestore',
+          tag: 'GroupFirebaseDataSource',
+        );
 
         // 그룹 존재 확인
         final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -772,14 +913,21 @@ class GroupFirebaseDataSource implements GroupDataSource {
         // 🔧 캐시 업데이트 및 멤버 변경 감지 시작
         _cachedGroupMembers = List<Map<String, dynamic>>.from(members);
         _lastGroupId = groupId;
-        print('🔍 Cached group members for groupId: $groupId');
+        AppLogger.debug(
+          'Cached group members for groupId: $groupId',
+          tag: 'GroupFirebaseDataSource',
+        );
 
         // 🔧 멤버 변경 감지 시작
         _startMemberChangeDetection(groupId);
 
         return members;
       } catch (e) {
-        print('그룹 멤버 조회 오류: $e');
+        AppLogger.error(
+          '그룹 멤버 조회 오류',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         throw Exception(GroupErrorMessages.loadFailed);
       }
     }, params: {'groupId': groupId});
@@ -870,7 +1018,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         return imageUrl;
       } catch (e) {
-        print('그룹 이미지 업데이트 오류: $e');
+        AppLogger.error(
+          '그룹 이미지 업데이트 오류',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         throw Exception(GroupErrorMessages.updateFailed);
       }
     }, params: {'groupId': groupId});
@@ -1018,7 +1170,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return results;
         } catch (e) {
-          print('통합 그룹 검색 오류: $e');
+          AppLogger.error(
+            '통합 그룹 검색 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception('그룹 검색 중 오류가 발생했습니다');
         }
       },
@@ -1075,7 +1231,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
               .cast<Map<String, dynamic>>()
               .toList();
         } catch (e) {
-          print('그룹 타이머 활동 조회 오류: $e');
+          AppLogger.error(
+            '그룹 타이머 활동 조회 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception(GroupErrorMessages.loadFailed);
         }
       },
@@ -1105,13 +1265,19 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
     void handleUpdate() async {
       try {
-        print('🔴 멤버 또는 타이머 활동 변경 감지');
+        AppLogger.debug(
+          '멤버 또는 타이머 활동 변경 감지',
+          tag: 'GroupFirebaseDataSource',
+        );
 
         // 1. 멤버 정보 조회 (캐싱 활용)
         final members = await fetchGroupMembers(groupId);
 
         if (members.isEmpty) {
-          print('⚠️ 멤버가 없어서 빈 리스트 반환');
+          AppLogger.warning(
+            '멤버가 없어서 빈 리스트 반환',
+            tag: 'GroupFirebaseDataSource',
+          );
           controller.add(<Map<String, dynamic>>[]);
           return;
         }
@@ -1139,7 +1305,10 @@ class GroupFirebaseDataSource implements GroupDataSource {
           }
         }
 
-        print('🔍 멤버별 최신 활동 추출 완료: ${memberLastActivities.length}명');
+        AppLogger.debug(
+          '멤버별 최신 활동 추출 완료: ${memberLastActivities.length}명',
+          tag: 'GroupFirebaseDataSource',
+        );
 
         // 4. DTO 형태로 결합하여 반환
         final result = _combineMemebersWithTimerStatusAsDto(
@@ -1149,7 +1318,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
         controller.add(result);
       } catch (e) {
-        print('❌ 복합 스트림 처리 오류: $e');
+        AppLogger.error(
+          '복합 스트림 처리 오류',
+          tag: 'GroupFirebaseDataSource',
+          error: e,
+        );
         controller.addError(e);
       }
     }
@@ -1242,7 +1415,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return result;
         } catch (e) {
-          print('타이머 시작 오류: $e');
+          AppLogger.error(
+            '타이머 시작 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1293,7 +1470,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return result;
         } catch (e) {
-          print('타이머 일시정지 오류: $e');
+          AppLogger.error(
+            '타이머 일시정지 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1344,7 +1525,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return result;
         } catch (e) {
-          print('타이머 정지 오류: $e');
+          AppLogger.error(
+            '타이머 정지 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1402,7 +1587,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return activities;
         } catch (e) {
-          print('월별 타이머 활동 데이터 조회 오류: $e');
+          AppLogger.error(
+            '월별 타이머 활동 데이터 조회 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           if (e.toString().contains(GroupErrorMessages.notFound)) {
             throw Exception(GroupErrorMessages.notFound);
           }
@@ -1464,11 +1653,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
           final result = {...activityData};
           result['id'] = docRef.id;
 
-          print('✅ 타이머 활동 기록 완료: $activityType at $timestamp');
+          AppLogger.info(
+            '타이머 활동 기록 완료: $activityType at $timestamp',
+            tag: 'GroupFirebaseDataSource',
+          );
 
           return result;
         } catch (e) {
-          print('타이머 활동 기록 오류: $e');
+          AppLogger.error(
+            '타이머 활동 기록 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception(GroupErrorMessages.operationFailed);
         }
       },
@@ -1580,13 +1776,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
                     : Timestamp.now(),
           };
         } catch (e) {
-          print('사용자 최대 연속 출석일 조회 오류: $e');
+          AppLogger.error(
+            '사용자 최대 연속 출석일 조회 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception('연속 출석일을 불러오는데 실패했습니다');
         }
       },
     );
   }
 
+  /// 특정 그룹에서 특정 사용자의 연속 출석일 및 상세 정보 계산
   /// 특정 그룹에서 특정 사용자의 연속 출석일 및 상세 정보 계산
   Future<Map<String, dynamic>> _calculateUserStreakInfoInGroup(
     String groupId,
@@ -1679,7 +1880,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
         'lastActiveDate': latestActiveDate ?? DateTime.now(),
       };
     } catch (e) {
-      print('그룹 $groupId에서 사용자 $userId 연속 출석일 계산 오류: $e');
+      AppLogger.error(
+        '그룹 $groupId에서 사용자 $userId 연속 출석일 계산 오류',
+        tag: 'GroupFirebaseDataSource',
+        error: e,
+      );
       return {
         'streakDays': 0,
         'groupName': '알 수 없는 그룹',
@@ -1801,7 +2006,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
 
           return totalWeeklyMinutes;
         } catch (e) {
-          print('이번 주 공부 시간 조회 오류: $e');
+          AppLogger.error(
+            '이번 주 공부 시간 조회 오류',
+            tag: 'GroupFirebaseDataSource',
+            error: e,
+          );
           throw Exception('이번 주 공부 시간을 불러오는데 실패했습니다');
         }
       },

@@ -12,6 +12,7 @@ import 'package:devlink_mobile_app/community/presentation/community_search/commu
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/layout/main_shell.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_screen_root.dart';
@@ -66,16 +67,18 @@ GoRouter appRouter(Ref ref) {
   // 온보딩 상태 구독
   final onboardingCompleted = ref.watch(onboardingCompletionStatusProvider);
 
-  if (kDebugMode) {
-    print('appRouter 재계산: onboardingCompleted=$onboardingCompleted');
-  }
+  // 개발 모드에서만 라우터 재계산 정보 로깅
+  AppLogger.logIf(
+    kDebugMode,
+    'appRouter 재계산: onboardingCompleted=$onboardingCompleted',
+    tag: 'Router',
+  );
 
   return GoRouter(
     initialLocation: '/',
-    debugLogDiagnostics: true,
-    // 디버그 모드에서 라우팅 정보 출력
-    refreshListenable: authStateListenable,
+    debugLogDiagnostics: kDebugMode,
     // 인증 상태 변경만 감시
+    refreshListenable: authStateListenable,
     routes: [
       // === 스플래시 라우트 ===
       GoRoute(path: '/', builder: (context, state) => const SplashScreenRoot()),
@@ -239,11 +242,14 @@ GoRouter appRouter(Ref ref) {
       final isAuthenticated =
           authState is AuthState && authState.isAuthenticated;
 
-      // 디버깅용 정보 출력(개발자 모드에서만)
+      // 개발 모드에서만 디버깅 정보 출력
       if (kDebugMode) {
-        print('Router.redirect: 현재 경로 - $currentPath');
-        print('onboardingCompleted: $onboardingCompleted');
-        print('isAuthenticated: $isAuthenticated');
+        AppLogger.navigation('현재 경로: $currentPath');
+        AppLogger.logState('Router 상태', {
+          'onboardingCompleted': onboardingCompleted,
+          'isAuthenticated': isAuthenticated,
+          'currentPath': currentPath,
+        });
       }
 
       // 1. 루트 경로('/')는 앱 시작시 스플래시를 위해 유지
@@ -280,25 +286,29 @@ GoRouter appRouter(Ref ref) {
 
       // 4. 온보딩 미완료 사용자는 온보딩으로 리디렉션 (퍼블릭 경로는 제외)
       if (!onboardingCompleted && !isPublicPath) {
-        if (kDebugMode) {
-          print('Router: 온보딩 미완료 사용자 리다이렉트 - $currentPath → /onboarding');
-        }
+        AppLogger.navigation(
+          '온보딩 미완료 사용자 리다이렉트: $currentPath → /onboarding',
+        );
         return '/onboarding';
       }
 
       // 5. 비인증 사용자는 퍼블릭 경로 외에는 로그인으로 리디렉션
       if (!isAuthenticated && !isPublicPath) {
-        if (kDebugMode) {
-          print('Router: 비인증 사용자가 인증 필요 페이지 접근 시도 - $currentPath');
-        }
+        AppLogger.warning(
+          '비인증 사용자가 인증 필요 페이지 접근 시도',
+          tag: 'Router',
+        );
+        AppLogger.navigation('비인증 사용자 리다이렉트: $currentPath → /login');
         return '/login';
       }
 
-      // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리디렉션
+      // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리다이렉션
       if (isAuthenticated && isPublicPath) {
-        if (kDebugMode) {
-          print('Router: 인증된 사용자가 인증 페이지 접근 시도 - $currentPath');
-        }
+        AppLogger.info(
+          '인증된 사용자가 인증 페이지 접근 시도',
+          tag: 'Router',
+        );
+        AppLogger.navigation('인증된 사용자 리다이렉트: $currentPath → /home');
         return '/home';
       }
 
@@ -307,12 +317,19 @@ GoRouter appRouter(Ref ref) {
     },
 
     // === 에러 페이지 처리 ===
-    errorBuilder:
-        (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('페이지를 찾을 수 없습니다')),
-          body: Center(
-            child: Text('요청한 경로 "${state.matchedLocation}"를 찾을 수 없습니다'),
-          ),
+    errorBuilder: (context, state) {
+      // 에러 페이지 접근 시에도 로깅
+      AppLogger.error(
+        '페이지를 찾을 수 없음: ${state.matchedLocation}',
+        tag: 'Router',
+      );
+
+      return Scaffold(
+        appBar: AppBar(title: const Text('페이지를 찾을 수 없습니다')),
+        body: Center(
+          child: Text('요청한 경로 "${state.matchedLocation}"를 찾을 수 없습니다'),
         ),
+      );
+    },
   );
 }

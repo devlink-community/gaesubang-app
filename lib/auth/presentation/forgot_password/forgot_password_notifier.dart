@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'forgot_password_notifier.g.dart';
@@ -70,7 +71,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
     AppLogger.logStep(1, 4, '비밀번호 재설정 프로세스 시작');
 
     AppLogger.logState('비밀번호 재설정 요청 정보', {
-      'email': state.email,
+      'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
       'email_length': state.email.length,
     });
 
@@ -141,12 +142,12 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
       // 성공 시 메시지 설정
       AppLogger.logBox(
         '비밀번호 재설정 이메일 전송 성공',
-        '이메일: ${state.email}\n소요시간: ${duration.inMilliseconds}ms',
+        '이메일: ${PrivacyMaskUtil.maskEmail(state.email)}\n소요시간: ${duration.inMilliseconds}ms', // 변경
       );
 
       AppLogger.authInfo('비밀번호 재설정 이메일 전송 완료');
       AppLogger.logState('비밀번호 재설정 성공 정보', {
-        'email': state.email,
+        'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
         'success': true,
         'duration_ms': duration.inMilliseconds,
       });

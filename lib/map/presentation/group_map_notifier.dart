@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/domain/usecase/get_current_location_use_case.dart';
@@ -11,7 +12,6 @@ import 'package:devlink_mobile_app/map/module/group_location_di.dart';
 import 'package:devlink_mobile_app/map/module/map_di.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_action.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_state.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -47,9 +47,7 @@ class GroupMapNotifier extends _$GroupMapNotifier {
       _locationSubscription?.cancel();
       _locationUpdateTimer?.cancel();
       _mapController = null;
-      if (kDebugMode) {
-        print('🗑️ GroupMapNotifier disposed');
-      }
+      AppLogger.debug('GroupMapNotifier disposed', tag: 'GroupMapNotifier');
     });
 
     return const GroupMapState();
@@ -108,8 +106,9 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 초기화 로직 수정
   Future<void> _initialize(String groupId, String groupName) async {
-    print(
-      '📱 GroupMapNotifier initializing - groupId: $groupId, groupName: $groupName (Mock 모드)',
+    AppLogger.info(
+      'GroupMapNotifier initializing - groupId: $groupId, groupName: $groupName (Mock 모드)',
+      tag: 'GroupMapNotifier',
     );
 
     state = state.copyWith(
@@ -134,7 +133,7 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 위치 권한 요청 메서드 수정
   Future<void> _requestLocationPermission() async {
-    print('위치 권한 요청 (Mock 모드): 자동 허용됨');
+    AppLogger.info('위치 권한 요청 (Mock 모드): 자동 허용됨', tag: 'GroupMapNotifier');
 
     state = state.copyWith(
       hasLocationPermission: true,
@@ -164,7 +163,10 @@ class GroupMapNotifier extends _$GroupMapNotifier {
     bool agreed,
     double radius,
   ) async {
-    print('위치 공유 동의 상태 업데이트: $agreed, 반경: $radius km');
+    AppLogger.info(
+      '위치 공유 동의 상태 업데이트: $agreed, 반경: $radius km',
+      tag: 'GroupMapNotifier',
+    );
 
     state = state.copyWith(
       isLocationSharingAgreed: agreed,
@@ -197,87 +199,13 @@ class GroupMapNotifier extends _$GroupMapNotifier {
     }
   }
 
-  // // 위치 권한 요청
-  // Future<void> _requestLocationPermission() async {
-  //   try {
-  //     print('위치 권한 요청 시작');
-
-  //     // 위치 서비스가 활성화되어 있는지 확인
-  //     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  //     print('위치 서비스 활성화 상태: $serviceEnabled');
-
-  //     if (!serviceEnabled) {
-  //       // 위치 서비스가 비활성화된 경우
-  //       state = state.copyWith(
-  //         hasLocationPermission: false,
-  //         isLocationServiceEnabled: false,
-  //         errorMessage: '위치 서비스가 비활성화되어 있습니다. 설정에서 위치 서비스를 활성화해주세요.',
-  //       );
-  //       return;
-  //     }
-
-  //     // 위치 권한 확인
-  //     LocationPermission permission = await Geolocator.checkPermission();
-  //     print('현재 위치 권한 상태: $permission');
-
-  //     // 권한이 거부된 경우 요청
-  //     if (permission == LocationPermission.denied) {
-  //       print('위치 권한이 거부되어 있습니다. 권한 요청을 시도합니다.');
-  //       permission = await Geolocator.requestPermission();
-  //       print('권한 요청 결과: $permission');
-
-  //       if (permission == LocationPermission.denied) {
-  //         // 사용자가 권한 요청을 거부한 경우
-  //         state = state.copyWith(
-  //           hasLocationPermission: false,
-  //           isLocationServiceEnabled: true,
-  //           errorMessage: '위치 접근 권한이 거부되었습니다. 설정에서 위치 권한을 허용해주세요.',
-  //         );
-  //         return;
-  //       }
-  //     }
-
-  //     // 권한이 영구적으로 거부된 경우
-  //     if (permission == LocationPermission.deniedForever) {
-  //       print('위치 권한이 영구적으로 거부되었습니다.');
-  //       state = state.copyWith(
-  //         hasLocationPermission: false,
-  //         isLocationServiceEnabled: true,
-  //         errorMessage: '위치 접근 권한이 영구적으로 거부되었습니다. 설정에서 위치 권한을 허용해주세요.',
-  //       );
-  //       return;
-  //     }
-
-  //     // 권한이 허용된 경우
-  //     print('위치 권한 획득 성공!');
-  //     state = state.copyWith(
-  //       hasLocationPermission: true,
-  //       isLocationServiceEnabled: true,
-  //       errorMessage: null,
-  //     );
-
-  //     // 권한이 있으면 현재 위치 가져오기
-  //     await _getCurrentLocation();
-
-  //     // 그룹 멤버 위치 정보 로드
-  //     await _loadGroupLocations(state.groupId);
-  //   } catch (e) {
-  //     print('위치 권한 요청 중 오류 발생: $e');
-  //     state = state.copyWith(
-  //       hasLocationPermission: false,
-  //       isLocationServiceEnabled: false,
-  //       errorMessage: '위치 권한 확인 중 오류가 발생했습니다: $e',
-  //     );
-  //   }
-  // }
-
   // 현재 위치 가져오기
   Future<void> _getCurrentLocation() async {
-    print('현재 위치 정보 가져오기 시작');
+    AppLogger.debug('현재 위치 정보 가져오기 시작', tag: 'GroupMapNotifier');
     state = state.copyWith(currentLocation: const AsyncValue.loading());
 
     final result = await _getCurrentLocationUseCase.execute();
-    print('현재 위치 정보 가져오기 결과: $result');
+    AppLogger.debug('현재 위치 정보 가져오기 결과: $result', tag: 'GroupMapNotifier');
 
     state = state.copyWith(currentLocation: result);
 
@@ -293,11 +221,17 @@ class GroupMapNotifier extends _$GroupMapNotifier {
   Future<void> _updateLocation(double latitude, double longitude) async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null || state.groupId.isEmpty) {
-      print('위치 업데이트 실패: 현재 사용자 또는 그룹 ID가 없습니다.');
+      AppLogger.warning(
+        '위치 업데이트 실패: 현재 사용자 또는 그룹 ID가 없습니다.',
+        tag: 'GroupMapNotifier',
+      );
       return;
     }
 
-    print('위치 업데이트: userId=${currentUser.uid}, 위치=($latitude, $longitude)');
+    AppLogger.debug(
+      '위치 업데이트: userId=${currentUser.uid}, 위치=($latitude, $longitude)',
+      tag: 'GroupMapNotifier',
+    );
 
     try {
       await _updateMemberLocationUseCase.execute(
@@ -306,16 +240,20 @@ class GroupMapNotifier extends _$GroupMapNotifier {
         latitude,
         longitude,
       );
-      print('위치 업데이트 성공');
+      AppLogger.debug('위치 업데이트 성공', tag: 'GroupMapNotifier');
     } catch (e) {
-      print('위치 업데이트 중 오류 발생: $e');
+      AppLogger.error(
+        '위치 업데이트 중 오류 발생',
+        tag: 'GroupMapNotifier',
+        error: e,
+      );
     }
   }
 
   // 위치 추적 모드 토글
   void _toggleTrackingMode() {
     final newTrackingMode = !state.isTrackingMode;
-    print('위치 추적 모드 토글: $newTrackingMode');
+    AppLogger.debug('위치 추적 모드 토글: $newTrackingMode', tag: 'GroupMapNotifier');
 
     state = state.copyWith(isTrackingMode: newTrackingMode);
 
@@ -327,7 +265,7 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 맵 초기화 완료
   void _onMapInitialized(NaverMapController controller) {
-    print('맵 초기화 완료: 컨트롤러 저장');
+    AppLogger.debug('맵 초기화 완료: 컨트롤러 저장', tag: 'GroupMapNotifier');
     _mapController = controller;
     state = state.copyWith(isMapInitialized: true);
 
@@ -353,12 +291,18 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 멤버 선택
   void _selectMember(GroupMemberLocation member) {
-    print('멤버 선택: ${member.nickname} (${member.userId})');
+    AppLogger.debug(
+      '멤버 선택: ${member.nickname} (${member.userId})',
+      tag: 'GroupMapNotifier',
+    );
     state = state.copyWith(selectedMember: member);
 
     // 선택한 멤버 위치로 카메라 이동
     if (_mapController != null) {
-      print('선택한 멤버 위치로 카메라 이동: (${member.latitude}, ${member.longitude})');
+      AppLogger.debug(
+        '선택한 멤버 위치로 카메라 이동: (${member.latitude}, ${member.longitude})',
+        tag: 'GroupMapNotifier',
+      );
       // 최신 API로 수정 (moveCamera 대신 updateCamera 사용)
       _mapController!.updateCamera(
         NCameraUpdate.withParams(
@@ -372,14 +316,14 @@ class GroupMapNotifier extends _$GroupMapNotifier {
   // 선택 해제
   void _clearSelection() {
     if (state.selectedMember != null) {
-      print('선택 해제');
+      AppLogger.debug('선택 해제', tag: 'GroupMapNotifier');
       state = state.copyWith(selectedMember: null);
     }
   }
 
   // 검색 반경 변경
   void _updateSearchRadius(double radius) {
-    print('검색 반경 변경: $radius km');
+    AppLogger.debug('검색 반경 변경: $radius km', tag: 'GroupMapNotifier');
     state = state.copyWith(searchRadius: radius);
 
     // 반경이 변경되면 맵 카메라 줌 레벨 조정
@@ -398,11 +342,11 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
   // 그룹 멤버 위치 정보 로드
   Future<void> _loadGroupLocations(String groupId) async {
-    print('그룹 멤버 위치 정보 로드 시작: $groupId');
+    AppLogger.debug('그룹 멤버 위치 정보 로드 시작: $groupId', tag: 'GroupMapNotifier');
     state = state.copyWith(memberLocations: const AsyncValue.loading());
 
     final result = await _getGroupLocationsUseCase.execute(groupId);
-    print('그룹 멤버 위치 정보 로드 결과: $result');
+    AppLogger.debug('그룹 멤버 위치 정보 로드 결과: $result', tag: 'GroupMapNotifier');
 
     state = state.copyWith(memberLocations: result);
   }
@@ -411,7 +355,10 @@ class GroupMapNotifier extends _$GroupMapNotifier {
   void _moveToCurrentLocation(Location location) {
     if (_mapController == null) return;
 
-    print('현재 위치로 카메라 이동: (${location.latitude}, ${location.longitude})');
+    AppLogger.debug(
+      '현재 위치로 카메라 이동: (${location.latitude}, ${location.longitude})',
+      tag: 'GroupMapNotifier',
+    );
     // 최신 API로 수정 (moveCamera 대신 updateCamera 사용, animation 파라미터 제거)
     _mapController!.updateCamera(
       NCameraUpdate.withParams(
@@ -426,13 +373,16 @@ class GroupMapNotifier extends _$GroupMapNotifier {
     // 이미 타이머가 실행 중이면 취소
     _locationUpdateTimer?.cancel();
 
-    print('주기적인 위치 업데이트 시작 (30초 간격)');
+    AppLogger.info('주기적인 위치 업데이트 시작 (30초 간격)', tag: 'GroupMapNotifier');
     // 30초마다 위치 업데이트
     _locationUpdateTimer = Timer.periodic(const Duration(seconds: 30), (
       _,
     ) async {
       if (!state.hasLocationPermission || !state.isLocationServiceEnabled) {
-        print('위치 권한 또는 서비스가 활성화되지 않아 위치 업데이트를 건너뜁니다.');
+        AppLogger.warning(
+          '위치 권한 또는 서비스가 활성화되지 않아 위치 업데이트를 건너뜁니다.',
+          tag: 'GroupMapNotifier',
+        );
         return;
       }
 
@@ -441,7 +391,10 @@ class GroupMapNotifier extends _$GroupMapNotifier {
 
       if (locationResult is AsyncData<Location>) {
         final location = locationResult.value;
-        print('현재 위치 업데이트: (${location.latitude}, ${location.longitude})');
+        AppLogger.debug(
+          '현재 위치 업데이트: (${location.latitude}, ${location.longitude})',
+          tag: 'GroupMapNotifier',
+        );
 
         // 위치 업데이트
         await _updateLocation(location.latitude, location.longitude);
@@ -451,7 +404,10 @@ class GroupMapNotifier extends _$GroupMapNotifier {
           _moveToCurrentLocation(location);
         }
       } else {
-        print('위치 업데이트 실패: $locationResult');
+        AppLogger.warning(
+          '위치 업데이트 실패: $locationResult',
+          tag: 'GroupMapNotifier',
+        );
       }
     });
   }

@@ -1,9 +1,11 @@
+// lib/app_setting/presentation/open_source_license_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../oss_licenses.dart';
 import '../../core/styles/app_color_styles.dart';
 import '../../core/styles/app_text_styles.dart';
+import '../../core/utils/app_logger.dart';
 
 class OpenSourceLicenseScreen extends StatefulWidget {
   const OpenSourceLicenseScreen({super.key});
@@ -23,6 +25,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.info('OpenSourceLicenseScreen 초기화', tag: 'OpenSourceLicense');
     _loadLicenses();
 
     // 검색 컨트롤러 리스너 설정
@@ -30,17 +33,28 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
+
+      if (_searchQuery.isNotEmpty) {
+        AppLogger.debug('라이센스 검색: $_searchQuery', tag: 'OpenSourceLicense');
+      }
     });
   }
 
   @override
   void dispose() {
+    AppLogger.debug(
+      'OpenSourceLicenseScreen dispose',
+      tag: 'OpenSourceLicense',
+    );
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
 
   void _loadLicenses() {
+    final startTime = DateTime.now();
+    AppLogger.info('라이센스 정보 로드 시작', tag: 'OpenSourceLicense');
+
     try {
       // 라이센스 정보 로드 (allDependencies 사용)
       final packages = List<Package>.from(allDependencies);
@@ -50,26 +64,52 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
       );
 
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.logPerformance('라이센스 정보 로드 완료', duration);
+
+      AppLogger.logState('라이센스 로드 결과', {
+        '총 패키지 수': packages.length,
+        '정렬': '알파벳 순',
+      });
+
       setState(() {
         _packages = packages;
         _loading = false;
       });
-    } catch (e) {
+
+      AppLogger.info(
+        '라이센스 정보 로드 성공: ${packages.length}개 패키지',
+        tag: 'OpenSourceLicense',
+      );
+    } catch (e, stackTrace) {
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.logPerformance('라이센스 정보 로드 실패', duration);
+
+      AppLogger.error(
+        '라이센스 정보 로드 실패',
+        tag: 'OpenSourceLicense',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
       setState(() {
         _packages = [];
         _loading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('라이센스 정보를 불러오는데 실패했습니다: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('라이센스 정보를 불러오는데 실패했습니다: $e')),
+        );
+      }
     }
   }
 
   List<Package> get _filteredPackages {
     if (_searchQuery.isEmpty) return _packages ?? [];
 
-    return _packages
+    final filtered =
+        _packages
             ?.where(
               (package) =>
                   package.name.toLowerCase().contains(_searchQuery) ||
@@ -79,6 +119,13 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
             )
             .toList() ??
         [];
+
+    AppLogger.debug(
+      '검색 결과: $_searchQuery -> ${filtered.length}개 패키지',
+      tag: 'OpenSourceLicense',
+    );
+
+    return filtered;
   }
 
   @override
@@ -106,6 +153,10 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
                         ? IconButton(
                           icon: const Icon(Icons.clear),
                           onPressed: () {
+                            AppLogger.debug(
+                              '검색어 초기화',
+                              tag: 'OpenSourceLicense',
+                            );
                             _searchController.clear();
                             _searchFocusNode.unfocus();
                           },
@@ -160,6 +211,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
 
   Widget _buildLicenseList() {
     if (_packages == null || _packages!.isEmpty) {
+      AppLogger.warning('라이센스 정보가 없음', tag: 'OpenSourceLicense');
       return Center(
         child: Text('라이센스 정보가 없습니다.', style: AppTextStyles.body1Regular),
       );
@@ -168,6 +220,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
     final filteredPackages = _filteredPackages;
 
     if (filteredPackages.isEmpty) {
+      AppLogger.debug('검색 결과 없음: $_searchQuery', tag: 'OpenSourceLicense');
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -202,7 +255,13 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => _showLicenseDetail(package),
+            onTap: () {
+              AppLogger.info(
+                '라이센스 상세 보기: ${package.name}',
+                tag: 'OpenSourceLicense',
+              );
+              _showLicenseDetail(package);
+            },
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -268,7 +327,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
     );
   }
 
-  // URL을 보기 좋게 포맷팅
+  // URL을 보기 좋게 포맷팅 (보안 개선)
   String _formatUrl(String url) {
     if (url.isEmpty) return '';
 
@@ -282,7 +341,11 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
         return uri.host + (uri.path.isNotEmpty ? uri.path : '');
       }
     } catch (e) {
-      // parsing 실패시 원본 URL 반환
+      // URL 파싱 실패시 호스트 정보만 로깅 (보안 고려)
+      AppLogger.debug(
+        'URL 파싱 실패: ${Uri.tryParse(url)?.host ?? "invalid_url"}',
+        tag: 'OpenSourceLicense',
+      );
     }
 
     return url;
@@ -310,6 +373,8 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
   }
 
   void _showLicenseDetail(Package package) {
+    AppLogger.info('라이센스 상세 화면 진입: ${package.name}', tag: 'OpenSourceLicense');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -326,6 +391,8 @@ class LicenseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.info('라이센스 상세 화면 빌드: ${package.name}', tag: 'LicenseDetail');
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -443,7 +510,11 @@ class LicenseDetailScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () => _launchUrl(url),
+        onTap: () {
+          final host = Uri.tryParse(url)?.host ?? "unknown_host";
+          AppLogger.info('외부 링크 클릭: $label - $host', tag: 'LicenseDetail');
+          _launchUrl(url);
+        },
         child: Row(
           children: [
             Container(
@@ -504,13 +575,21 @@ class LicenseDetailScreen extends StatelessWidget {
 
     final uri = Uri.parse(url);
     try {
+      // URL 호스트만 로깅 (보안 고려)
+      AppLogger.info('URL 실행 시도: ${uri.host}', tag: 'LicenseDetail');
+
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+        AppLogger.info('URL 실행 성공: ${uri.host}', tag: 'LicenseDetail');
       } else {
-        debugPrint('URL을 열 수 없습니다: $url');
+        AppLogger.warning('URL을 열 수 없습니다: ${uri.host}', tag: 'LicenseDetail');
       }
     } catch (e) {
-      debugPrint('URL 실행 오류: $e');
+      AppLogger.error(
+        'URL 실행 오류',
+        tag: 'LicenseDetail',
+        error: e,
+      );
     }
   }
 }

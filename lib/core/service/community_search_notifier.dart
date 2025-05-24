@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_state.dart';
 import 'package:devlink_mobile_app/core/service/search_history_item.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'community_search_notifier.g.dart';
@@ -43,7 +44,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         popularSearches: popularSearches,
       );
     } catch (e) {
-      print('검색어 히스토리 로드 실패: $e');
+      AppLogger.error(
+        '검색어 히스토리 로드 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       // 실패해도 앱은 정상 동작하도록 빈 리스트 유지
     }
   }
@@ -119,7 +124,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       // 업데이트된 검색어 목록을 다시 로드하여 상태 동기화
       await _loadSearchHistory();
     } catch (e) {
-      print('검색어 히스토리 추가 실패: $e');
+      AppLogger.error(
+        '검색어 히스토리 추가 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       // 실패해도 검색 기능에는 영향 없음
     }
   }
@@ -142,7 +151,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         popularSearches: updatedPopularSearches,
       );
     } catch (e) {
-      print('검색어 삭제 실패: $e');
+      AppLogger.error(
+        '검색어 삭제 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
     }
@@ -162,7 +175,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         popularSearches: [],
       );
     } catch (e) {
-      print('모든 검색어 삭제 실패: $e');
+      AppLogger.error(
+        '모든 검색어 삭제 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
     }
@@ -175,7 +192,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
         category: SearchCategory.community,
       );
     } catch (e) {
-      print('검색 통계 조회 실패: $e');
+      AppLogger.error(
+        '검색 통계 조회 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       return {};
     }
   }
@@ -191,7 +212,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
 
       state = state.copyWith(recentSearches: filteredSearches);
     } catch (e) {
-      print('검색어 필터 변경 실패: $e');
+      AppLogger.error(
+        '검색어 필터 변경 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
     }
   }
 
@@ -200,7 +225,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
     try {
       return await SearchHistoryService.exportAllData();
     } catch (e) {
-      print('검색어 데이터 백업 실패: $e');
+      AppLogger.error(
+        '검색어 데이터 백업 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
       return {};
     }
   }
@@ -211,7 +240,11 @@ class CommunitySearchNotifier extends _$CommunitySearchNotifier {
       await SearchHistoryService.importAllData(backupData);
       await _loadSearchHistory(); // 복원 후 상태 새로고침
     } catch (e) {
-      print('검색어 데이터 복원 실패: $e');
+      AppLogger.error(
+        '검색어 데이터 복원 실패',
+        tag: 'CommunitySearch',
+        error: e,
+      );
     }
   }
 }

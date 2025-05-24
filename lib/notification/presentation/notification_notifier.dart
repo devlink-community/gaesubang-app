@@ -14,7 +14,7 @@ import 'package:devlink_mobile_app/notification/presentation/notification_state.
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
-import 'package:flutter/foundation.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -38,27 +38,35 @@ class NotificationNotifier extends _$NotificationNotifier {
   String? _lastRegisteredUserId;
 
   String? get _currentUserId {
-    debugPrint('=== _currentUserId 호출됨 ===');
+    AppLogger.debug('_currentUserId 호출됨', tag: 'NotificationAuth');
     final authStateAsync = ref.read(authStateProvider);
 
     return authStateAsync.when(
       data: (authState) {
-        debugPrint('authState 데이터: $authState');
+        AppLogger.debug('authState 데이터: $authState', tag: 'NotificationAuth');
         switch (authState) {
           case Authenticated(user: final member):
-            debugPrint('인증된 사용자 발견: ${member.uid}');
+            AppLogger.debug(
+              '인증된 사용자 발견: ${member.uid}',
+              tag: 'NotificationAuth',
+            );
             return member.uid;
           case _:
-            debugPrint('인증되지 않은 상태');
+            AppLogger.debug('인증되지 않은 상태', tag: 'NotificationAuth');
             return null;
         }
       },
       loading: () {
-        debugPrint('authState 로딩 중...');
+        AppLogger.debug('authState 로딩 중...', tag: 'NotificationAuth');
         return null;
       },
       error: (error, stackTrace) {
-        debugPrint('authState 에러: $error');
+        AppLogger.error(
+          'authState 에러',
+          tag: 'NotificationAuth',
+          error: error,
+          stackTrace: stackTrace,
+        );
         return null;
       },
     );
@@ -66,7 +74,10 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   @override
   NotificationState build() {
-    debugPrint('=== NotificationNotifier.build() 호출됨 ===');
+    AppLogger.info(
+      'NotificationNotifier.build() 호출됨',
+      tag: 'NotificationNotifier',
+    );
 
     // 의존성 주입
     _getNotificationsUseCase = ref.watch(getNotificationsUseCaseProvider);
@@ -78,22 +89,25 @@ class NotificationNotifier extends _$NotificationNotifier {
     _fcmService = ref.watch(fcmServiceProvider);
     _fcmTokenService = ref.watch(fcmTokenServiceProvider);
 
-    debugPrint('의존성 주입 완료');
+    AppLogger.info('의존성 주입 완료', tag: 'NotificationNotifier');
 
     // FCM 알림 클릭 이벤트 구독
     _subscribeToFCMEvents();
-    debugPrint('FCM 이벤트 구독 완료');
+    AppLogger.info('FCM 이벤트 구독 완료', tag: 'NotificationNotifier');
 
     // 인증 상태 변화 감지 및 처리
     _setupAuthStateListener();
-    debugPrint('인증 상태 리스너 설정 완료');
+    AppLogger.info('인증 상태 리스너 설정 완료', tag: 'NotificationNotifier');
 
     // 초기 인증 상태 확인 및 알림 로딩
     _checkInitialAuthStateAndLoadNotifications();
 
     // 리소스 정리 (메모리 누수 방지)
     ref.onDispose(() {
-      debugPrint('=== NotificationNotifier 리소스 정리 시작 ===');
+      AppLogger.info(
+        'NotificationNotifier 리소스 정리 시작',
+        tag: 'NotificationNotifier',
+      );
 
       // FCM 구독 취소
       _fcmSubscription?.cancel();
@@ -106,58 +120,76 @@ class NotificationNotifier extends _$NotificationNotifier {
       // 등록된 사용자 ID 초기화
       _lastRegisteredUserId = null;
 
-      debugPrint('✅ NotificationNotifier 리소스 정리 완료');
+      AppLogger.info(
+        'NotificationNotifier 리소스 정리 완료',
+        tag: 'NotificationNotifier',
+      );
     });
 
-    debugPrint('초기 상태 반환: NotificationState()');
+    AppLogger.info(
+      '초기 상태 반환: NotificationState()',
+      tag: 'NotificationNotifier',
+    );
     return const NotificationState();
   }
 
   /// 인증 상태 변화 리스너 설정 (중복 방지)
   void _setupAuthStateListener() {
-    debugPrint('=== 인증 상태 리스너 설정 ===');
+    AppLogger.info('인증 상태 리스너 설정', tag: 'NotificationAuth');
 
     // 기존 구독이 있다면 취소 (중복 방지)
     _authSubscription?.close();
 
     _authSubscription = ref.listen(authStateProvider, (previous, next) {
-      debugPrint('=== authStateProvider 변화 감지됨 ===');
-      debugPrint('이전 상태: $previous');
-      debugPrint('현재 상태: $next');
+      AppLogger.info('authStateProvider 변화 감지됨', tag: 'NotificationAuth');
+      AppLogger.logState('인증 상태 변화', {
+        'previous': previous?.toString(),
+        'next': next.toString(),
+      });
 
       next.when(
         data: (authState) {
-          debugPrint('authState 데이터: $authState');
+          AppLogger.debug('authState 데이터: $authState', tag: 'NotificationAuth');
           switch (authState) {
             case Authenticated(user: final member):
-              debugPrint('로그인 상태 감지 - 사용자: ${member.nickname}');
+              AppLogger.info(
+                '로그인 상태 감지 - 사용자: ${member.nickname}',
+                tag: 'NotificationAuth',
+              );
               _handleUserLogin(member.uid, member.nickname);
             case Unauthenticated():
-              debugPrint('로그아웃 상태 감지');
+              AppLogger.info('로그아웃 상태 감지', tag: 'NotificationAuth');
               _handleUserLogout();
             case Loading():
-              debugPrint('로딩 상태');
+              AppLogger.debug('로딩 상태', tag: 'NotificationAuth');
               break;
           }
         },
         loading: () {
-          debugPrint('authState 로딩 중...');
+          AppLogger.debug('authState 로딩 중...', tag: 'NotificationAuth');
         },
         error: (error, stackTrace) {
-          debugPrint('authState 에러: $error');
+          AppLogger.error(
+            'authState 에러',
+            tag: 'NotificationAuth',
+            error: error,
+            stackTrace: stackTrace,
+          );
           _handleAuthError();
         },
       );
     });
 
-    debugPrint('✅ 인증 상태 리스너 설정 완료');
+    AppLogger.info('인증 상태 리스너 설정 완료', tag: 'NotificationAuth');
   }
 
   /// 사용자 로그인 처리
   Future<void> _handleUserLogin(String userId, String nickname) async {
-    debugPrint('=== 사용자 로그인 처리 시작 ===');
-    debugPrint('사용자 ID: $userId');
-    debugPrint('닉네임: $nickname');
+    AppLogger.info('사용자 로그인 처리 시작', tag: 'NotificationAuth');
+    AppLogger.logState('로그인 정보', {
+      'userId': userId,
+      'nickname': nickname,
+    });
 
     try {
       // 1. FCM 토큰 등록 (중복 방지)
@@ -168,19 +200,26 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       // 3. 알림 목록 로딩
       Future.microtask(() {
-        debugPrint('microtask에서 알림 refresh 액션 호출');
+        AppLogger.debug(
+          'microtask에서 알림 refresh 액션 호출',
+          tag: 'NotificationNotifier',
+        );
         onAction(const NotificationAction.refresh());
       });
 
-      debugPrint('✅ 사용자 로그인 처리 완료');
+      AppLogger.info('사용자 로그인 처리 완료', tag: 'NotificationAuth');
     } catch (e) {
-      debugPrint('❌ 사용자 로그인 처리 실패: $e');
+      AppLogger.error(
+        '사용자 로그인 처리 실패',
+        tag: 'NotificationAuth',
+        error: e,
+      );
     }
   }
 
   /// 사용자 로그아웃 처리
   Future<void> _handleUserLogout() async {
-    debugPrint('=== 사용자 로그아웃 처리 시작 ===');
+    AppLogger.info('사용자 로그아웃 처리 시작', tag: 'NotificationAuth');
 
     try {
       // 1. 알림 상태 초기화
@@ -192,15 +231,19 @@ class NotificationNotifier extends _$NotificationNotifier {
       // 2. 등록된 사용자 ID 초기화
       _lastRegisteredUserId = null;
 
-      debugPrint('✅ 사용자 로그아웃 처리 완료');
+      AppLogger.info('사용자 로그아웃 처리 완료', tag: 'NotificationAuth');
     } catch (e) {
-      debugPrint('❌ 사용자 로그아웃 처리 실패: $e');
+      AppLogger.error(
+        '사용자 로그아웃 처리 실패',
+        tag: 'NotificationAuth',
+        error: e,
+      );
     }
   }
 
   /// 인증 에러 처리
   void _handleAuthError() {
-    debugPrint('=== 인증 에러 처리 ===');
+    AppLogger.warning('인증 에러 처리', tag: 'NotificationAuth');
 
     state = const NotificationState(
       notifications: AsyncData([]),
@@ -213,20 +256,20 @@ class NotificationNotifier extends _$NotificationNotifier {
   Future<void> _registerFCMTokenIfNeeded(String userId) async {
     // 이미 등록된 사용자인 경우 스킵
     if (_lastRegisteredUserId == userId) {
-      debugPrint('이미 등록된 사용자 - FCM 토큰 등록 스킵');
+      AppLogger.debug('이미 등록된 사용자 - FCM 토큰 등록 스킵', tag: 'FCMToken');
       return;
     }
 
     try {
-      debugPrint('=== FCM 토큰 등록 시작 ===');
+      AppLogger.info('FCM 토큰 등록 시작', tag: 'FCMToken');
 
       // 1. 권한 확인
       final hasPermission = await _fcmTokenService.hasNotificationPermission();
       if (!hasPermission) {
-        debugPrint('FCM 권한이 없음 - 권한 요청');
+        AppLogger.warning('FCM 권한이 없음 - 권한 요청', tag: 'FCMToken');
         final granted = await _fcmTokenService.requestNotificationPermission();
         if (!granted) {
-          debugPrint('⚠️ FCM 권한 거부됨');
+          AppLogger.warning('FCM 권한 거부됨', tag: 'FCMToken');
           return;
         }
       }
@@ -237,37 +280,52 @@ class NotificationNotifier extends _$NotificationNotifier {
       // 3. 등록 완료 마킹
       _lastRegisteredUserId = userId;
 
-      debugPrint('✅ FCM 토큰 등록 완료');
+      AppLogger.info('FCM 토큰 등록 완료', tag: 'FCMToken');
     } catch (e) {
-      debugPrint('❌ FCM 토큰 등록 실패: $e');
+      AppLogger.error(
+        'FCM 토큰 등록 실패',
+        tag: 'FCMToken',
+        error: e,
+      );
     }
   }
 
   /// 초기 인증 상태를 확인하고 필요시 알림을 로딩
   void _checkInitialAuthStateAndLoadNotifications() {
-    debugPrint('=== 초기 인증 상태 확인 시작 ===');
+    AppLogger.info('초기 인증 상태 확인 시작', tag: 'NotificationAuth');
 
     Future.microtask(() {
       final authStateAsync = ref.read(authStateProvider);
-      debugPrint('현재 authState: $authStateAsync');
+      AppLogger.debug('현재 authState: $authStateAsync', tag: 'NotificationAuth');
 
       authStateAsync.when(
         data: (authState) {
-          debugPrint('초기 authState 데이터: $authState');
+          AppLogger.debug(
+            '초기 authState 데이터: $authState',
+            tag: 'NotificationAuth',
+          );
           switch (authState) {
             case Authenticated(user: final member):
-              debugPrint('초기 상태에서 인증된 사용자 감지: ${member.nickname}');
+              AppLogger.info(
+                '초기 상태에서 인증된 사용자 감지: ${member.nickname}',
+                tag: 'NotificationAuth',
+              );
               _handleUserLogin(member.uid, member.nickname);
             case _:
-              debugPrint('초기 상태에서 비인증 상태');
+              AppLogger.debug('초기 상태에서 비인증 상태', tag: 'NotificationAuth');
               _handleUserLogout();
           }
         },
         loading: () {
-          debugPrint('초기 authState 로딩 중...');
+          AppLogger.debug('초기 authState 로딩 중...', tag: 'NotificationAuth');
         },
         error: (error, stackTrace) {
-          debugPrint('초기 authState 에러: $error');
+          AppLogger.error(
+            '초기 authState 에러',
+            tag: 'NotificationAuth',
+            error: error,
+            stackTrace: stackTrace,
+          );
           _handleAuthError();
         },
       );
@@ -276,15 +334,19 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// FCM 이벤트 구독 (중복 방지)
   void _subscribeToFCMEvents() {
-    debugPrint('=== FCM 이벤트 구독 설정 ===');
+    AppLogger.info('FCM 이벤트 구독 설정', tag: 'FCMEvents');
 
     // 기존 구독이 있다면 취소 (중복 방지)
     _fcmSubscription?.cancel();
 
     _fcmSubscription = _fcmService.onNotificationTap.listen((payload) {
-      debugPrint('=== FCM 알림 탭 이벤트 수신 ===');
-      debugPrint('알림 타입: ${payload.type}');
-      debugPrint('타겟 ID: ${payload.targetId}');
+      AppLogger.info('FCM 알림 탭 이벤트 수신', tag: 'FCMEvents');
+      AppLogger.logState('FCM 페이로드', {
+        'type': payload.type.toString(),
+        'targetId': payload.targetId,
+        'title': payload.title,
+        'body': payload.body,
+      });
 
       // 알림 목록 새로고침
       onAction(const NotificationAction.refresh());
@@ -293,13 +355,16 @@ class NotificationNotifier extends _$NotificationNotifier {
       // 여기서는 단순히 알림 목록만 새로고침
     });
 
-    debugPrint('✅ FCM 이벤트 구독 완료');
+    AppLogger.info('FCM 이벤트 구독 완료', tag: 'FCMEvents');
   }
 
   /// 액션 핸들러 - 모든 사용자 액션의 진입점
   Future<void> onAction(NotificationAction action) async {
-    debugPrint('=== NotificationAction 수신 ===');
-    debugPrint('액션 타입: ${action.runtimeType}');
+    AppLogger.info('NotificationAction 수신', tag: 'NotificationNotifier');
+    AppLogger.debug(
+      '액션 타입: ${action.runtimeType}',
+      tag: 'NotificationNotifier',
+    );
 
     switch (action) {
       case Refresh():
@@ -321,14 +386,17 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 알림 목록 로딩
   Future<void> _loadNotifications() async {
-    debugPrint('=== _loadNotifications 시작 ===');
-    debugPrint('현재 환경: ${AppConfig.useMockAuth ? "Mock" : "Firebase"}');
+    AppLogger.info('_loadNotifications 시작', tag: 'NotificationData');
+    AppLogger.debug(
+      '현재 환경: ${AppConfig.useMockAuth ? "Mock" : "Firebase"}',
+      tag: 'NotificationData',
+    );
 
     final currentUserId = _currentUserId;
-    debugPrint('현재 사용자 ID: $currentUserId');
+    AppLogger.debug('현재 사용자 ID: $currentUserId', tag: 'NotificationData');
 
     if (currentUserId == null) {
-      debugPrint('사용자 ID가 null - 빈 상태로 설정');
+      AppLogger.warning('사용자 ID가 null - 빈 상태로 설정', tag: 'NotificationData');
       state = const NotificationState(
         notifications: AsyncData([]),
         unreadCount: 0,
@@ -336,7 +404,7 @@ class NotificationNotifier extends _$NotificationNotifier {
       return;
     }
 
-    debugPrint('알림 로딩 시작: userId=$currentUserId');
+    AppLogger.info('알림 로딩 시작: userId=$currentUserId', tag: 'NotificationData');
 
     // 로딩 상태로 설정
     state = NotificationState(
@@ -344,19 +412,24 @@ class NotificationNotifier extends _$NotificationNotifier {
       unreadCount: state.unreadCount,
       errorMessage: state.errorMessage,
     );
-    debugPrint('로딩 상태로 변경됨');
+    AppLogger.debug('로딩 상태로 변경됨', tag: 'NotificationData');
 
     try {
-      debugPrint('UseCase 호출 중...');
+      AppLogger.debug('UseCase 호출 중...', tag: 'NotificationData');
       final result = await _getNotificationsUseCase.execute(currentUserId);
-      debugPrint('UseCase 결과 타입: ${result.runtimeType}');
-      debugPrint('UseCase 결과: $result');
+      AppLogger.debug(
+        'UseCase 결과 타입: ${result.runtimeType}',
+        tag: 'NotificationData',
+      );
+      AppLogger.debug('UseCase 결과: $result', tag: 'NotificationData');
 
       if (result is AsyncData) {
         final notifications = result.value ?? [];
         final unreadCount = notifications.where((n) => !n.isRead).length;
-        debugPrint(
+
+        AppLogger.info(
           '알림 데이터 로드 성공: ${notifications.length}개, 읽지않음: $unreadCount개',
+          tag: 'NotificationData',
         );
 
         state = NotificationState(
@@ -365,9 +438,17 @@ class NotificationNotifier extends _$NotificationNotifier {
           errorMessage: null,
         );
 
-        debugPrint('상태 업데이트 완료: ${state.notifications.runtimeType}');
+        AppLogger.debug(
+          '상태 업데이트 완료: ${state.notifications.runtimeType}',
+          tag: 'NotificationData',
+        );
       } else if (result is AsyncError) {
-        debugPrint('UseCase에서 에러 반환: ${result.error}');
+        AppLogger.error(
+          'UseCase에서 에러 반환',
+          tag: 'NotificationData',
+          error: result.error,
+          stackTrace: result.stackTrace,
+        );
         state = NotificationState(
           notifications: AsyncError(result.error!, result.stackTrace!),
           unreadCount: state.unreadCount,
@@ -375,8 +456,12 @@ class NotificationNotifier extends _$NotificationNotifier {
         );
       }
     } catch (e, stack) {
-      debugPrint('예외 발생: $e');
-      debugPrint('스택 트레이스: $stack');
+      AppLogger.error(
+        '예외 발생',
+        tag: 'NotificationData',
+        error: e,
+        stackTrace: stack,
+      );
 
       state = NotificationState(
         notifications: AsyncError(e, stack),
@@ -388,7 +473,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 알림 탭 처리
   Future<void> _handleTapNotification(String notificationId) async {
-    debugPrint('=== 알림 탭 처리: $notificationId ===');
+    AppLogger.info('알림 탭 처리: $notificationId', tag: 'NotificationAction');
 
     // 읽음 처리
     await _markAsRead(notificationId);
@@ -400,11 +485,11 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// 단일 알림 읽음 처리
   Future<void> _markAsRead(String notificationId) async {
-    debugPrint('=== 단일 알림 읽음 처리: $notificationId ===');
+    AppLogger.info('단일 알림 읽음 처리: $notificationId', tag: 'NotificationAction');
 
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      debugPrint('사용자 ID가 null - 읽음 처리 불가');
+      AppLogger.warning('사용자 ID가 null - 읽음 처리 불가', tag: 'NotificationAction');
       return;
     }
 
@@ -416,30 +501,41 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       switch (result) {
         case AsyncData(:final value) when value:
-          debugPrint('✅ 알림 읽음 처리 성공');
+          AppLogger.info('알림 읽음 처리 성공', tag: 'NotificationAction');
           _updateNotificationReadStatus(notificationId, true);
 
         case AsyncError(:final error):
-          debugPrint('❌ 알림 읽음 처리 실패: $error');
+          AppLogger.error(
+            '알림 읽음 처리 실패',
+            tag: 'NotificationAction',
+            error: error,
+          );
           state = state.copyWith(errorMessage: '알림 읽음 처리에 실패했습니다.');
 
         default:
-          debugPrint('알림 읽음 처리 결과를 알 수 없음');
+          AppLogger.warning('알림 읽음 처리 결과를 알 수 없음', tag: 'NotificationAction');
           break;
       }
     } catch (e) {
-      debugPrint('❌ 알림 읽음 처리 예외: $e');
+      AppLogger.error(
+        '알림 읽음 처리 예외',
+        tag: 'NotificationAction',
+        error: e,
+      );
       state = state.copyWith(errorMessage: '알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
 
   /// 모든 알림 읽음 처리
   Future<void> _markAllAsRead() async {
-    debugPrint('=== 모든 알림 읽음 처리 ===');
+    AppLogger.info('모든 알림 읽음 처리', tag: 'NotificationAction');
 
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      debugPrint('사용자 ID가 null - 모든 읽음 처리 불가');
+      AppLogger.warning(
+        '사용자 ID가 null - 모든 읽음 처리 불가',
+        tag: 'NotificationAction',
+      );
       return;
     }
 
@@ -448,30 +544,41 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       switch (result) {
         case AsyncData(:final value) when value:
-          debugPrint('✅ 모든 알림 읽음 처리 성공');
+          AppLogger.info('모든 알림 읽음 처리 성공', tag: 'NotificationAction');
           _updateAllNotificationsReadStatus();
 
         case AsyncError(:final error):
-          debugPrint('❌ 모든 알림 읽음 처리 실패: $error');
+          AppLogger.error(
+            '모든 알림 읽음 처리 실패',
+            tag: 'NotificationAction',
+            error: error,
+          );
           state = state.copyWith(errorMessage: '모든 알림 읽음 처리에 실패했습니다.');
 
         default:
-          debugPrint('모든 알림 읽음 처리 결과를 알 수 없음');
+          AppLogger.warning(
+            '모든 알림 읽음 처리 결과를 알 수 없음',
+            tag: 'NotificationAction',
+          );
           break;
       }
     } catch (e) {
-      debugPrint('❌ 모든 알림 읽음 처리 예외: $e');
+      AppLogger.error(
+        '모든 알림 읽음 처리 예외',
+        tag: 'NotificationAction',
+        error: e,
+      );
       state = state.copyWith(errorMessage: '모든 알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
 
   /// 알림 삭제
   Future<void> _deleteNotification(String notificationId) async {
-    debugPrint('=== 알림 삭제: $notificationId ===');
+    AppLogger.info('알림 삭제: $notificationId', tag: 'NotificationAction');
 
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      debugPrint('사용자 ID가 null - 삭제 불가');
+      AppLogger.warning('사용자 ID가 null - 삭제 불가', tag: 'NotificationAction');
       return;
     }
 
@@ -483,19 +590,27 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       switch (result) {
         case AsyncData(:final value) when value:
-          debugPrint('✅ 알림 삭제 성공');
+          AppLogger.info('알림 삭제 성공', tag: 'NotificationAction');
           _removeNotificationFromState(notificationId);
 
         case AsyncError(:final error):
-          debugPrint('❌ 알림 삭제 실패: $error');
+          AppLogger.error(
+            '알림 삭제 실패',
+            tag: 'NotificationAction',
+            error: error,
+          );
           state = state.copyWith(errorMessage: '알림 삭제에 실패했습니다.');
 
         default:
-          debugPrint('알림 삭제 결과를 알 수 없음');
+          AppLogger.warning('알림 삭제 결과를 알 수 없음', tag: 'NotificationAction');
           break;
       }
     } catch (e) {
-      debugPrint('❌ 알림 삭제 예외: $e');
+      AppLogger.error(
+        '알림 삭제 예외',
+        tag: 'NotificationAction',
+        error: e,
+      );
       state = state.copyWith(errorMessage: '알림 삭제 중 오류가 발생했습니다.');
     }
   }

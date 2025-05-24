@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -68,7 +69,11 @@ class NotificationService {
         }
         return false;
       } catch (e) {
-        debugPrint('알림 권한 요청 에러: $e');
+        AppLogger.error(
+          '알림 권한 요청 에러',
+          tag: 'NotificationService',
+          error: e,
+        );
         return false;
       }
     } else if (Platform.isIOS) {
@@ -98,7 +103,11 @@ class NotificationService {
       }
     } catch (e) {
       // 설정 화면 열기 실패 시 사용자에게 안내
-      debugPrint('알림 설정 화면 열기 실패: $e');
+      AppLogger.error(
+        '알림 설정 화면 열기 실패',
+        tag: 'NotificationService',
+        error: e,
+      );
 
       // 필요 시 직접적인 알림(예: SnackBar, Dialog) 표시를 위한 콜백이나
       // 상태 업데이트를 이곳에 구현 (현재는 로깅만 수행)
@@ -111,7 +120,10 @@ class NotificationService {
     // 알림 탭 시 액션 처리 (필요한 경우 라우팅 등)
     if (response.payload != null) {
       // 페이로드 기반 액션 (예: 특정 화면으로 이동)
-      debugPrint('알림 탭: ${response.payload}');
+      AppLogger.info(
+        '알림 탭: ${response.payload}',
+        tag: 'NotificationService',
+      );
     }
   }
 

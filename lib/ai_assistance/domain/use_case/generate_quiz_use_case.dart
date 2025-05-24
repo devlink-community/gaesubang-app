@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
@@ -20,7 +20,10 @@ class GenerateQuizUseCase {
     // 최대 3개 스킬로 제한
     final limitedSkills = skills.length > 3 ? skills.sublist(0, 3) : skills;
 
-    debugPrint('사용 가능한 스킬 (최대 3개): ${limitedSkills.join(", ")}');
+    AppLogger.info(
+      '사용 가능한 스킬 (최대 3개): ${limitedSkills.join(", ")}',
+      tag: 'QuizGeneration',
+    );
 
     final selectedSkill =
         limitedSkills.isEmpty
@@ -29,7 +32,10 @@ class GenerateQuizUseCase {
 
     // 선택된 스킬로 퀴즈 생성 요청
     final cleanSkillArea = _cleanSkillArea(selectedSkill);
-    debugPrint('선택된 스킬: $cleanSkillArea');
+    AppLogger.info(
+      '선택된 스킬: $cleanSkillArea',
+      tag: 'QuizGeneration',
+    );
 
     final result = await _repository.generateQuiz(cleanSkillArea);
 

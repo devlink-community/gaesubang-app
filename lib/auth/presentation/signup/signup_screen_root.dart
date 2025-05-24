@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 
 class SignupScreenRoot extends ConsumerStatefulWidget {
   final String? agreedTermsId;
@@ -68,7 +69,7 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
         // 라우터의 authStateChanges가 업데이트되기까지 기다림
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) {
-            debugPrint('✅ 3초 대기 후 홈으로 이동');
+            AppLogger.info('3초 대기 후 홈으로 이동', tag: 'SignupScreenRoot');
             context.go('/home');
           }
         });
@@ -84,6 +85,12 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
         } else {
           errorMessage = '회원가입 실패: 알 수 없는 오류가 발생했습니다';
         }
+
+        AppLogger.error(
+          '회원가입 실패',
+          tag: 'SignupScreenRoot',
+          error: error,
+        );
 
         // 에러 메시지를 SnackBar로 표시
         ScaffoldMessenger.of(context).showSnackBar(

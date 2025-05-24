@@ -1,7 +1,7 @@
 // lib/group/data/data_source/group_chat_firebase_data_source.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
-import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
 
 class GroupChatFirebaseDataSource implements GroupChatDataSource {
@@ -38,7 +38,11 @@ class GroupChatFirebaseDataSource implements GroupChatDataSource {
             return data;
           }).toList();
         } catch (e) {
-          print('채팅 메시지 조회 오류: $e');
+          AppLogger.error(
+            '채팅 메시지 조회 오류',
+            tag: 'GroupChatFirebase',
+            error: e,
+          );
           throw Exception('채팅 메시지를 불러오는데 실패했습니다');
         }
       },
@@ -80,7 +84,11 @@ class GroupChatFirebaseDataSource implements GroupChatDataSource {
 
           return newMessage;
         } catch (e) {
-          print('메시지 전송 오류: $e');
+          AppLogger.error(
+            '메시지 전송 오류',
+            tag: 'GroupChatFirebase',
+            error: e,
+          );
           throw Exception('메시지 전송에 실패했습니다');
         }
       },
@@ -106,7 +114,11 @@ class GroupChatFirebaseDataSource implements GroupChatDataSource {
             }).toList();
           });
     } catch (e) {
-      print('메시지 스트림 구독 오류: $e');
+      AppLogger.error(
+        '메시지 스트림 구독 오류',
+        tag: 'GroupChatFirebase',
+        error: e,
+      );
       // 스트림 에러 처리는 리포지토리에서 Result로 변환
       throw Exception('메시지 스트림 구독에 실패했습니다');
     }
@@ -144,7 +156,11 @@ class GroupChatFirebaseDataSource implements GroupChatDataSource {
           // 일괄 처리 실행
           await batch.commit();
         } catch (e) {
-          print('메시지 읽음 처리 오류: $e');
+          AppLogger.error(
+            '메시지 읽음 처리 오류',
+            tag: 'GroupChatFirebase',
+            error: e,
+          );
           throw Exception('메시지 읽음 처리에 실패했습니다');
         }
       },

@@ -1,5 +1,6 @@
 // lib/profile/presentation/user_profile/user_profile_screen_root.dart
 import 'package:devlink_mobile_app/core/component/error_view.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_notifier.dart';
 import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_screen.dart';
@@ -34,7 +35,10 @@ class _UserProfileScreenRootState extends ConsumerState<UserProfileScreenRoot> {
   Future<void> _initializeScreen() async {
     if (_isInitialized) return;
 
-    print('🚀 사용자 프로필 화면 초기화 시작 - userId: ${widget.userId}');
+    AppLogger.info(
+      '사용자 프로필 화면 초기화 시작 - userId: ${widget.userId}',
+      tag: 'UserProfileScreenRoot',
+    );
 
     if (mounted) {
       final notifier = ref.read(userProfileNotifierProvider.notifier);
@@ -42,7 +46,7 @@ class _UserProfileScreenRootState extends ConsumerState<UserProfileScreenRoot> {
     }
 
     _isInitialized = true;
-    print('✅ 사용자 프로필 화면 초기화 완료');
+    AppLogger.info('사용자 프로필 화면 초기화 완료', tag: 'UserProfileScreenRoot');
   }
 
   @override

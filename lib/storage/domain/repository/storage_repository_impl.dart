@@ -1,10 +1,10 @@
 // lib/storage/data/repository_impl/storage_repository_impl.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/storage_exception_mapper.dart';
 import 'package:devlink_mobile_app/storage/data_source/storage_data_source.dart';
 import 'package:devlink_mobile_app/storage/domain/repository/storage_repository.dart';
-import 'package:flutter/foundation.dart';
 
 class StorageRepositoryImpl implements StorageRepository {
   final StorageDataSource _dataSource;
@@ -29,9 +29,21 @@ class StorageRepositoryImpl implements StorageRepository {
             bytes: bytes,
             metadata: metadata,
           );
+
+          AppLogger.info(
+            '이미지 업로드 성공: $folderPath/$fileName',
+            tag: 'StorageRepository',
+          );
+
           return Result.success(downloadUrl);
         } catch (e, st) {
-          debugPrint('이미지 업로드 실패: $e');
+          AppLogger.error(
+            '이미지 업로드 실패: $folderPath/$fileName',
+            tag: 'StorageRepository',
+            error: e,
+            stackTrace: st,
+          );
+
           return Result.error(
             StorageExceptionMapper.mapStorageException(e, st),
           );
@@ -58,9 +70,21 @@ class StorageRepositoryImpl implements StorageRepository {
             bytesList: bytesList,
             metadata: metadata,
           );
+
+          AppLogger.info(
+            '여러 이미지 업로드 성공: $folderPath/${fileNamePrefix}_* (${bytesList.length}개)',
+            tag: 'StorageRepository',
+          );
+
           return Result.success(downloadUrls);
         } catch (e, st) {
-          debugPrint('여러 이미지 업로드 실패: $e');
+          AppLogger.error(
+            '여러 이미지 업로드 실패: $folderPath/${fileNamePrefix}_* (${bytesList.length}개)',
+            tag: 'StorageRepository',
+            error: e,
+            stackTrace: st,
+          );
+
           return Result.error(
             StorageExceptionMapper.mapStorageException(e, st),
           );
@@ -75,9 +99,21 @@ class StorageRepositoryImpl implements StorageRepository {
     return ApiCallDecorator.wrap('StorageRepository.deleteImage', () async {
       try {
         await _dataSource.deleteImage(imageUrl);
+
+        AppLogger.info(
+          '이미지 삭제 성공: $imageUrl',
+          tag: 'StorageRepository',
+        );
+
         return const Result.success(null);
       } catch (e, st) {
-        debugPrint('이미지 삭제 실패: $e');
+        AppLogger.error(
+          '이미지 삭제 실패: $imageUrl',
+          tag: 'StorageRepository',
+          error: e,
+          stackTrace: st,
+        );
+
         return Result.error(StorageExceptionMapper.mapStorageException(e, st));
       }
     }, params: {'imageUrl': imageUrl});
@@ -88,9 +124,21 @@ class StorageRepositoryImpl implements StorageRepository {
     return ApiCallDecorator.wrap('StorageRepository.deleteFolder', () async {
       try {
         await _dataSource.deleteFolder(folderPath);
+
+        AppLogger.info(
+          '폴더 삭제 성공: $folderPath',
+          tag: 'StorageRepository',
+        );
+
         return const Result.success(null);
       } catch (e, st) {
-        debugPrint('폴더 삭제 실패: $e');
+        AppLogger.error(
+          '폴더 삭제 실패: $folderPath',
+          tag: 'StorageRepository',
+          error: e,
+          stackTrace: st,
+        );
+
         return Result.error(StorageExceptionMapper.mapStorageException(e, st));
       }
     }, params: {'folderPath': folderPath});
