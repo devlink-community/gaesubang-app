@@ -30,10 +30,51 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentBannerIndex = 0;
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+  final CarouselSliderController _carouselController = CarouselSliderController();
+
+  // 🆕 다이얼로그 및 포커스 상태 관리
+  bool _isDialogVisible = false;
+  bool _isAppInBackground = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 앱 생명주기 관찰자 등록
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // 앱 생명주기 관찰자 해제
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // 🆕 앱 생명주기 상태 변경 감지
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    setState(() {
+      _isAppInBackground = state != AppLifecycleState.resumed;
+    });
+  }
+
+  // 🆕 다이얼로그 표시 상태 업데이트 메서드
+  void _updateDialogVisibility(bool isVisible) {
+    if (_isDialogVisible != isVisible) {
+      setState(() {
+        _isDialogVisible = isVisible;
+      });
+    }
+  }
+
+  // 🆕 자동재생 활성화 여부 계산
+  bool get _shouldAutoPlay {
+    return !_isDialogVisible && !_isAppInBackground;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -317,26 +358,26 @@ class _HomeScreenState extends State<HomeScreen> {
           width: 2,
         ),
         image:
-            widget.state.currentMemberImage != null
-                ? DecorationImage(
-                  image: NetworkImage(widget.state.currentMemberImage!),
-                  fit: BoxFit.cover,
-                )
-                : null,
+        widget.state.currentMemberImage != null
+            ? DecorationImage(
+          image: NetworkImage(widget.state.currentMemberImage!),
+          fit: BoxFit.cover,
+        )
+            : null,
       ),
       child:
-          widget.state.currentMemberImage == null
-              ? Center(
-                child: Text(
-                  widget.state.currentMemberName.isNotEmpty
-                      ? widget.state.currentMemberName[0].toUpperCase()
-                      : 'U',
-                  style: AppTextStyles.heading6Bold.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-              )
-              : null,
+      widget.state.currentMemberImage == null
+          ? Center(
+        child: Text(
+          widget.state.currentMemberName.isNotEmpty
+              ? widget.state.currentMemberName[0].toUpperCase()
+              : 'U',
+          style: AppTextStyles.heading6Bold.copyWith(
+            color: Colors.white,
+          ),
+        ),
+      )
+          : null,
     );
   }
 
@@ -390,12 +431,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCarouselSection() {
     final bannerWidgets = [
       const AdvertisementBanner(),
+      // 🔧 배너에 다이얼로그 상태 콜백 전달
       DailyQuizBanner(
         skills: widget.userSkills,
+        onDialogStateChanged: _updateDialogVisibility,
         key: ValueKey('quiz_banner_${widget.userSkills ?? "default"}'),
       ),
       StudyTipBanner(
         skills: widget.userSkills,
+        onDialogStateChanged: _updateDialogVisibility,
         key: ValueKey('study_tip_banner_${widget.userSkills ?? "default"}'),
       ),
     ];
@@ -410,7 +454,8 @@ class _HomeScreenState extends State<HomeScreen> {
             viewportFraction: 0.92,
             enlargeCenterPage: true,
             enlargeFactor: 0.15,
-            autoPlay: true,
+            // 🔧 수정: 다이얼로그 표시 중 자동재생 중지
+            autoPlay: _shouldAutoPlay,
             autoPlayInterval: const Duration(seconds: 4),
             autoPlayAnimationDuration: const Duration(milliseconds: 800),
             autoPlayCurve: Curves.easeInOutCubic,
@@ -421,28 +466,28 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           items:
-              bannerWidgets.map((banner) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 8,
+          bannerWidgets.map((banner) {
+            return Container(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: banner,
-                  ),
-                );
-              }).toList(),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: banner,
+              ),
+            );
+          }).toList(),
         ),
         const SizedBox(height: 20),
         AnimatedSmoothIndicator(
@@ -490,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> {
             posts: widget.state.popularPosts,
             onTapPost:
                 (postId) =>
-                    widget.onAction(HomeAction.onTapPopularPost(postId)),
+                widget.onAction(HomeAction.onTapPopularPost(postId)),
           ),
           const SizedBox(height: 80),
         ],

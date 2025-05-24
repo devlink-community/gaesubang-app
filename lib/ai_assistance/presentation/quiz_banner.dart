@@ -16,7 +16,14 @@ class DailyQuizBanner extends ConsumerWidget {
   final String? skills;
   final Random _random = Random();
 
-  DailyQuizBanner({super.key, this.skills});
+  // 🆕 다이얼로그 상태 변경 콜백 추가
+  final Function(bool isVisible)? onDialogStateChanged;
+
+  DailyQuizBanner({
+    super.key,
+    this.skills,
+    this.onDialogStateChanged, // 🆕 콜백 매개변수 추가
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -260,7 +267,17 @@ class DailyQuizBanner extends ConsumerWidget {
     return limitedSkills.isEmpty ? ['컴퓨터 기초'] : limitedSkills;
   }
 
-  // 🔧 최소 수정: 기존 디자인 유지 + 취소 기능만 추가
+  // 🔧 다이얼로그 상태 알림 기능 추가
+  void _notifyDialogState(bool isVisible) {
+    if (onDialogStateChanged != null) {
+      onDialogStateChanged!(isVisible);
+      AppLogger.debug(
+        'CarouselSlider 상태 변경 알림: isVisible=$isVisible',
+        tag: 'QuizDialog',
+      );
+    }
+  }
+
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
     final startTime = DateTime.now();
 
@@ -351,10 +368,12 @@ class DailyQuizBanner extends ConsumerWidget {
       tag: 'QuizUI',
     );
 
-    // 🔧 최소 수정: barrierDismissible만 true로 변경, 나머지는 기존 디자인 유지
+    // 🆕 로딩 다이얼로그 표시 전 배너 자동재생 중지
+    _notifyDialogState(true);
+
     showDialog(
       context: context,
-      barrierDismissible: true, // 🔧 유일한 변경점: false → true
+      barrierDismissible: true,
       builder: (dialogContext) {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
@@ -364,6 +383,10 @@ class DailyQuizBanner extends ConsumerWidget {
             // 뒤로가기 버튼으로 취소 가능
             isCancelled = true;
             loadingTimer?.cancel();
+
+            // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+            _notifyDialogState(false);
+
             AppLogger.info('사용자가 퀴즈 로딩을 취소했습니다', tag: 'QuizGeneration');
             return true;
           },
@@ -385,7 +408,6 @@ class DailyQuizBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // 🔧 기존 메시지 그대로 유지
                   Text('퀴즈를 준비하고 있습니다...', style: AppTextStyles.subtitle1Bold),
                   const SizedBox(height: 8),
                   Text(
@@ -401,11 +423,14 @@ class DailyQuizBanner extends ConsumerWidget {
         );
       },
     ).then((_) {
-      // 다이얼로그가 닫혔을 때 취소 처리
+      // 다이얼로그가 닫혔을 때 취소 처리 및 배너 자동재생 재개
       if (!isCancelled) {
         isCancelled = true;
         loadingTimer?.cancel();
       }
+
+      // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+      _notifyDialogState(false);
     });
 
     // 타임아웃 설정 (기존 20초 유지)
@@ -487,6 +512,8 @@ class DailyQuizBanner extends ConsumerWidget {
               tag: 'QuizGeneration',
             );
 
+            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+            _notifyDialogState(false);
             // 백업 퀴즈 표시
             _showBackupQuiz(context, ref, selectedSkill);
           }
@@ -513,6 +540,9 @@ class DailyQuizBanner extends ConsumerWidget {
               '오류로 인한 백업 퀴즈 표시: $selectedSkill',
               tag: 'QuizFallback',
             );
+
+            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+            _notifyDialogState(false);
             _showBackupQuiz(context, ref, selectedSkill);
           }
         },
@@ -524,6 +554,9 @@ class DailyQuizBanner extends ConsumerWidget {
           );
 
           _closeLoadingDialog(loadingDialogContext);
+
+          // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+          _notifyDialogState(false);
           _showBackupQuiz(context, ref, selectedSkill);
         },
       );
@@ -560,6 +593,9 @@ class DailyQuizBanner extends ConsumerWidget {
           '예외로 인한 백업 퀴즈 표시: $selectedSkill',
           tag: 'QuizFallback',
         );
+
+        // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+        _notifyDialogState(false);
         _showBackupQuiz(context, ref, selectedSkill);
       }
     }
@@ -587,9 +623,12 @@ class DailyQuizBanner extends ConsumerWidget {
       tag: 'QuizUI',
     );
 
+    // 🆕 퀴즈 다이얼로그 표시 시에는 여전히 배너 자동재생 중지 상태 유지
+    // (이미 _notifyDialogState(true)가 호출된 상태)
+
     showDialog(
       context: context,
-      barrierDismissible: true, // 🔧 기존 false → true로 변경
+      barrierDismissible: true,
       builder: (dialogContext) {
         // 화면 크기를 가져와서 다이얼로그 크기를 적절히 조정
         final screenSize = MediaQuery.of(context).size;
@@ -633,7 +672,7 @@ class DailyQuizBanner extends ConsumerWidget {
                     // 약간의 지연 후 새 퀴즈 로딩 다이얼로그 표시
                     Future.delayed(const Duration(milliseconds: 100), () {
                       if (context.mounted) {
-                        // 새 퀴즈 로딩 시작
+                        // 새 퀴즈 로딩 시작 (여전히 배너 자동재생 중지 상태 유지)
                         _handleQuizTap(context, ref);
                       }
                     });
@@ -652,6 +691,9 @@ class DailyQuizBanner extends ConsumerWidget {
                       tag: 'QuizUI',
                     );
                     Navigator.of(dialogContext).pop();
+
+                    // 🆕 퀴즈 다이얼로그 닫힐 때 배너 자동재생 재개
+                    _notifyDialogState(false);
                     break;
                 }
               },
@@ -659,7 +701,10 @@ class DailyQuizBanner extends ConsumerWidget {
           ),
         );
       },
-    );
+    ).then((_) {
+      // 🆕 다이얼로그가 외부에서 닫혔을 때도 배너 자동재생 재개
+      _notifyDialogState(false);
+    });
   }
 
   // 백업 퀴즈 표시 메서드
