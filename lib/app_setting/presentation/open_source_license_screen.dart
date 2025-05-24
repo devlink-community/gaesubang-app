@@ -1,3 +1,4 @@
+// lib/app_setting/presentation/open_source_license_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -326,7 +327,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
     );
   }
 
-  // URL을 보기 좋게 포맷팅
+  // URL을 보기 좋게 포맷팅 (보안 개선)
   String _formatUrl(String url) {
     if (url.isEmpty) return '';
 
@@ -340,8 +341,11 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
         return uri.host + (uri.path.isNotEmpty ? uri.path : '');
       }
     } catch (e) {
-      // parsing 실패시 원본 URL 반환
-      AppLogger.debug('URL 파싱 실패: $url', tag: 'OpenSourceLicense');
+      // URL 파싱 실패시 호스트 정보만 로깅 (보안 고려)
+      AppLogger.debug(
+        'URL 파싱 실패: ${Uri.tryParse(url)?.host ?? "invalid_url"}',
+        tag: 'OpenSourceLicense',
+      );
     }
 
     return url;
@@ -507,7 +511,8 @@ class LicenseDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 16),
       child: InkWell(
         onTap: () {
-          AppLogger.info('외부 링크 클릭: $label - $url', tag: 'LicenseDetail');
+          final host = Uri.tryParse(url)?.host ?? "unknown_host";
+          AppLogger.info('외부 링크 클릭: $label - $host', tag: 'LicenseDetail');
           _launchUrl(url);
         },
         child: Row(
@@ -570,13 +575,14 @@ class LicenseDetailScreen extends StatelessWidget {
 
     final uri = Uri.parse(url);
     try {
-      AppLogger.info('URL 실행 시도: $url', tag: 'LicenseDetail');
+      // URL 호스트만 로깅 (보안 고려)
+      AppLogger.info('URL 실행 시도: ${uri.host}', tag: 'LicenseDetail');
 
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-        AppLogger.info('URL 실행 성공: $url', tag: 'LicenseDetail');
+        AppLogger.info('URL 실행 성공: ${uri.host}', tag: 'LicenseDetail');
       } else {
-        AppLogger.warning('URL을 열 수 없습니다: $url', tag: 'LicenseDetail');
+        AppLogger.warning('URL을 열 수 없습니다: ${uri.host}', tag: 'LicenseDetail');
       }
     } catch (e) {
       AppLogger.error(
