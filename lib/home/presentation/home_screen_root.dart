@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../auth/domain/usecase/get_current_user_use_case.dart';
 import '../../auth/module/auth_di.dart';
 import 'home_action.dart';
 import 'home_notifier.dart';
@@ -58,11 +57,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
             await homeNotifier.onAction(action);
             _loadUserSkills(); // 새로고침 시 스킬 정보도 다시 로드
             break;
-          case OnTapNotice(:final noticeId):
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('공지사항 $noticeId 클릭')));
-            break;
+
           case OnTapGroup(:final groupId):
             context.push('/group/$groupId');
             break;
@@ -74,6 +69,10 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
             break;
           case OnTapNotification():
             context.push('/notifications');
+            break;
+
+          case OnTapCreateGroup():
+            context.push('/group/create');
             break;
           default:
             await homeNotifier.onAction(action);
