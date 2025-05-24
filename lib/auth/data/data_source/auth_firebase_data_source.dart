@@ -217,7 +217,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
       // 닉네임 중복 확인 (Firestore에서만 확인 가능)
       final nicknameAvailable = await checkNicknameAvailability(nickname);
       if (!nicknameAvailable) {
-        AppLogger.warning('닉네임 중복: $nickname');
+        AppLogger.warning('닉네임 중복: ${PrivacyMaskUtil.maskNickname(nickname)}');
         throw Exception(AuthErrorMessages.nicknameAlreadyInUse);
       }
 
@@ -225,7 +225,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
       // 이메일 중복 확인은 Firestore에서만 가능 (Firebase Auth는 보안상 확인 불가)
       final emailAvailableInFirestore = await _checkEmailInFirestore(email);
       if (!emailAvailableInFirestore) {
-        AppLogger.warning('이메일 중복 (Firestore): $email');
+        AppLogger.warning(
+          '이메일 중복 (Firestore): ${PrivacyMaskUtil.maskEmail(email)}',
+        );
         throw Exception(AuthErrorMessages.emailAlreadyInUse);
       }
 
@@ -347,7 +349,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
   /// Firestore에서만 이메일 중복 확인 (Firebase Auth 확인은 보안상 불가능)
   Future<bool> _checkEmailInFirestore(String email) async {
-    AppLogger.debug('Firestore 이메일 중복 확인 시작: $email');
+    AppLogger.debug(
+      'Firestore 이메일 중복 확인 시작: ${PrivacyMaskUtil.maskEmail(email)}',
+    );
 
     try {
       final normalizedEmail = email.toLowerCase();
@@ -361,7 +365,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
       final isAvailable = query.docs.isEmpty;
 
       AppLogger.logState('Firestore 이메일 중복 확인 결과', {
-        'email': normalizedEmail,
+        'email': PrivacyMaskUtil.maskEmail(normalizedEmail),
         'is_available': isAvailable,
         'docs_found': query.docs.length,
       });
@@ -404,7 +408,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap(
       'FirebaseAuth.checkNicknameAvailability',
       () async {
-        AppLogger.debug('Firebase 닉네임 중복 확인: $nickname');
+        AppLogger.debug(
+          'Firebase 닉네임 중복 확인: ${PrivacyMaskUtil.maskNickname(nickname)}',
+        );
 
         // 유효성 검사
         AuthValidator.validateNicknameFormat(nickname);
@@ -418,7 +424,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
 
         final isAvailable = query.docs.isEmpty;
         AppLogger.logState('Firebase 닉네임 중복 확인 결과', {
-          'nickname': nickname,
+          'nickname': PrivacyMaskUtil.maskNickname(nickname),
           'is_available': isAvailable,
           'docs_found': query.docs.length,
         });
@@ -434,7 +440,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap(
       'FirebaseAuth.checkEmailAvailability',
       () async {
-        AppLogger.debug('Firebase 이메일 중복 확인: $email');
+        AppLogger.debug(
+          'Firebase 이메일 중복 확인: ${PrivacyMaskUtil.maskEmail(email)}',
+        );
 
         // 유효성 검사
         AuthValidator.validateEmailFormat(email);
@@ -443,7 +451,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
         // Firestore에서만 확인 가능하며, 실제 중복은 createUser 시점에서 감지됨
         final result = await _checkEmailInFirestore(email);
         AppLogger.debug(
-          'Firebase 이메일 중복 확인 완료: $email -> ${result ? "사용가능" : "사용불가"}',
+          'Firebase 이메일 중복 확인 완료: ${PrivacyMaskUtil.maskEmail(email)} -> ${result ? "사용가능" : "사용불가"}',
         );
         return result;
       },
@@ -456,7 +464,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
     return ApiCallDecorator.wrap(
       'FirebaseAuth.sendPasswordResetEmail',
       () async {
-        AppLogger.authInfo('Firebase 비밀번호 재설정 이메일 전송: $email');
+        AppLogger.authInfo(
+          'Firebase 비밀번호 재설정 이메일 전송: ${PrivacyMaskUtil.maskEmail(email)}',
+        );
 
         // 유효성 검사
         AuthValidator.validateEmailFormat(email);
