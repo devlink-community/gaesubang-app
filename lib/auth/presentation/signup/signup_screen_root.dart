@@ -119,14 +119,25 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
 
     return SignupScreen(
       state: state,
-      onAction: (action) {
+      onAction: (action) async {
         switch (action) {
           case NavigateToLogin():
             context.go('/');
 
           case NavigateToTerms():
-            context.push('/terms');
+            // 약관 화면으로 이동하고 결과 받기 (true = 약관 동의 완료)
+            final result = await context.push<bool>('/terms');
 
+            // 약관 동의 완료 상태를 업데이트
+            if (result == true) {
+              AppLogger.authInfo('약관 동의 완료 - 체크박스 상태 업데이트');
+              notifier.updateTermsAgreement(isAgreed: true);
+            } else if (result == false) {
+              // 약관에 동의하지 않은 경우
+              AppLogger.authInfo('약관 미동의 - 체크박스 해제');
+              notifier.updateTermsAgreement(isAgreed: false);
+            }
+          // result가 null인 경우(그냥 뒤로가기)는 상태 변경 없음
           default:
             // 나머지 액션은 Notifier에서 처리
             notifier.onAction(action);

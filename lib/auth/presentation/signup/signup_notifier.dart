@@ -507,12 +507,16 @@ class SignupNotifier extends _$SignupNotifier {
   }) {
     AppLogger.logState('약관 동의 상태 업데이트', {
       'is_agreed': isAgreed,
+      'previous_value': state.isTermsAgreed,
     });
 
     state = state.copyWith(
       isTermsAgreed: isAgreed,
-      termsError: null, // 약관 에러 메시지 초기화 추가
+      agreeToTerms: isAgreed, // 체크박스 상태도 함께 업데이트
+      termsError: null, // 약관 에러 메시지 초기화
       formErrorMessage: null, // 통합 에러 메시지도 초기화
     );
+
+    AppLogger.authInfo('약관 동의 상태 업데이트 완료: $isAgreed');
   }
 }

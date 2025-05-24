@@ -21,8 +21,14 @@ class TermsScreenRoot extends ConsumerWidget {
       (previous, next) {
         // 약관 동의가 완료된 경우
         if (next == true && previous != true) {
-          // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
-          context.pop(true);
+          // 필수 약관 동의 여부 확인
+          final termsState = ref.read(termsNotifierProvider);
+          final isRequiredTermsAgreed =
+              termsState.isServiceTermsAgreed &&
+              termsState.isPrivacyPolicyAgreed;
+
+          // 필수 약관 동의 여부를 결과로 전달
+          context.pop(isRequiredTermsAgreed);
         }
       },
     );
@@ -74,7 +80,7 @@ class TermsScreenRoot extends ConsumerWidget {
           case NavigateToSignup():
             context.pop(); // 회원가입 화면으로 돌아가기
           case NavigateBack():
-            context.pop(); // 이전 화면(회원가입)으로 돌아가기
+            context.pop(false); // 이전 화면(회원가입)으로 돌아가기
           default:
             notifier.onAction(action);
         }
