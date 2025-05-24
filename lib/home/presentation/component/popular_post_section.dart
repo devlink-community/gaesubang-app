@@ -1,4 +1,3 @@
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -36,16 +35,16 @@ class PopularPostSection extends StatelessWidget {
 
         return Column(
           children:
-              data.asMap().entries.map((entry) {
-                final index = entry.key;
-                final post = entry.value;
-                return Padding(
-                  padding: EdgeInsets.only(
-                    bottom: index < data.length - 1 ? 12 : 0,
-                  ),
-                  child: _buildPostItem(post, index + 1),
-                );
-              }).toList(),
+          data.asMap().entries.map((entry) {
+            final index = entry.key;
+            final post = entry.value;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index < data.length - 1 ? 12 : 0,
+              ),
+              child: _buildPostItem(post, index + 1),
+            );
+          }).toList(),
         );
       },
       loading: () => _buildLoadingState(),
@@ -73,8 +72,11 @@ class PopularPostSection extends StatelessWidget {
                 // 왼쪽: 프로필 + 작성자
                 Row(
                   children: [
-                    // 안전한 프로필 이미지 처리
-                    _buildSafeProfileImage(post.userProfileImageUrl),
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundImage: NetworkImage(post.userProfileImageUrl),
+                      backgroundColor: AppColorStyles.gray40,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       post.authorNickname,
@@ -173,9 +175,9 @@ class PopularPostSection extends StatelessWidget {
                       : Icons.favorite_border,
                   size: 16,
                   color:
-                      post.isLikedByCurrentUser
-                          ? Colors.red
-                          : AppColorStyles.gray80,
+                  post.isLikedByCurrentUser
+                      ? Colors.red
+                      : AppColorStyles.gray80,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -207,31 +209,58 @@ class PopularPostSection extends StatelessWidget {
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
+      padding: const EdgeInsets.all(40), // 상하좌우 동일한 패딩
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorStyles.gray40.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.trending_up_outlined,
-            size: 48,
-            color: AppColorStyles.gray60,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '아직 인기 게시글이 없습니다',
-            style: AppTextStyles.body1Regular.copyWith(
-              color: AppColorStyles.gray80,
+          // 아이콘 컨테이너
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.trending_up_rounded,
+              size: 28,
+              color: Colors.orange.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+
+          // 메인 텍스트
           Text(
-            '첫 게시글을 작성해서 인기글이 되어보세요!',
-            style: AppTextStyles.captionRegular.copyWith(
+            '아직 인기 게시글이 없어요',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.gray80,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // 서브 텍스트
+          Text(
+            '첫 게시글을 작성해보세요',
+            style: AppTextStyles.body2Regular.copyWith(
               color: AppColorStyles.gray60,
+              fontSize: 13,
             ),
           ),
         ],
@@ -297,94 +326,4 @@ class PopularPostSection extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _buildSafeProfileImage(String? imageUrl) {
-  // URL이 비어있거나 null인 경우 기본 아바타 표시
-  if (imageUrl == null || imageUrl.trim().isEmpty) {
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: AppColorStyles.gray40,
-      child: Icon(
-        Icons.person,
-        size: 16,
-        color: AppColorStyles.gray80,
-      ),
-    );
-  }
-
-  final String cleanUrl = imageUrl.trim();
-
-  // 올바른 URL 형식인지 확인
-  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: AppColorStyles.gray40,
-      child: Icon(
-        Icons.person,
-        size: 16,
-        color: AppColorStyles.gray80,
-      ),
-    );
-  }
-
-  try {
-    final uri = Uri.parse(cleanUrl);
-    if (uri.host.isEmpty) {
-      return CircleAvatar(
-        radius: 12,
-        backgroundColor: AppColorStyles.gray40,
-        child: Icon(
-          Icons.person,
-          size: 16,
-          color: AppColorStyles.gray80,
-        ),
-      );
-    }
-  } catch (e) {
-    return CircleAvatar(
-      radius: 12,
-      backgroundColor: AppColorStyles.gray40,
-      child: Icon(
-        Icons.person,
-        size: 16,
-        color: AppColorStyles.gray80,
-      ),
-    );
-  }
-
-  // 정상적인 네트워크 이미지인 경우
-  return CircleAvatar(
-    radius: 12,
-    backgroundColor: AppColorStyles.gray40,
-    child: ClipOval(
-      child: Image.network(
-        cleanUrl,
-        width: 24,
-        height: 24,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
-          return Icon(
-            Icons.person,
-            size: 16,
-            color: AppColorStyles.gray80,
-          );
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return SizedBox(
-            width: 24,
-            height: 24,
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 1,
-                color: AppColorStyles.gray60,
-              ),
-            ),
-          );
-        },
-      ),
-    ),
-  );
 }

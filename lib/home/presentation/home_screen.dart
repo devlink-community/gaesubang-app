@@ -38,6 +38,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isDialogVisible = false;
   bool _isAppInBackground = false;
 
+  // 🆕 프로필 이미지 로딩 실패 상태 관리
+  bool _profileImageLoadFailed = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,13 +49,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // 🆕 사용자 정보가 변경되면 프로필 이미지 로딩 실패 상태 초기화
+    if (oldWidget.state.currentMember != widget.state.currentMember) {
+      _profileImageLoadFailed = false;
+    }
+  }
+
+  @override
   void dispose() {
     // 앱 생명주기 관찰자 해제
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-
-  // 🆕 앱 생명주기 상태 변경 감지
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -350,6 +361,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
+    // 🔧 이미지 URL이 있고 로딩에 실패하지 않은 경우에만 이미지 표시
+    final hasValidImage = widget.state.currentMemberImage != null &&
+        widget.state.currentMemberImage!.isNotEmpty &&
+        !_profileImageLoadFailed;
+
     // 정상 데이터 표시
     return Container(
       decoration: BoxDecoration(
@@ -358,16 +374,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           color: Colors.white,
           width: 2,
         ),
-        image:
-        widget.state.currentMemberImage != null
+        image: hasValidImage
             ? DecorationImage(
           image: NetworkImage(widget.state.currentMemberImage!),
           fit: BoxFit.cover,
+          onError: (error, stackTrace) {
+            // 🆕 이미지 로딩 실패 시 상태 업데이트
+            if (mounted) {
+              setState(() {
+                _profileImageLoadFailed = true;
+              });
+            }
+          },
         )
             : null,
       ),
-      child:
-      widget.state.currentMemberImage == null
+      child: !hasValidImage
           ? Center(
         child: Text(
           widget.state.currentMemberName.isNotEmpty
@@ -512,7 +534,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
           _buildSectionHeader(
             title: '내 그룹',
             subtitle: '오늘도 함께 공부해요',
@@ -525,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 (groupId) => widget.onAction(HomeAction.onTapGroup(groupId)),
             onTapCreateGroup: () => widget.onAction(const HomeAction.onTapCreateGroup()), // 🆕 그룹 생성 콜백 추가
           ),
-          const SizedBox(height: 36), // 🔧 그룹과 인기 게시글 사이 간격 조정
+          const SizedBox(height: 32), // 🔧 그룹과 인기 게시글 사이 간격 조정
           _buildSectionHeader(
             title: '인기 게시글',
             subtitle: '지금 가장 핫한 글',
@@ -550,49 +571,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required IconData icon,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColorStyles.primary80.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: AppColorStyles.primary80,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary80.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: AppColorStyles.primary80,
-                size: 20,
+            Text(
+              title,
+              style: AppTextStyles.subtitle1Bold.copyWith(
+                fontSize: 18,
+                color: AppColorStyles.textPrimary,
               ),
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.subtitle1Bold.copyWith(
-                    fontSize: 18,
-                    color: AppColorStyles.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.captionRegular.copyWith(
-                    color: AppColorStyles.gray80,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: AppTextStyles.captionRegular.copyWith(
+                color: AppColorStyles.gray80,
+                fontSize: 12,
+              ),
             ),
           ],
-        ),
-        Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 16,
-          color: AppColorStyles.gray60,
         ),
       ],
     );

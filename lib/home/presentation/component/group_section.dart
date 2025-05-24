@@ -34,10 +34,11 @@ class GroupSection extends StatelessWidget {
   Widget _buildGroupList(BuildContext context, List<Group> data) {
     return SizedBox(
       height: 180, // 충분한 높이 확보
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 20), // 🔧 홈화면과 동일한 패딩
         itemCount: data.length + 1, // +1 for add button
         itemBuilder: (context, index) {
           if (index == data.length) {
@@ -200,7 +201,7 @@ class GroupSection extends StatelessWidget {
                               fontSize: 13,
                               height: 1.2, // 줄간격 조정
                             ),
-                            maxLines: 2, // 🔧 2줄로 변경
+                            maxLines: 2, // 2줄로 변경
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -284,66 +285,101 @@ class GroupSection extends StatelessWidget {
 
   Widget _buildEmptyState() {
     return Container(
-      height: 180,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
+      padding: const EdgeInsets.all(40), // 상하좌우 동일한 패딩
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColorStyles.primary80.withValues(alpha: 0.05),
-            AppColorStyles.primary80.withValues(alpha: 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColorStyles.primary80.withValues(alpha: 0.1),
+          color: AppColorStyles.gray40.withValues(alpha: 0.3),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary80.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.group_add_rounded,
-                size: 32,
-                color: AppColorStyles.primary80,
-              ),
+      child: Column(
+        children: [
+          // 아이콘 컨테이너
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary80.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 16),
-            Text(
-              '아직 가입한 그룹이 없어요',
-              style: AppTextStyles.body1Regular.copyWith(
-                color: Colors.grey[700],
-              ),
+            child: Icon(
+              Icons.groups_rounded,
+              size: 28,
+              color: AppColorStyles.primary80.withValues(alpha: 0.6),
             ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: onTapCreateGroup, // 🔧 콜백 연결
-              style: TextButton.styleFrom(
-                foregroundColor: AppColorStyles.primary80,
-              ),
+          ),
+          const SizedBox(height: 16),
+
+          // 메인 텍스트
+          Text(
+            '아직 가입한 그룹이 없어요',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.gray80,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // 서브 텍스트
+          Text(
+            '새로운 그룹을 만들어보세요',
+            style: AppTextStyles.body2Regular.copyWith(
+              color: AppColorStyles.gray60,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 액션 버튼
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary80,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColorStyles.primary80.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: onTapCreateGroup,
+              borderRadius: BorderRadius.circular(20),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '그룹 찾아보기',
-                    style: AppTextStyles.body2Regular,
+                  Icon(
+                    Icons.add_rounded,
+                    size: 16,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    '그룹 만들기',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -438,6 +474,7 @@ class GroupSection extends StatelessWidget {
   Widget _buildErrorState(Object error) {
     return Container(
       height: 180,
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: AppColorStyles.error.withValues(alpha: 0.05),
