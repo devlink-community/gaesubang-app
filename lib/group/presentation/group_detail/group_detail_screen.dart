@@ -379,33 +379,28 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
   }
 
-  // 🔧 개별 멤버 아이템 - 실시간 시간 표시
+  // 🔧 개별 멤버 아이템 - 실시간 시간 표시 (수정됨)
   Widget _buildMemberItem(GroupMember member) {
-    // 🔧 실시간 시간 계산 로직을 직접 구현
+    // 🔧 올바른 시간 계산 로직
     String getTimeDisplay() {
-      int seconds;
+      int totalSeconds;
 
       if (member.isActive && member.timerStartTime != null) {
         // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
         final now = DateTime.now();
-        seconds =
-            now.difference(member.timerStartTime!).inSeconds +
-            member.elapsedSeconds;
+        totalSeconds = now.difference(member.timerStartTime!).inSeconds;
+        // ❌ member.elapsedSeconds를 더하면 안됨! (중복 계산)
       } else {
         // 비활성 상태이면 저장된 경과 시간 사용
-        seconds = member.elapsedSeconds;
+        totalSeconds = member.elapsedSeconds;
       }
 
-      // 시간 포맷팅
-      final hours = seconds ~/ 3600;
-      final minutes = (seconds % 3600) ~/ 60;
-      final remainingSeconds = seconds % 60;
+      // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
+      final hours = totalSeconds ~/ 3600;
+      final minutes = (totalSeconds % 3600) ~/ 60;
+      final seconds = totalSeconds % 60;
 
-      if (hours > 0) {
-        return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-      } else {
-        return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-      }
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     }
 
     return Column(
@@ -469,7 +464,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ),
         const SizedBox(height: 8),
 
-        // 🔧 타이머 표시 - 직접 계산된 시간 사용
+        // 🔧 타이머 표시 - 수정된 시간 계산 사용
         member.isActive
             ? Container(
               padding: const EdgeInsets.symmetric(
@@ -481,7 +476,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                getTimeDisplay(), // 🔧 직접 계산된 시간 표시
+                getTimeDisplay(), // 🔧 수정된 시간 표시
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
