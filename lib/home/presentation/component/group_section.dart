@@ -8,11 +8,13 @@ import '../../../group/domain/model/group.dart';
 class GroupSection extends StatelessWidget {
   final AsyncValue<List<Group>> groups;
   final Function(String groupId) onTapGroup;
+  final VoidCallback? onTapCreateGroup; // 🆕 그룹 생성 콜백 추가
 
   const GroupSection({
     super.key,
     required this.groups,
     required this.onTapGroup,
+    this.onTapCreateGroup, // 🆕 선택적 파라미터
   });
 
   @override
@@ -185,38 +187,23 @@ class GroupSection extends StatelessWidget {
                             ),
                           ),
 
-                        // 그룹명 (최대 2줄)
+                        // 그룹명 (2줄로 확장)
                         ConstrainedBox(
                           constraints: const BoxConstraints(
-                            maxHeight: 36, // 2줄 최대 높이 제한
+                            maxHeight: 32, // 2줄 최대 높이 설정
                           ),
                           child: Text(
                             group.name,
-                            style: AppTextStyles.subtitle1Bold.copyWith(
+                            style: AppTextStyles.body1Regular.copyWith(
                               color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
                               height: 1.2, // 줄간격 조정
                             ),
-                            maxLines: 2,
+                            maxLines: 2, // 🔧 2줄로 변경
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-
-                        // 해시태그 (고정 높이)
-                        if (group.hashTags.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          SizedBox(
-                            height: 16,
-                            child: Text(
-                              '#${group.hashTags.first}',
-                              style: AppTextStyles.captionRegular.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 12,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -260,9 +247,7 @@ class GroupSection extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {
-              // TODO: Navigate to create/join group
-            },
+            onTap: onTapCreateGroup, // 🔧 콜백 연결
             borderRadius: BorderRadius.circular(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -283,8 +268,10 @@ class GroupSection extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   '그룹 추가',
-                  style: AppTextStyles.subtitle2Regular.copyWith(
+                  style: AppTextStyles.body2Regular.copyWith(
                     color: AppColorStyles.primary80,
+                    fontSize: 12, // 🔧 13px → 12px로 조정
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -339,9 +326,7 @@ class GroupSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () {
-                // TODO: Navigate to group search
-              },
+              onPressed: onTapCreateGroup, // 🔧 콜백 연결
               style: TextButton.styleFrom(
                 foregroundColor: AppColorStyles.primary80,
               ),
@@ -424,6 +409,15 @@ class GroupSection extends StatelessWidget {
                       const SizedBox(height: 4),
                       Container(
                         width: 60,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 4), // 2줄 그룹명을 위한 공간
+                      Container(
+                        width: 40,
                         height: 12,
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
