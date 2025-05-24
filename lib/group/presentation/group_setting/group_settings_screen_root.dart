@@ -1,5 +1,6 @@
 // lib/group/presentation/group_setting/group_settings_screen_root.dart
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/presentation/component/group_leave_dialog.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_notifier.dart';
@@ -246,7 +247,7 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
         }
 
         // 이미지 경로 로깅 추가
-        debugPrint('📸 선택된 이미지 경로: ${image.path}');
+        AppLogger.debug('선택된 이미지 경로: ${image.path}', tag: 'GroupSettingsRoot');
 
         // 로컬 파일 경로 (file:// 프로토콜 포함)
         String localImagePath = image.path;
@@ -257,15 +258,14 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
           localImagePath = 'file://$localImagePath';
         }
 
-        debugPrint('📸 최종 이미지 경로: $localImagePath');
+        AppLogger.debug('최종 이미지 경로: $localImagePath', tag: 'GroupSettingsRoot');
 
         // ImageUrlChanged 액션으로 전달하면 Notifier에서 자동으로 업로드 처리
         notifier.onAction(GroupSettingsAction.imageUrlChanged(localImagePath));
       }
     } catch (e, st) {
       // 이미지 선택 중 오류 발생 시 처리
-      debugPrint('📸 이미지 선택 오류: $e');
-      debugPrint('📸 StackTrace: $st');
+      AppLogger.error('이미지 선택 오류', tag: 'GroupSettingsRoot', error: e, stackTrace: st);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

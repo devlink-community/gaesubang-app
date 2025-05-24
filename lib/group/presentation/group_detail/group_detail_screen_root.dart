@@ -2,6 +2,7 @@
 import 'package:devlink_mobile_app/core/component/custom_alert_dialog.dart';
 import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_notifier.dart';
@@ -36,7 +37,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   void initState() {
     super.initState();
 
-    print('🚀 GroupDetailScreenRoot initState - groupId: ${widget.groupId}');
+    AppLogger.debug('GroupDetailScreenRoot initState - groupId: ${widget.groupId}', tag: 'GroupDetailRoot');
 
     WidgetsBinding.instance.addObserver(this);
     _isInitializing = true;
@@ -56,7 +57,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   void dispose() {
     // 🔧 dispose 시 화면 비활성 상태 알림
     if (_isInitialized) {
-      print('🔄 화면 dispose - Notifier에 비활성 상태 알림');
+      AppLogger.debug('화면 dispose - Notifier에 비활성 상태 알림', tag: 'GroupDetailRoot');
       final notifier = ref.read(groupDetailNotifierProvider.notifier);
       notifier.setScreenActive(false);
     }
@@ -71,7 +72,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     super.didChangeAppLifecycleState(state);
 
     if (_isInitializing) {
-      print('🔄 초기화 중이므로 생명주기 이벤트 무시: $state');
+      AppLogger.debug('초기화 중이므로 생명주기 이벤트 무시: $state', tag: 'GroupDetailRoot');
       return;
     }
 
@@ -80,7 +81,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     switch (state) {
       case AppLifecycleState.paused:
         if (_isInitialized && !_isInitializing && !_wasInBackground) {
-          print('📱 앱이 백그라운드로 전환됨');
+          AppLogger.info('앱이 백그라운드로 전환됨', tag: 'GroupDetailRoot');
           _wasInBackground = true;
 
           notifier.setAppForeground(false);
@@ -95,7 +96,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       case AppLifecycleState.inactive:
         // 🔧 일시적 비활성 상태에서도 준비
         if (_isInitialized && !_wasInBackground) {
-          print('📱 앱이 일시적으로 비활성화됨');
+          AppLogger.info('앱이 일시적으로 비활성화됨', tag: 'GroupDetailRoot');
           notifier.setAppForeground(false);
         }
         break;
@@ -103,7 +104,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
         // 🔧 앱 종료 시에도 동일한 처리 (더 빠르게)
-        print('🔄 앱 종료 감지: $state');
+        AppLogger.info('앱 종료 감지: $state', tag: 'GroupDetailRoot');
         if (_isInitialized) {
           notifier.setAppForeground(false);
           notifier.setScreenActive(false);
@@ -113,7 +114,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
           if (mounted) {
             final currentState = ref.read(groupDetailNotifierProvider);
             if (currentState.timerStatus == TimerStatus.running) {
-              print('⚡ 앱 종료 - 긴급 타이머 종료 처리');
+              AppLogger.warning('앱 종료 - 긴급 타이머 종료 처리', tag: 'GroupDetailRoot');
               notifier.handleBackgroundTransition();
             }
           }
@@ -122,7 +123,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
 
       case AppLifecycleState.resumed:
         if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
-          print('🔄 백그라운드에서 앱 재개 - 데이터 갱신');
+          AppLogger.info('백그라운드에서 앱 재개 - 데이터 갱신', tag: 'GroupDetailRoot');
 
           notifier.setAppForeground(true);
 
@@ -142,7 +143,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     // 중복 초기화 방지
     if (_isInitialized) return;
 
-    print('🚀 화면 초기화 시작 - groupId: ${widget.groupId}');
+    AppLogger.info('화면 초기화 시작 - groupId: ${widget.groupId}', tag: 'GroupDetailRoot');
 
     try {
       final notifier = ref.read(groupDetailNotifierProvider.notifier);
@@ -164,9 +165,9 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
 
       _isInitialized = true;
       _isInitializing = false;
-      print('✅ 화면 초기화 완료');
+      AppLogger.info('화면 초기화 완료', tag: 'GroupDetailRoot');
     } catch (e) {
-      print('❌ 화면 초기화 실패: $e');
+      AppLogger.error('화면 초기화 실패', tag: 'GroupDetailRoot', error: e);
       _isInitializing = false;
     }
   }
@@ -185,7 +186,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     _lastShownStatusMessage = statusMessage;
     _lastStatusMessageTime = DateTime.now();
 
-    print('📢 상태 메시지 표시: $statusMessage');
+    AppLogger.info('상태 메시지 표시: $statusMessage', tag: 'GroupDetailRoot');
 
     // 🔧 스낵바 우선순위에 따라 다른 duration 설정
     Duration duration;
@@ -350,7 +351,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   // 🔥 Root 역할: 화면 복귀 처리
   void _handleScreenReturn() {
     if (mounted && _isInitialized && !_isInitializing) {
-      print('🔄 다른 화면에서 돌아옴 - 데이터 갱신');
+      AppLogger.info('다른 화면에서 돌아옴 - 데이터 갱신', tag: 'GroupDetailRoot');
 
       // 🔧 화면 활성 상태 복원
       final notifier = ref.read(groupDetailNotifierProvider.notifier);

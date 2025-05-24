@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_firebase_data_source.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
@@ -25,7 +26,6 @@ import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.da
 import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -42,14 +42,16 @@ GroupDataSource groupDataSource(Ref ref) {
 
   // AppConfig 설정에 따라 Firebase 또는 Mock 구현체 제공
   if (AppConfig.useMockGroup) {
-    if (kDebugMode) {
-      print('GroupDataSource: MockGroupDataSourceImpl 사용');
-    }
+    AppLogger.debug(
+      'GroupDataSource: MockGroupDataSourceImpl 사용',
+      tag: 'GroupDI',
+    );
     dataSource = MockGroupDataSourceImpl();
   } else {
-    if (kDebugMode) {
-      print('GroupDataSource: GroupFirebaseDataSource 사용');
-    }
+    AppLogger.debug(
+      'GroupDataSource: GroupFirebaseDataSource 사용',
+      tag: 'GroupDI',
+    );
 
     // Firebase 인스턴스들을 주입
     dataSource = GroupFirebaseDataSource(
@@ -61,9 +63,7 @@ GroupDataSource groupDataSource(Ref ref) {
 
   // 🔧 새로 추가: Provider가 dispose될 때 DataSource의 dispose 호출
   ref.onDispose(() {
-    if (kDebugMode) {
-      print('GroupDataSource Provider: onDispose 호출');
-    }
+    AppLogger.debug('GroupDataSource Provider: onDispose 호출', tag: 'GroupDI');
 
     // Firebase DataSource인 경우에만 dispose 호출
     if (dataSource is GroupFirebaseDataSource) {

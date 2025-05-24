@@ -2,10 +2,10 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/data/data_source/group_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/data_source/mock_current_location_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/group_member_location_dto.dart';
-import 'package:flutter/foundation.dart';
 
 /// 그룹 위치 데이터를 Mock으로 제공하는 DataSource 구현체
 class MockGroupLocationDataSource implements GroupLocationDataSource {
@@ -26,9 +26,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
     double latitude,
     double longitude,
   ) async {
-    if (kDebugMode) {
-      print('MockDataSource: 멤버 위치 업데이트 - $userId, ($latitude, $longitude)');
-    }
+    AppLogger.debug('MockDataSource: 멤버 위치 업데이트 - $userId, ($latitude, $longitude)', tag: 'MockGroupLocation');
 
     // 해당 그룹에 대한 위치 정보가 없으면 생성
     if (!_groupLocations.containsKey(groupId)) {
@@ -68,9 +66,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
   Future<List<GroupMemberLocationDto>> getGroupMemberLocations(
     String groupId,
   ) async {
-    if (kDebugMode) {
-      print('MockDataSource: 그룹 멤버 위치 조회 - $groupId');
-    }
+    AppLogger.debug('MockDataSource: 그룹 멤버 위치 조회 - $groupId', tag: 'MockGroupLocation');
 
     // 해당 그룹의 위치 정보가 없으면 초기 데이터 생성
     if (!_groupLocations.containsKey(groupId)) {
@@ -87,9 +83,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
   Stream<List<GroupMemberLocationDto>> streamGroupMemberLocations(
     String groupId,
   ) {
-    if (kDebugMode) {
-      print('MockDataSource: 그룹 멤버 위치 스트림 시작 - $groupId');
-    }
+    AppLogger.debug('MockDataSource: 그룹 멤버 위치 스트림 시작 - $groupId', tag: 'MockGroupLocation');
 
     // 이미 존재하는 컨트롤러가 있으면 재사용
     if (_controllers.containsKey(groupId)) {
@@ -103,9 +97,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
         if (!_controllers[groupId]!.hasListener) {
           _controllers[groupId]!.close();
           _controllers.remove(groupId);
-          if (kDebugMode) {
-            print('MockDataSource: 스트림 컨트롤러 종료 - $groupId');
-          }
+          AppLogger.debug('MockDataSource: 스트림 컨트롤러 종료 - $groupId', tag: 'MockGroupLocation');
         }
       },
     );
@@ -128,9 +120,7 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
 
   // 모의 데이터 초기 생성 (제주도 성산일출봉 근처에 자연스럽게 7명 배치)
   void _createInitialMockDataJeju(String groupId) {
-    if (kDebugMode) {
-      print('MockDataSource: 제주도 성산일출봉 근처 모의 데이터 생성 - $groupId (그룹원 7명)');
-    }
+    AppLogger.debug('MockDataSource: 제주도 성산일출봉 근처 모의 데이터 생성 - $groupId (그룹원 7명)', tag: 'MockGroupLocation');
 
     // 성산일출봉 좌표 (MockCurrentLocationDataSource의 상수 사용)
     final baseLatitude = MockCurrentLocationDataSource.latitude;
@@ -255,12 +245,11 @@ class MockGroupLocationDataSource implements GroupLocationDataSource {
           // 스트림 업데이트
           _notifyListeners(groupId);
 
-          if (kDebugMode) {
-            print(
-              'MockDataSource: 랜덤 위치 업데이트 - ${location.userId}, '
-              '(${updatedLocation.latitude}, ${updatedLocation.longitude})',
-            );
-          }
+          AppLogger.debug(
+            'MockDataSource: 랜덤 위치 업데이트 - ${location.userId}, '
+            '(${updatedLocation.latitude}, ${updatedLocation.longitude})',
+            tag: 'MockGroupLocation',
+          );
         }
 
         // 재귀 호출로 계속 업데이트
