@@ -2,7 +2,7 @@
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:flutter/foundation.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 // 새로운 import 추가
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
@@ -44,9 +44,13 @@ class LoginUseCase {
         // 2. 만료된 토큰 정리 (선택적)
         await _fcmTokenService.cleanupExpiredTokens(userId);
 
-        debugPrint('로그인 후 FCM 작업 완료');
+        AppLogger.info('로그인 후 FCM 작업 완료', tag: 'LoginUseCase');
       } catch (e) {
-        debugPrint('로그인 후 FCM 작업 실패: $e');
+        AppLogger.error(
+          '로그인 후 FCM 작업 실패',
+          tag: 'LoginUseCase',
+          error: e,
+        );
         // FCM 작업 실패는 무시 (로그인 자체에는 영향 없음)
       }
     });
