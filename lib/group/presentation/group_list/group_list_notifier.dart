@@ -1,8 +1,10 @@
+import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_sort_type.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/usecase/get_group_list_use_case.dart';
@@ -63,7 +65,7 @@ class GroupListNotifier extends _$GroupListNotifier {
     if (state.groupList is AsyncData) {
       final groups = (state.groupList as AsyncData<List<Group>>).value;
       final selectedGroup = groups.firstWhere(
-            (group) => group.id == groupId,
+        (group) => group.id == groupId,
         orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
       );
       state = state.copyWith(selectedGroup: AsyncData(selectedGroup));
@@ -71,9 +73,23 @@ class GroupListNotifier extends _$GroupListNotifier {
   }
 
   bool isCurrentMemberInGroup(Group group) {
-    // 현재 사용자가 그룹에 속해 있는지 확인하는 로직
-    // 필요에 따라 수정해야 함 (예: 사용자 정보는 다른 Provider나 캐시에서 가져와야 할 수 있음)
-    return group.isJoinedByCurrentUser;
+    // 1. 사용자가 그룹에 이미 가입되어 있는지 확인
+    if (group.isJoinedByCurrentUser) {
+      return true;
+    }
+
+    // 2. 사용자가 그룹의 소유자인지 확인 (소유자는 무조건 가입된 상태)
+    final currentUserId = _getCurrentUserId();
+
+    // 소유자인 경우 자동으로 가입된 상태로 간주
+    return group.ownerId == currentUserId;
+  }
+
+  // 현재 사용자 ID 가져오기 헬퍼 메서드
+  String _getCurrentUserId() {
+    // Firebase Auth에서 현재 사용자 ID 가져오기
+    final auth = ref.read(firebaseAuthProvider);
+    return auth.currentUser?.uid ?? '';
   }
 
   Future<void> _joinGroup(String groupId) async {
@@ -91,10 +107,10 @@ class GroupListNotifier extends _$GroupListNotifier {
       case OnJoinGroup(:final groupId):
         await _joinGroup(groupId);
       case ResetSelectedGroup():
-      // selectedGroup 초기화
+        // selectedGroup 초기화
         state = state.copyWith(selectedGroup: const AsyncData(null));
       case OnShowFullGroupDialog():
-      // 인원 마감 다이얼로그 액션 - Root에서 처리하므로 여기서는 단순 분기만
+        // 인원 마감 다이얼로그 액션 - Root에서 처리하므로 여기서는 단순 분기만
         break;
       case OnTapSearch():
         break;
@@ -109,4 +125,4 @@ class GroupListNotifier extends _$GroupListNotifier {
         _changeSortType(sortType);
     }
   }
-}    
+}
