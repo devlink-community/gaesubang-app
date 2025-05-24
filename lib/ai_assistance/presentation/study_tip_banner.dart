@@ -116,7 +116,14 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
 class StudyTipBanner extends ConsumerWidget {
   final String? skills;
 
-  const StudyTipBanner({super.key, this.skills});
+  // 🆕 다이얼로그 상태 변경 콜백 추가
+  final Function(bool isVisible)? onDialogStateChanged;
+
+  const StudyTipBanner({
+    super.key,
+    this.skills,
+    this.onDialogStateChanged, // 🆕 콜백 매개변수 추가
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -368,6 +375,17 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
+  // 🔧 다이얼로그 상태 알림 기능 추가
+  void _notifyDialogState(bool isVisible) {
+    if (onDialogStateChanged != null) {
+      onDialogStateChanged!(isVisible);
+      AppLogger.debug(
+        'CarouselSlider 상태 변경 알림: isVisible=$isVisible',
+        tag: 'StudyTipDialog',
+      );
+    }
+  }
+
   // 캐시 업데이트 메서드 - 홈화면에 새로운 팁 반영
   void _updateHomeBannerCache(WidgetRef ref, StudyTip newTip, String? skills) {
     final cacheKey = _generateCacheKey(skills);
@@ -389,7 +407,7 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
-  // 🔧 최소 수정: 기존 디자인 유지 + 취소 기능만 추가
+  // 🔧 새로운 팁 로딩 메서드에 다이얼로그 상태 관리 추가
   Future<void> _loadNewTip(
       BuildContext context,
       String? skills,
@@ -415,10 +433,11 @@ class StudyTipBanner extends ConsumerWidget {
       tag: 'StudyTipGeneration',
     );
 
-    // 🔧 최소 수정: barrierDismissible만 true로 변경, 나머지는 기존 디자인 유지
+    // 🆕 새 팁 로딩 다이얼로그 표시 (이미 다이얼로그가 표시된 상태이므로 추가 알림 불필요)
+
     showDialog(
       context: context,
-      barrierDismissible: true, // 🔧 유일한 변경점: false → true
+      barrierDismissible: true,
       builder: (dialogContext) {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
@@ -479,7 +498,7 @@ class StudyTipBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // 🔧 기존 메시지 그대로 유지
+                  // 기존 메시지 그대로 유지
                   Text(
                     '따뜻한 꿀팁을\n우려내고 있어요 ☕',
                     style: AppTextStyles.subtitle1Bold.copyWith(
@@ -565,7 +584,7 @@ class StudyTipBanner extends ConsumerWidget {
         tag: 'StudyTipGeneration',
       );
 
-      // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
+      // 학습 팁 생성 (타이머보다 먼저 완료되면 타이머 취소)
       final asyncValue = await getStudyTipUseCase.execute(skillWithTimestamp);
 
       // 취소되었으면 더 이상 진행하지 않음
@@ -700,10 +719,13 @@ class StudyTipBanner extends ConsumerWidget {
       tag: 'StudyTipUI',
     );
 
+    // 🆕 상세 다이얼로그 표시 전 배너 자동재생 중지
+    _notifyDialogState(true);
+
     // StatefulWidget으로 다이얼로그 상태 관리
     showDialog(
       context: context,
-      barrierDismissible: true, // 🔧 기존 false → true로 변경
+      barrierDismissible: true,
       builder:
           (context) => _StudyTipDialog(
         initialTip: tip,
@@ -727,7 +749,10 @@ class StudyTipBanner extends ConsumerWidget {
           _loadNewTip(context, skills, ref, updateContent);
         },
       ),
-    );
+    ).then((_) {
+      // 🆕 상세 다이얼로그 닫힐 때 배너 자동재생 재개
+      _notifyDialogState(false);
+    });
   }
 }
 
