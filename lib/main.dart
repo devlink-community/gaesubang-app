@@ -1,3 +1,5 @@
+// lib/main.dart - 간단한 ErrorApp 구현
+
 import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/app_initialization_service.dart';
 import 'package:devlink_mobile_app/core/styles/app_theme.dart';
@@ -102,60 +104,134 @@ class ErrorApp extends StatelessWidget {
       title: '개수방 - 오류',
       home: Scaffold(
         backgroundColor: Colors.red.shade50,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red.shade400,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '앱 초기화 중 오류가 발생했습니다',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 80,
+                    color: Colors.red.shade400,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '앱을 다시 시작해주세요',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.red.shade600,
+                  const SizedBox(height: 32),
+                  Text(
+                    '앱 실행 중 오류가 발생했습니다',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    // 앱 재시작 시도 (실제로는 시스템에서 처리해야 함)
-                    AppLogger.info(
-                      '앱 재시작 버튼 클릭',
-                      tag: 'ErrorApp',
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade400,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                  const SizedBox(height: 16),
+                  Text(
+                    '다음 단계를 따라주세요',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.red.shade600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // 단계별 안내
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _buildStep('1', '현재 앱을 완전히 종료하세요'),
+                        const SizedBox(height: 16),
+                        _buildStep('2', '최근 앱에서 개수방을 제거하세요'),
+                        const SizedBox(height: 16),
+                        _buildStep('3', '홈 화면에서 앱을 다시 실행하세요'),
+                      ],
                     ),
                   ),
-                  child: const Text('다시 시도'),
-                ),
-              ],
+                  
+                  const SizedBox(height: 24),
+                  
+                  // 추가 안내
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.amber.shade700,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            '문제가 계속되면 기기를 재부팅하거나\n앱을 재설치해주세요',
+                            style: TextStyle(fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// 단계별 안내 위젯
+  Widget _buildStep(String number, String description) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.red.shade400,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            description,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
