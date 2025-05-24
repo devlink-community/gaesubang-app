@@ -1,10 +1,11 @@
 // lib/group/presentation/group_create/group_create_state.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'group_create_state.freezed.dart';
 
+//TODO: state가 이상하게 구현되어있음
 @freezed
 class GroupCreateState with _$GroupCreateState {
   const GroupCreateState({
@@ -41,7 +42,7 @@ class GroupCreateState with _$GroupCreateState {
   final int pauseTimeLimit;
 
   @override
-  final List<Member> invitedMembers;
+  final List<User> invitedMembers;
 
   @override
   final bool isSubmitting;

@@ -1,5 +1,5 @@
 // lib/community/data/repository_impl/post_repository_impl.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/data/data_source/post_data_source.dart';
 import 'package:devlink_mobile_app/community/data/mapper/post_mapper.dart';
 import 'package:devlink_mobile_app/community/domain/model/comment.dart';
@@ -308,7 +308,7 @@ class PostRepositoryImpl implements PostRepository {
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
-    Member? author,
+    User? author,
   }) async {
     const operationName = 'PostRepository.createPost';
 
@@ -406,7 +406,7 @@ class PostRepositoryImpl implements PostRepository {
     required String content,
     required List<String> hashTags,
     required List<Uri> imageUris,
-    Member? author,
+    User? author,
   }) async {
     const operationName = 'PostRepository.updatePost';
 

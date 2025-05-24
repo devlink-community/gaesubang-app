@@ -1,19 +1,19 @@
 import 'dart:io';
 
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 
-import '../../../auth/domain/model/member.dart';
 import '../../../core/styles/app_text_styles.dart';
 
 class ProfileInfoCard extends StatefulWidget {
-  final Member member;
+  final User user;
   final bool compact;
 
   const ProfileInfoCard({
     super.key,
-    required this.member,
+    required this.user,
     this.compact = false,
   });
 
@@ -68,13 +68,13 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
     final double imageSize = widget.compact ? 60.0 : 72.0;
 
     // 소개글이 있는지 확인
-    final bool hasDescription = widget.member.description.isNotEmpty;
+    final bool hasDescription = widget.user.description.isNotEmpty;
 
     // 직무와 스킬이 있는지 확인
     final bool hasPosition =
-        widget.member.position != null && widget.member.position!.isNotEmpty;
+        widget.user.position != null && widget.user.position!.isNotEmpty;
     final bool hasSkills =
-        widget.member.skills != null && widget.member.skills!.isNotEmpty;
+        widget.user.skills != null && widget.user.skills!.isNotEmpty;
 
     // 직무 또는 스킬 정보가 있는지 확인
     final bool hasExtraInfo = hasPosition || hasSkills;
@@ -124,7 +124,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
 
         // 이름
         Text(
-          widget.member.nickname,
+          widget.user.nickname,
           style: AppTextStyles.heading6Bold.copyWith(
             fontWeight: FontWeight.w700,
             fontSize: 22,
@@ -138,7 +138,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Text(
-            hasDescription ? widget.member.description : "아직 소개글이 작성되지 않았어요",
+            hasDescription ? widget.user.description : "아직 소개글이 작성되지 않았어요",
             style: AppTextStyles.body2Regular.copyWith(
               color:
                   hasDescription
@@ -238,7 +238,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
 
                         // 직무 내용
                         Text(
-                          widget.member.position!,
+                          widget.user.position!,
                           style: AppTextStyles.body1Regular.copyWith(
                             color: AppColorStyles.textPrimary,
                           ),
@@ -291,7 +291,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _buildSkillTags(widget.member.skills!),
+                          children: _buildSkillTags(widget.user.skills!),
                         ),
                       ],
                     ),
@@ -363,7 +363,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
   }
 
   Widget _buildProfileImage() {
-    if (widget.member.image.isEmpty) {
+    if (widget.user.image.isEmpty) {
       return CircleAvatar(
         radius: widget.compact ? 30 : 40,
         backgroundColor: Colors.grey.shade100,
@@ -375,10 +375,10 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
       );
     }
 
-    if (widget.member.image.startsWith('/')) {
+    if (widget.user.image.startsWith('/')) {
       return CircleAvatar(
         radius: widget.compact ? 30 : 40,
-        backgroundImage: FileImage(File(widget.member.image)),
+        backgroundImage: FileImage(File(widget.user.image)),
         backgroundColor: Colors.grey.shade200,
         onBackgroundImageError: (exception, stackTrace) {
           AppLogger.error(
@@ -394,7 +394,7 @@ class _ProfileInfoCardState extends State<ProfileInfoCard>
 
     return CircleAvatar(
       radius: widget.compact ? 30 : 40,
-      backgroundImage: NetworkImage(widget.member.image),
+      backgroundImage: NetworkImage(widget.user.image),
       backgroundColor: Colors.grey.shade200,
       onBackgroundImageError: (exception, stackTrace) {
         AppLogger.error(

@@ -1,5 +1,5 @@
 // lib/group/presentation/group_create/group_create_notifier.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
@@ -62,7 +62,7 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
 
       case MemberInvited(userId: final memberUserId):
         // 실제 구현에서는 멤버 조회 API 호출 등이 필요
-        final mockMember = Member(
+        final mockMember = User(
           id: memberUserId,
           email: 'user$memberUserId@example.com',
           nickname: 'User $memberUserId',
