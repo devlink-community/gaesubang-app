@@ -1,5 +1,5 @@
 // lib/group/data/data_source/group_data_source.dart
-// 기존 인터페이스에 다음과 같이 메서드를 정리하고 추가합니다
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 
 abstract interface class GroupDataSource {
   /// 전체 그룹 목록 조회 - 내부에서 현재 사용자의 가입 그룹 정보 처리
@@ -62,7 +62,7 @@ abstract interface class GroupDataSource {
   /// 모든 타이머 관련 액션의 기본 메서드 (일반화된 인터페이스)
   Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
     String groupId,
-    String activityType, // 'start', 'pause', 'resume', 'end'
+    TimerActivityType activityType,
     DateTime timestamp,
   );
 

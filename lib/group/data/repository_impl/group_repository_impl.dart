@@ -12,6 +12,7 @@ import 'package:devlink_mobile_app/group/data/mapper/user_streak_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 
@@ -366,7 +367,7 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> recordTimerActivity(
     String groupId,
-    String activityType, {
+    TimerActivityType activityType, {
     DateTime? timestamp,
   }) async {
     try {
@@ -396,22 +397,22 @@ class GroupRepositoryImpl implements GroupRepository {
 
   @override
   Future<Result<void>> startMemberTimer(String groupId) async {
-    return recordTimerActivity(groupId, 'start');
+    return recordTimerActivity(groupId, TimerActivityType.start);
   }
 
   @override
   Future<Result<void>> pauseMemberTimer(String groupId) async {
-    return recordTimerActivity(groupId, 'pause');
+    return recordTimerActivity(groupId, TimerActivityType.pause);
   }
 
   @override
   Future<Result<void>> resumeMemberTimer(String groupId) async {
-    return recordTimerActivity(groupId, 'resume');
+    return recordTimerActivity(groupId, TimerActivityType.resume);
   }
 
   @override
   Future<Result<void>> stopMemberTimer(String groupId) async {
-    return recordTimerActivity(groupId, 'end');
+    return recordTimerActivity(groupId, TimerActivityType.end);
   }
 
   @override
@@ -452,7 +453,7 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> recordTimerActivityWithTimestamp(
     String groupId,
-    String activityType,
+    TimerActivityType activityType,
     DateTime timestamp,
   ) async {
     try {
@@ -492,7 +493,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.start,
+      timestamp,
+    );
   }
 
   @override
@@ -500,7 +505,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.pause,
+      timestamp,
+    );
   }
 
   @override
@@ -508,7 +517,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.end,
+      timestamp,
+    );
   }
 
   @override
@@ -516,7 +529,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivity(groupId, 'resume', timestamp: timestamp);
+    return recordTimerActivity(
+      groupId,
+      TimerActivityType.resume,
+      timestamp: timestamp,
+    );
   }
 
   @override

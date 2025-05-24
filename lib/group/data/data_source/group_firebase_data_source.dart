@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/group/data/data_source/firebase/group_query_f
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_stats_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_timer_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -133,7 +134,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
   @override
   Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
     String groupId,
-    String activityType,
+    TimerActivityType activityType,
     DateTime timestamp,
   ) async {
     return _timer.recordTimerActivityWithTimestamp(
@@ -146,25 +147,41 @@ class GroupFirebaseDataSource implements GroupDataSource {
   @override
   Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
     // 현재 시간으로 'start' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'start', DateTime.now());
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.start,
+      DateTime.now(),
+    );
   }
 
   @override
   Future<Map<String, dynamic>> pauseMemberTimer(String groupId) async {
     // 현재 시간으로 'pause' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'pause', DateTime.now());
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.pause,
+      DateTime.now(),
+    );
   }
 
   @override
   Future<Map<String, dynamic>> resumeMemberTimer(String groupId) async {
     // 현재 시간으로 'resume' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'resume', DateTime.now());
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.resume,
+      DateTime.now(),
+    );
   }
 
   @override
   Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
     // 현재 시간으로 'end' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'end', DateTime.now());
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.end,
+      DateTime.now(),
+    );
   }
 
   @override
@@ -173,7 +190,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
     DateTime timestamp,
   ) async {
     // 지정된 시간으로 'start' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.start,
+      timestamp,
+    );
   }
 
   @override
@@ -182,7 +203,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
     DateTime timestamp,
   ) async {
     // 지정된 시간으로 'pause' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.pause,
+      timestamp,
+    );
   }
 
   @override
@@ -191,7 +216,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
     DateTime timestamp,
   ) async {
     // 지정된 시간으로 'resume' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'resume', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.resume,
+      timestamp,
+    );
   }
 
   @override
@@ -200,7 +229,11 @@ class GroupFirebaseDataSource implements GroupDataSource {
     DateTime timestamp,
   ) async {
     // 지정된 시간으로 'end' 활동 기록
-    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.end,
+      timestamp,
+    );
   }
 
   // ===== Stats 기능 위임 =====

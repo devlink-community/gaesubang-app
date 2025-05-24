@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 
 abstract interface class GroupRepository {
@@ -32,15 +33,26 @@ abstract interface class GroupRepository {
   /// 타이머 활동 기록 - 모든 타이머 액션의 기본 메서드
   ///
   /// [groupId] 그룹 ID
-  /// [activityType] 활동 타입 ('start', 'pause', 'resume', 'end')
+  /// [activityType] 활동 타입 (TimerActivityType enum 사용)
   /// [timestamp] 타임스탬프 (null인 경우 현재 시간 사용)
   ///
   /// 모든 타이머 관련 액션은 내부적으로 이 메서드를 사용합니다.
   Future<Result<void>> recordTimerActivity(
     String groupId,
-    String activityType, {
+    TimerActivityType activityType, {
     DateTime? timestamp,
   });
+
+  /// 타이머 활동 기록 - 타임스탬프 지정 버전
+  ///
+  /// [groupId] 그룹 ID
+  /// [activityType] 활동 타입 (TimerActivityType enum 사용)
+  /// [timestamp] 타임스탬프
+  Future<Result<void>> recordTimerActivityWithTimestamp(
+    String groupId,
+    TimerActivityType activityType,
+    DateTime timestamp,
+  );
 
   /// 멤버 타이머 시작
   /// 내부적으로 recordTimerActivity를 호출하여 구현
