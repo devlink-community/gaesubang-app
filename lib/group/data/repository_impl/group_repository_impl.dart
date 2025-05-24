@@ -7,9 +7,11 @@ import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
+import 'package:devlink_mobile_app/group/data/mapper/user_streak_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
@@ -540,5 +542,47 @@ class GroupRepositoryImpl implements GroupRepository {
     DateTime timestamp,
   ) async {
     return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+  }
+
+  @override
+  Future<Result<UserStreak>> getUserMaxStreakDays() async {
+    try {
+      // 1. 현재 사용자가 가입한 모든 그룹의 연속 출석일 정보 조회
+      final userStreakData = await _dataSource.fetchUserMaxStreakDays();
+
+      // 2. DTO → Model 변환
+      final userStreakDto = userStreakData.toUserStreakDto();
+      final userStreak = userStreakDto.toModel();
+
+      return Result.success(userStreak);
+    } catch (e, st) {
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '연속 출석일을 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<Result<int>> getWeeklyStudyTimeMinutes() async {
+    try {
+      // DataSource에서 이번 주 공부 시간 데이터 조회
+      final weeklyStudyData = await _dataSource.fetchWeeklyStudyTimeMinutes();
+
+      return Result.success(weeklyStudyData);
+    } catch (e, st) {
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '이번 주 공부 시간을 불러오는데 실패했습니다.',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
   }
 }

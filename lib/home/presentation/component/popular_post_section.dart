@@ -21,59 +21,7 @@ class PopularPostSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(),
-        const SizedBox(height: 16),
         _buildPostList(),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary100,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '인기 게시글',
-              style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColorStyles.primary100.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.trending_up,
-                size: 14,
-                color: AppColorStyles.primary100,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'HOT',
-                style: AppTextStyles.captionRegular.copyWith(
-                  color: AppColorStyles.primary100,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
