@@ -66,11 +66,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
             await homeNotifier.onAction(action);
             _loadUserSkills(); // 새로고침 시 스킬 정보도 다시 로드
             break;
-          case OnTapNotice(:final noticeId):
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('공지사항 $noticeId 클릭')));
-            break;
+
           case OnTapGroup(:final groupId):
             context.push('/group/$groupId');
             break;
@@ -82,6 +78,10 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
             break;
           case OnTapNotification():
             context.push('/notifications');
+            break;
+
+          case OnTapCreateGroup():
+            context.push('/group/create');
             break;
           default:
             await homeNotifier.onAction(action);

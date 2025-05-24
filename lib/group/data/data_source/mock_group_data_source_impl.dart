@@ -952,4 +952,258 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     }
     _timerStatusControllers.clear();
   }
+
+  @override
+  Future<Map<String, dynamic>> fetchUserMaxStreakDays() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    await _initializeIfNeeded();
+
+    final userId = _currentUserId;
+    final userGroupIds = _userGroups[userId] ?? [];
+
+    if (userGroupIds.isEmpty) {
+      // 가입한 그룹이 없으면 기본값 반환
+      return {
+        'maxStreakDays': 0,
+        'bestGroupId': null,
+        'bestGroupName': null,
+        'lastActiveDate': _dateFormat.format(DateTime.now()),
+      };
+    }
+
+    int maxStreakDays = 0;
+    String? bestGroupId;
+    String? bestGroupName;
+    DateTime? lastActiveDate;
+
+    // 각 그룹별로 연속 출석일 계산
+    for (final groupId in userGroupIds) {
+      final streakInfo = _calculateUserStreakInfoInGroup(groupId, userId);
+
+      if (streakInfo['streakDays'] > maxStreakDays) {
+        maxStreakDays = streakInfo['streakDays'];
+        bestGroupId = groupId;
+        bestGroupName = streakInfo['groupName'];
+        lastActiveDate = streakInfo['lastActiveDate'];
+      }
+    }
+
+    return {
+      'maxStreakDays': maxStreakDays,
+      'bestGroupId': bestGroupId,
+      'bestGroupName': bestGroupName,
+      'lastActiveDate':
+          lastActiveDate != null
+              ? _dateFormat.format(lastActiveDate)
+              : _dateFormat.format(DateTime.now()),
+    };
+  }
+
+  /// 특정 그룹에서 특정 사용자의 연속 출석일 및 상세 정보 계산
+  Map<String, dynamic> _calculateUserStreakInfoInGroup(
+    String groupId,
+    String userId,
+  ) {
+    final activities = _timerActivities[groupId] ?? [];
+
+    // 해당 사용자의 활동만 필터링
+    final userActivities =
+        activities.where((activity) => activity['memberId'] == userId).toList();
+
+    // 그룹 이름 찾기
+    final group = _groups.firstWhere(
+      (g) => g['id'] == groupId,
+      orElse: () => {'name': '알 수 없는 그룹'},
+    );
+    final groupName = group['name'] as String;
+
+    if (userActivities.isEmpty) {
+      return {
+        'streakDays': 0,
+        'groupName': groupName,
+        'lastActiveDate': DateTime.now(),
+      };
+    }
+
+    // 활동을 날짜순으로 정렬 (최신순)
+    userActivities.sort((a, b) {
+      try {
+        final dateA = _dateFormat.parse(a['timestamp'] as String);
+        final dateB = _dateFormat.parse(b['timestamp'] as String);
+        return dateB.compareTo(dateA); // 내림차순
+      } catch (e) {
+        return 0;
+      }
+    });
+
+    // 날짜별로 그룹화하여 실제 활동한 날짜들 추출
+    final Set<String> activeDates = {};
+    DateTime? latestActiveDate;
+
+    for (final activity in userActivities) {
+      try {
+        final timestamp = activity['timestamp'] as String;
+        final activityDate = _dateFormat.parse(timestamp);
+        final dateKey = DateFormat('yyyy-MM-dd').format(activityDate);
+
+        // 가장 최근 활동 날짜 업데이트
+        if (latestActiveDate == null ||
+            activityDate.isAfter(latestActiveDate)) {
+          latestActiveDate = activityDate;
+        }
+
+        // start/end 페어가 있는 날만 실제 활동한 날로 간주
+        if (activity['type'] == 'start' || activity['type'] == 'end') {
+          activeDates.add(dateKey);
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (activeDates.isEmpty) {
+      return {
+        'streakDays': 0,
+        'groupName': groupName,
+        'lastActiveDate': DateTime.now(),
+      };
+    }
+
+    // 연속 출석일 계산
+    final streakDays = _calculateStreakDaysFromActiveDates(activeDates);
+
+    return {
+      'streakDays': streakDays,
+      'groupName': groupName,
+      'lastActiveDate': latestActiveDate ?? DateTime.now(),
+    };
+  }
+
+  /// 활동한 날짜들로부터 연속 출석일 계산
+  int _calculateStreakDaysFromActiveDates(Set<String> activeDates) {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final yesterday = DateFormat('yyyy-MM-dd').format(
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
+
+    // 오늘 또는 어제까지 활동이 있었는지 확인 (연속성 유지 조건)
+    bool hasRecentActivity =
+        activeDates.contains(today) || activeDates.contains(yesterday);
+    if (!hasRecentActivity) {
+      return 0; // 최근 활동이 없으면 연속 출석일 0
+    }
+
+    int streakDays = 0;
+
+    // 오늘부터 역순으로 연속일 계산
+    for (int i = 0; i < 30; i++) {
+      // 최대 30일까지만 확인
+      final checkDate = DateFormat('yyyy-MM-dd').format(
+        DateTime.now().subtract(Duration(days: i)),
+      );
+
+      if (activeDates.contains(checkDate)) {
+        streakDays++;
+      } else {
+        break; // 연속성이 끊어지면 중단
+      }
+    }
+
+    return streakDays;
+  }
+
+  @override
+  Future<int> fetchWeeklyStudyTimeMinutes() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _initializeIfNeeded();
+
+    final userId = _currentUserId;
+    final userGroupIds = _userGroups[userId] ?? [];
+
+    if (userGroupIds.isEmpty) {
+      return 0; // 가입한 그룹이 없으면 0분 반환
+    }
+
+    int totalWeeklyMinutes = 0;
+
+    // 이번 주 시작일과 종료일 계산
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1)); // 월요일
+    final weekStartDate = DateTime(
+      weekStart.year,
+      weekStart.month,
+      weekStart.day,
+    );
+    final weekEndDate = weekStartDate.add(const Duration(days: 7));
+
+    // 각 그룹별로 이번 주 타이머 활동 집계
+    for (final groupId in userGroupIds) {
+      final activities = _timerActivities[groupId] ?? [];
+
+      // 현재 사용자의 이번 주 활동만 필터링
+      final userWeeklyActivities =
+          activities.where((activity) {
+            if (activity['memberId'] != userId) return false;
+
+            try {
+              final timestamp = activity['timestamp'] as String?;
+              if (timestamp == null) return false;
+
+              final activityDate = _dateFormat.parse(timestamp);
+              return activityDate.isAfter(
+                    weekStartDate.subtract(const Duration(seconds: 1)),
+                  ) &&
+                  activityDate.isBefore(weekEndDate);
+            } catch (e) {
+              return false;
+            }
+          }).toList();
+
+      // 시간순 정렬
+      userWeeklyActivities.sort((a, b) {
+        try {
+          final dateA = _dateFormat.parse(a['timestamp'] as String);
+          final dateB = _dateFormat.parse(b['timestamp'] as String);
+          return dateA.compareTo(dateB);
+        } catch (e) {
+          return 0;
+        }
+      });
+
+      // start/end 페어 매칭하여 시간 계산
+      DateTime? startTime;
+      for (final activity in userWeeklyActivities) {
+        final type = activity['type'] as String?;
+        final timestamp = activity['timestamp'] as String?;
+
+        if (timestamp == null) continue;
+
+        try {
+          final activityTime = _dateFormat.parse(timestamp);
+
+          if (type == 'start') {
+            startTime = activityTime;
+          } else if (type == 'end' && startTime != null) {
+            final duration = activityTime.difference(startTime).inMinutes;
+            if (duration > 0) {
+              totalWeeklyMinutes += duration;
+            }
+            startTime = null; // 페어 처리 완료
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+    }
+
+    // Mock 환경에서는 임의의 값도 추가 (더 현실적인 데이터를 위해)
+    if (totalWeeklyMinutes == 0) {
+      // 기본적으로 8-25시간 사이의 랜덤한 주간 공부 시간 생성
+      final baseMinutes = 8 * 60; // 8시간
+      final randomAdditional = _random.nextInt(17 * 60); // 0-17시간 추가
+      totalWeeklyMinutes = baseMinutes + randomAdditional;
+    }
+
+    return totalWeeklyMinutes;
+  }
 }
