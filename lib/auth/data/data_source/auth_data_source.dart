@@ -1,4 +1,5 @@
 // lib/auth/data/data_source/auth_data_source.dart
+import '../dto/summary_dto.dart';
 import '../dto/user_dto.dart';
 
 abstract interface class AuthDataSource {
@@ -13,7 +14,7 @@ abstract interface class AuthDataSource {
     required String email,
     required String password,
     required String nickname,
-    String? agreedTermsId, // 약관 동의 ID 추가
+    String? agreedTermsId,
   });
 
   /// 현재 로그인 세션 확인
@@ -45,15 +46,6 @@ abstract interface class AuthDataSource {
   /// 특정 약관 정보 조회
   Future<Map<String, dynamic>?> getTermsInfo(String termsId);
 
-  /// 사용자의 타이머 활동 로그 조회
-  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId);
-
-  /// 타이머 활동 로그 저장
-  Future<void> saveTimerActivity(
-    String userId,
-    Map<String, dynamic> activityData,
-  );
-
   /// 사용자 정보 업데이트
   Future<Map<String, dynamic>> updateUser({
     required String nickname,
@@ -65,11 +57,34 @@ abstract interface class AuthDataSource {
   /// 사용자 이미지 업데이트
   Future<Map<String, dynamic>> updateUserImage(String imagePath);
 
-  /// 인증 상태 변화 스트림 (추가)
+  /// 인증 상태 변화 스트림
   Stream<Map<String, dynamic>?> get authStateChanges;
 
-  /// 현재 인증 상태 확인 (추가)
+  /// 현재 인증 상태 확인
   Future<Map<String, dynamic>?> getCurrentAuthState();
 
+  /// 특정 사용자 프로필 조회
   Future<UserDto> fetchUserProfile(String userId);
+
+  // ===== 새로운 Activity/Summary 관련 메서드 =====
+
+  /// 사용자 Summary 조회
+  Future<SummaryDto?> fetchUserSummary(String userId);
+
+  /// 사용자 Summary 업데이트
+  Future<void> updateUserSummary({
+    required String userId,
+    required SummaryDto summary,
+  });
+
+  // ===== Deprecated 메서드 (추후 삭제 예정) =====
+
+  /// @deprecated - Summary/Activity 사용
+  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId);
+
+  /// @deprecated - updateGroupActivity 사용
+  Future<void> saveTimerActivity(
+    String userId,
+    Map<String, dynamic> activityData,
+  );
 }
