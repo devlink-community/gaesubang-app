@@ -1,11 +1,10 @@
 // lib/auth/domain/usecase/login_use_case.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-// 새로운 import 추가
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class LoginUseCase {
   final AuthRepository _repository;
@@ -17,7 +16,7 @@ class LoginUseCase {
   }) : _repository = repository,
        _fcmTokenService = fcmTokenService;
 
-  Future<AsyncValue<Member>> execute({
+  Future<AsyncValue<User>> execute({
     required String email,
     required String password,
   }) async {

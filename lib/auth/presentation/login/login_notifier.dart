@@ -1,14 +1,14 @@
 // lib/auth/presentation/login/login_notifier.dart
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_notifier.g.dart';
@@ -162,7 +162,7 @@ class LoginNotifier extends _$LoginNotifier {
   }
 
   /// 로그인 결과 처리 (AsyncValue 기반)
-  void _processLoginResult(AsyncValue<Member> asyncResult, String email) {
+  void _processLoginResult(AsyncValue<User> asyncResult, String email) {
     final startTime = DateTime.now();
     final maskedEmail = PrivacyMaskUtil.maskEmail(email);
 

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -23,7 +23,7 @@ class UpdateProfileImageUseCase {
   /// 2. 이미지 압축 (필요한 경우)
   /// 3. 서버에 업로드
   /// 4. 업데이트된 사용자 정보 반환
-  Future<AsyncValue<Member>> execute(String imagePath) async {
+  Future<AsyncValue<User>> execute(String imagePath) async {
     try {
       AppLogger.info(
         '이미지 업데이트 시작 - $imagePath',
@@ -119,7 +119,7 @@ class UpdateProfileImageUseCase {
 
       // 6. Result<Member> 타입 처리 (freezed sealed class 패턴 매칭)
       switch (result) {
-        case Success<Member>(:final data):
+        case Success<User>(:final data):
           // 7. 임시 압축 파일 정리 (원본과 다른 경우)
           if (imageFileToUpload.path != originalImageFile.path) {
             imageFileToUpload.delete().catchError((deleteError) {
@@ -139,7 +139,7 @@ class UpdateProfileImageUseCase {
 
           return AsyncValue.data(data);
 
-        case Error<Member>(:final failure):
+        case Error<User>(:final failure):
           AppLogger.error(
             'Repository 실패',
             tag: 'ProfileImage',
@@ -200,7 +200,7 @@ class UpdateProfileImageUseCase {
   }
 
   /// 추가 검증을 포함한 고급 이미지 업데이트
-  Future<AsyncValue<Member>> executeWithValidation(String imagePath) async {
+  Future<AsyncValue<User>> executeWithValidation(String imagePath) async {
     try {
       AppLogger.info(
         '고급 검증과 함께 이미지 업데이트 시작',

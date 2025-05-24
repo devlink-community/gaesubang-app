@@ -1,18 +1,19 @@
-import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/activity.dart';
+import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
 abstract interface class AuthRepository {
   /// 이메일, 비밀번호로 로그인
-  Future<Result<Member>> login({
+  Future<Result<User>> login({
     required String email,
     required String password,
   });
 
   /// 이메일, 비밀번호, 닉네임으로 회원가입 (약관 ID 추가)
-  Future<Result<Member>> signup({
+  Future<Result<User>> signup({
     required String email,
     required String password,
     required String nickname,
@@ -20,7 +21,7 @@ abstract interface class AuthRepository {
   });
 
   /// 현재 로그인된 유저 조회
-  Future<Result<Member>> getCurrentUser();
+  Future<Result<User>> getCurrentUser();
 
   /// 로그아웃
   Future<Result<void>> signOut();
@@ -45,17 +46,8 @@ abstract interface class AuthRepository {
   /// 약관 정보 조회
   Future<Result<TermsAgreement?>> getTermsInfo(String? termsId);
 
-  /// 사용자의 타이머 활동 로그 조회
-  Future<Result<List<TimerActivityDto>>> getTimerActivities(String userId);
-
-  /// 타이머 활동 로그 추가
-  Future<Result<void>> saveTimerActivity(
-    String userId,
-    TimerActivityDto activity,
-  );
-
   /// 프로필 정보 업데이트
-  Future<Result<Member>> updateProfile({
+  Future<Result<User>> updateProfile({
     required String nickname,
     String? description,
     String? position,
@@ -63,9 +55,30 @@ abstract interface class AuthRepository {
   });
 
   /// 프로필 이미지 업데이트
-  Future<Result<Member>> updateProfileImage(String imagePath);
+  Future<Result<User>> updateProfileImage(String imagePath);
 
-  // === 새로 추가된 인증 상태 관련 메서드 ===
+  /// 사용자 프로필 조회 (다른 사용자)
+  Future<Result<User>> getUserProfile(String userId);
+
+  /// 사용자 Summary 조회
+  Future<Result<Summary?>> getUserSummary(String userId);
+
+  /// 사용자 Summary 업데이트
+  Future<Result<void>> updateUserSummary({
+    required String userId,
+    required Summary summary,
+  });
+
+  /// 사용자 Activity 조회
+  Future<Result<Activity?>> getUserActivity(String userId);
+
+  /// 사용자 Activity 업데이트
+  Future<Result<void>> updateUserActivity({
+    required String userId,
+    required Activity activity,
+  });
+
+  // === 인증 상태 관련 메서드 ===
 
   /// 인증 상태 변화 스트림
   /// Firebase Auth 또는 Mock의 상태 변화를 실시간으로 감지
@@ -75,7 +88,7 @@ abstract interface class AuthRepository {
   /// 라우터에서 초기 리다이렉트 시 사용
   Future<AuthState> getCurrentAuthState();
 
-  // === FCM 토큰 관리 메서드 추가 ===
+  // === FCM 토큰 관리 메서드 ===
 
   /// 로그인 성공 시 FCM 토큰 등록
   /// 사용자 ID와 현재 디바이스의 FCM 토큰을 서버에 등록
@@ -88,6 +101,4 @@ abstract interface class AuthRepository {
   /// 계정 삭제 시 모든 FCM 토큰 제거
   /// 해당 사용자의 모든 디바이스에서 알림을 받지 않도록 설정
   Future<Result<void>> removeAllFCMTokens(String userId);
-
-  Future<Result<Member>> getUserProfile(String userId);
 }
