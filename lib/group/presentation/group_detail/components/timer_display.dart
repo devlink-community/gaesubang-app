@@ -16,34 +16,31 @@ class TimerDisplay extends StatelessWidget {
     this.isCompact = false,
   });
 
+  // 🔧 통일된 시간 포맷팅 메서드
+  String _formatTime(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    // 🔧 항상 HH:MM:SS 형식으로 표시
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRunning = timerStatus == TimerStatus.running;
     final isStopped = timerStatus == TimerStatus.stop;
 
-    final hours = elapsedSeconds ~/ 3600;
-    final minutes = (elapsedSeconds % 3600) ~/ 60;
-    final seconds = elapsedSeconds % 60;
-
     // 컴팩트 모드(상단 플로팅) 또는 일반 모드에 따라 스타일 변경
     if (isCompact) {
-      return _buildCompactTimer(hours, minutes, seconds, isRunning, isStopped);
+      return _buildCompactTimer(isRunning, isStopped);
     } else {
-      return _buildFullTimer(hours, minutes, seconds, isRunning, isStopped);
+      return _buildFullTimer(isRunning, isStopped);
     }
   }
 
   // 작은 타이머 디스플레이 (상단 플로팅용)
-  Widget _buildCompactTimer(
-    int hours,
-    int minutes,
-    int seconds,
-    bool isRunning,
-    bool isStopped,
-  ) {
-    final timeText =
-        '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-
+  Widget _buildCompactTimer(bool isRunning, bool isStopped) {
     // 상태에 따른 배경색 결정
     final backgroundColor =
         isStopped
@@ -67,7 +64,7 @@ class TimerDisplay extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            timeText,
+            _formatTime(elapsedSeconds), // 🔧 통일된 포맷 사용
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -82,13 +79,7 @@ class TimerDisplay extends StatelessWidget {
   }
 
   // 큰 타이머 디스플레이 (메인 화면용)
-  Widget _buildFullTimer(
-    int hours,
-    int minutes,
-    int seconds,
-    bool isRunning,
-    bool isStopped,
-  ) {
+  Widget _buildFullTimer(bool isRunning, bool isStopped) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 16, bottom: 24),
@@ -108,7 +99,7 @@ class TimerDisplay extends StatelessWidget {
 
           // 디지털 시간 표시
           Text(
-            '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+            _formatTime(elapsedSeconds), // 🔧 통일된 포맷 사용
             style: const TextStyle(
               fontSize: 52,
               fontWeight: FontWeight.bold,
