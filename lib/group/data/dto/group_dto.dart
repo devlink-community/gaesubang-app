@@ -19,13 +19,14 @@ class GroupDto {
     this.hashTags,
     this.memberCount,
     this.isJoinedByCurrentUser = false,
-    this.pauseTimeLimit, // 추가
+    this.pauseTimeLimit = 120, // 기본값 120분
   });
 
   final String? id;
   final String? name;
   final String? description;
   final String? imageUrl;
+
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
@@ -34,7 +35,6 @@ class GroupDto {
 
   @JsonKey(name: 'createdBy')
   final String? ownerId;
-
   final String? ownerNickname;
   final String? ownerProfileImage;
 
@@ -45,13 +45,12 @@ class GroupDto {
   @JsonKey(includeFromJson: false, includeToJson: false)
   final bool? isJoinedByCurrentUser;
 
-  final int? pauseTimeLimit; // 추가: 일시정지 제한시간 (분 단위)
+  final int? pauseTimeLimit; // 일시정지 제한시간 (분 단위)
 
   factory GroupDto.fromJson(Map<String, dynamic> json) =>
       _$GroupDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupDtoToJson(this);
 
-  // copyWith 메서드 수정
   GroupDto copyWith({
     String? id,
     String? name,
@@ -65,7 +64,7 @@ class GroupDto {
     List<String>? hashTags,
     int? memberCount,
     bool? isJoinedByCurrentUser,
-    int? pauseTimeLimit, // 추가
+    int? pauseTimeLimit,
   }) {
     return GroupDto(
       id: id ?? this.id,
@@ -81,7 +80,7 @@ class GroupDto {
       memberCount: memberCount ?? this.memberCount,
       isJoinedByCurrentUser:
           isJoinedByCurrentUser ?? this.isJoinedByCurrentUser,
-      pauseTimeLimit: pauseTimeLimit ?? this.pauseTimeLimit, // 추가
+      pauseTimeLimit: pauseTimeLimit ?? this.pauseTimeLimit,
     );
   }
 }

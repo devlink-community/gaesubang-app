@@ -17,27 +17,34 @@ class Group with _$Group {
     required this.maxMemberCount,
     required this.hashTags,
     required this.memberCount,
-    this.isJoinedByCurrentUser = false,
-    this.pauseTimeLimit = 120, // 추가: 기본값 120분 (2시간)
+    required this.isJoinedByCurrentUser,
+    required this.pauseTimeLimit, // 추가: 일시정지 제한시간 (분 단위)
   });
 
+  @override
   final String id;
+  @override
   final String name;
+  @override
   final String description;
+  @override
   final String? imageUrl;
+  @override
   final DateTime createdAt;
+  @override
   final String ownerId;
+  @override
   final String? ownerNickname;
+  @override
   final String? ownerProfileImage;
+  @override
   final int maxMemberCount;
+  @override
   final List<String> hashTags;
+  @override
   final int memberCount;
+  @override
   final bool isJoinedByCurrentUser;
-  final int pauseTimeLimit; // 추가: 일시정지 제한시간 (분 단위)
-
-  // 멤버 수 제한 도달 여부 헬퍼 메서드
-  bool get isOpen => memberCount < maxMemberCount;
-
-  // 현재 사용자가 방장인지 확인하는 헬퍼 메서드
-  bool isOwner(String userId) => ownerId == userId;
+  @override
+  final int pauseTimeLimit; // 새 필드
 }

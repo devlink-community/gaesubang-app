@@ -1,10 +1,8 @@
 // lib/group/domain/model/chat_message.dart
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'chat_message.freezed.dart';
 
-/// 채팅 메시지 도메인 모델
 @freezed
 class ChatMessage with _$ChatMessage {
   const ChatMessage({
@@ -15,15 +13,23 @@ class ChatMessage with _$ChatMessage {
     required this.senderName,
     this.senderImage,
     required this.timestamp,
-    this.isRead = false,
+    required this.isRead,
   });
-  
+
+  @override
   final String id;
+  @override
   final String groupId;
+  @override
   final String content;
+  @override
   final String senderId;
+  @override
   final String senderName;
+  @override
   final String? senderImage;
+  @override
   final DateTime timestamp;
+  @override
   final bool isRead;
 }

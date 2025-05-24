@@ -78,7 +78,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   void didUpdateWidget(GroupChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 수정된 부분: 패턴 매칭 구문을 if-else로 변경
+    // 새 메시지가 추가되었을 때 자동 스크롤
     final oldMessagesResult = oldWidget.state.messagesResult;
     final newMessagesResult = widget.state.messagesResult;
 
@@ -132,13 +132,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       endDrawer: _buildMembersDrawer(),
       body: Column(
         children: [
-          // 🆕 봇 상태 표시줄 (선택사항)
+          // 봇 상태 표시줄
           if (widget.state.isBotActive) _buildBotStatusBar(),
 
           // 메시지 목록
           Expanded(child: _buildMessageList()),
 
-          // 🆕 수정된 입력 영역 - 봇 관련 프로퍼티 추가
+          // 채팅 입력 영역
           ChatInput(
             controller: _textController,
             focusNode: _focusNode,
@@ -149,7 +149,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               widget.onAction(GroupChatAction.messageChanged(value));
             },
             onSend: _handleSendMessage,
-            // 🆕 봇 관련 프로퍼티들
+            // 봇 관련 프로퍼티들
             activeBotType: widget.state.activeBotType,
             onBotTypeSelected: (botType) {
               widget.onAction(GroupChatAction.setBotType(botType));
@@ -160,14 +160,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 🆕 앱바 구성
+  // 앱바 구성
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('그룹 채팅'),
-          // 🆕 봇 상태 표시 (간단 버전)
+          // 봇 상태 표시 (간단 버전)
           if (widget.state.isBotActive && widget.state.activeBotType != null)
             Text(
               '${widget.state.activeBotType!.emoji} ${widget.state.activeBotType!.displayName} 활성화',
@@ -192,7 +192,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 🆕 봇 상태 표시줄 (상세 버전)
+  // 봇 상태 표시줄 (상세 버전)
   Widget _buildBotStatusBar() {
     return Container(
       width: double.infinity,
@@ -256,13 +256,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 개선된 멤버 목록 드로어 위젯 (기존과 동일)
+  // 멤버 목록 드로어 위젯
   Widget _buildMembersDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
       child: Column(
         children: [
-          // 상단 헤더 부분 개선
+          // 상단 헤더 부분
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -311,7 +311,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                       ),
                                     ),
                                   ),
-                                  // 🆕 봇 활성화 표시
+                                  // 봇 활성화 표시
                                   if (widget.state.isBotActive) ...[
                                     const SizedBox(width: 8),
                                     Container(
@@ -327,7 +327,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                       ),
                                       child: Text(
                                         '${widget.state.activeBotType!.emoji} AI',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
@@ -369,7 +369,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ),
           ),
 
-          // 검색창 (기존과 동일)
+          // 검색창
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
@@ -427,7 +427,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             ),
           ),
 
-          // 검색 결과 정보 표시 (기존과 동일)
+          // 검색 결과 정보 표시
           if (widget.state.memberSearchQuery.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -450,7 +450,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               ),
             ),
 
-          // 활성 멤버 섹션 (기존과 동일)
+          // 활성 멤버 섹션
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
@@ -479,7 +479,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           // 필터링된 멤버 목록
           Expanded(child: _buildFilteredMembersList()),
 
-          // 하단 버튼 영역 (기존과 동일)
+          // 하단 버튼 영역
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -498,7 +498,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 _scaffoldKey.currentState?.closeEndDrawer();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('멤버 초대 기능은 개발 예정입니다. 개발 해줘?'),
+                    content: Text('멤버 초대 기능은 개발 예정입니다.'),
                     duration: Duration(seconds: 2),
                   ),
                 );
@@ -521,7 +521,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 기존 메서드들 (변경사항 없음)
+  // 필터링된 멤버 목록
   Widget _buildFilteredMembersList() {
     return switch (widget.state.groupMembersResult) {
       AsyncLoading() => const Center(child: CircularProgressIndicator()),
@@ -562,6 +562,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemBuilder: (context, index) {
         final member = filteredMembers[index];
+
+        // 🔧 수정: member.isOwner → member.role == 'owner'
+        final isOwner = member.role == 'owner';
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -629,22 +632,20 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     margin: const EdgeInsets.only(top: 2),
                     decoration: BoxDecoration(
                       color:
-                          member.isOwner
+                          isOwner
                               ? AppColorStyles.primary100.withValues(alpha: 0.1)
                               : AppColorStyles.gray40,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      member.isOwner ? '방장' : '멤버',
+                      isOwner ? '방장' : '멤버',
                       style: AppTextStyles.captionRegular.copyWith(
                         color:
-                            member.isOwner
+                            isOwner
                                 ? AppColorStyles.primary100
                                 : AppColorStyles.gray80,
                         fontWeight:
-                            member.isOwner
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                            isOwner ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -674,7 +675,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           ],
                         ),
                       ),
-                      if (member.isOwner == false)
+                      // 🔧 수정: member.isOwner == false → !isOwner
+                      if (!isOwner)
                         const PopupMenuItem<String>(
                           value: 'promote',
                           child: Row(
@@ -685,7 +687,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             ],
                           ),
                         ),
-                      if (member.isOwner == false)
+                      if (!isOwner)
                         const PopupMenuItem<String>(
                           value: 'remove',
                           child: Row(
@@ -839,7 +841,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     );
   }
 
-  // 메시지 목록 위젯 (기존과 동일)
+  // 메시지 목록 위젯
   Widget _buildMessageList() {
     return switch (widget.state.messagesResult) {
       AsyncLoading() => const Center(child: CircularProgressIndicator()),
@@ -894,7 +896,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       itemBuilder: (context, index) {
         final message = messages[index];
 
-        // 🔧 수정: 봇 메시지는 항상 왼쪽에 표시
+        // 봇 메시지는 항상 왼쪽에 표시
         final bool isMe =
             message.senderId == widget.state.currentUserId &&
             !message.senderId.startsWith('bot_');

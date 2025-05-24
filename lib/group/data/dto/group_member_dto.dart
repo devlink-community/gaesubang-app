@@ -20,6 +20,7 @@ class GroupMemberDto {
   final String? userName;
   final String? profileUrl;
   final String? role; // "owner", "member"
+
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
@@ -30,7 +31,6 @@ class GroupMemberDto {
       _$GroupMemberDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupMemberDtoToJson(this);
 
-  // 필드 업데이트를 위한 copyWith 메서드
   GroupMemberDto copyWith({
     String? id,
     String? userId,
