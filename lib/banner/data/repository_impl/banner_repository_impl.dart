@@ -1,5 +1,7 @@
+// lib/banner/data/repository_impl/banner_repository_impl.dart - 최종 수정버전
+
 import '../../../core/result/result.dart';
-import '../../../core/utils/exception_mappers/auth_exception_mapper.dart';
+import '../../../core/utils/exception_mappers/banner_exception_mapper.dart';
 import '../../../core/utils/api_call_logger.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../domain/model/banner.dart';
@@ -59,7 +61,8 @@ class BannerRepositoryImpl implements BannerRepository {
           'duration_ms': duration.inMilliseconds,
         });
 
-        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        // ✅ 배너 전용 예외 매퍼 사용
+        return Result.error(BannerExceptionMapper.mapBannerException(e, st));
       }
     });
   }
@@ -100,7 +103,8 @@ class BannerRepositoryImpl implements BannerRepository {
           'duration_ms': duration.inMilliseconds,
         });
 
-        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        // ✅ 배너 전용 예외 매퍼 사용
+        return Result.error(BannerExceptionMapper.mapBannerException(e, st));
       }
     });
   }
@@ -149,7 +153,8 @@ class BannerRepositoryImpl implements BannerRepository {
           'duration_ms': duration.inMilliseconds,
         });
 
-        return Result.error(AuthExceptionMapper.mapAuthException(e, st));
+        // ✅ 배너 전용 예외 매퍼 사용
+        return Result.error(BannerExceptionMapper.mapBannerException(e, st));
       }
     }, params: {'bannerId': bannerId});
   }
