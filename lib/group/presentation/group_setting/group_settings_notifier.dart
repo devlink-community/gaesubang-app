@@ -14,7 +14,6 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
 import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
 import 'package:devlink_mobile_app/storage/module/storage_di.dart';
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_settings_notifier.g.dart';
@@ -136,7 +135,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           break;
       }
     } catch (e, st) {
-      AppLogger.error('멤버 페이지 로드 중 예외 발생', tag: 'GroupSettings', error: e, stackTrace: st);
+      AppLogger.error(
+        '멤버 페이지 로드 중 예외 발생',
+        tag: 'GroupSettings',
+        error: e,
+        stackTrace: st,
+      );
       _handleMemberPageError(e, isInitialLoad);
     }
   }
@@ -198,7 +202,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       );
     }
 
-    AppLogger.error('멤버 로딩 실패: $friendlyMessage', tag: 'GroupSettings', error: error);
+    AppLogger.error(
+      '멤버 로딩 실패: $friendlyMessage',
+      tag: 'GroupSettings',
+      error: error,
+    );
   }
 
   // 🔧 새로 추가: 사용자 친화적 에러 메시지 생성
@@ -379,7 +387,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           break;
       }
     } catch (e, st) {
-      AppLogger.error('이미지 업로드 과정에서 오류 발생', tag: 'GroupSettings', error: e, stackTrace: st);
+      AppLogger.error(
+        '이미지 업로드 과정에서 오류 발생',
+        tag: 'GroupSettings',
+        error: e,
+        stackTrace: st,
+      );
 
       state = state.copyWith(
         imageUploadStatus: ImageUploadStatus.failed,
