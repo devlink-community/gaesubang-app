@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
-import 'package:flutter/foundation.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
@@ -25,12 +25,18 @@ class UpdateProfileImageUseCase {
   /// 4. 업데이트된 사용자 정보 반환
   Future<AsyncValue<Member>> execute(String imagePath) async {
     try {
-      debugPrint('🔄 UpdateProfileImageUseCase: 이미지 업데이트 시작 - $imagePath');
+      AppLogger.info(
+        '이미지 업데이트 시작 - $imagePath',
+        tag: 'ProfileImage',
+      );
 
       // 1. 이미지 파일 유효성 검사
       final File originalImageFile = File(imagePath);
       if (!await originalImageFile.exists()) {
-        debugPrint('❌ UpdateProfileImageUseCase: 이미지 파일이 존재하지 않음');
+        AppLogger.error(
+          '이미지 파일이 존재하지 않음',
+          tag: 'ProfileImage',
+        );
         return AsyncValue.error(
           '선택한 이미지 파일을 찾을 수 없습니다',
           StackTrace.current,
@@ -39,8 +45,9 @@ class UpdateProfileImageUseCase {
 
       // 2. 파일 크기 확인 및 로깅
       final int originalSizeKB = await originalImageFile.length() ~/ 1024;
-      debugPrint(
-        '📊 UpdateProfileImageUseCase: 원본 이미지 크기 - ${originalSizeKB}KB',
+      AppLogger.info(
+        '원본 이미지 크기 - ${originalSizeKB}KB',
+        tag: 'ProfileImage',
       );
 
       // 3. 이미지 압축 처리
@@ -54,8 +61,9 @@ class UpdateProfileImageUseCase {
           );
 
       if (shouldCompress) {
-        debugPrint(
-          '🗜️ UpdateProfileImageUseCase: 이미지 압축 시작 (${originalSizeKB}KB > 500KB)',
+        AppLogger.info(
+          '이미지 압축 시작 (${originalSizeKB}KB > 500KB)',
+          tag: 'ProfileImage',
         );
 
         try {
@@ -71,35 +79,40 @@ class UpdateProfileImageUseCase {
           );
 
           final int compressedSizeKB = await imageFileToUpload.length() ~/ 1024;
-          debugPrint('✅ UpdateProfileImageUseCase: 이미지 압축 완료');
-          debugPrint(
-            '   압축 전: ${originalSizeKB}KB → 압축 후: ${compressedSizeKB}KB',
+          AppLogger.info(
+            '이미지 압축 완료 - 압축 전: ${originalSizeKB}KB → 압축 후: ${compressedSizeKB}KB',
+            tag: 'ProfileImage',
           );
-          debugPrint(
-            '   압축률: ${((originalSizeKB - compressedSizeKB) / originalSizeKB * 100).toStringAsFixed(1)}%',
+          AppLogger.info(
+            '압축률: ${((originalSizeKB - compressedSizeKB) / originalSizeKB * 100).toStringAsFixed(1)}%',
+            tag: 'ProfileImage',
           );
         } catch (compressionError) {
-          debugPrint(
-            '⚠️ UpdateProfileImageUseCase: 이미지 압축 실패, 원본 사용 - $compressionError',
+          AppLogger.warning(
+            '이미지 압축 실패, 원본 사용',
+            tag: 'ProfileImage',
+            error: compressionError,
           );
           // 압축 실패 시 원본 이미지 사용
           imageFileToUpload = originalImageFile;
         }
       } else {
-        debugPrint(
-          'ℹ️ UpdateProfileImageUseCase: 이미지 압축 불필요 (${originalSizeKB}KB ≤ 500KB)',
+        AppLogger.info(
+          '이미지 압축 불필요 (${originalSizeKB}KB ≤ 500KB)',
+          tag: 'ProfileImage',
         );
         imageFileToUpload = originalImageFile;
       }
 
       // 4. 최종 업로드 파일 크기 확인
       final int finalSizeKB = await imageFileToUpload.length() ~/ 1024;
-      debugPrint(
-        '📤 UpdateProfileImageUseCase: 업로드할 이미지 - ${imageFileToUpload.path} (${finalSizeKB}KB)',
+      AppLogger.info(
+        '업로드할 이미지 - ${imageFileToUpload.path} (${finalSizeKB}KB)',
+        tag: 'ProfileImage',
       );
 
       // 5. 서버에 이미지 업로드
-      debugPrint('🚀 UpdateProfileImageUseCase: 서버 업로드 시작');
+      AppLogger.info('서버 업로드 시작', tag: 'ProfileImage');
       final result = await _authRepository.updateProfileImage(
         imageFileToUpload.path,
       );
@@ -110,28 +123,38 @@ class UpdateProfileImageUseCase {
           // 7. 임시 압축 파일 정리 (원본과 다른 경우)
           if (imageFileToUpload.path != originalImageFile.path) {
             imageFileToUpload.delete().catchError((deleteError) {
-              debugPrint(
-                '⚠️ UpdateProfileImageUseCase: 임시 파일 삭제 실패 - $deleteError',
+              AppLogger.warning(
+                '임시 파일 삭제 실패',
+                tag: 'ProfileImage',
+                error: deleteError,
               );
               // 파일 삭제 실패는 치명적이지 않으므로 계속 진행
             });
           }
 
-          debugPrint('✅ UpdateProfileImageUseCase: 프로필 이미지 업데이트 성공');
-          debugPrint('   새 이미지 URL: ${data.image}');
+          AppLogger.info(
+            '프로필 이미지 업데이트 성공 - 새 이미지 URL: ${data.image}',
+            tag: 'ProfileImage',
+          );
 
           return AsyncValue.data(data);
 
         case Error<Member>(:final failure):
-          debugPrint(
-            '❌ UpdateProfileImageUseCase: Repository 실패 - ${failure.message}',
+          AppLogger.error(
+            'Repository 실패',
+            tag: 'ProfileImage',
+            error: failure.message,
           );
 
           return AsyncValue.error(failure.message, StackTrace.current);
       }
     } catch (e, stackTrace) {
-      debugPrint('❌ UpdateProfileImageUseCase: 프로필 이미지 업데이트 실패 - $e');
-      debugPrint('스택 트레이스: $stackTrace');
+      AppLogger.error(
+        '프로필 이미지 업데이트 실패',
+        tag: 'ProfileImage',
+        error: e,
+        stackTrace: stackTrace,
+      );
 
       // 사용자 친화적인 에러 메시지 제공
       String userFriendlyMessage;
@@ -179,7 +202,10 @@ class UpdateProfileImageUseCase {
   /// 추가 검증을 포함한 고급 이미지 업데이트
   Future<AsyncValue<Member>> executeWithValidation(String imagePath) async {
     try {
-      debugPrint('🔄 UpdateProfileImageUseCase: 고급 검증과 함께 이미지 업데이트 시작');
+      AppLogger.info(
+        '고급 검증과 함께 이미지 업데이트 시작',
+        tag: 'ProfileImage',
+      );
 
       final File imageFile = File(imagePath);
 
@@ -204,7 +230,12 @@ class UpdateProfileImageUseCase {
       // 4. 일반 업데이트 프로세스 실행
       return await execute(imagePath);
     } catch (e, stackTrace) {
-      debugPrint('❌ UpdateProfileImageUseCase: 고급 검증 실패 - $e');
+      AppLogger.error(
+        '고급 검증 실패',
+        tag: 'ProfileImage',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return AsyncValue.error('이미지 업데이트 검증에 실패했습니다', stackTrace);
     }
   }
