@@ -67,7 +67,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
     switch (result) {
       case AsyncData(:final value):
-        // 현재 사용자가 방장인지 확인
+        // 🔧 수정: 현재 사용자가 방장인지 확인
         final isOwner = value.ownerId == currentUser?.id;
 
         state = state.copyWith(
@@ -494,14 +494,14 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         final group = state.group.valueOrNull;
         if (group != null) {
           await _loadGroupDetail(group.id);
-          await _loadInitialMembers(group.id); // 🔧 페이지네이션 버전으로 변경
+          await _loadInitialMembers(group.id);
         }
 
       case SelectImage():
         // Root에서 처리 (이미지 선택 다이얼로그 표시)
         break;
 
-      // 🔧 새로 추가: 페이지네이션 관련 액션 처리
+      // 페이지네이션 관련 액션 처리
       case LoadMoreMembers():
         final group = state.group.valueOrNull;
         if (group != null && state.canLoadMoreMembers) {
@@ -542,7 +542,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       successMessage: null,
     );
 
-    // 업데이트된 그룹 생성
+    // 🔧 수정: 업데이트된 그룹 생성
     final updatedGroup = Group(
       id: currentGroup.id,
       name: state.name,
@@ -556,6 +556,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       imageUrl: state.imageUrl,
       createdAt: currentGroup.createdAt,
       isJoinedByCurrentUser: currentGroup.isJoinedByCurrentUser,
+      pauseTimeLimit: currentGroup.pauseTimeLimit, // 기존값 유지
     );
 
     // 그룹 업데이트

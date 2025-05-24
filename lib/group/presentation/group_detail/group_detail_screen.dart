@@ -381,6 +381,33 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   // 🔧 개별 멤버 아이템 - 실시간 시간 표시
   Widget _buildMemberItem(GroupMember member) {
+    // 🔧 실시간 시간 계산 로직을 직접 구현
+    String getTimeDisplay() {
+      int seconds;
+
+      if (member.isActive && member.timerStartTime != null) {
+        // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
+        final now = DateTime.now();
+        seconds =
+            now.difference(member.timerStartTime!).inSeconds +
+            member.elapsedSeconds;
+      } else {
+        // 비활성 상태이면 저장된 경과 시간 사용
+        seconds = member.elapsedSeconds;
+      }
+
+      // 시간 포맷팅
+      final hours = seconds ~/ 3600;
+      final minutes = (seconds % 3600) ~/ 60;
+      final remainingSeconds = seconds % 60;
+
+      if (hours > 0) {
+        return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+      } else {
+        return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+      }
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -442,7 +469,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ),
         const SizedBox(height: 8),
 
-        // 🔧 타이머 표시 - 실시간 계산 사용
+        // 🔧 타이머 표시 - 직접 계산된 시간 사용
         member.isActive
             ? Container(
               padding: const EdgeInsets.symmetric(
@@ -454,7 +481,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                member.currentElapsedTimeFormat, // 🔧 실시간 시간 계산 사용
+                getTimeDisplay(), // 🔧 직접 계산된 시간 표시
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

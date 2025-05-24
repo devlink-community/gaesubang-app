@@ -19,7 +19,7 @@ extension GroupDtoMapper on GroupDto {
       hashTags: hashTags ?? [],
       memberCount: memberCount ?? 0,
       isJoinedByCurrentUser: isJoinedByCurrentUser ?? false,
-      pauseTimeLimit: pauseTimeLimit ?? 120, // 추가: 기본값 120분
+      pauseTimeLimit: pauseTimeLimit ?? 120, // 기본값 120분
     );
   }
 }
@@ -40,7 +40,7 @@ extension GroupModelMapper on Group {
       hashTags: hashTags,
       memberCount: memberCount,
       isJoinedByCurrentUser: isJoinedByCurrentUser,
-      pauseTimeLimit: pauseTimeLimit, // 추가
+      pauseTimeLimit: pauseTimeLimit,
     );
   }
 }
@@ -55,7 +55,7 @@ extension GroupModelListMapper on List<Group> {
   List<GroupDto> toDtoList() => map((e) => e.toDto()).toList();
 }
 
-/// 🔧 Map<String, dynamic> → GroupDto 변환 (isJoinedByCurrentUser 보존)
+/// Map<String, dynamic> → GroupDto 변환 (isJoinedByCurrentUser 보존)
 extension MapToGroupDtoMapper on Map<String, dynamic> {
   GroupDto toGroupDto() {
     // 기본 DTO 생성
@@ -68,7 +68,7 @@ extension MapToGroupDtoMapper on Map<String, dynamic> {
   }
 }
 
-/// 🔧 Map 리스트를 Group 리스트로 직접 변환 (Repository에서 사용)
+/// Map 리스트를 Group 리스트로 직접 변환 (Repository에서 사용)
 extension MapListToGroupListMapper on List<Map<String, dynamic>>? {
   List<Group> toGroupModelList() {
     if (this == null || this!.isEmpty) return [];
@@ -94,7 +94,7 @@ extension MapListToGroupListMapper on List<Map<String, dynamic>>? {
         hashTags: dto.hashTags ?? [],
         memberCount: dto.memberCount ?? 0,
         isJoinedByCurrentUser: isJoined,
-        pauseTimeLimit: dto.pauseTimeLimit ?? 120, // 추가: 기본값 120분
+        pauseTimeLimit: dto.pauseTimeLimit ?? 120, // 기본값 120분
       );
     }).toList();
   }
@@ -114,7 +114,7 @@ extension JoinedGroupDtoToGroupMapper on JoinedGroupDto {
       hashTags: const [], // 빈 리스트 사용
       memberCount: 0, // 기본값 사용
       isJoinedByCurrentUser: true, // 이미 가입된 그룹이므로 true
-      pauseTimeLimit: 120, // 추가: 기본값 120분 (간소화된 버전에서는 정보가 없으므로)
+      pauseTimeLimit: 120, // 기본값 120분
     );
   }
 }

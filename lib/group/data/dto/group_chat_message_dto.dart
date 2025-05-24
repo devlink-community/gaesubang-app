@@ -14,7 +14,7 @@ class GroupChatMessageDto {
     this.senderName,
     this.senderImage,
     this.timestamp,
-    this.isRead,
+    this.isRead = false,
   });
 
   final String? id;
@@ -23,19 +23,19 @@ class GroupChatMessageDto {
   final String? senderId;
   final String? senderName;
   final String? senderImage;
-  
+
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? timestamp;
+
   final bool? isRead;
 
   factory GroupChatMessageDto.fromJson(Map<String, dynamic> json) =>
       _$GroupChatMessageDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupChatMessageDtoToJson(this);
 
-  // 필드 업데이트를 위한 copyWith 메서드
   GroupChatMessageDto copyWith({
     String? id,
     String? groupId,
