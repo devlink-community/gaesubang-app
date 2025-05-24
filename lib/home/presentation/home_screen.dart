@@ -1,7 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -33,12 +32,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentBannerIndex = 0;
-  final CarouselSliderController _carouselController =
-      CarouselSliderController();
+  final CarouselSliderController _carouselController = CarouselSliderController();
 
   // 🆕 다이얼로그 및 포커스 상태 관리
   bool _isDialogVisible = false;
   bool _isAppInBackground = false;
+
+  // 🆕 프로필 이미지 로딩 실패 상태 관리
+  bool _profileImageLoadFailed = false;
 
   @override
   void initState() {
@@ -48,13 +49,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // 🆕 사용자 정보가 변경되면 프로필 이미지 로딩 실패 상태 초기화
+    if (oldWidget.state.currentMember != widget.state.currentMember) {
+      _profileImageLoadFailed = false;
+    }
+  }
+
+  @override
   void dispose() {
     // 앱 생명주기 관찰자 해제
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-
-  // 🆕 앱 생명주기 상태 변경 감지
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -103,8 +112,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(),
+                  const SizedBox(height: 20), // 🔧 헤더와 배너 사이 간격 통일
                   _buildCarouselSection(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20), // 🔧 배너와 콘텐츠 사이 간격 통일
                   _buildContentSection(),
                 ],
               ),
@@ -351,98 +361,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // 이미지 URL 안전성 검사
-    final imageUrl = widget.state.currentMemberImage;
-    final memberName = widget.state.currentMemberName;
+    // 🔧 이미지 URL이 있고 로딩에 실패하지 않은 경우에만 이미지 표시
+    final hasValidImage = widget.state.currentMemberImage != null &&
+        widget.state.currentMemberImage!.isNotEmpty &&
+        !_profileImageLoadFailed;
 
-    if (imageUrl == null || imageUrl.trim().isEmpty) {
-      // 이미지가 없으면 이니셜 표시
-      return Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
-            style: AppTextStyles.heading6Bold.copyWith(
-              color: Colors.white,
-            ),
-          ),
-        ),
-      );
-    }
-
-    final String cleanUrl = imageUrl.trim();
-
-    // URL 형식 검사
-    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      return Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
-            style: AppTextStyles.heading6Bold.copyWith(
-              color: Colors.white,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // URI 유효성 검사
-    try {
-      final uri = Uri.parse(cleanUrl);
-      if (uri.host.isEmpty) {
-        return Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white,
-              width: 2,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
-              style: AppTextStyles.heading6Bold.copyWith(
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      AppLogger.warning('프로필 이미지 URL 파싱 실패: $cleanUrl', error: e);
-      return Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
-            style: AppTextStyles.heading6Bold.copyWith(
-              color: Colors.white,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 정상 데이터로 네트워크 이미지 표시
+    // 정상 데이터 표시
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -450,35 +374,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           color: Colors.white,
           width: 2,
         ),
-      ),
-      child: ClipOval(
-        child: Image.network(
-          cleanUrl,
-          width: 52,
-          height: 52,
+        image: hasValidImage
+            ? DecorationImage(
+          image: NetworkImage(widget.state.currentMemberImage!),
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
-            return Center(
-              child: Text(
-                memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
-                style: AppTextStyles.heading6Bold.copyWith(
-                  color: Colors.white,
-                ),
-              ),
-            );
+          onError: (error, stackTrace) {
+            // 🆕 이미지 로딩 실패 시 상태 업데이트
+            if (mounted) {
+              setState(() {
+                _profileImageLoadFailed = true;
+              });
+            }
           },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            );
-          },
-        ),
+        )
+            : null,
       ),
+      child: !hasValidImage
+          ? Center(
+        child: Text(
+          widget.state.currentMemberName.isNotEmpty
+              ? widget.state.currentMemberName[0].toUpperCase()
+              : 'U',
+          style: AppTextStyles.heading6Bold.copyWith(
+            color: Colors.white,
+          ),
+        ),
+      )
+          : null,
     );
   }
 
@@ -547,7 +469,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Column(
       children: [
-        const SizedBox(height: 24),
         CarouselSlider(
           carouselController: _carouselController,
           options: CarouselOptions(
@@ -567,30 +488,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           items:
-              bannerWidgets.map((banner) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 8,
+          bannerWidgets.map((banner) {
+            return Container(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: banner,
-                  ),
-                );
-              }).toList(),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: banner,
+              ),
+            );
+          }).toList(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16), // 🔧 배너와 인디케이터 사이 간격 조정
         AnimatedSmoothIndicator(
           activeIndex: _currentBannerIndex,
           count: bannerWidgets.length,
@@ -613,32 +534,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 32),
           _buildSectionHeader(
             title: '내 그룹',
             subtitle: '오늘도 함께 공부해요',
             icon: Icons.groups_rounded,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 16), // 🔧 헤더와 그룹 리스트 사이 간격 통일
           GroupSection(
             groups: widget.state.joinedGroups,
             onTapGroup:
                 (groupId) => widget.onAction(HomeAction.onTapGroup(groupId)),
+            onTapCreateGroup: () => widget.onAction(const HomeAction.onTapCreateGroup()), // 🆕 그룹 생성 콜백 추가
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32), // 🔧 그룹과 인기 게시글 사이 간격 조정
           _buildSectionHeader(
             title: '인기 게시글',
             subtitle: '지금 가장 핫한 글',
             icon: Icons.whatshot_rounded,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 16), // 🔧 헤더와 게시글 리스트 사이 간격 통일
           PopularPostSection(
             posts: widget.state.popularPosts,
             onTapPost:
                 (postId) =>
-                    widget.onAction(HomeAction.onTapPopularPost(postId)),
+                widget.onAction(HomeAction.onTapPopularPost(postId)),
           ),
-          const SizedBox(height: 80),
+          const SizedBox(height: 60), // 🔧 하단 여백 조정 (탭바 고려)
         ],
       ),
     );
@@ -650,49 +571,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required IconData icon,
   }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColorStyles.primary80.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: AppColorStyles.primary80,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary80.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: AppColorStyles.primary80,
-                size: 20,
+            Text(
+              title,
+              style: AppTextStyles.subtitle1Bold.copyWith(
+                fontSize: 18,
+                color: AppColorStyles.textPrimary,
               ),
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.subtitle1Bold.copyWith(
-                    fontSize: 18,
-                    color: AppColorStyles.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.captionRegular.copyWith(
-                    color: AppColorStyles.gray80,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: AppTextStyles.captionRegular.copyWith(
+                color: AppColorStyles.gray80,
+                fontSize: 12,
+              ),
             ),
           ],
-        ),
-        Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 16,
-          color: AppColorStyles.gray60,
         ),
       ],
     );

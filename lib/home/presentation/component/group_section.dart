@@ -8,11 +8,13 @@ import '../../../group/domain/model/group.dart';
 class GroupSection extends StatelessWidget {
   final AsyncValue<List<Group>> groups;
   final Function(String groupId) onTapGroup;
+  final VoidCallback? onTapCreateGroup; // 🆕 그룹 생성 콜백 추가
 
   const GroupSection({
     super.key,
     required this.groups,
     required this.onTapGroup,
+    this.onTapCreateGroup, // 🆕 선택적 파라미터
   });
 
   @override
@@ -31,11 +33,12 @@ class GroupSection extends StatelessWidget {
 
   Widget _buildGroupList(BuildContext context, List<Group> data) {
     return SizedBox(
-      height: 160,
+      height: 180, // 충분한 높이 확보
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 20), // 🔧 홈화면과 동일한 패딩
         itemCount: data.length + 1, // +1 for add button
         itemBuilder: (context, index) {
           if (index == data.length) {
@@ -61,205 +64,163 @@ class GroupSection extends StatelessWidget {
 
     final gradientIndex = index % gradientSets.length;
 
-    return GestureDetector(
-      onTap: () => onTapGroup(group.id),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(right: 16, bottom: 8, top: 8),
-        width: 120,
-        decoration: BoxDecoration(
-          gradient:
-              group.imageUrl == null
-                  ? LinearGradient(
-                    colors: gradientSets[gradientIndex],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                  : null,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: gradientSets[gradientIndex][0].withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-          image:
-              group.imageUrl != null
-                  ? DecorationImage(
-                    image: NetworkImage(group.imageUrl!),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Colors.black.withValues(alpha: 0.2),
-                      BlendMode.darken,
+    return Container(
+      margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8), // 그림자 여백 확보
+      width: 120,
+      child: GestureDetector(
+        onTap: () => onTapGroup(group.id),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          height: 164, // 명시적 높이 설정 (180 - 상하마진 16)
+          decoration: BoxDecoration(
+            gradient: group.imageUrl == null
+                ? LinearGradient(
+              colors: gradientSets[gradientIndex],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            )
+                : null,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: gradientSets[gradientIndex][0].withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            image: group.imageUrl != null
+                ? DecorationImage(
+              image: NetworkImage(group.imageUrl!),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: 0.2),
+                BlendMode.darken,
+              ),
+            )
+                : null,
+          ),
+          child: Stack(
+            children: [
+              // 그라데이션 오버레이 (이미지가 있는 경우)
+              if (group.imageUrl != null)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.6),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
-                  )
-                  : null,
-        ),
-        child: Stack(
-          children: [
-            // 그라데이션 오버레이
-            if (group.imageUrl != null)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.6),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
                   ),
                 ),
-              ),
 
-            // 컨텐츠
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // 상단: 멤버 수 뱃지
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.person,
-                              size: 14,
-                              color: gradientSets[gradientIndex][0],
+              // 컨텐츠 영역
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 상단: 멤버 수 뱃지 (고정 높이)
+                    SizedBox(
+                      height: 24,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${group.memberCount}',
-                              style: AppTextStyles.captionRegular.copyWith(
-                                color: gradientSets[gradientIndex][0],
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person,
+                                  size: 14,
+                                  color: gradientSets[gradientIndex][0],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${group.memberCount}',
+                                  style: AppTextStyles.captionRegular.copyWith(
+                                    color: gradientSets[gradientIndex][0],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 중간 여백을 Spacer로 유연하게 처리
+                    const Spacer(),
+
+                    // 하단: 그룹 정보 (유연한 높이)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 기본 아이콘 (이미지가 없는 경우)
+                        if (group.imageUrl == null)
+                          Container(
+                            width: 40,
+                            height: 40,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_outlined,
+                                color: Colors.white,
+                                size: 24,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // 하단: 그룹 정보
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (group.imageUrl == null)
-                        Container(
-                          width: 40,
-                          height: 40,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: Icon(
-                              Icons.image_outlined,
+
+                        // 그룹명 (2줄로 확장)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxHeight: 32, // 2줄 최대 높이 설정
+                          ),
+                          child: Text(
+                            group.name,
+                            style: AppTextStyles.body1Regular.copyWith(
                               color: Colors.white,
-                              size: 24,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              height: 1.2, // 줄간격 조정
                             ),
+                            maxLines: 2, // 2줄로 변경
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      Text(
-                        group.name,
-                        style: AppTextStyles.subtitle1Bold.copyWith(
-                          color: Colors.white,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      // 해시태그
-                      if (group.hashTags.isNotEmpty)
-                        Text(
-                          '#${group.hashTags.first}',
-                          style: AppTextStyles.captionRegular.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // 탭 영역 (전체 영역)
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onTapGroup(group.id),
+                    borderRadius: BorderRadius.circular(24),
+                    splashColor: Colors.white.withValues(alpha: 0.1),
+                    highlightColor: Colors.white.withValues(alpha: 0.05),
                   ),
-                ],
-              ),
-            ),
-
-            // 호버 효과
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => onTapGroup(group.id),
-                  borderRadius: BorderRadius.circular(24),
-                  splashColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.white.withValues(alpha: 0.05),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddGroupButton() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(right: 16, bottom: 8, top: 8),
-      width: 120,
-      decoration: BoxDecoration(
-        color: AppColorStyles.primary80.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColorStyles.primary80.withValues(alpha: 0.3),
-          width: 2,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // TODO: Navigate to create/join group
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColorStyles.primary80.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.add_rounded,
-                  color: AppColorStyles.primary80,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '그룹 추가',
-                style: AppTextStyles.subtitle2Regular.copyWith(
-                  color: AppColorStyles.primary80,
                 ),
               ),
             ],
@@ -269,86 +230,173 @@ class GroupSection extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildAddGroupButton() {
     return Container(
-      height: 160,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColorStyles.primary80.withValues(alpha: 0.05),
-            AppColorStyles.primary80.withValues(alpha: 0.02),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
+      margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+      width: 120,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        height: 164,
+        decoration: BoxDecoration(
           color: AppColorStyles.primary80.withValues(alpha: 0.1),
-          width: 1,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColorStyles.primary80.withValues(alpha: 0.3),
+            width: 2,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTapCreateGroup, // 🔧 콜백 연결
+            borderRadius: BorderRadius.circular(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary80.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: AppColorStyles.primary80,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '그룹 추가',
+                  style: AppTextStyles.body2Regular.copyWith(
+                    color: AppColorStyles.primary80,
+                    fontSize: 12, // 🔧 13px → 12px로 조정
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary80.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.group_add_rounded,
-                size: 32,
-                color: AppColorStyles.primary80,
-              ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
+      padding: const EdgeInsets.all(40), // 상하좌우 동일한 패딩
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColorStyles.gray40.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 아이콘 컨테이너
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary80.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 16),
-            Text(
-              '아직 가입한 그룹이 없어요',
-              style: AppTextStyles.body1Regular.copyWith(
-                color: Colors.grey[700],
-              ),
+            child: Icon(
+              Icons.groups_rounded,
+              size: 28,
+              color: AppColorStyles.primary80.withValues(alpha: 0.6),
             ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                // TODO: Navigate to group search
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: AppColorStyles.primary80,
-              ),
+          ),
+          const SizedBox(height: 16),
+
+          // 메인 텍스트
+          Text(
+            '아직 가입한 그룹이 없어요',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.gray80,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // 서브 텍스트
+          Text(
+            '새로운 그룹을 만들어보세요',
+            style: AppTextStyles.body2Regular.copyWith(
+              color: AppColorStyles.gray60,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // 액션 버튼
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary80,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColorStyles.primary80.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: InkWell(
+              onTap: onTapCreateGroup,
+              borderRadius: BorderRadius.circular(20),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '그룹 찾아보기',
-                    style: AppTextStyles.body2Regular,
+                  Icon(
+                    Icons.add_rounded,
+                    size: 16,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    '그룹 만들기',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildLoadingState() {
     return SizedBox(
-      height: 160,
+      height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         itemCount: 3,
         itemBuilder: (context, index) {
           return Container(
-            margin: const EdgeInsets.only(right: 16, bottom: 8, top: 8),
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
             width: 120,
+            height: 164,
             decoration: BoxDecoration(
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(24),
@@ -357,16 +405,23 @@ class GroupSection extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  // 상단 뱃지 영역
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ],
                   ),
+                  const Spacer(),
+                  // 하단 정보 영역
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -387,6 +442,24 @@ class GroupSection extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 60,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 4), // 2줄 그룹명을 위한 공간
+                      Container(
+                        width: 40,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -400,7 +473,8 @@ class GroupSection extends StatelessWidget {
 
   Widget _buildErrorState(Object error) {
     return Container(
-      height: 160,
+      height: 180,
+      width: double.infinity, // 🔧 화면 전체 너비로 확장
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: AppColorStyles.error.withValues(alpha: 0.05),
