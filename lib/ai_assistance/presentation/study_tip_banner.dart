@@ -22,11 +22,11 @@ String _generateCacheKey(String? skills) {
           ?.split(',')
           .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
           .trim() ??
-      '프로그래밍 기초';
+          '프로그래밍 기초';
 
   // 스킬 첫 3글자만 사용하여 캐시 키 생성
   final skillPrefix =
-      skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
+  skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
 
   // 시간대별 다양성 추가 (4시간 단위로 캐시 갱신)
   final timeSlot = (hour / 4).floor();
@@ -36,9 +36,9 @@ String _generateCacheKey(String? skills) {
 
 // 개선된 캐시 기반 FutureProvider
 final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
-  ref,
-  skills,
-) async {
+    ref,
+    skills,
+    ) async {
   // 캐시 키 생성 - 시간대별 다양성 반영
   final cacheKey = _generateCacheKey(skills);
 
@@ -185,54 +185,54 @@ class StudyTipBanner extends ConsumerWidget {
               asyncStudyTip.when(
                 data:
                     (tip) =>
-                        tip != null
-                            ? GestureDetector(
-                              onTap:
-                                  () => _showStudyTipDetailsDialog(
-                                    context,
-                                    tip,
-                                    skills,
-                                    ref,
-                                  ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                      spreadRadius: -2,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      '더보기',
-                                      style: TextStyle(
-                                        color: AppColorStyles.primary80,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.play_arrow,
-                                      color: AppColorStyles.primary80,
-                                      size: 12,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            : SizedBox.shrink(),
+                tip != null
+                    ? GestureDetector(
+                  onTap:
+                      () => _showStudyTipDetailsDialog(
+                    context,
+                    tip,
+                    skills,
+                    ref,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: 0.05,
+                          ),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                          spreadRadius: -2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '더보기',
+                          style: TextStyle(
+                            color: AppColorStyles.primary80,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Icon(
+                          Icons.play_arrow,
+                          color: AppColorStyles.primary80,
+                          size: 12,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                    : SizedBox.shrink(),
                 loading: () => SizedBox.shrink(),
                 error: (_, __) => SizedBox.shrink(),
               ),
@@ -246,9 +246,9 @@ class StudyTipBanner extends ConsumerWidget {
   }
 
   Widget _buildStudyTipContent(
-    AsyncValue<StudyTip?> asyncStudyTip,
-    BuildContext context,
-  ) {
+      AsyncValue<StudyTip?> asyncStudyTip,
+      BuildContext context,
+      ) {
     return asyncStudyTip.when(
       data: (tip) {
         if (tip == null) {
@@ -331,11 +331,11 @@ class StudyTipBanner extends ConsumerWidget {
       },
       loading:
           () => const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
-            ),
-          ),
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 2,
+        ),
+      ),
       error: (error, stack) => _buildErrorState('오류: $error'),
     );
   }
@@ -375,10 +375,10 @@ class StudyTipBanner extends ConsumerWidget {
         .read(studyTipCacheProvider.notifier)
         .update(
           (state) => {
-            ...state,
-            cacheKey: newTip,
-          },
-        );
+        ...state,
+        cacheKey: newTip,
+      },
+    );
 
     // Provider 새로고침을 위해 invalidate
     ref.invalidate(studyTipProvider(skills));
@@ -389,13 +389,13 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
-  // 새로운 팁 로드 메서드 - 기존 스타일의 로딩 팝업 사용
+  // 🔧 최소 수정: 기존 디자인 유지 + 취소 기능만 추가
   Future<void> _loadNewTip(
-    BuildContext context,
-    String? skills,
-    WidgetRef ref,
-    Function(StudyTip) updateDialogContent,
-  ) async {
+      BuildContext context,
+      String? skills,
+      WidgetRef ref,
+      Function(StudyTip) updateDialogContent,
+      ) async {
     final startTime = DateTime.now();
 
     // 대화상자 컨텍스트 추적을 위한 변수
@@ -403,6 +403,9 @@ class StudyTipBanner extends ConsumerWidget {
 
     // 로딩 타이머 관리를 위한 변수
     Timer? loadingTimer;
+
+    // 취소 여부 추적
+    bool isCancelled = false;
 
     // 로딩 다이얼로그에 고유 키 부여
     final loadingDialogKey = UniqueKey();
@@ -412,102 +415,119 @@ class StudyTipBanner extends ConsumerWidget {
       tag: 'StudyTipGeneration',
     );
 
-    // 기존 스타일의 로딩 다이얼로그 표시
+    // 🔧 최소 수정: barrierDismissible만 true로 변경, 나머지는 기존 디자인 유지
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true, // 🔧 유일한 변경점: false → true
       builder: (dialogContext) {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
 
-        return Dialog(
-          key: loadingDialogKey,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColorStyles.primary60, AppColorStyles.primary100],
-              ),
+        return WillPopScope(
+          onWillPop: () async {
+            // 뒤로가기 버튼으로 취소 가능
+            isCancelled = true;
+            loadingTimer?.cancel();
+            AppLogger.info('사용자가 학습 팁 로딩을 취소했습니다', tag: 'StudyTipGeneration');
+            return true;
+          },
+          child: Dialog(
+            key: loadingDialogKey,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColorStyles.primary60.withValues(alpha: 0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                  spreadRadius: -3,
-                ),
-              ],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 브랜드 아이콘
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColorStyles.primary60, AppColorStyles.primary100],
                 ),
-                const SizedBox(height: 24),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColorStyles.primary60.withValues(alpha: 0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                    spreadRadius: -3,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 브랜드 아이콘 - 기존과 동일
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                // 로딩 스피너 (앱 컬러)
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 3,
-                ),
-                const SizedBox(height: 24),
-
-                // 메인 메시지
-                Text(
-                  '따뜻한 꿀팁을\n우려내고 있어요 ☕',
-                  style: AppTextStyles.subtitle1Bold.copyWith(
-                    color: Colors.white,
-                    fontSize: 18,
+                  // 로딩 스피너 - 기존과 동일
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 3,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 24),
 
-                // 부가 설명
-                Text(
-                  'AI가 당신만을 위한 특별한 팁을 준비 중이에요',
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 14,
+                  // 🔧 기존 메시지 그대로 유지
+                  Text(
+                    '따뜻한 꿀팁을\n우려내고 있어요 ☕',
+                    style: AppTextStyles.subtitle1Bold.copyWith(
+                      color: Colors.white,
+                      fontSize: 18,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
-                // 기술적 디테일
-                Text(
-                  '잠시만 기다려주세요...',
-                  style: AppTextStyles.captionRegular.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 12,
+                  // 기존 부가 설명 그대로 유지
+                  Text(
+                    'AI가 당신만을 위한 특별한 팁을 준비 중이에요',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                  const SizedBox(height: 8),
+
+                  // 기존 기술적 디테일 그대로 유지
+                  Text(
+                    '잠시만 기다려주세요...',
+                    style: AppTextStyles.captionRegular.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
-    );
+    ).then((_) {
+      // 다이얼로그가 닫혔을 때 취소 처리
+      if (!isCancelled) {
+        isCancelled = true;
+        loadingTimer?.cancel();
+      }
+    });
 
-    // 타임아웃 설정 (20초)
+    // 타임아웃 설정 (기존 20초 유지)
     loadingTimer = Timer(const Duration(seconds: 20), () {
+      if (isCancelled) return;
+
       final duration = DateTime.now().difference(startTime);
 
       AppLogger.warning(
@@ -517,7 +537,7 @@ class StudyTipBanner extends ConsumerWidget {
 
       _closeLoadingDialog(loadingDialogContext);
 
-      if (context.mounted) {
+      if (context.mounted && !isCancelled) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('인사이트 생성이 지연되고 있습니다. 기본 팁을 표시합니다.'),
@@ -545,7 +565,14 @@ class StudyTipBanner extends ConsumerWidget {
         tag: 'StudyTipGeneration',
       );
 
+      // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
       final asyncValue = await getStudyTipUseCase.execute(skillWithTimestamp);
+
+      // 취소되었으면 더 이상 진행하지 않음
+      if (isCancelled) {
+        AppLogger.info('로딩이 취소되어 결과를 무시합니다', tag: 'StudyTipGeneration');
+        return;
+      }
 
       // 타이머 취소
       loadingTimer.cancel();
@@ -588,6 +615,12 @@ class StudyTipBanner extends ConsumerWidget {
         }
       }
     } catch (e) {
+      // 취소되었으면 더 이상 진행하지 않음
+      if (isCancelled) {
+        AppLogger.info('로딩이 취소되어 예외 처리를 무시합니다', tag: 'StudyTipGeneration');
+        return;
+      }
+
       // 예외 발생 시 타이머 취소 및 백업 팁 표시
       loadingTimer.cancel();
       _closeLoadingDialog(loadingDialogContext);
@@ -636,7 +669,7 @@ class StudyTipBanner extends ConsumerWidget {
             ?.split(',')
             .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
             .trim() ??
-        '프로그래밍 기초';
+            '프로그래밍 기초';
 
     AppLogger.info(
       '백업 StudyTip 생성: $skillArea',
@@ -650,18 +683,18 @@ class StudyTipBanner extends ConsumerWidget {
       content: fallbackTipData['content'] ?? '꾸준한 학습이 성공의 열쇠입니다.',
       relatedSkill: fallbackTipData['relatedSkill'] ?? skillArea,
       englishPhrase:
-          fallbackTipData['englishPhrase'] ?? 'Practice makes perfect.',
+      fallbackTipData['englishPhrase'] ?? 'Practice makes perfect.',
       translation: fallbackTipData['translation'] ?? '연습이 완벽을 만든다.',
       source: fallbackTipData['source'],
     );
   }
 
   void _showStudyTipDetailsDialog(
-    BuildContext context,
-    StudyTip tip,
-    String? skills,
-    WidgetRef ref,
-  ) {
+      BuildContext context,
+      StudyTip tip,
+      String? skills,
+      WidgetRef ref,
+      ) {
     AppLogger.info(
       '학습 팁 상세 다이얼로그 표시: ${tip.title}',
       tag: 'StudyTipUI',
@@ -670,34 +703,35 @@ class StudyTipBanner extends ConsumerWidget {
     // StatefulWidget으로 다이얼로그 상태 관리
     showDialog(
       context: context,
+      barrierDismissible: true, // 🔧 기존 false → true로 변경
       builder:
           (context) => _StudyTipDialog(
-            initialTip: tip,
-            skills: skills,
-            onConfirm: (StudyTip finalTip) {
-              AppLogger.info(
-                '학습 팁 확인 버튼 클릭: ${finalTip.title}',
-                tag: 'StudyTipUI',
-              );
+        initialTip: tip,
+        skills: skills,
+        onConfirm: (StudyTip finalTip) {
+          AppLogger.info(
+            '학습 팁 확인 버튼 클릭: ${finalTip.title}',
+            tag: 'StudyTipUI',
+          );
 
-              // 확인 버튼 클릭 시 홈 배너 캐시 업데이트
-              _updateHomeBannerCache(ref, finalTip, skills);
-            },
-            onLoadNewTip: (Function(StudyTip) updateContent) {
-              AppLogger.info(
-                'Next Insight 버튼 클릭',
-                tag: 'StudyTipUI',
-              );
+          // 확인 버튼 클릭 시 홈 배너 캐시 업데이트
+          _updateHomeBannerCache(ref, finalTip, skills);
+        },
+        onLoadNewTip: (Function(StudyTip) updateContent) {
+          AppLogger.info(
+            'Next Insight 버튼 클릭',
+            tag: 'StudyTipUI',
+          );
 
-              // Next Insight 버튼 클릭 시 기존 로딩 팝업 스타일 사용
-              _loadNewTip(context, skills, ref, updateContent);
-            },
-          ),
+          // Next Insight 버튼 클릭 시 기존 로딩 팝업 스타일 사용
+          _loadNewTip(context, skills, ref, updateContent);
+        },
+      ),
     );
   }
 }
 
-// 다이얼로그를 위한 별도 StatefulWidget
+// 다이얼로그를 위한 별도 StatefulWidget - 기존과 동일
 class _StudyTipDialog extends StatefulWidget {
   final StudyTip initialTip;
   final String? skills;
