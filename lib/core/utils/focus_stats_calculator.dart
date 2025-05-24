@@ -1,6 +1,7 @@
 // lib/core/utils/focus_stats_calculator.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/profile/domain/model/focus_time_stats.dart';
@@ -333,64 +334,24 @@ class FocusStatsCalculator {
     return attendances;
   }
 
-  // /// Firebase Timestamp 또는 DateTime을 DateTime으로 안전하게 변환 (수정된 부분)
-  // /// 🔧 파싱 실패 시 null 반환으로 변경
-  // static DateTime? _extractDateTime(dynamic timestamp) {
-  //   if (timestamp == null) {
-  //     return null;
-  //   }
-  //
-  //   try {
-  //     // Firebase Timestamp인 경우
-  //     if (timestamp is Timestamp) {
-  //       return timestamp.toDate();
-  //     }
-  //
-  //     // 이미 DateTime인 경우
-  //     if (timestamp is DateTime) {
-  //       return timestamp;
-  //     }
-  //
-  //     // 문자열인 경우
-  //     if (timestamp is String) {
-  //       return DateTime.tryParse(timestamp);
-  //     }
-  //
-  //     // Map 형태의 Timestamp (Firestore에서 가끔 이런 형태로 옴)
-  //     if (timestamp is Map<String, dynamic>) {
-  //       final seconds = timestamp['_seconds'] as int?;
-  //       final nanoseconds = timestamp['_nanoseconds'] as int?;
-  //
-  //       if (seconds != null) {
-  //         return DateTime.fromMillisecondsSinceEpoch(
-  //           seconds * 1000 + (nanoseconds ?? 0) ~/ 1000000,
-  //         );
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print('⚠️ timestamp 변환 실패: $timestamp, error: $e');
-  //   }
-  //
-  //   // 🔧 모든 변환 시도 실패 시 null 반환
-  //   return null;
-  // }
-  //
-  // /// DateTime을 YYYY-MM-DD 형식 문자열로 변환
-  // static String _formatDate(DateTime dateTime) {
-  //   return '${dateTime.year.toString().padLeft(4, '0')}-'
-  //       '${dateTime.month.toString().padLeft(2, '0')}-'
-  //       '${dateTime.day.toString().padLeft(2, '0')}';
-  // }
-
   static DateTime _parseTimestamp(dynamic timestamp) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
-    } else if (timestamp is String) {
-      return DateTime.parse(timestamp);
-    } else if (timestamp is DateTime) {
-      return timestamp;
+    try {
+      if (timestamp is Timestamp) {
+        return timestamp.toDate();
+      } else if (timestamp is String) {
+        return DateTime.parse(timestamp);
+      } else if (timestamp is DateTime) {
+        return timestamp;
+      }
+      throw ArgumentError('Invalid timestamp type: ${timestamp.runtimeType}');
+    } catch (e) {
+      AppLogger.error(
+        'Timestamp 파싱 실패',
+        tag: 'FocusStats',
+        error: e,
+      );
+      rethrow;
     }
-    throw ArgumentError('Invalid timestamp type: ${timestamp.runtimeType}');
   }
 
   static bool _isSameDay(DateTime date1, DateTime date2) {
