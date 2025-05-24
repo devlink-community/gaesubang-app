@@ -1,4 +1,4 @@
-// lib/ai_assistance/module/ai_assistance_di.dart
+// lib/ai_assistance/module/ai_client_di.dart
 
 import 'package:devlink_mobile_app/ai_assistance/module/quiz_prompt.dart';
 import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
@@ -17,6 +17,9 @@ import '../domain/repository/study_tip_repository.dart';
 // 유스케이스 import
 import '../domain/use_case/generate_quiz_use_case.dart';
 import '../domain/use_case/get_study_tip_use_case.dart';
+// 도메인 모델 import
+import '../domain/model/study_tip.dart';
+import '../domain/model/quiz.dart';
 
 //------------------------------------------------------------------
 // 서비스 프로바이더
@@ -116,8 +119,163 @@ final getStudyTipUseCaseProvider = Provider<GetStudyTipUseCase>((ref) {
   return GetStudyTipUseCase(repository: repository);
 });
 
-/// 학습 팁 캐시 프로바이더 - 더 효과적인 캐싱을 위한 최대 항목 수 제한 추가
+//------------------------------------------------------------------
+// 🆕 개선된 캐시 관리 시스템
+//------------------------------------------------------------------
+
+/// 🆕 학습 팁 캐시 프로바이더 - 더 효과적인 캐시 관리
 final studyTipCacheProvider = StateProvider<Map<String, dynamic>>((ref) {
-  // 초기 설정: 캐시 기간은 하루, 최대 10개 항목 저장
+  // 초기 설정: 캐시 기간은 하루, 최대 20개 항목 저장
   return {};
 });
+
+/// 🆕 강제 새로고침용 학습 팁 프로바이더 (캐시 우회)
+final freshStudyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
+    ref,
+    skills,
+    ) async {
+  // 🔧 캐시를 완전히 우회하고 항상 새로운 데이터 생성
+  final getStudyTipUseCase = ref.watch(getStudyTipUseCaseProvider);
+
+  // 강제 새로고침을 위한 고유 타임스탬프 추가
+  final forceRefreshTimestamp = DateTime.now().millisecondsSinceEpoch;
+  final randomSalt = DateTime.now().microsecond; // 추가 무작위성
+  final skillWithForceRefresh = '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
+
+  try {
+    final asyncValue = await getStudyTipUseCase.execute(skillWithForceRefresh);
+
+    if (asyncValue.hasValue && asyncValue.value != null) {
+      return asyncValue.value as StudyTip;
+    }
+
+    return null;
+  } catch (e) {
+    // 에러 발생 시 null 반환 (fallback 처리는 UI에서)
+    return null;
+  }
+});
+
+/// 🆕 강제 새로고침용 퀴즈 프로바이더 (캐시 우회)
+final freshQuizProvider = FutureProvider.autoDispose.family<Quiz?, String?>((
+    ref,
+    skills,
+    ) async {
+  // 🔧 캐시를 완전히 우회하고 항상 새로운 데이터 생성
+  final generateQuizUseCase = ref.watch(generateQuizUseCaseProvider);
+
+  // 강제 새로고침을 위한 고유 타임스탬프 추가
+  final forceRefreshTimestamp = DateTime.now().millisecondsSinceEpoch;
+  final randomSalt = DateTime.now().microsecond; // 추가 무작위성
+  final skillWithForceRefresh = '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
+
+  try {
+    final asyncValue = await generateQuizUseCase.execute(skillWithForceRefresh);
+
+    return asyncValue.when(
+      data: (quiz) => quiz,
+      error: (_, __) => null,
+      loading: () => null,
+    );
+  } catch (e) {
+    // 에러 발생 시 null 반환 (fallback 처리는 UI에서)
+    return null;
+  }
+});
+
+//------------------------------------------------------------------
+// 🆕 캐시 관리 유틸리티
+//------------------------------------------------------------------
+
+/// 🆕 캐시 정리 프로바이더 - 주기적으로 오래된 캐시 정리
+final cacheCleanupProvider = Provider((ref) {
+  // 캐시 정리 로직을 제공하는 유틸리티
+  return CacheCleanupService(ref);
+});
+
+/// 🆕 캐시 정리 서비스 클래스
+class CacheCleanupService {
+  final Ref _ref;
+
+  CacheCleanupService(this._ref);
+
+  /// 오래된 캐시 항목 정리 (1시간 이상 된 항목)
+  void cleanupOldCacheEntries() {
+    final currentCache = Map<String, dynamic>.from(
+      _ref.read(studyTipCacheProvider),
+    );
+
+    final now = DateTime.now();
+    final cutoffTime = now.subtract(const Duration(hours: 1));
+
+    // 캐시 키에서 타임스탬프 추출하여 오래된 항목 제거
+    final keysToRemove = <String>[];
+
+    for (final key in currentCache.keys) {
+      // 캐시 키 형식: "YYYY-MM-DD-skillPrefix-timeSlot"
+      final parts = key.split('-');
+      if (parts.length >= 3) {
+        try {
+          final dateStr = '${parts[0]}-${parts[1]}-${parts[2]}';
+          final cacheDate = DateTime.parse(dateStr);
+
+          if (cacheDate.isBefore(cutoffTime)) {
+            keysToRemove.add(key);
+          }
+        } catch (e) {
+          // 파싱 실패 시 해당 항목 제거
+          keysToRemove.add(key);
+        }
+      }
+    }
+
+    // 오래된 항목들 제거
+    for (final key in keysToRemove) {
+      currentCache.remove(key);
+    }
+
+    // 캐시 크기 제한 (최대 15개로 감소)
+    if (currentCache.length > 15) {
+      final sortedKeys = currentCache.keys.toList()..sort();
+      final keysToRemoveForLimit = sortedKeys.take(currentCache.length - 15);
+
+      for (final key in keysToRemoveForLimit) {
+        currentCache.remove(key);
+      }
+    }
+
+    // 업데이트된 캐시 저장
+    _ref.read(studyTipCacheProvider.notifier).state = currentCache;
+  }
+
+  /// 특정 스킬의 캐시 무효화
+  void invalidateCacheForSkill(String? skills) {
+    final currentCache = Map<String, dynamic>.from(
+      _ref.read(studyTipCacheProvider),
+    );
+
+    final skillArea = skills
+        ?.split(',')
+        .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
+        .trim() ?? '프로그래밍 기초';
+
+    final skillPrefix = skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
+
+    // 해당 스킬과 관련된 캐시 항목들 제거
+    final keysToRemove = currentCache.keys
+        .where((key) => key.contains(skillPrefix))
+        .toList();
+
+    for (final key in keysToRemove) {
+      currentCache.remove(key);
+    }
+
+    // 업데이트된 캐시 저장
+    _ref.read(studyTipCacheProvider.notifier).state = currentCache;
+  }
+
+  /// 전체 캐시 초기화
+  void clearAllCache() {
+    _ref.read(studyTipCacheProvider.notifier).state = {};
+  }
+}
