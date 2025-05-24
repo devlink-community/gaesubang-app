@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart'
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/api_call_logger.dart';
+import '../dto/summary_dto.dart';
 import '../dto/user_dto.dart';
 import 'auth_data_source.dart';
 
@@ -16,7 +17,10 @@ class MockAuthDataSource implements AuthDataSource {
   static final Map<String, Map<String, dynamic>> _termsAgreements = {};
   static String? _currentUserId;
 
-  // 인증 상태 스트림 컨트롤러 (추가)
+  // 새로운 타이머 시스템을 위한 저장소 (User 도메인만)
+  static final Map<String, Map<String, dynamic>> _userSummaries = {};
+
+  // 인증 상태 스트림 컨트롤러
   static final StreamController<Map<String, dynamic>?> _authStateController =
       StreamController<Map<String, dynamic>?>.broadcast();
 
@@ -155,7 +159,38 @@ class MockAuthDataSource implements AuthDataSource {
 
       // 타이머 활동 로그 초기화 (샘플 데이터 포함)
       _timerActivities[uid] = _generateSampleTimerActivities(uid);
+
+      // Summary 데이터 초기화
+      _userSummaries[uid] = _generateDefaultSummary(uid);
     }
+  }
+
+  // 기본 Summary 데이터 생성
+  static Map<String, dynamic> _generateDefaultSummary(String userId) {
+    final now = DateTime.now();
+    final last7Days = <String, int>{};
+
+    // 최근 7일 활동 데이터 생성
+    for (int i = 0; i < 7; i++) {
+      final date = now.subtract(Duration(days: i));
+      final dateKey =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      last7Days[dateKey] =
+          [3600, 5400, 2700, 7200, 4500, 10800, 1800][i % 7]; // 1-3시간
+    }
+
+    return {
+      'allTimeTotalSeconds': 234000, // 65시간
+      'groupTotalSecondsMap': {
+        'group1': 120000,
+        'group2': 114000,
+      },
+      'last7DaysActivityMap': last7Days,
+      'currentStreakDays': 7,
+      'lastActivityDate':
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+      'longestStreakDays': 15,
+    };
   }
 
   // 샘플 타이머 활동 데이터 생성
@@ -190,14 +225,14 @@ class MockAuthDataSource implements AuthDataSource {
     return activities;
   }
 
-  // 인증 상태 변경 통지 (새로 추가)
+  // 인증 상태 변경 통지
   void _notifyAuthStateChanged() {
     if (_currentUserId == null) {
       _authStateController.add(null);
       return;
     }
 
-    _fetchUserWithTimerActivities(_currentUserId!)
+    _fetchUserWithSummary(_currentUserId!)
         .then((userData) {
           _authStateController.add(userData);
         })
@@ -207,18 +242,22 @@ class MockAuthDataSource implements AuthDataSource {
         });
   }
 
-  /// Firebase와 동일하게 사용자 정보와 타이머 활동을 함께 반환하는 메서드
-  Future<Map<String, dynamic>?> _fetchUserWithTimerActivities(
+  /// 사용자 정보와 Summary를 함께 반환하는 메서드
+  Future<Map<String, dynamic>?> _fetchUserWithSummary(
     String userId,
   ) async {
     return ApiCallDecorator.wrap(
-      'MockAuth.fetchUserWithTimerActivities',
+      'MockAuth.fetchUserWithSummary',
       () async {
         final userData = _users[userId];
         if (userData == null) return null;
 
-        // 타이머 활동 데이터 포함하여 반환
-        return {...userData, 'timerActivities': _timerActivities[userId] ?? []};
+        // Summary 데이터 포함하여 반환
+        return {
+          ...userData,
+          'summary': _userSummaries[userId] ?? _generateDefaultSummary(userId),
+          'timerActivities': _timerActivities[userId] ?? [], // 호환성을 위해 유지
+        };
       },
       params: {'userId': userId},
     );
@@ -251,16 +290,16 @@ class MockAuthDataSource implements AuthDataSource {
       // 로그인 상태 설정
       _currentUserId = userId;
 
-      // 타이머 활동 포함하여 반환
-      final userWithActivities = await _fetchUserWithTimerActivities(userId);
-      if (userWithActivities == null) {
+      // Summary 포함하여 반환
+      final userWithSummary = await _fetchUserWithSummary(userId);
+      if (userWithSummary == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
 
-      return userWithActivities;
+      return userWithSummary;
     }, params: {'email': email});
   }
 
@@ -321,15 +360,27 @@ class MockAuthDataSource implements AuthDataSource {
       _users[userId] = newUserData;
       _passwords[userId] = password;
       _timerActivities[userId] = [];
+      _userSummaries[userId] = {
+        'allTimeTotalSeconds': 0,
+        'groupTotalSecondsMap': {},
+        'last7DaysActivityMap': {},
+        'currentStreakDays': 0,
+        'lastActivityDate': null,
+        'longestStreakDays': 0,
+      };
 
       // 회원가입 후 자동 로그인 상태로 설정
       _currentUserId = userId;
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
 
-      // 회원가입 시에는 빈 타이머 활동 리스트와 함께 반환
-      return {...newUserData, 'timerActivities': []};
+      // 회원가입 시에는 빈 Summary와 함께 반환
+      return {
+        ...newUserData,
+        'summary': _userSummaries[userId],
+        'timerActivities': [],
+      };
     }, params: {'email': email, 'nickname': nickname});
   }
 
@@ -341,8 +392,8 @@ class MockAuthDataSource implements AuthDataSource {
 
       if (_currentUserId == null) return null;
 
-      // 타이머 활동 포함하여 현재 사용자 정보 반환
-      return await _fetchUserWithTimerActivities(_currentUserId!);
+      // Summary 포함하여 현재 사용자 정보 반환
+      return await _fetchUserWithSummary(_currentUserId!);
     });
   }
 
@@ -352,7 +403,7 @@ class MockAuthDataSource implements AuthDataSource {
       await Future.delayed(const Duration(milliseconds: 300));
       _currentUserId = null;
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
     });
   }
@@ -426,9 +477,10 @@ class MockAuthDataSource implements AuthDataSource {
       _users.remove(userId);
       _passwords.remove(userId);
       _timerActivities.remove(userId);
+      _userSummaries.remove(userId);
       _currentUserId = null;
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
     }, params: {'email': email});
   }
@@ -555,18 +607,18 @@ class MockAuthDataSource implements AuthDataSource {
 
       _users[_currentUserId!] = updatedUser;
 
-      // 타이머 활동 포함하여 반환
-      final userWithActivities = await _fetchUserWithTimerActivities(
+      // Summary 포함하여 반환
+      final userWithSummary = await _fetchUserWithSummary(
         _currentUserId!,
       );
-      if (userWithActivities == null) {
+      if (userWithSummary == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
 
-      return userWithActivities;
+      return userWithSummary;
     }, params: {'nickname': nickname});
   }
 
@@ -591,22 +643,22 @@ class MockAuthDataSource implements AuthDataSource {
 
       _users[_currentUserId!] = updatedUser;
 
-      // 타이머 활동 포함하여 반환
-      final userWithActivities = await _fetchUserWithTimerActivities(
+      // Summary 포함하여 반환
+      final userWithSummary = await _fetchUserWithSummary(
         _currentUserId!,
       );
-      if (userWithActivities == null) {
+      if (userWithSummary == null) {
         throw Exception(AuthErrorMessages.userDataNotFound);
       }
 
-      // 인증 상태 변경 통지 (추가)
+      // 인증 상태 변경 통지
       _notifyAuthStateChanged();
 
-      return userWithActivities;
+      return userWithSummary;
     }, params: {'imagePath': imagePath});
   }
 
-  // 인증 상태 변화 스트림 (추가)
+  // 인증 상태 변화 스트림
   @override
   Stream<Map<String, dynamic>?> get authStateChanges {
     _initializeDefaultUsers();
@@ -615,7 +667,7 @@ class MockAuthDataSource implements AuthDataSource {
     if (_currentUserId != null) {
       // 비동기적으로 현재 상태 통지
       Future.microtask(() async {
-        final userData = await _fetchUserWithTimerActivities(_currentUserId!);
+        final userData = await _fetchUserWithSummary(_currentUserId!);
         _authStateController.add(userData);
       });
     } else {
@@ -628,7 +680,7 @@ class MockAuthDataSource implements AuthDataSource {
     return _authStateController.stream;
   }
 
-  // 현재 인증 상태 확인 (추가)
+  // 현재 인증 상태 확인
   @override
   Future<Map<String, dynamic>?> getCurrentAuthState() async {
     _initializeDefaultUsers();
@@ -637,14 +689,14 @@ class MockAuthDataSource implements AuthDataSource {
       return null;
     }
 
-    return await _fetchUserWithTimerActivities(_currentUserId!);
+    return await _fetchUserWithSummary(_currentUserId!);
   }
 
   @override
   Future<UserDto> fetchUserProfile(String userId) async {
     await Future.delayed(const Duration(milliseconds: 500)); // 네트워크 지연 시뮬레이션
 
-    // Mock 사용자 데이터 생성 (실제 Mock 데이터 구조에 맞춰 수정 필요)
+    // Mock 사용자 데이터 생성
     final mockUserData = {
       'uid': userId,
       'email': 'user$userId@example.com',
@@ -664,5 +716,38 @@ class MockAuthDataSource implements AuthDataSource {
     };
 
     return UserDto.fromJson(mockUserData);
+  }
+
+  // ===== 새로운 User Summary 관련 메서드 구현 =====
+
+  @override
+  Future<SummaryDto?> fetchUserSummary(String userId) async {
+    return ApiCallDecorator.wrap('MockAuth.fetchUserSummary', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
+
+      final summaryData = _userSummaries[userId];
+      if (summaryData == null) return null;
+
+      return SummaryDto.fromJson(summaryData);
+    }, params: {'userId': userId});
+  }
+
+  @override
+  Future<void> updateUserSummary({
+    required String userId,
+    required SummaryDto summary,
+  }) async {
+    return ApiCallDecorator.wrap('MockAuth.updateUserSummary', () async {
+      await Future.delayed(const Duration(milliseconds: 300));
+      _initializeDefaultUsers();
+
+      _userSummaries[userId] = summary.toJson();
+
+      // 현재 사용자면 인증 상태 업데이트
+      if (_currentUserId == userId) {
+        _notifyAuthStateChanged();
+      }
+    }, params: {'userId': userId});
   }
 }
