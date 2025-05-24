@@ -20,6 +20,7 @@ import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart'
 import 'package:devlink_mobile_app/auth/domain/usecase/core/reset_password_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signout_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/profile/get_user_profile_usecase.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
@@ -134,6 +135,13 @@ CheckEmailAvailabilityUseCase checkEmailAvailabilityUseCase(Ref ref) {
 CheckNicknameAvailabilityUseCase checkNicknameAvailabilityUseCase(Ref ref) {
   return CheckNicknameAvailabilityUseCase(
     repository: ref.watch(authCoreRepositoryProvider),
+  );
+}
+
+@riverpod
+GetUserProfileUseCase getUserProfileUseCase(Ref ref) {
+  return GetUserProfileUseCase(
+    repository: ref.watch(authProfileRepositoryProvider),
   );
 }
 

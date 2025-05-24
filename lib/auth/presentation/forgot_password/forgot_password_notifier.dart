@@ -1,12 +1,12 @@
 // lib/auth/presentation/forgot_password/forgot_password_notifier.dart
-import 'package:devlink_mobile_app/auth/domain/usecase/reset_password_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/reset_password_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/forgot_password/forgot_password_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

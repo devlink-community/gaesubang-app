@@ -1,6 +1,6 @@
 // lib/auth/presentation/login/login_notifier.dart
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/login/login_state.dart';
