@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/foundation.dart';
 
 /// Firebase AI를 사용한 Gemini API 클라이언트
 /// 기존 Vertex AI 클라이언트를 대체하여 더 간단하고 효율적인 구조 제공
@@ -38,12 +38,12 @@ class FirebaseAIClient {
     _initializing = true;
 
     try {
-      debugPrint('Firebase AI 클라이언트 초기화 시작');
+      AppLogger.info('Firebase AI 클라이언트 초기화 시작', tag: 'FirebaseAI');
 
       // Firebase Auth 확인 (필요 시 익명 로그인)
       if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
-        debugPrint('Firebase 익명 로그인 완료');
+        AppLogger.info('Firebase 익명 로그인 완료', tag: 'FirebaseAI');
       }
 
       // Google AI 인스턴스 생성 (무료 tier 사용)
@@ -62,9 +62,13 @@ class FirebaseAIClient {
 
       _initialized = true;
       _initializing = false;
-      debugPrint('Firebase AI 클라이언트 초기화 완료');
+      AppLogger.info('Firebase AI 클라이언트 초기화 완료', tag: 'FirebaseAI');
     } catch (e) {
-      debugPrint('Firebase AI 클라이언트 초기화 실패: $e');
+      AppLogger.error(
+        'Firebase AI 클라이언트 초기화 실패',
+        tag: 'FirebaseAI',
+        error: e,
+      );
       _initialized = false;
       _initializing = false;
       rethrow;
@@ -83,10 +87,14 @@ class FirebaseAIClient {
         throw Exception('Gemini API 키가 Remote Config에 없습니다.');
       }
 
-      debugPrint('Remote Config에서 Gemini API 키 로드 완료');
+      AppLogger.info('Remote Config에서 Gemini API 키 로드 완료', tag: 'FirebaseAI');
       return apiKey;
     } catch (e) {
-      debugPrint('Remote Config에서 Gemini API 키 로드 실패: $e');
+      AppLogger.error(
+        'Remote Config에서 Gemini API 키 로드 실패',
+        tag: 'FirebaseAI',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -98,8 +106,9 @@ class FirebaseAIClient {
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
-      debugPrint(
+      AppLogger.info(
         'Gemini 챗봇 API 호출: ${prompt.substring(0, min(50, prompt.length))}...',
+        tag: 'GeminiChat',
       );
 
       final response = await _generativeModel.generateContent([
@@ -111,13 +120,18 @@ class FirebaseAIClient {
         throw Exception('응답이 비어있습니다');
       }
 
-      debugPrint(
+      AppLogger.info(
         'Gemini 챗봇 응답: ${responseText.substring(0, min(100, responseText.length))}...',
+        tag: 'GeminiChat',
       );
 
       return responseText.trim();
     } catch (e) {
-      debugPrint('Gemini 챗봇 API 호출 실패: $e');
+      AppLogger.error(
+        'Gemini 챗봇 API 호출 실패',
+        tag: 'GeminiChat',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -130,8 +144,9 @@ class FirebaseAIClient {
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
-      debugPrint(
+      AppLogger.info(
         'Gemini API 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
+        tag: 'GeminiAPI',
       );
 
       final response = await _generativeModel.generateContent([
@@ -143,14 +158,19 @@ class FirebaseAIClient {
         throw Exception('응답이 비어있습니다');
       }
 
-      debugPrint(
+      AppLogger.info(
         'Gemini API 응답 수신: ${responseText.substring(0, min(100, responseText.length))}...',
+        tag: 'GeminiAPI',
       );
 
       // JSON 추출 및 반환
       return _extractJsonFromText(responseText);
     } catch (e) {
-      debugPrint('Gemini API 호출 실패: $e');
+      AppLogger.error(
+        'Gemini API 호출 실패',
+        tag: 'GeminiAPI',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -168,8 +188,9 @@ class FirebaseAIClient {
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
-      debugPrint(
+      AppLogger.info(
         'Gemini API 리스트 호출 시작: ${prompt.substring(0, min(50, prompt.length))}...',
+        tag: 'GeminiAPI',
       );
 
       // 동적으로 temperature 조정된 모델 생성
@@ -194,14 +215,19 @@ class FirebaseAIClient {
         throw Exception('응답이 비어있습니다');
       }
 
-      debugPrint(
+      AppLogger.info(
         'Gemini API 리스트 응답 수신: ${responseText.substring(0, min(100, responseText.length))}...',
+        tag: 'GeminiAPI',
       );
 
       // JSON 배열 추출 및 반환
       return _extractJsonArrayFromText(responseText);
     } catch (e) {
-      debugPrint('Gemini API 리스트 호출 실패: $e');
+      AppLogger.error(
+        'Gemini API 리스트 호출 실패',
+        tag: 'GeminiAPI',
+        error: e,
+      );
       rethrow;
     }
   }
@@ -224,11 +250,15 @@ class FirebaseAIClient {
       try {
         return jsonDecode(jsonString);
       } catch (e) {
-        debugPrint('JSON 객체 파싱 오류: $e');
+        AppLogger.error('JSON 객체 파싱 오류', tag: 'GeminiAPI', error: e);
         throw Exception('JSON 객체 파싱 오류: $e');
       }
     } else {
-      debugPrint('JSON 형식을 찾을 수 없음. 전체 텍스트: $text');
+      AppLogger.error(
+        'JSON 형식을 찾을 수 없음',
+        tag: 'GeminiAPI',
+        error: 'Response: $text',
+      );
       throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
     }
   }
@@ -255,7 +285,7 @@ class FirebaseAIClient {
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
       } catch (e) {
-        debugPrint('JSON 배열 파싱 오류: $e');
+        AppLogger.error('JSON 배열 파싱 오류', tag: 'GeminiAPI', error: e);
         // 배열 파싱 실패 시, 단일 객체 확인
         return [_extractJsonFromText(cleanedText)];
       }
@@ -265,7 +295,11 @@ class FirebaseAIClient {
         final singleObject = _extractJsonFromText(cleanedText);
         return [singleObject]; // 단일 객체를 리스트로 반환
       } catch (e) {
-        debugPrint('JSON 형식을 찾을 수 없음: $text');
+        AppLogger.error(
+          'JSON 형식을 찾을 수 없음',
+          tag: 'GeminiAPI',
+          error: 'Response: $text',
+        );
         throw Exception('응답에서 JSON 형식을 찾을 수 없습니다');
       }
     }
@@ -275,6 +309,6 @@ class FirebaseAIClient {
   void dispose() {
     _initialized = false;
     _initializing = false;
-    debugPrint('Firebase AI 클라이언트 리소스 정리 완료');
+    AppLogger.info('Firebase AI 클라이언트 리소스 정리 완료', tag: 'FirebaseAI');
   }
 }
