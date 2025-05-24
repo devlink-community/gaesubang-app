@@ -1,5 +1,6 @@
 // lib/core/layout/main_shell.dart
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,7 +19,10 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
 
-    print("감지했음 currentUser: $currentUser.nickname");
+    AppLogger.debug(
+      '현재 사용자 감지: ${currentUser?.nickname ?? "없음"}',
+      tag: 'MainShell',
+    );
 
     // 현재 경로 가져오기
     final String currentPath = GoRouterState.of(context).matchedLocation;
