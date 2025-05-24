@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -16,32 +17,62 @@ class FirebaseAIClient {
 
   FirebaseAIClient._internal();
 
-  // 초기화 상태
+  // 🔧 개선된 초기화 상태 관리
   bool _initialized = false;
-  bool _initializing = false;
+
+  // 🆕 Completer 기반 초기화 - 경합 조건 해결
+  Completer<void>? _initCompleter;
 
   late GenerativeModel _generativeModel;
   late FirebaseAI _firebaseAI;
 
-  /// 초기화 메서드
+  /// 🔧 개선된 초기화 메서드 - 경합 조건 및 무한 대기 방지
   Future<void> initialize() async {
+    // 이미 초기화된 경우 즉시 반환
     if (_initialized) return;
 
-    if (_initializing) {
-      // 초기화가 진행 중인 경우 완료될 때까지 대기
-      while (_initializing && !_initialized) {
-        await Future.delayed(const Duration(milliseconds: 100));
+    // 초기화가 진행 중인 경우 해당 Completer를 기다림
+    if (_initCompleter != null) {
+      AppLogger.debug(
+        'Firebase AI 초기화가 이미 진행 중입니다. 완료를 기다립니다.',
+        tag: 'FirebaseAI',
+      );
+
+      // 🔧 타임아웃 추가 - 무한 대기 방지
+      try {
+        await _initCompleter!.future.timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            AppLogger.error(
+              'Firebase AI 초기화 타임아웃 (30초)',
+              tag: 'FirebaseAI',
+            );
+            throw TimeoutException('Firebase AI 초기화 타임아웃', const Duration(seconds: 30));
+          },
+        );
+        return;
+      } catch (e) {
+        AppLogger.error(
+          'Firebase AI 초기화 대기 중 오류 발생',
+          tag: 'FirebaseAI',
+          error: e,
+        );
+
+        // 실패한 Completer 정리
+        _initCompleter = null;
+        rethrow;
       }
-      return;
     }
 
-    _initializing = true;
+    // 새로운 초기화 시작
+    _initCompleter = Completer<void>();
 
     try {
       AppLogger.info('Firebase AI 클라이언트 초기화 시작', tag: 'FirebaseAI');
 
       // Firebase Auth 확인 (필요 시 익명 로그인)
       if (FirebaseAuth.instance.currentUser == null) {
+        AppLogger.debug('Firebase 익명 로그인 시작', tag: 'FirebaseAI');
         await FirebaseAuth.instance.signInAnonymously();
         AppLogger.info('Firebase 익명 로그인 완료', tag: 'FirebaseAI');
       }
@@ -61,7 +92,11 @@ class FirebaseAIClient {
       );
 
       _initialized = true;
-      _initializing = false;
+
+      // 🔧 성공 시 Completer 완료
+      _initCompleter!.complete();
+      _initCompleter = null;
+
       AppLogger.info('Firebase AI 클라이언트 초기화 완료', tag: 'FirebaseAI');
     } catch (e) {
       AppLogger.error(
@@ -69,8 +104,12 @@ class FirebaseAIClient {
         tag: 'FirebaseAI',
         error: e,
       );
+
+      // 🔧 실패 시 상태 정리 및 Completer 에러 완료
       _initialized = false;
-      _initializing = false;
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+
       rethrow;
     }
   }
@@ -101,7 +140,11 @@ class FirebaseAIClient {
 
   Future<String> callTextModelForChat(String prompt) async {
     try {
-      if (!_initialized) await initialize();
+      // 🔧 개선된 초기화 확인
+      if (!_initialized) {
+        AppLogger.debug('Firebase AI 미초기화 상태, 초기화 시도', tag: 'GeminiChat');
+        await initialize();
+      }
 
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
@@ -139,7 +182,11 @@ class FirebaseAIClient {
   /// 텍스트 생성 API 호출 - 단일 JSON 객체 반환
   Future<Map<String, dynamic>> callTextModel(String prompt) async {
     try {
-      if (!_initialized) await initialize();
+      // 🔧 개선된 초기화 확인
+      if (!_initialized) {
+        AppLogger.debug('Firebase AI 미초기화 상태, 초기화 시도', tag: 'GeminiAPI');
+        await initialize();
+      }
 
       final uniqueId = DateTime.now().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
@@ -178,7 +225,11 @@ class FirebaseAIClient {
   /// 텍스트 생성 API 호출 - JSON 배열 반환
   Future<List<Map<String, dynamic>>> callTextModelForList(String prompt) async {
     try {
-      if (!_initialized) await initialize();
+      // 🔧 개선된 초기화 확인
+      if (!_initialized) {
+        AppLogger.debug('Firebase AI 미초기화 상태, 초기화 시도', tag: 'GeminiAPI');
+        await initialize();
+      }
 
       // 다양성을 위한 랜덤 temperature 설정
       final random = Random();
@@ -305,10 +356,31 @@ class FirebaseAIClient {
     }
   }
 
-  /// 리소스 정리
+  /// 🆕 초기화 상태 확인 메서드
+  bool get isInitialized => _initialized;
+
+  /// 🆕 초기화 진행 상태 확인 메서드
+  bool get isInitializing => _initCompleter != null;
+
+  /// 🔧 개선된 리소스 정리
   void dispose() {
     _initialized = false;
-    _initializing = false;
+
+    // 진행 중인 초기화가 있다면 취소
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      _initCompleter!.completeError(
+        StateError('Firebase AI 클라이언트가 dispose되었습니다'),
+      );
+    }
+    _initCompleter = null;
+
     AppLogger.info('Firebase AI 클라이언트 리소스 정리 완료', tag: 'FirebaseAI');
+  }
+
+  /// 🆕 초기화 상태 리셋 메서드 (테스트 및 디버깅용)
+  void resetForTesting() {
+    _initialized = false;
+    _initCompleter = null;
+    AppLogger.debug('Firebase AI 클라이언트 상태 리셋 완료', tag: 'FirebaseAI');
   }
 }
