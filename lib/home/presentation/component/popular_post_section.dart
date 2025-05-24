@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -72,11 +73,8 @@ class PopularPostSection extends StatelessWidget {
                 // 왼쪽: 프로필 + 작성자
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundImage: NetworkImage(post.userProfileImageUrl),
-                      backgroundColor: AppColorStyles.gray40,
-                    ),
+                    // 안전한 프로필 이미지 처리
+                    _buildSafeProfileImage(post.userProfileImageUrl),
                     const SizedBox(width: 8),
                     Text(
                       post.authorNickname,
@@ -299,4 +297,96 @@ class PopularPostSection extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildSafeProfileImage(String? imageUrl) {
+  // URL이 비어있거나 null인 경우 기본 아바타 표시
+  if (imageUrl == null || imageUrl.trim().isEmpty) {
+    return CircleAvatar(
+      radius: 12,
+      backgroundColor: AppColorStyles.gray40,
+      child: Icon(
+        Icons.person,
+        size: 16,
+        color: AppColorStyles.gray80,
+      ),
+    );
+  }
+
+  final String cleanUrl = imageUrl.trim();
+
+  // 올바른 URL 형식인지 확인
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    return CircleAvatar(
+      radius: 12,
+      backgroundColor: AppColorStyles.gray40,
+      child: Icon(
+        Icons.person,
+        size: 16,
+        color: AppColorStyles.gray80,
+      ),
+    );
+  }
+
+  try {
+    final uri = Uri.parse(cleanUrl);
+    if (uri.host.isEmpty) {
+      return CircleAvatar(
+        radius: 12,
+        backgroundColor: AppColorStyles.gray40,
+        child: Icon(
+          Icons.person,
+          size: 16,
+          color: AppColorStyles.gray80,
+        ),
+      );
+    }
+  } catch (e) {
+    return CircleAvatar(
+      radius: 12,
+      backgroundColor: AppColorStyles.gray40,
+      child: Icon(
+        Icons.person,
+        size: 16,
+        color: AppColorStyles.gray80,
+      ),
+    );
+  }
+
+  return CircleAvatar(
+    radius: 12,
+    backgroundColor: AppColorStyles.gray40,
+    onBackgroundImageError: (exception, stackTrace) {
+      // 이미지 로드 실패 시 로그 출력
+      AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
+    },
+    child: ClipOval(
+      child: Image.network(
+        cleanUrl,
+        width: 24,
+        height: 24,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.person,
+            size: 16,
+            color: AppColorStyles.gray80,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 1,
+                color: AppColorStyles.gray60,
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }
