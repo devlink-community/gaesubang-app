@@ -1,5 +1,5 @@
 // lib/auth/presentation/signup/signup_state.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -63,7 +63,7 @@ class SignupState with _$SignupState {
   final AsyncValue<bool>? nicknameAvailability;
   final AsyncValue<bool>? emailAvailability;
 
-  final AsyncValue<Member>? signupResult;
+  final AsyncValue<User>? signupResult;
 
   final String? agreedTermsId;
   final bool isTermsAgreed; // 약관 동의 여부

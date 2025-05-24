@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -32,7 +33,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentBannerIndex = 0;
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
 
   // 🆕 다이얼로그 및 포커스 상태 관리
   bool _isDialogVisible = false;
@@ -349,7 +351,98 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // 정상 데이터 표시
+    // 이미지 URL 안전성 검사
+    final imageUrl = widget.state.currentMemberImage;
+    final memberName = widget.state.currentMemberName;
+
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      // 이미지가 없으면 이니셜 표시
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
+            style: AppTextStyles.heading6Bold.copyWith(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final String cleanUrl = imageUrl.trim();
+
+    // URL 형식 검사
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
+            style: AppTextStyles.heading6Bold.copyWith(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // URI 유효성 검사
+    try {
+      final uri = Uri.parse(cleanUrl);
+      if (uri.host.isEmpty) {
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 2,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
+              style: AppTextStyles.heading6Bold.copyWith(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.warning('프로필 이미지 URL 파싱 실패: $cleanUrl', error: e);
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white,
+            width: 2,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
+            style: AppTextStyles.heading6Bold.copyWith(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 정상 데이터로 네트워크 이미지 표시
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -357,27 +450,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           color: Colors.white,
           width: 2,
         ),
-        image:
-        widget.state.currentMemberImage != null
-            ? DecorationImage(
-          image: NetworkImage(widget.state.currentMemberImage!),
-          fit: BoxFit.cover,
-        )
-            : null,
       ),
-      child:
-      widget.state.currentMemberImage == null
-          ? Center(
-        child: Text(
-          widget.state.currentMemberName.isNotEmpty
-              ? widget.state.currentMemberName[0].toUpperCase()
-              : 'U',
-          style: AppTextStyles.heading6Bold.copyWith(
-            color: Colors.white,
-          ),
+      child: ClipOval(
+        child: Image.network(
+          cleanUrl,
+          width: 52,
+          height: 52,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
+            return Center(
+              child: Text(
+                memberName.isNotEmpty ? memberName[0].toUpperCase() : 'U',
+                style: AppTextStyles.heading6Bold.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            );
+          },
         ),
-      )
-          : null,
+      ),
     );
   }
 
@@ -466,28 +567,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           items:
-          bannerWidgets.map((banner) {
-            return Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+              bannerWidgets.map((banner) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: banner,
-              ),
-            );
-          }).toList(),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: banner,
+                  ),
+                );
+              }).toList(),
         ),
         const SizedBox(height: 20),
         AnimatedSmoothIndicator(
@@ -535,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             posts: widget.state.popularPosts,
             onTapPost:
                 (postId) =>
-                widget.onAction(HomeAction.onTapPopularPost(postId)),
+                    widget.onAction(HomeAction.onTapPopularPost(postId)),
           ),
           const SizedBox(height: 80),
         ],

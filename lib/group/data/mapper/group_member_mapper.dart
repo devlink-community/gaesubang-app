@@ -3,8 +3,6 @@ import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 
-// lib/group/data/mapper/group_member_mapper.dart 수정
-
 extension GroupMemberDtoMapper on GroupMemberDto {
   /// DTO를 모델로 변환 (타이머 상태 포함)
   GroupMember toModel(GroupTimerActivityDto? timerActivity) {

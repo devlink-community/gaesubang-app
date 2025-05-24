@@ -1,19 +1,18 @@
 // lib/auth/presentation/signup/signup_notifier.dart
 
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/check_email_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/login_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/signup_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/check_email_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/check_nickname_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/save_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

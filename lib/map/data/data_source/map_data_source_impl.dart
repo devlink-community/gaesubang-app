@@ -1,4 +1,5 @@
 // lib/map/data/data_source/map_data_source_impl.dart
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/data/data_source/map_data_source.dart';
 import 'package:devlink_mobile_app/map/data/dto/location_dto.dart';
 import 'package:devlink_mobile_app/map/data/dto/map_marker_dto.dart';
@@ -50,11 +51,11 @@ class MapDataSourceImpl implements MapDataSource {
           (e.toString().contains('위치 접근 권한이 없습니다') ||
               e.toString().contains('위치 서비스가 비활성화되어 있습니다'))) {
         // 비즈니스 로직 검증 실패: 의미 있는 예외 그대로 전달
-        print('위치 조회 비즈니스 로직 오류: $e');
+        AppLogger.error('위치 조회 비즈니스 로직 오류', tag: 'MapDataSource', error: e);
         rethrow;
       } else {
         // Geolocator 통신 오류: 원본 예외 정보 보존
-        print('위치 조회 Geolocator 통신 오류: $e\n$st');
+        AppLogger.error('위치 조회 Geolocator 통신 오류', tag: 'MapDataSource', error: e, stackTrace: st);
         rethrow;
       }
     }
@@ -87,7 +88,7 @@ class MapDataSourceImpl implements MapDataSource {
       );
     } catch (e, st) {
       // ✅ API 통신 오류: 원본 예외 정보 보존
-      print('주변 항목 조회 API 통신 오류: $e\n$st');
+      AppLogger.networkError('주변 항목 조회 API 통신 오류', error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -105,7 +106,7 @@ class MapDataSourceImpl implements MapDataSource {
       await Future.delayed(const Duration(milliseconds: 200)); // 네트워크 지연 시뮬레이션
     } catch (e, st) {
       // ✅ API 통신 오류: 원본 예외 정보 보존
-      print('위치 데이터 저장 API 통신 오류: $e\n$st');
+      AppLogger.networkError('위치 데이터 저장 API 통신 오류', error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -123,7 +124,7 @@ class MapDataSourceImpl implements MapDataSource {
           permission == LocationPermission.whileInUse;
     } catch (e, st) {
       // ✅ Geolocator 권한 확인 오류: 원본 예외 정보 보존
-      print('위치 권한 확인 오류: $e\n$st');
+      AppLogger.error('위치 권한 확인 오류', tag: 'MapDataSource', error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -134,7 +135,7 @@ class MapDataSourceImpl implements MapDataSource {
       return _geolocator.isLocationServiceEnabled();
     } catch (e, st) {
       // ✅ Geolocator 서비스 확인 오류: 원본 예외 정보 보존
-      print('위치 서비스 확인 오류: $e\n$st');
+      AppLogger.error('위치 서비스 확인 오류', tag: 'MapDataSource', error: e, stackTrace: st);
       rethrow;
     }
   }

@@ -20,7 +20,8 @@ class MockGetGroupDetailUseCase {
       maxMemberCount: 10,
       hashTags: ['출석', '테스트'], // 해시태그는 이제 String 리스트
       memberCount: 3,
-      isJoinedByCurrentUser: true, // 현재 사용자 참여 상태
+      isJoinedByCurrentUser: true,
+      pauseTimeLimit: 20, // 현재 사용자 참여 상태
     );
 
     return AsyncData(mockGroup);

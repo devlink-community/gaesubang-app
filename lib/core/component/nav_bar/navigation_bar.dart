@@ -292,7 +292,8 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
 
   Widget _buildProfileImage() {
     // 이미지 URL이 없는 경우 기본 아이콘
-    if (widget.profileImageUrl == null || widget.profileImageUrl!.isEmpty) {
+    if (widget.profileImageUrl == null ||
+        widget.profileImageUrl!.trim().isEmpty) {
       return CircleAvatar(
         radius: 11,
         backgroundColor: Colors.grey.shade200,
@@ -300,36 +301,113 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
       );
     }
 
-    // 로컬 이미지 경로인 경우
-    if (widget.profileImageUrl!.startsWith('/')) {
-      return CircleAvatar(
-        radius: 11,
-        backgroundImage: FileImage(File(widget.profileImageUrl!)),
-        backgroundColor: Colors.grey.shade200,
-        onBackgroundImageError: (exception, stackTrace) {
-          AppLogger.error(
-            '로컬 이미지 로딩 오류',
-            tag: 'NavigationBar',
-            error: exception,
-            stackTrace: stackTrace,
-          );
-        },
-      );
+    final String cleanUrl = widget.profileImageUrl!.trim();
+
+    // 로컬 이미지 경로인 경우 (file:// 또는 / 로 시작)
+    if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
+      try {
+        return CircleAvatar(
+          radius: 11,
+          backgroundImage: FileImage(File(cleanUrl)),
+          backgroundColor: Colors.grey.shade200,
+          onBackgroundImageError: (exception, stackTrace) {
+            AppLogger.error(
+              '로컬 이미지 로딩 오류: $cleanUrl',
+              tag: 'NavigationBar',
+              error: exception,
+              stackTrace: stackTrace,
+            );
+          },
+          child: null, // backgroundImage가 로드되면 child는 표시되지 않음
+        );
+      } catch (e) {
+        AppLogger.error(
+          '로컬 이미지 파일 접근 실패: $cleanUrl',
+          tag: 'NavigationBar',
+          error: e,
+        );
+        return CircleAvatar(
+          radius: 11,
+          backgroundColor: Colors.grey.shade200,
+          child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+        );
+      }
     }
 
     // 네트워크 이미지인 경우
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      try {
+        final uri = Uri.parse(cleanUrl);
+        if (uri.host.isEmpty) {
+          AppLogger.warning(
+            '잘못된 네트워크 이미지 URL: $cleanUrl',
+            tag: 'NavigationBar',
+          );
+          return CircleAvatar(
+            radius: 11,
+            backgroundColor: Colors.grey.shade200,
+            child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+          );
+        }
+
+        return CircleAvatar(
+          radius: 11,
+          backgroundColor: Colors.grey.shade200,
+          child: ClipOval(
+            child: Image.network(
+              cleanUrl,
+              width: 22,
+              height: 22,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                AppLogger.error(
+                  '네트워크 이미지 로딩 오류: $cleanUrl',
+                  tag: 'NavigationBar',
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+                return Icon(
+                  Icons.person,
+                  size: 11,
+                  color: Colors.grey.shade400,
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      } catch (e) {
+        AppLogger.error(
+          '네트워크 이미지 URL 파싱 실패: $cleanUrl',
+          tag: 'NavigationBar',
+          error: e,
+        );
+        return CircleAvatar(
+          radius: 11,
+          backgroundColor: Colors.grey.shade200,
+          child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+        );
+      }
+    }
+
+    // 지원하지 않는 형식의 경우
+    AppLogger.warning('지원하지 않는 이미지 경로 형식: $cleanUrl', tag: 'NavigationBar');
     return CircleAvatar(
       radius: 11,
-      backgroundImage: NetworkImage(widget.profileImageUrl!),
       backgroundColor: Colors.grey.shade200,
-      onBackgroundImageError: (exception, stackTrace) {
-        AppLogger.error(
-          '네트워크 이미지 로딩 오류',
-          tag: 'NavigationBar',
-          error: exception,
-          stackTrace: stackTrace,
-        );
-      },
+      child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
     );
   }
 

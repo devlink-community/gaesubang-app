@@ -13,6 +13,7 @@ import 'package:devlink_mobile_app/community/domain/usecase/toggle_like_use_case
 import 'package:devlink_mobile_app/community/domain/usecase/update_post_use_case.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -30,10 +31,10 @@ part 'community_di.g.dart';
 @Riverpod(keepAlive: true)
 PostDataSource postDataSource(Ref ref) {
   if (AppConfig.useMockCommunity) {
-    print('Community DI: Mock DataSource 사용');
+    AppLogger.debug('Community DI: Mock DataSource 사용', tag: 'CommunityDI');
     return MockPostDataSourceImpl();
   } else {
-    print('Community DI: Firebase DataSource 사용');
+    AppLogger.debug('Community DI: Firebase DataSource 사용', tag: 'CommunityDI');
     return PostFirebaseDataSource(
       firestore: ref.watch(firebaseFirestoreProvider),
       auth: ref.watch(firebaseAuthProvider),

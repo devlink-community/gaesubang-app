@@ -1,16 +1,18 @@
-// lib/auth/domain/usecase/save_terms_agreement_use_case.dart
+// lib/auth/domain/usecase/terms/save_terms_agreement_use_case.dart
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
-import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+import 'package:devlink_mobile_app/auth/domain/repository/auth_terms_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SaveTermsAgreementUseCase {
-  final AuthRepository _repository;
+  final AuthTermsRepository _repository;
 
-  SaveTermsAgreementUseCase({required AuthRepository repository})
-      : _repository = repository;
+  SaveTermsAgreementUseCase({required AuthTermsRepository repository})
+    : _repository = repository;
 
-  Future<AsyncValue<TermsAgreement>> execute(TermsAgreement termsAgreement) async {
+  Future<AsyncValue<TermsAgreement>> execute(
+    TermsAgreement termsAgreement,
+  ) async {
     // 현재 시간으로 동의 시간 설정
     final updatedTerms = TermsAgreement(
       id: termsAgreement.id,

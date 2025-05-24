@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
 import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
-import 'package:devlink_mobile_app/auth/data/mapper/member_mapper.dart';
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
@@ -15,7 +14,7 @@ import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_m
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthDataSource _authDataSource;
@@ -35,7 +34,7 @@ class AuthRepositoryImpl implements AuthRepository {
   static bool _hasInitialized = false;
 
   // === Firebase 스트림 최적화를 위한 Static 변수들 ===
-  static Member? _cachedMember;
+  static User? _cachedMember;
   static String? _lastFirebaseUserId;
 
   /// Mock 스트림 컨트롤러 초기화
@@ -107,7 +106,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   /// Firebase 사용자 정보 캐시 업데이트
-  void _updateFirebaseCache(Member member, String userId) {
+  void _updateFirebaseCache(User member, String userId) {
     _cachedMember = member;
     _lastFirebaseUserId = userId;
 
@@ -132,7 +131,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<Member>> login({
+  Future<Result<User>> login({
     required String email,
     required String password,
   }) async {

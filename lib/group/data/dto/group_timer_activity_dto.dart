@@ -19,12 +19,14 @@ class GroupTimerActivityDto {
   final String? id;
   final String? userId;
   final String? userName;
-  final String? type; // "start", "end" 등 타이머 액션 타입
+  final String? type; // "start", "pause", "resume", "end"
+
   @JsonKey(
     fromJson: FirebaseTimestampConverter.timestampFromJson,
     toJson: FirebaseTimestampConverter.timestampToJson,
   )
   final DateTime? timestamp;
+
   final String? groupId;
   final Map<String, dynamic>? metadata;
 
@@ -32,7 +34,6 @@ class GroupTimerActivityDto {
       _$GroupTimerActivityDtoFromJson(json);
   Map<String, dynamic> toJson() => _$GroupTimerActivityDtoToJson(this);
 
-  // 필드 업데이트를 위한 copyWith 메서드
   GroupTimerActivityDto copyWith({
     String? id,
     String? userId,

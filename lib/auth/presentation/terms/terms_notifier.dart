@@ -1,13 +1,13 @@
 // lib/auth/presentation/terms/terms_notifier.dart
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_terms_info_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/save_terms_agreement_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/save_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
-import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'terms_notifier.g.dart';

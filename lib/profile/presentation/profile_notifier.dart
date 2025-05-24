@@ -1,11 +1,10 @@
-import 'package:flutter/cupertino.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../auth/domain/usecase/get_current_user_use_case.dart';
-import '../../auth/module/auth_di.dart';
-import '../domain/model/focus_time_stats.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../auth/module/auth_di.dart';
+import '../domain/model/focus_time_stats.dart';
 import 'profile_action.dart';
 import 'profile_refresh_state.dart';
 import 'profile_state.dart';

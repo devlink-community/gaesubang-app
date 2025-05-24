@@ -1,5 +1,5 @@
 // lib/profile/presentation/user_profile/user_profile_state.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -30,7 +30,7 @@ class UserProfileState with _$UserProfileState {
     this.currentUserId,
   });
 
-  final AsyncValue<Member> userProfile;
+  final AsyncValue<User> userProfile;
   final bool isFollowing;
   final bool isLoading;
   final String? errorMessage;

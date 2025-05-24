@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/styles/app_color_styles.dart';
 import '../../../core/styles/app_text_styles.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../domain/model/banner.dart';
 import '../banner_action.dart';
 import '../banner_notifier.dart';
@@ -31,9 +32,11 @@ class AdvertisementBanner extends ConsumerWidget {
         ],
       ),
       child: bannerState.activeBanner.when(
-        data: (banner) => banner != null
-            ? _buildBannerContent(banner, bannerNotifier)
-            : _buildEmptyState(),
+        data:
+            (banner) =>
+                banner != null
+                    ? _buildBannerContent(banner, bannerNotifier)
+                    : _buildEmptyState(),
         loading: () => _buildLoadingState(),
         error: (error, stack) => _buildErrorState(bannerNotifier),
       ),
@@ -41,37 +44,26 @@ class AdvertisementBanner extends ConsumerWidget {
   }
 
   Widget _buildBannerContent(Banner banner, BannerNotifier bannerNotifier) {
+    // 🔧 URL 유효성 검사 추가
+    if (banner.imageUrl.isEmpty) {
+      AppLogger.warning(
+        '빈 배너 이미지 URL 감지: ${banner.id}',
+        tag: 'AdvertisementBanner',
+      );
+      return _buildEmptyState();
+    }
+
     return GestureDetector(
-      onTap: () => bannerNotifier.onAction(
-        BannerAction.onTapBanner(banner.id, banner.linkUrl),
-      ),
+      onTap:
+          () => bannerNotifier.onAction(
+            BannerAction.onTapBanner(banner.id, banner.linkUrl),
+          ),
       child: Stack(
         children: [
-          // 배너 이미지 - assets과 network 이미지 모두 지원
+          // 🔧 배너 이미지 - 안전한 이미지 로딩
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: banner.imageUrl.startsWith('assets/')
-                ? Image.asset(
-              banner.imageUrl,
-              width: 380,
-              height: 220,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _buildImageErrorState();
-              },
-            )
-                : CachedNetworkImage(
-              imageUrl: banner.imageUrl,
-              width: 380,
-              height: 220,
-              fit: BoxFit.cover,
-              memCacheWidth: 380, // 메모리 최적화
-              memCacheHeight: 220,
-              placeholder: (context, url) => _buildImageLoadingState(),
-              errorWidget: (context, url, error) => _buildImageErrorState(),
-              fadeInDuration: const Duration(milliseconds: 200),
-              fadeOutDuration: const Duration(milliseconds: 100),
-            ),
+            child: _buildSafeImage(banner),
           ),
 
           // AD 라벨
@@ -98,33 +90,66 @@ class AdvertisementBanner extends ConsumerWidget {
             ),
           ),
 
-          // 배너 제목 (하단 오버레이)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Text(
-                banner.title,
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
+          // 배너 제목 제거 - 이미지만 표시
         ],
       ),
     );
+  }
+
+  // 🔧 안전한 이미지 빌더 메서드 추가
+  Widget _buildSafeImage(Banner banner) {
+    final imageUrl = banner.imageUrl;
+
+    // Assets 이미지 처리
+    if (imageUrl.startsWith('assets/') || imageUrl.startsWith('asset/')) {
+      AppLogger.debug('배너 Asset 이미지 로드: $imageUrl', tag: 'AdvertisementBanner');
+      return Image.asset(
+        imageUrl,
+        width: 380,
+        height: 220,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          AppLogger.error(
+            '배너 Asset 이미지 로드 실패: $imageUrl',
+            tag: 'AdvertisementBanner',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          return _buildImageErrorState();
+        },
+      );
+    }
+
+    // 네트워크 이미지 처리 - HTTP/HTTPS 검증 추가
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      AppLogger.debug('배너 네트워크 이미지 로드: $imageUrl', tag: 'AdvertisementBanner');
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: 380,
+        height: 220,
+        fit: BoxFit.cover,
+        memCacheWidth: 380, // 메모리 최적화
+        memCacheHeight: 220,
+        placeholder: (context, url) => _buildImageLoadingState(),
+        errorWidget: (context, url, error) {
+          AppLogger.error(
+            '배너 네트워크 이미지 로드 실패: $url',
+            tag: 'AdvertisementBanner',
+            error: error,
+          );
+          return _buildImageErrorState();
+        },
+        fadeInDuration: const Duration(milliseconds: 200),
+        fadeOutDuration: const Duration(milliseconds: 100),
+      );
+    }
+
+    // 잘못된 URL 형식 처리
+    AppLogger.warning(
+      '잘못된 배너 이미지 URL 형식: $imageUrl (배너 ID: ${banner.id})',
+      tag: 'AdvertisementBanner',
+    );
+    return _buildImageErrorState();
   }
 
   Widget _buildImageLoadingState() {
@@ -261,9 +286,10 @@ class AdvertisementBanner extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => bannerNotifier.onAction(
-              const BannerAction.refreshBanners(),
-            ),
+            onPressed:
+                () => bannerNotifier.onAction(
+                  const BannerAction.refreshBanners(),
+                ),
             child: Text(
               '다시 시도',
               style: AppTextStyles.button2Regular.copyWith(

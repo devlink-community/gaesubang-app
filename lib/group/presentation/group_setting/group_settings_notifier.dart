@@ -1,6 +1,7 @@
 // lib/group/presentation/group_setting/group_settings_notifier.dart
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/image_compression.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
@@ -13,7 +14,6 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
 import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
 import 'package:devlink_mobile_app/storage/module/storage_di.dart';
-import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_settings_notifier.g.dart';
@@ -42,7 +42,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
     // 추가: Provider가 dispose될 때 호출될 콜백 등록
     ref.onDispose(() {
       _mounted = false;
-      debugPrint('GroupSettingsNotifier disposed');
+      AppLogger.debug('GroupSettingsNotifier disposed', tag: 'GroupSettings');
     });
 
     // 초기 상태를 먼저 반환
@@ -135,7 +135,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           break;
       }
     } catch (e, st) {
-      debugPrint('멤버 페이지 로드 중 예외 발생: $e\n$st');
+      AppLogger.error(
+        '멤버 페이지 로드 중 예외 발생',
+        tag: 'GroupSettings',
+        error: e,
+        stackTrace: st,
+      );
       _handleMemberPageError(e, isInitialLoad);
     }
   }
@@ -172,8 +177,9 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       memberLoadError: null,
     );
 
-    debugPrint(
+    AppLogger.info(
       '멤버 페이지 로딩 완료: ${updatedMembers.length}/${allMembers.length}, hasMore: $hasMore',
+      tag: 'GroupSettings',
     );
   }
 
@@ -196,7 +202,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       );
     }
 
-    debugPrint('멤버 로딩 실패: $friendlyMessage');
+    AppLogger.error(
+      '멤버 로딩 실패: $friendlyMessage',
+      tag: 'GroupSettings',
+      error: error,
+    );
   }
 
   // 🔧 새로 추가: 사용자 친화적 에러 메시지 생성
@@ -264,7 +274,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         return;
       }
 
-      debugPrint('🖼️ 이미지 업로드 시작: $localImagePath');
+      AppLogger.info('이미지 업로드 시작: $localImagePath', tag: 'GroupSettings');
 
       // 1단계: 이미지 압축 시작
       state = state.copyWith(
@@ -274,7 +284,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
       // file:// 프로토콜 제거 (플랫폼 호환성 개선)
       final cleanPath = localImagePath.replaceFirst(RegExp(r'^file:\/\/'), '');
-      debugPrint('🖼️ 정제된 이미지 경로: $cleanPath');
+      AppLogger.debug('정제된 이미지 경로: $cleanPath', tag: 'GroupSettings');
 
       final compressedFile = await ImageCompressionUtils.compressAndSaveImage(
         originalImagePath: cleanPath,
@@ -284,7 +294,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         maxFileSizeKB: 500,
       );
 
-      debugPrint('🖼️ 이미지 압축 완료: ${compressedFile.path}');
+      AppLogger.info('이미지 압축 완료: ${compressedFile.path}', tag: 'GroupSettings');
 
       // 2단계: 압축 완료, 업로드 준비
       state = state.copyWith(
@@ -293,7 +303,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
       // 3단계: 압축된 이미지를 바이트로 읽기
       final imageBytes = await compressedFile.readAsBytes();
-      debugPrint('🖼️ 이미지 바이트 크기: ${imageBytes.length}');
+      AppLogger.debug('이미지 바이트 크기: ${imageBytes.length}', tag: 'GroupSettings');
 
       // 4단계: Firebase Storage 업로드 시작
       state = state.copyWith(
@@ -305,7 +315,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           'group_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final folderPath = 'groups/${currentGroup.id}';
 
-      debugPrint('🖼️ 스토리지 경로: $folderPath/$fileName');
+      AppLogger.debug('스토리지 경로: $folderPath/$fileName', tag: 'GroupSettings');
 
       final uploadResult = await _uploadImageUseCase.execute(
         folderPath: folderPath,
@@ -321,7 +331,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
 
       switch (uploadResult) {
         case AsyncData(:final value):
-          debugPrint('🖼️ 이미지 업로드 성공: $value');
+          AppLogger.info('이미지 업로드 성공: $value', tag: 'GroupSettings');
 
           // 5단계: 업로드 완료
           state = state.copyWith(
@@ -342,7 +352,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
               await compressedFile.delete();
             }
           } catch (e) {
-            debugPrint('임시 파일 삭제 실패: $e');
+            AppLogger.warning('임시 파일 삭제 실패', tag: 'GroupSettings', error: e);
           }
 
           // 3초 후 완료 상태 초기화
@@ -360,7 +370,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           break;
 
         case AsyncError(:final error):
-          debugPrint('🖼️ 이미지 업로드 실패: $error');
+          AppLogger.error('이미지 업로드 실패', tag: 'GroupSettings', error: error);
           state = state.copyWith(
             imageUploadStatus: ImageUploadStatus.failed,
             uploadProgress: 0.0,
@@ -377,8 +387,12 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
           break;
       }
     } catch (e, st) {
-      debugPrint('🖼️ 이미지 업로드 과정에서 오류 발생: $e');
-      debugPrint('🖼️ StackTrace: $st');
+      AppLogger.error(
+        '이미지 업로드 과정에서 오류 발생',
+        tag: 'GroupSettings',
+        error: e,
+        stackTrace: st,
+      );
 
       state = state.copyWith(
         imageUploadStatus: ImageUploadStatus.failed,
@@ -427,11 +441,11 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         // 로컬 파일 경로인 경우 Firebase Storage에 업로드
         else if (imageUrl.startsWith('file://') ||
             imageUrl.startsWith('content://')) {
-          debugPrint('🖼️ 로컬 파일 업로드 시작: $imageUrl');
+          AppLogger.info('로컬 파일 업로드 시작: $imageUrl', tag: 'GroupSettings');
           await uploadGroupImage(imageUrl);
         } else {
           // 네트워크 URL인 경우 직접 설정
-          debugPrint('🖼️ 네트워크 URL 직접 설정: $imageUrl');
+          AppLogger.info('네트워크 URL 직접 설정: $imageUrl', tag: 'GroupSettings');
           state = state.copyWith(imageUrl: imageUrl);
         }
 
@@ -556,6 +570,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       imageUrl: state.imageUrl,
       createdAt: currentGroup.createdAt,
       isJoinedByCurrentUser: currentGroup.isJoinedByCurrentUser,
+      pauseTimeLimit: currentGroup.pauseTimeLimit,
     );
 
     // 그룹 업데이트

@@ -197,7 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         data:
             (member) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-              child: ProfileInfoCard(member: member, compact: false),
+              child: ProfileInfoCard(user: member, compact: false),
             ),
         loading:
             () => const Padding(

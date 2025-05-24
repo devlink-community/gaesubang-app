@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -35,7 +35,7 @@ class ProfileEditState with _$ProfileEditState {
   });
 
   /// 프로필 로드 상태
-  final AsyncValue<Member> profileState;
+  final AsyncValue<User> profileState;
 
   /// 저장 작업 상태 (null = 저장 안함, true = 저장 성공)
   final AsyncValue<bool?> saveState;
@@ -44,7 +44,7 @@ class ProfileEditState with _$ProfileEditState {
   final AsyncValue<bool?> nicknameCheckState;
 
   /// 편집 중인 프로필 정보
-  final Member? editingProfile;
+  final User? editingProfile;
 
   /// 폼 필드별 검증 에러 메시지
   final Map<String, String> validationErrors;
@@ -53,7 +53,7 @@ class ProfileEditState with _$ProfileEditState {
   final bool isImageUploading;
 
   /// 원본 프로필 (에러 발생 시 복원용)
-  final Member? originalProfile;
+  final User? originalProfile;
 
   /// 중복 요청 방지를 위한 요청 ID들
   final int? activeLoadRequestId;

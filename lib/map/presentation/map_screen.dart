@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/map/domain/model/location.dart';
 import 'package:devlink_mobile_app/map/presentation/components/filter_tabs.dart';
 import 'package:devlink_mobile_app/map/presentation/components/nearby_card_view.dart';
@@ -76,7 +77,7 @@ class _MapScreenState extends State<MapScreen> {
                   /// 지도 재스처 이벤트를 우선순위
                   onMapReady: (controller) {
                     _mapController = controller;
-                    print("네이버맵 준비 완료!");
+                    AppLogger.info('네이버맵 준비 완료!', tag: 'MapScreen');
                   },
                   onMapTapped: (point, latLng) {
                     // 지도 탭 이벤트 처리
