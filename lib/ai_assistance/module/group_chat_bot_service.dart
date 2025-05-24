@@ -2,8 +2,8 @@
 import 'dart:math';
 
 import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/model/chat_message.dart';
-import 'package:flutter/foundation.dart';
 
 import 'bot_constants.dart';
 
@@ -39,7 +39,11 @@ class GroupChatbotService {
         botType: botType,
       );
     } catch (e) {
-      debugPrint('챗봇 응답 생성 실패: $e');
+      AppLogger.error(
+        '챗봇 응답 생성 실패',
+        tag: 'GroupChatbot',
+        error: e,
+      );
 
       // 폴백 응답
       return _createBotMessage(
