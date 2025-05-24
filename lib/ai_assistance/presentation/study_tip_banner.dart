@@ -563,7 +563,7 @@ class StudyTipBanner extends ConsumerWidget {
 
                   // 🆕 더 구체적인 메시지
                   Text(
-                    '새로운 꿀팁을\n생성하고 있어요 ✨',
+                    '새로운 꿀팁을\n우려내고 있어요 ✨',
                     style: AppTextStyles.subtitle1Bold.copyWith(
                       color: Colors.white,
                       fontSize: 18,
@@ -573,7 +573,7 @@ class StudyTipBanner extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   Text(
-                    '이전과는 완전히 다른 새로운 인사이트를 준비 중입니다',
+                    '이전과는 완전히 다른 새로운 꿀팁을 준비 중입니다',
                     style: AppTextStyles.body2Regular.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
@@ -1143,7 +1143,7 @@ class _StudyTipDialogState extends State<_StudyTipDialog> {
                           Icon(Icons.refresh_rounded, size: 16), // 🆕 새로고침 아이콘
                           SizedBox(width: 6),
                           Text(
-                            '새 꿀팁!',
+                            '꿀팁 하나더!',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
