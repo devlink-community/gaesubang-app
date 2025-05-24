@@ -4,6 +4,7 @@ import 'package:devlink_mobile_app/auth/domain/usecase/core/check_email_availabi
 import 'package:devlink_mobile_app/auth/domain/usecase/core/check_nickname_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/clear_terms_from_memory_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_from_memory_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
@@ -22,7 +23,8 @@ class SignupNotifier extends _$SignupNotifier {
   late final LoginUseCase _loginUseCase;
   late final CheckNicknameAvailabilityUseCase _checkNicknameAvailabilityUseCase;
   late final CheckEmailAvailabilityUseCase _checkEmailAvailabilityUseCase;
-  late final GetTermsFromMemoryUseCase _getTermsFromMemoryUseCase;
+  late final GetTermsFromMemoryUseCase _getTermsFromMemoryUseCase; // 추가
+  late final ClearTermsFromMemoryUseCase _clearTermsFromMemoryUseCase; // 추가
 
   @override
   SignupState build() {
@@ -36,7 +38,12 @@ class SignupNotifier extends _$SignupNotifier {
     _checkEmailAvailabilityUseCase = ref.watch(
       checkEmailAvailabilityUseCaseProvider,
     );
-    _getTermsFromMemoryUseCase = ref.watch(getTermsFromMemoryUseCaseProvider);
+    _getTermsFromMemoryUseCase = ref.watch(
+      getTermsFromMemoryUseCaseProvider,
+    ); // 추가
+    _clearTermsFromMemoryUseCase = ref.watch(
+      clearTermsFromMemoryUseCaseProvider,
+    ); // 추가
 
     AppLogger.authInfo('SignupNotifier 초기화 완료');
     return const SignupState();
@@ -432,29 +439,59 @@ class SignupNotifier extends _$SignupNotifier {
       return;
     }
 
+    // 회원가입 실행 부분
     AppLogger.logStep(3, 6, '회원가입 API 호출 시작');
+
+    // 메모리에서 약관 정보 로드
+    final termsResult = await _getTermsFromMemoryUseCase.execute();
+
+    if (termsResult.hasError || termsResult.value == null) {
+      // 약관 정보가 없거나 로드 실패
+      AppLogger.error('약관 정보 로드 실패', error: termsResult.error);
+      state = state.copyWith(
+        formErrorMessage: '약관 동의 정보를 확인할 수 없습니다. 약관 동의를 다시 진행해주세요.',
+      );
+      return;
+    }
+
+    // 약관 정보가 로드되면 회원가입 진행
+    final termsAgreement = termsResult.value!;
+
+    // 필수 약관 동의 여부 확인
+    if (!termsAgreement.isRequiredTermsAgreed) {
+      AppLogger.warning('필수 약관 미동의 - 회원가입 중단');
+      state = state.copyWith(
+        termsError: AuthErrorMessages.termsRequired,
+        formErrorMessage: AuthErrorMessages.termsNotAgreed,
+      );
+      return;
+    }
+
     AppLogger.logState('회원가입 요청 정보', {
-      'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
-      'nickname': PrivacyMaskUtil.maskNickname(state.nickname), // 변경
+      'email': PrivacyMaskUtil.maskEmail(state.email),
+      'nickname': PrivacyMaskUtil.maskNickname(state.nickname),
       'password_length': state.password.length,
-      'is_terms_agreed': state.isTermsAgreed,
+      'terms_agreed': termsAgreement.isRequiredTermsAgreed,
     });
 
-    // 3. 회원가입 실행
     state = state.copyWith(
       signupResult: const AsyncValue.loading(),
-      formErrorMessage: null, // 회원가입 시작 시 폼 에러 메시지 클리어
+      formErrorMessage: null,
     );
 
     final signupResult = await _signupUseCase.execute(
       email: state.email,
       password: state.password,
       nickname: state.nickname,
+      termsAgreement: termsAgreement, // 약관 정보 객체 전달
     );
 
     AppLogger.logStep(4, 6, '회원가입 API 응답 처리');
     // 회원가입 성공 시 자동 로그인 수행
     if (signupResult.hasValue) {
+      AppLogger.authInfo('회원가입 성공 - 약관 정보 메모리 정리');
+      await _clearTermsFromMemoryUseCase.execute();
+
       AppLogger.authInfo('회원가입 성공 - 자동 로그인 시작');
 
       AppLogger.logStep(5, 6, '자동 로그인 수행 중');

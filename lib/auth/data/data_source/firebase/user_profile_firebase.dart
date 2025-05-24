@@ -35,47 +35,45 @@ class UserProfileFirebase {
     required String userId,
     required String email,
     required String nickname,
-    required String agreedTermsId,
+    required Map<String, dynamic> termsMap, // Map 형태로 변경
   }) async {
     return ApiCallDecorator.wrap(
       'UserProfileFirebase.createUserProfile',
       () async {
-        AppLogger.logStep(1, 1, 'Firestore 사용자 데이터 저장');
+        AppLogger.debug('Firestore 사용자 프로필 생성 시작');
 
-        final now = Timestamp.now();
-        final userData = {
-          'uid': userId,
-          'email': email.toLowerCase(),
-          'nickname': nickname,
-          'image': '',
-          'description': '',
-          'onAir': false,
-          'position': '',
-          'skills': '',
-          'streakDays': 0,
-          'agreedTermId': agreedTermsId,
-          'isServiceTermsAgreed': true,
-          'isPrivacyPolicyAgreed': true,
-          'isMarketingAgreed': false,
-          'agreedAt': now,
-          'joingroup': <Map<String, dynamic>>[],
-        };
+        try {
+          // 프로필 데이터 준비
+          final userData = {
+            'uid': userId,
+            'email': email.toLowerCase(),
+            'nickname': nickname,
+            'image': '',
+            'description': '',
+            'onAir': false,
+            'position': '',
+            'skills': '',
+            'streakDays': 0,
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+            // 약관 동의 정보 추가
+            'isServiceTermsAgreed': termsMap['isServiceTermsAgreed'] ?? false,
+            'isPrivacyPolicyAgreed': termsMap['isPrivacyPolicyAgreed'] ?? false,
+            'isMarketingAgreed': termsMap['isMarketingAgreed'] ?? false,
+            'agreedAt': termsMap['agreedAt'] ?? FieldValue.serverTimestamp(),
+            // 추가 필드는 필요에 따라 설정
+          };
 
-        await _usersCollection.doc(userId).set(userData);
+          // Firestore에 저장
+          await _usersCollection.doc(userId).set(userData);
 
-        AppLogger.authInfo('Firestore 사용자 데이터 저장 완료');
-        AppLogger.logState('생성된 사용자 정보', {
-          'uid': userId,
-          'email': userData['email'],
-          'nickname': userData['nickname'],
-          'agreed_terms_id': userData['agreedTermId'],
-        });
+          AppLogger.debug('Firestore 사용자 프로필 생성 완료');
+        } catch (e, st) {
+          AppLogger.error('Firestore 사용자 프로필 생성 실패', error: e, stackTrace: st);
+          rethrow;
+        }
       },
-      params: {
-        'userId': PrivacyMaskUtil.maskUserId(userId),
-        'email': PrivacyMaskUtil.maskEmail(email),
-        'nickname': PrivacyMaskUtil.maskNickname(nickname),
-      },
+      params: {'userId': userId},
     );
   }
 

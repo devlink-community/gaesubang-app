@@ -71,11 +71,12 @@ class AuthCoreFirebase {
   }
 
   /// 회원가입
+  /// 회원가입
   Future<User> createUserWithEmailPassword({
     required String email,
     required String password,
     required String nickname,
-    required String agreedTermsId,
+    required Map<String, dynamic> termsMap, // Map 형태로 변경
   }) async {
     return ApiCallDecorator.wrap(
       'AuthCoreFirebase.createUserWithEmailPassword',
@@ -85,14 +86,18 @@ class AuthCoreFirebase {
           'email': PrivacyMaskUtil.maskEmail(email),
           'nickname': PrivacyMaskUtil.maskNickname(nickname),
           'password_length': password.length,
-          'agreed_terms_id': agreedTermsId,
+          'terms_service_agreed': termsMap['isServiceTermsAgreed'] ?? false,
+          'terms_privacy_agreed': termsMap['isPrivacyPolicyAgreed'] ?? false,
+          'terms_marketing_agreed': termsMap['isMarketingAgreed'] ?? false,
         });
 
         AppLogger.logStep(1, 3, '입력값 유효성 검사');
         AuthValidator.validateEmailFormat(email);
         AuthValidator.validateNicknameFormat(nickname);
 
-        if (agreedTermsId.isEmpty) {
+        // 약관 동의 여부 확인
+        if (!(termsMap['isServiceTermsAgreed'] == true &&
+            termsMap['isPrivacyPolicyAgreed'] == true)) {
           AppLogger.error('약관 동의 누락');
           throw Exception(AuthErrorMessages.termsNotAgreed);
         }
@@ -117,31 +122,7 @@ class AuthCoreFirebase {
           return user;
         } catch (e, st) {
           AppLogger.error('Firebase Auth 계정 생성 실패', error: e, stackTrace: st);
-
-          if (e is FirebaseAuthException) {
-            AppLogger.logState('Firebase Auth 에러 상세', {
-              'error_code': e.code,
-              'error_message': e.message,
-              'email': email,
-            });
-
-            switch (e.code) {
-              case 'email-already-in-use':
-                throw Exception(AuthErrorMessages.emailAlreadyInUse);
-              case 'weak-password':
-                throw Exception('비밀번호가 너무 약합니다');
-              case 'invalid-email':
-                throw Exception('잘못된 이메일 형식입니다');
-              case 'operation-not-allowed':
-                throw Exception('이메일/비밀번호 인증이 비활성화되어 있습니다');
-              case 'too-many-requests':
-                throw Exception('너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요');
-              default:
-                throw Exception('계정 생성에 실패했습니다: ${e.message}');
-            }
-          }
-
-          throw Exception('계정 생성 중 오류가 발생했습니다: $e');
+          rethrow;
         }
       },
       params: {
