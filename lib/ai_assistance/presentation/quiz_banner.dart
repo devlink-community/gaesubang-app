@@ -378,17 +378,19 @@ class DailyQuizBanner extends ConsumerWidget {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
 
-        return WillPopScope(
-          onWillPop: () async {
-            // 뒤로가기 버튼으로 취소 가능
-            isCancelled = true;
-            loadingTimer?.cancel();
+        return PopScope(
+          canPop: true,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) {
+              // 뒤로가기 버튼으로 취소 처리
+              isCancelled = true;
+              loadingTimer?.cancel();
 
-            // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
-            _notifyDialogState(false);
+              // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+              _notifyDialogState(false);
 
-            AppLogger.info('사용자가 퀴즈 로딩을 취소했습니다', tag: 'QuizGeneration');
-            return true;
+              AppLogger.info('사용자가 퀴즈 로딩을 취소했습니다', tag: 'QuizGeneration');
+            }
           },
           child: Dialog(
             key: loadingDialogKey,

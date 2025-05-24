@@ -34,7 +34,7 @@ String _generateCacheKey(String? skills) {
   return '$today-$skillPrefix-$timeSlot';
 }
 
-// 개선된 캐시 기반 FutureProvider
+// 🔧 개선된 캐시 기반 FutureProvider - 일반 배너용
 final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
     ref,
     skills,
@@ -78,24 +78,14 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
         tag: 'StudyTipCache',
       );
 
-      // 캐시 크기 제한 확인 (최대 20개 항목으로 증가)
+      // 🔧 캐시 정리 서비스 활용
+      final cacheCleanup = ref.read(cacheCleanupProvider);
+      cacheCleanup.cleanupOldCacheEntries();
+
+      // 새 항목 추가
       final currentCache = Map<String, dynamic>.from(
         ref.read(studyTipCacheProvider),
       );
-      if (currentCache.length >= 20) {
-        // 가장 오래된 항목들 제거 (5개씩 정리)
-        final keysToRemove = currentCache.keys.take(5).toList();
-        for (final key in keysToRemove) {
-          currentCache.remove(key);
-        }
-
-        AppLogger.info(
-          'StudyTip 캐시 정리: 오래된 항목 ${keysToRemove.length}개 제거',
-          tag: 'StudyTipCache',
-        );
-      }
-
-      // 새 항목 추가
       currentCache[cacheKey] = studyTip;
       ref.read(studyTipCacheProvider.notifier).state = currentCache;
 
@@ -116,13 +106,13 @@ final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
 class StudyTipBanner extends ConsumerWidget {
   final String? skills;
 
-  // 🆕 다이얼로그 상태 변경 콜백 추가
+  // 다이얼로그 상태 변경 콜백
   final Function(bool isVisible)? onDialogStateChanged;
 
   const StudyTipBanner({
     super.key,
     this.skills,
-    this.onDialogStateChanged, // 🆕 콜백 매개변수 추가
+    this.onDialogStateChanged,
   });
 
   @override
@@ -375,7 +365,7 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
-  // 🔧 다이얼로그 상태 알림 기능 추가
+  // 다이얼로그 상태 알림 기능
   void _notifyDialogState(bool isVisible) {
     if (onDialogStateChanged != null) {
       onDialogStateChanged!(isVisible);
@@ -407,8 +397,8 @@ class StudyTipBanner extends ConsumerWidget {
     );
   }
 
-  // 🔧 새로운 팁 로딩 메서드에 다이얼로그 상태 관리 추가
-  Future<void> _loadNewTip(
+  // 🆕 강제 새로고침용 새로운 팁 로딩 메서드 - 캐시 우회
+  Future<void> _loadNewTipWithCacheBypass(
       BuildContext context,
       String? skills,
       WidgetRef ref,
@@ -416,6 +406,79 @@ class StudyTipBanner extends ConsumerWidget {
       ) async {
     final startTime = DateTime.now();
 
+    AppLogger.info(
+      '캐시 우회 새로운 학습 팁 로딩 시작: $skills',
+      tag: 'StudyTipFresh',
+    );
+
+    // 🔧 freshStudyTipProvider를 사용하여 캐시 완전 우회
+    try {
+      final freshTip = await ref.read(freshStudyTipProvider(skills).future);
+
+      final duration = DateTime.now().difference(startTime);
+
+      if (freshTip != null) {
+        AppLogger.logPerformance('캐시 우회 StudyTip 생성 성공', duration);
+        AppLogger.info(
+          '새 StudyTip 생성 성공 (캐시 우회): ${freshTip.title}',
+          tag: 'StudyTipFresh',
+        );
+
+        // 다이얼로그 내용 업데이트
+        updateDialogContent(freshTip);
+
+        // 🆕 새로운 팁을 일반 캐시에도 저장 (다음 번 일반 로딩을 위해)
+        _updateHomeBannerCache(ref, freshTip, skills);
+
+      } else {
+        AppLogger.logPerformance('캐시 우회 StudyTip 생성 실패', duration);
+
+        // Fallback 처리
+        final backupTip = _generateBackupStudyTip(skills, ref);
+        updateDialogContent(backupTip);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('새로운 팁 생성에 실패했습니다. 기본 팁을 표시합니다.'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.amber.shade700,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.logPerformance('캐시 우회 StudyTip 생성 예외', duration);
+      AppLogger.error(
+        '캐시 우회 StudyTip 생성 예외',
+        tag: 'StudyTipFresh',
+        error: e,
+      );
+
+      // Fallback 처리
+      final backupTip = _generateBackupStudyTip(skills, ref);
+      updateDialogContent(backupTip);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('예상치 못한 오류가 발생했습니다. 기본 팁을 표시합니다.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // 🔧 기존 로딩 다이얼로그와 함께 사용하는 개선된 메서드
+  Future<void> _loadNewTip(
+      BuildContext context,
+      String? skills,
+      WidgetRef ref,
+      Function(StudyTip) updateDialogContent,
+      ) async {
     // 대화상자 컨텍스트 추적을 위한 변수
     BuildContext? loadingDialogContext;
 
@@ -429,11 +492,9 @@ class StudyTipBanner extends ConsumerWidget {
     final loadingDialogKey = UniqueKey();
 
     AppLogger.info(
-      '새로운 학습 팁 로딩 시작',
+      '새로운 학습 팁 로딩 시작 (로딩 다이얼로그 포함)',
       tag: 'StudyTipGeneration',
     );
-
-    // 🆕 새 팁 로딩 다이얼로그 표시 (이미 다이얼로그가 표시된 상태이므로 추가 알림 불필요)
 
     showDialog(
       context: context,
@@ -442,13 +503,15 @@ class StudyTipBanner extends ConsumerWidget {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
 
-        return WillPopScope(
-          onWillPop: () async {
-            // 뒤로가기 버튼으로 취소 가능
-            isCancelled = true;
-            loadingTimer?.cancel();
-            AppLogger.info('사용자가 학습 팁 로딩을 취소했습니다', tag: 'StudyTipGeneration');
-            return true;
+        return PopScope(
+          canPop: true,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) {
+              // 뒤로가기 버튼으로 취소 처리
+              isCancelled = true;
+              loadingTimer?.cancel();
+              AppLogger.info('사용자가 학습 팁 로딩을 취소했습니다', tag: 'StudyTipGeneration');
+            }
           },
           child: Dialog(
             key: loadingDialogKey,
@@ -476,7 +539,7 @@ class StudyTipBanner extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 브랜드 아이콘 - 기존과 동일
+                  // 브랜드 아이콘
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -491,16 +554,16 @@ class StudyTipBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // 로딩 스피너 - 기존과 동일
+                  // 로딩 스피너
                   const CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     strokeWidth: 3,
                   ),
                   const SizedBox(height: 24),
 
-                  // 기존 메시지 그대로 유지
+                  // 🆕 더 구체적인 메시지
                   Text(
-                    '따뜻한 꿀팁을\n우려내고 있어요 ☕',
+                    '새로운 꿀팁을\n생성하고 있어요 ✨',
                     style: AppTextStyles.subtitle1Bold.copyWith(
                       color: Colors.white,
                       fontSize: 18,
@@ -509,9 +572,8 @@ class StudyTipBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // 기존 부가 설명 그대로 유지
                   Text(
-                    'AI가 당신만을 위한 특별한 팁을 준비 중이에요',
+                    '이전과는 완전히 다른 새로운 인사이트를 준비 중입니다',
                     style: AppTextStyles.body2Regular.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
@@ -520,7 +582,6 @@ class StudyTipBanner extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // 기존 기술적 디테일 그대로 유지
                   Text(
                     '잠시만 기다려주세요...',
                     style: AppTextStyles.captionRegular.copyWith(
@@ -543,14 +604,12 @@ class StudyTipBanner extends ConsumerWidget {
       }
     });
 
-    // 타임아웃 설정 (기존 20초 유지)
-    loadingTimer = Timer(const Duration(seconds: 20), () {
+    // 타임아웃 설정 (15초로 단축 - 캐시 우회로 더 빠름)
+    loadingTimer = Timer(const Duration(seconds: 15), () {
       if (isCancelled) return;
 
-      final duration = DateTime.now().difference(startTime);
-
       AppLogger.warning(
-        '학습 팁 로딩 타임아웃 (${duration.inSeconds}초)',
+        '새 학습 팁 로딩 타임아웃 (15초)',
         tag: 'StudyTipGeneration',
       );
 
@@ -559,7 +618,7 @@ class StudyTipBanner extends ConsumerWidget {
       if (context.mounted && !isCancelled) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('인사이트 생성이 지연되고 있습니다. 기본 팁을 표시합니다.'),
+            content: Text('새로운 팁 생성이 지연되고 있습니다. 기본 팁을 표시합니다.'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColorStyles.primary80,
           ),
@@ -571,21 +630,9 @@ class StudyTipBanner extends ConsumerWidget {
       }
     });
 
+    // 🆕 캐시 우회 방식으로 새로운 팁 로딩
     try {
-      // UseCase 호출 - 전체 스킬 목록 전달 (Repository에서 랜덤 선택)
-      final getStudyTipUseCase = ref.read(getStudyTipUseCaseProvider);
-
-      // 캐시 방지를 위한 타임스탬프 추가
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final skillWithTimestamp = '${skills ?? '프로그래밍 기초'}-$timestamp';
-
-      AppLogger.info(
-        '학습 팁 UseCase 호출: $skillWithTimestamp',
-        tag: 'StudyTipGeneration',
-      );
-
-      // 학습 팁 생성 (타이머보다 먼저 완료되면 타이머 취소)
-      final asyncValue = await getStudyTipUseCase.execute(skillWithTimestamp);
+      final freshTip = await ref.read(freshStudyTipProvider(skills).future);
 
       // 취소되었으면 더 이상 진행하지 않음
       if (isCancelled) {
@@ -599,32 +646,30 @@ class StudyTipBanner extends ConsumerWidget {
       // 로딩 다이얼로그 닫기
       _closeLoadingDialog(loadingDialogContext);
 
-      final duration = DateTime.now().difference(startTime);
-
-      // 결과 처리
-      if (asyncValue.hasValue && asyncValue.value != null) {
-        AppLogger.logPerformance('새 StudyTip 생성 성공', duration);
+      if (freshTip != null) {
         AppLogger.info(
-          '새 StudyTip 생성 성공: ${asyncValue.value!.title}',
+          '새 StudyTip 생성 성공 (캐시 우회): ${freshTip.title}',
           tag: 'StudyTipGeneration',
         );
 
         // 기존 다이얼로그 내용 업데이트
-        updateDialogContent(asyncValue.value!);
-      } else if (asyncValue.hasError) {
-        AppLogger.logPerformance('StudyTip 생성 오류', duration);
-        AppLogger.error(
-          'StudyTip 생성 오류',
+        updateDialogContent(freshTip);
+
+        // 새로운 팁을 일반 캐시에도 저장
+        _updateHomeBannerCache(ref, freshTip, skills);
+
+      } else {
+        AppLogger.warning(
+          'freshStudyTipProvider에서 null 반환',
           tag: 'StudyTipGeneration',
-          error: asyncValue.error,
         );
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('새 팁을 불러오는데 실패했습니다: ${asyncValue.error}'),
+              content: Text('새로운 팁을 생성하지 못했습니다. 기본 팁을 표시합니다.'),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.amber.shade700,
             ),
           );
 
@@ -644,10 +689,8 @@ class StudyTipBanner extends ConsumerWidget {
       loadingTimer.cancel();
       _closeLoadingDialog(loadingDialogContext);
 
-      final duration = DateTime.now().difference(startTime);
-      AppLogger.logPerformance('StudyTip 생성 예외 발생', duration);
       AppLogger.error(
-        'StudyTip 생성 예외 발생',
+        'freshStudyTipProvider 예외 발생',
         tag: 'StudyTipGeneration',
         error: e,
       );
@@ -719,7 +762,7 @@ class StudyTipBanner extends ConsumerWidget {
       tag: 'StudyTipUI',
     );
 
-    // 🆕 상세 다이얼로그 표시 전 배너 자동재생 중지
+    // 상세 다이얼로그 표시 전 배너 자동재생 중지
     _notifyDialogState(true);
 
     // StatefulWidget으로 다이얼로그 상태 관리
@@ -741,16 +784,16 @@ class StudyTipBanner extends ConsumerWidget {
         },
         onLoadNewTip: (Function(StudyTip) updateContent) {
           AppLogger.info(
-            'Next Insight 버튼 클릭',
+            'Next Insight 버튼 클릭 - 캐시 우회 모드',
             tag: 'StudyTipUI',
           );
 
-          // Next Insight 버튼 클릭 시 기존 로딩 팝업 스타일 사용
+          // 🆕 캐시 우회 방식으로 새 팁 로드
           _loadNewTip(context, skills, ref, updateContent);
         },
       ),
     ).then((_) {
-      // 🆕 상세 다이얼로그 닫힐 때 배너 자동재생 재개
+      // 상세 다이얼로그 닫힐 때 배너 자동재생 재개
       _notifyDialogState(false);
     });
   }
@@ -1076,11 +1119,11 @@ class _StudyTipDialogState extends State<_StudyTipDialog> {
                   // 간격
                   const SizedBox(width: 12),
 
-                  // Next Insight 버튼
+                  // 🆕 개선된 Next Insight 버튼 - 캐시 우회 강조
                   Expanded(
                     child: TextButton(
                       onPressed: () {
-                        // 기존 로딩 팝업 스타일로 새 팁 로드
+                        // 캐시 우회 방식으로 새 팁 로드
                         widget.onLoadNewTip(_updateCurrentTip);
                       },
                       style: TextButton.styleFrom(
@@ -1097,10 +1140,10 @@ class _StudyTipDialogState extends State<_StudyTipDialog> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.auto_awesome, size: 16),
+                          Icon(Icons.refresh_rounded, size: 16), // 🆕 새로고침 아이콘
                           SizedBox(width: 6),
                           Text(
-                            '꿀팁 하나 더?',
+                            '새 꿀팁!',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
