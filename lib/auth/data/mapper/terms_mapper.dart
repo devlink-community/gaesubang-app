@@ -5,7 +5,6 @@ extension TermsAgreementMapper on TermsAgreement {
   /// TermsAgreement를 UserDto에 저장할 Map으로 변환
   Map<String, dynamic> toUserDtoMap() {
     return {
-      'agreedTermId': id,
       'isServiceTermsAgreed': isServiceTermsAgreed,
       'isPrivacyPolicyAgreed': isPrivacyPolicyAgreed,
       'isMarketingAgreed': isMarketingAgreed,
@@ -18,7 +17,6 @@ extension MapToTermsAgreementMapper on Map<String, dynamic> {
   /// Map에서 TermsAgreement로 변환
   TermsAgreement toTermsAgreement() {
     return TermsAgreement(
-      id: this['agreedTermId'] as String? ?? '',
       isAllAgreed:
           (this['isServiceTermsAgreed'] == true) &&
           (this['isPrivacyPolicyAgreed'] == true),

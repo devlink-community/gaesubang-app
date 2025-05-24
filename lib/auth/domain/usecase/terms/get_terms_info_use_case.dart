@@ -10,20 +10,30 @@ class GetTermsInfoUseCase {
   GetTermsInfoUseCase({required AuthTermsRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<TermsAgreement?>> execute(String? termsId) async {
-    // termsId가 없으면 기본 빈 약관 정보 반환
-    if (termsId == null) {
-      // 새로운 약관 ID 생성 (실제로는 저장하지 않음)
-      final newTermsId = 'terms_${DateTime.now().millisecondsSinceEpoch}';
-      return AsyncData(TermsAgreement(id: newTermsId));
-    }
+  /// 메모리에서 약관 정보를 조회하거나 기본 템플릿을 반환
+  Future<AsyncValue<TermsAgreement>> execute() async {
+    // 먼저 메모리에서 약관 정보 조회 시도
+    final memoryResult = await _repository.getTermsFromMemory();
 
-    // 기존 약관 정보 조회
-    final result = await _repository.getTermsInfo(termsId);
+    switch (memoryResult) {
+      case Success(data: final termsAgreement):
+        if (termsAgreement != null) {
+          // 메모리에 저장된 약관 정보가 있으면 반환
+          return AsyncData(termsAgreement);
+        }
 
-    switch (result) {
-      case Success(:final data):
-        return AsyncData(data);
+        // 메모리에 없으면 기본 템플릿 반환
+        final templateResult = await _repository.getDefaultTermsTemplate();
+        switch (templateResult) {
+          case Success(data: final template):
+            return AsyncData(template);
+          case Error(failure: final failure):
+            return AsyncError(
+              failure,
+              failure.stackTrace ?? StackTrace.current,
+            );
+        }
+
       case Error(failure: final failure):
         return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
     }

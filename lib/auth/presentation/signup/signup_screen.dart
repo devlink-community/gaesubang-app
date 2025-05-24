@@ -310,15 +310,34 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // 이용약관 동의 섹션 - 모듈화하여 가독성 향상
+  // lib/auth/presentation/signup/signup_screen.dart
+
+  // _buildTermsAgreement() 메서드 수정
+  // lib/auth/presentation/signup/signup_screen.dart
+
   Widget _buildTermsAgreement() {
     return Column(
       children: [
         const SizedBox(height: 24),
 
-        // 이용약관 링크 (우측 정렬, 테두리 없이 텍스트만)
+        // 약관 링크와 체크박스 (링크 좌측에 체크박스 배치)
         Row(
-          mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬
+          mainAxisAlignment: MainAxisAlignment.end, // 우측 정렬 유지
           children: [
+            // 체크박스 (약관 동의 상태 표시)
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: widget.state.isTermsAgreed,
+                onChanged:
+                    (_) =>
+                        widget.onAction(const SignupAction.navigateToTerms()),
+                activeColor: AppColorStyles.primary100,
+              ),
+            ),
+
+            // 약관 링크 텍스트 (기존 GestureDetector 유지)
             GestureDetector(
               onTap:
                   () => widget.onAction(const SignupAction.navigateToTerms()),
@@ -330,41 +349,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Text(
                   '이용약관 및 개인정보처리방침',
                   style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.primary100, // 프라이머리 컬러 적용
-                    decoration: TextDecoration.underline, // 링크처럼 보이도록 밑줄 추가
-                    decorationColor: AppColorStyles.primary100, // 밑줄도 프라이머리 컬러
+                    color: AppColorStyles.gray100, // 기본 텍스트 색상으로 변경
+                    // decoration: TextDecoration.underline 제거
+                    // decorationColor 제거
                   ),
                 ),
               ),
             ),
           ],
         ),
-
-        // 약관 동의 상태 표시 (동의한 경우에만 표시)
-        if (widget.state.isTermsAgreed)
-          Padding(
-            padding: const EdgeInsets.only(top: 12.0, right: 8.0),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: AppColorStyles.primary100,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '약관에 동의하셨습니다',
-                    style: AppTextStyles.captionRegular.copyWith(
-                      color: AppColorStyles.primary100,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
 
         // 약관 동의 에러 메시지 (동의하지 않았을 때)
         if (widget.state.termsError != null)

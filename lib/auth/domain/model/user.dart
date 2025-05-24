@@ -16,7 +16,6 @@ class User with _$User {
     required this.uid,
     this.image = "",
     this.onAir = false,
-    this.agreedTermsId,
     this.description = "",
     this.streakDays = 0,
     this.position = "",
@@ -32,7 +31,6 @@ class User with _$User {
   final String uid;
   final String image;
   final bool onAir;
-  final String? agreedTermsId;
   final String description;
   final int streakDays;
   final String? position;

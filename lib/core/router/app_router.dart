@@ -115,8 +115,7 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '/sign-up',
         builder: (context, state) {
-          final termsId = state.extra as String?;
-          return SignupScreenRoot(agreedTermsId: termsId);
+          return SignupScreenRoot();
         },
       ),
       GoRoute(

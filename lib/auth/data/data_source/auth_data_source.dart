@@ -14,7 +14,7 @@ abstract interface class AuthDataSource {
     required String email,
     required String password,
     required String nickname,
-    String? agreedTermsId,
+    required Map<String, dynamic> termsMap, // Map 형태로 변경
   });
 
   /// 현재 로그인 세션 확인

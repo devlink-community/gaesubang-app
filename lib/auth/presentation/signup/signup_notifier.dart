@@ -1,12 +1,11 @@
 // lib/auth/presentation/signup/signup_notifier.dart
 
-import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/check_nickname_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/terms/save_terms_agreement_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/clear_terms_from_memory_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_from_memory_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
@@ -24,8 +23,8 @@ class SignupNotifier extends _$SignupNotifier {
   late final LoginUseCase _loginUseCase;
   late final CheckNicknameAvailabilityUseCase _checkNicknameAvailabilityUseCase;
   late final CheckEmailAvailabilityUseCase _checkEmailAvailabilityUseCase;
-  late final GetTermsInfoUseCase _getTermsInfoUseCase;
-  late final SaveTermsAgreementUseCase _saveTermsAgreementUseCase;
+  late final GetTermsFromMemoryUseCase _getTermsFromMemoryUseCase; // 추가
+  late final ClearTermsFromMemoryUseCase _clearTermsFromMemoryUseCase; // 추가
 
   @override
   SignupState build() {
@@ -39,8 +38,12 @@ class SignupNotifier extends _$SignupNotifier {
     _checkEmailAvailabilityUseCase = ref.watch(
       checkEmailAvailabilityUseCaseProvider,
     );
-    _getTermsInfoUseCase = ref.watch(getTermsInfoUseCaseProvider);
-    _saveTermsAgreementUseCase = ref.watch(saveTermsAgreementUseCaseProvider);
+    _getTermsFromMemoryUseCase = ref.watch(
+      getTermsFromMemoryUseCaseProvider,
+    ); // 추가
+    _clearTermsFromMemoryUseCase = ref.watch(
+      clearTermsFromMemoryUseCaseProvider,
+    ); // 추가
 
     AppLogger.authInfo('SignupNotifier 초기화 완료');
     return const SignupState();
@@ -108,7 +111,7 @@ class SignupNotifier extends _$SignupNotifier {
         } else {
           AppLogger.authInfo('약관 동의 해제 - 상태 초기화');
           // 체크 해제된 경우 약관 동의 상태 초기화
-          state = state.copyWith(agreedTermsId: null, isTermsAgreed: false);
+          state = state.copyWith(isTermsAgreed: false);
         }
 
       // 포커스 변경 액션 처리 (필드 유효성 검증)
@@ -212,45 +215,9 @@ class SignupNotifier extends _$SignupNotifier {
     try {
       AppLogger.logStep(2, 3, '약관 정보 조회 중');
       // 새 약관 정보 생성
-      final termsResult = await _getTermsInfoUseCase.execute(null);
+      final termsResult = await _getTermsFromMemoryUseCase.execute();
 
       if (termsResult.hasValue && termsResult.value != null) {
-        final termsId = termsResult.value!.id;
-        AppLogger.authInfo('약관 정보 조회 성공: $termsId');
-
-        AppLogger.logStep(3, 3, '약관 동의 정보 저장 중');
-        // 모든 약관에 동의하는 TermsAgreement 객체 생성
-        final termsAgreement = TermsAgreement(
-          id: termsId,
-          isAllAgreed: true,
-          isServiceTermsAgreed: true,
-          isPrivacyPolicyAgreed: true,
-          isMarketingAgreed: true,
-          agreedAt: DateTime.now(),
-        );
-
-        // 약관 동의 저장
-        final saveResult = await _saveTermsAgreementUseCase.execute(
-          termsAgreement,
-        );
-
-        if (saveResult.hasValue) {
-          // 약관 동의 상태 업데이트
-          state = state.copyWith(
-            agreedTermsId: termsId,
-            isTermsAgreed: true,
-            termsError: null,
-          );
-
-          AppLogger.logBox('약관 자동 동의 완료', '약관 ID: $termsId');
-        } else {
-          AppLogger.error('약관 저장 실패', error: saveResult.error);
-          // 실패 시 체크박스 상태를 원래대로 되돌림
-          state = state.copyWith(
-            agreeToTerms: false,
-            formErrorMessage: AuthErrorMessages.termsProcessFailed,
-          );
-        }
       } else {
         AppLogger.error('약관 정보 조회 실패', error: termsResult.error);
         state = state.copyWith(
@@ -472,31 +439,59 @@ class SignupNotifier extends _$SignupNotifier {
       return;
     }
 
+    // 회원가입 실행 부분
     AppLogger.logStep(3, 6, '회원가입 API 호출 시작');
+
+    // 메모리에서 약관 정보 로드
+    final termsResult = await _getTermsFromMemoryUseCase.execute();
+
+    if (termsResult.hasError || termsResult.value == null) {
+      // 약관 정보가 없거나 로드 실패
+      AppLogger.error('약관 정보 로드 실패', error: termsResult.error);
+      state = state.copyWith(
+        formErrorMessage: '약관 동의 정보를 확인할 수 없습니다. 약관 동의를 다시 진행해주세요.',
+      );
+      return;
+    }
+
+    // 약관 정보가 로드되면 회원가입 진행
+    final termsAgreement = termsResult.value!;
+
+    // 필수 약관 동의 여부 확인
+    if (!termsAgreement.isRequiredTermsAgreed) {
+      AppLogger.warning('필수 약관 미동의 - 회원가입 중단');
+      state = state.copyWith(
+        termsError: AuthErrorMessages.termsRequired,
+        formErrorMessage: AuthErrorMessages.termsNotAgreed,
+      );
+      return;
+    }
+
     AppLogger.logState('회원가입 요청 정보', {
-      'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
-      'nickname': PrivacyMaskUtil.maskNickname(state.nickname), // 변경
+      'email': PrivacyMaskUtil.maskEmail(state.email),
+      'nickname': PrivacyMaskUtil.maskNickname(state.nickname),
       'password_length': state.password.length,
-      'agreed_terms_id': state.agreedTermsId,
-      'is_terms_agreed': state.isTermsAgreed,
+      'terms_agreed': termsAgreement.isRequiredTermsAgreed,
     });
 
-    // 3. 회원가입 실행
     state = state.copyWith(
       signupResult: const AsyncValue.loading(),
-      formErrorMessage: null, // 회원가입 시작 시 폼 에러 메시지 클리어
+      formErrorMessage: null,
     );
 
     final signupResult = await _signupUseCase.execute(
       email: state.email,
       password: state.password,
       nickname: state.nickname,
-      agreedTermsId: state.agreedTermsId,
+      termsAgreement: termsAgreement, // 약관 정보 객체 전달
     );
 
     AppLogger.logStep(4, 6, '회원가입 API 응답 처리');
     // 회원가입 성공 시 자동 로그인 수행
     if (signupResult.hasValue) {
+      AppLogger.authInfo('회원가입 성공 - 약관 정보 메모리 정리');
+      await _clearTermsFromMemoryUseCase.execute();
+
       AppLogger.authInfo('회원가입 성공 - 자동 로그인 시작');
 
       AppLogger.logStep(5, 6, '자동 로그인 수행 중');
@@ -543,27 +538,22 @@ class SignupNotifier extends _$SignupNotifier {
     state = const SignupState();
   }
 
-  // 약관 동의 ID 설정
-  void setAgreedTermsId(String termsId) {
-    AppLogger.authInfo('약관 동의 ID 설정: $termsId');
-    state = state.copyWith(agreedTermsId: termsId, formErrorMessage: null);
-  }
-
   // 약관 동의 상태 업데이트
   void updateTermsAgreement({
-    required String? agreedTermsId,
     required bool isAgreed,
   }) {
     AppLogger.logState('약관 동의 상태 업데이트', {
-      'agreed_terms_id': agreedTermsId,
       'is_agreed': isAgreed,
+      'previous_value': state.isTermsAgreed,
     });
 
     state = state.copyWith(
-      agreedTermsId: agreedTermsId,
       isTermsAgreed: isAgreed,
-      termsError: null, // 약관 에러 메시지 초기화 추가
+      agreeToTerms: isAgreed, // 체크박스 상태도 함께 업데이트
+      termsError: null, // 약관 에러 메시지 초기화
       formErrorMessage: null, // 통합 에러 메시지도 초기화
     );
+
+    AppLogger.authInfo('약관 동의 상태 업데이트 완료: $isAgreed');
   }
 }

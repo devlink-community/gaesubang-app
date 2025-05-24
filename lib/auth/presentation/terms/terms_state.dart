@@ -11,9 +11,9 @@ class TermsState with _$TermsState {
     this.isPrivacyPolicyAgreed = false,
     this.isMarketingAgreed = false,
     this.errorMessage,
-    this.savedTermsId,
     this.isSubmitting = false,
-    this.formErrorMessage, // 통합 오류 메시지 필드 추가
+    this.formErrorMessage,
+    this.isCompleted = false, // savedTermsId 대신 완료 여부만 표시
   });
 
   final bool isAllAgreed;
@@ -21,7 +21,7 @@ class TermsState with _$TermsState {
   final bool isPrivacyPolicyAgreed;
   final bool isMarketingAgreed;
   final String? errorMessage;
-  final String? savedTermsId;
   final bool isSubmitting;
-  final String? formErrorMessage; // 통합 오류 메시지 필드
+  final String? formErrorMessage;
+  final bool isCompleted; // 약관 동의 완료 여부
 }

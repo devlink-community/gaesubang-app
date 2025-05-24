@@ -10,21 +10,9 @@ class SaveTermsAgreementUseCase {
   SaveTermsAgreementUseCase({required AuthTermsRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<TermsAgreement>> execute(
-    TermsAgreement termsAgreement,
-  ) async {
-    // 현재 시간으로 동의 시간 설정
-    final updatedTerms = TermsAgreement(
-      id: termsAgreement.id,
-      isAllAgreed: termsAgreement.isAllAgreed,
-      isServiceTermsAgreed: termsAgreement.isServiceTermsAgreed,
-      isPrivacyPolicyAgreed: termsAgreement.isPrivacyPolicyAgreed,
-      isMarketingAgreed: termsAgreement.isMarketingAgreed,
-      agreedAt: DateTime.now(), // 현재 시간으로 동의 시간 업데이트
-    );
-
+  Future<AsyncValue<void>> execute(TermsAgreement termsAgreement) async {
     // 필수 약관 동의 여부 확인
-    if (!updatedTerms.isRequiredTermsAgreed) {
+    if (!termsAgreement.isRequiredTermsAgreed) {
       return AsyncError(
         Failure(
           FailureType.validation,
@@ -34,11 +22,21 @@ class SaveTermsAgreementUseCase {
       );
     }
 
-    final result = await _repository.saveTermsAgreement(updatedTerms);
+    // 현재 시간으로 동의 시간 설정
+    final updatedTerms = TermsAgreement(
+      isAllAgreed: termsAgreement.isAllAgreed,
+      isServiceTermsAgreed: termsAgreement.isServiceTermsAgreed,
+      isPrivacyPolicyAgreed: termsAgreement.isPrivacyPolicyAgreed,
+      isMarketingAgreed: termsAgreement.isMarketingAgreed,
+      agreedAt: DateTime.now(), // 현재 시간으로 동의 시간 업데이트
+    );
+
+    // 메모리에만 저장
+    final result = await _repository.saveTermsToMemory(updatedTerms);
 
     switch (result) {
-      case Success(:final data):
-        return AsyncData(data);
+      case Success():
+        return const AsyncData(null);
       case Error(failure: final failure):
         return AsyncError(failure, failure.stackTrace ?? StackTrace.current);
     }

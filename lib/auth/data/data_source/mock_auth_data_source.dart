@@ -308,7 +308,7 @@ class MockAuthDataSource implements AuthDataSource {
     required String email,
     required String password,
     required String nickname,
-    String? agreedTermsId,
+    required Map<String, dynamic> termsMap, // agreedTermsId 대신 termsMap으로 변경
   }) async {
     return ApiCallDecorator.wrap('MockAuth.createUser', () async {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -316,8 +316,13 @@ class MockAuthDataSource implements AuthDataSource {
 
       final lowercaseEmail = email.toLowerCase();
 
-      // 약관 동의 확인
-      if (agreedTermsId == null || agreedTermsId.isEmpty) {
+      // 필수 약관 동의 여부 확인
+      final isServiceTermsAgreed =
+          termsMap['isServiceTermsAgreed'] as bool? ?? false;
+      final isPrivacyPolicyAgreed =
+          termsMap['isPrivacyPolicyAgreed'] as bool? ?? false;
+
+      if (!isServiceTermsAgreed || !isPrivacyPolicyAgreed) {
         throw Exception(AuthErrorMessages.termsNotAgreed);
       }
 
@@ -349,11 +354,11 @@ class MockAuthDataSource implements AuthDataSource {
         'position': '',
         'skills': '',
         'streakDays': 0,
-        'agreedTermId': agreedTermsId,
-        'isServiceTermsAgreed': true,
-        'isPrivacyPolicyAgreed': true,
-        'isMarketingAgreed': false,
-        'agreedAt': DateTime.now(),
+        // 약관 동의 정보 직접 추가
+        'isServiceTermsAgreed': isServiceTermsAgreed,
+        'isPrivacyPolicyAgreed': isPrivacyPolicyAgreed,
+        'isMarketingAgreed': termsMap['isMarketingAgreed'] as bool? ?? false,
+        'agreedAt': termsMap['agreedAt'] ?? DateTime.now(),
         'joingroup': <Map<String, dynamic>>[],
       };
 

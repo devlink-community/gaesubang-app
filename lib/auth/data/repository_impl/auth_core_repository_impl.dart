@@ -1,6 +1,8 @@
 // lib/auth/data/repository_impl/auth_core_repository_impl.dart
 import 'package:devlink_mobile_app/auth/data/data_source/auth_data_source.dart';
+import 'package:devlink_mobile_app/auth/data/mapper/terms_mapper.dart';
 import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
+import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_core_repository.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
@@ -37,14 +39,14 @@ class AuthCoreRepositoryImpl implements AuthCoreRepository {
     required String email,
     required String password,
     required String nickname,
-    String? agreedTermsId,
+    required TermsAgreement termsAgreement, // TermsAgreement 객체로 변경
   }) async {
     try {
       final response = await _authDataSource.createUser(
         email: email,
         password: password,
         nickname: nickname,
-        agreedTermsId: agreedTermsId,
+        termsMap: termsAgreement.toUserDtoMap(), // TermsAgreement 객체 전달
       );
       final user = response.toUser();
       return Result.success(user);

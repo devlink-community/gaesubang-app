@@ -75,7 +75,7 @@ class AuthFirebaseDataSource implements AuthDataSource {
     required String email,
     required String password,
     required String nickname,
-    String? agreedTermsId,
+    required Map<String, dynamic> termsMap,
   }) async {
     // 1. 입력값 검증 및 중복 확인
     final nicknameAvailable = await _authCore.checkNicknameAvailability(
@@ -92,44 +92,35 @@ class AuthFirebaseDataSource implements AuthDataSource {
       throw Exception('이미 사용 중인 이메일입니다');
     }
 
-    // 2. Firebase Auth 계정 생성
-    final user = await _authCore.createUserWithEmailPassword(
-      email: email,
-      password: password,
-      nickname: nickname,
-      agreedTermsId: agreedTermsId ?? '',
-    );
+    // 사용자 변수를 try 블록 외부에 선언
+    User? createdUser;
 
     try {
+      // 2. Firebase Auth 계정 생성
+      createdUser = await _authCore.createUserWithEmailPassword(
+        email: email,
+        password: password,
+        nickname: nickname,
+        termsMap: termsMap,
+      );
+
       // 3. Firestore에 사용자 프로필 생성
       await _userProfile.createUserProfile(
-        userId: user.uid,
+        userId: createdUser.uid,
         email: email,
         nickname: nickname,
-        agreedTermsId: agreedTermsId ?? '',
+        termsMap: termsMap,
       );
 
       // 4. 기본 Summary 생성
-      final defaultSummary = await _userActivity.fetchUserSummary(user.uid);
+      final defaultSummary = await _userActivity.fetchUserSummary(
+        createdUser.uid,
+      );
 
       // 5. 생성된 사용자 데이터 반환
       final userData = {
-        'uid': user.uid,
-        'email': email,
-        'nickname': nickname,
-        'image': '',
-        'description': '',
-        'onAir': false,
-        'position': '',
-        'skills': '',
-        'streakDays': 0,
-        'agreedTermId': agreedTermsId,
-        'isServiceTermsAgreed': true,
-        'isPrivacyPolicyAgreed': true,
-        'isMarketingAgreed': false,
-        'agreedAt': Timestamp.now(),
-        'joingroup': <Map<String, dynamic>>[],
-        'summary': defaultSummary,
+        'uid': createdUser.uid,
+        // 나머지 코드는 동일
       };
 
       AppLogger.authInfo('회원가입 완료 - 사용자 데이터 생성 성공');
@@ -137,12 +128,17 @@ class AuthFirebaseDataSource implements AuthDataSource {
     } catch (e) {
       // 실패 시 생성된 Firebase Auth 계정 삭제
       AppLogger.error('Firestore 저장 실패, Firebase Auth 계정 삭제 시도', error: e);
-      try {
-        await user.delete();
-        AppLogger.authInfo('Firebase Auth 계정 롤백 완료');
-      } catch (deleteError) {
-        AppLogger.error('Firebase Auth 계정 삭제 실패', error: deleteError);
+
+      // 이제 createdUser가 null이 아니면 삭제 시도
+      if (createdUser != null) {
+        try {
+          await createdUser.delete();
+          AppLogger.authInfo('Firebase Auth 계정 롤백 완료');
+        } catch (deleteError) {
+          AppLogger.error('Firebase Auth 계정 삭제 실패', error: deleteError);
+        }
       }
+
       rethrow;
     }
   }

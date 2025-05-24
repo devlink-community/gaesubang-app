@@ -12,7 +12,6 @@ extension UserDtoMapper on UserDto {
       uid: uid ?? '',
       image: image ?? '',
       onAir: onAir ?? false,
-      agreedTermsId: agreedTermId,
       description: description ?? '',
       streakDays: streakDays ?? 0,
       position: position,
@@ -31,7 +30,6 @@ extension UserModelMapper on User {
       nickname: nickname,
       uid: uid,
       image: image,
-      agreedTermId: agreedTermsId,
       description: description,
       isServiceTermsAgreed: true, // 기본값
       isPrivacyPolicyAgreed: true, // 기본값
