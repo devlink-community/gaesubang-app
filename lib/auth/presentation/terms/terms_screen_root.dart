@@ -3,13 +3,9 @@
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_notifier.dart';
 import 'package:devlink_mobile_app/auth/presentation/terms/terms_screen.dart';
-import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-// signupNotifierProvider import 추가
-import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart';
 
 class TermsScreenRoot extends ConsumerWidget {
   const TermsScreenRoot({super.key});
@@ -19,24 +15,14 @@ class TermsScreenRoot extends ConsumerWidget {
     final state = ref.watch(termsNotifierProvider);
     final notifier = ref.watch(termsNotifierProvider.notifier);
 
-    // 약관 동의 저장 완료 감지
+    // 약관 동의 완료 감지
     ref.listen(
-      termsNotifierProvider.select((value) => value.savedTermsId),
-          (previous, next) {
-        // savedTermsId가 null이 아니고 이전과 다른 경우 (새로 저장된 경우)
-        if (next != null && previous != next) {
-          // 성공 메시지 제거 (SnackBar 표시하지 않음)
-
+      termsNotifierProvider.select((value) => value.isCompleted),
+      (previous, next) {
+        // 약관 동의가 완료된 경우
+        if (next == true && previous != true) {
           // 현재 화면을 닫고 이전 화면(회원가입)으로 돌아가기
-          context.pop();
-
-          // 다음 프레임에서 signupNotifier 업데이트 (화면 전환 후)
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(signupNotifierProvider.notifier).updateTermsAgreement(
-              agreedTermsId: next,
-              isAgreed: true,
-            );
-          });
+          context.pop(true);
         }
       },
     );
@@ -44,7 +30,7 @@ class TermsScreenRoot extends ConsumerWidget {
     // 오류 메시지 감지
     ref.listen(
       termsNotifierProvider.select((value) => value.errorMessage),
-          (previous, next) {
+      (previous, next) {
         if (next != null) {
           // 오류 메시지를 SnackBar로 표시
           ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +49,7 @@ class TermsScreenRoot extends ConsumerWidget {
     // 통합 오류 메시지 감지
     ref.listen(
       termsNotifierProvider.select((value) => value.formErrorMessage),
-          (previous, next) {
+      (previous, next) {
         if (next != null) {
           // 폼 에러 메시지를 SnackBar로 표시
           ScaffoldMessenger.of(context).showSnackBar(
@@ -88,19 +74,6 @@ class TermsScreenRoot extends ConsumerWidget {
           case NavigateToSignup():
             context.pop(); // 회원가입 화면으로 돌아가기
           case NavigateBack():
-          // 필수 약관에 동의했는지 확인 (서비스 이용 약관 + 개인정보 수집 동의)
-            final requiredTermsAgreed =
-                state.isServiceTermsAgreed && state.isPrivacyPolicyAgreed;
-
-            // 필수 약관에 동의하지 않은 경우, 회원가입 화면으로 돌아가면서
-            // 약관 동의 체크박스를 해제하도록 signupNotifier 업데이트
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(signupNotifierProvider.notifier).updateTermsAgreement(
-                agreedTermsId: null, // 약관 ID를 null로 설정
-                isAgreed: requiredTermsAgreed, // 필수 약관 동의 여부 전달
-              );
-            });
-
             context.pop(); // 이전 화면(회원가입)으로 돌아가기
           default:
             notifier.onAction(action);
@@ -111,7 +84,6 @@ class TermsScreenRoot extends ConsumerWidget {
 
   // 약관 상세보기 다이얼로그 메서드는 그대로 유지
   void _showTermsDetailDialog(BuildContext context, String termType) {
-    // 기존 코드 유지
     String title;
     String content;
 
@@ -176,18 +148,19 @@ class TermsScreenRoot extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: Text(content),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('닫기'),
+      builder:
+          (context) => AlertDialog(
+            title: Text(title),
+            content: SingleChildScrollView(
+              child: Text(content),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('닫기'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }

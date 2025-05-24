@@ -14,7 +14,6 @@ class UserDto {
     this.nickname,
     this.uid,
     this.image,
-    this.agreedTermId,
     this.description,
     this.isServiceTermsAgreed,
     this.isPrivacyPolicyAgreed,
@@ -25,14 +24,13 @@ class UserDto {
     this.skills,
     this.onAir,
     this.streakDays,
-    this.userSummary, // 새로 추가
+    this.userSummary,
   });
 
   final String? email;
   final String? nickname;
   final String? uid;
   final String? image;
-  final String? agreedTermId;
   final String? description;
   final bool? isServiceTermsAgreed;
   final bool? isPrivacyPolicyAgreed;
@@ -52,20 +50,19 @@ class UserDto {
   final List<JoinedGroupDto>? joinedGroups;
 
   @JsonKey(name: 'summary')
-  final SummaryDto? userSummary; // 사용자 활동 요약 정보
+  final SummaryDto? userSummary;
 
   factory UserDto.fromJson(Map<String, dynamic> json) =>
       _$UserDtoFromJson(json);
 
   Map<String, dynamic> toJson() => _$UserDtoToJson(this);
 
-  // copyWith 메서드 추가
+  // copyWith 메서드 업데이트
   UserDto copyWith({
     String? email,
     String? nickname,
     String? uid,
     String? image,
-    String? agreedTermId,
     String? description,
     bool? isServiceTermsAgreed,
     bool? isPrivacyPolicyAgreed,
@@ -83,7 +80,6 @@ class UserDto {
       nickname: nickname ?? this.nickname,
       uid: uid ?? this.uid,
       image: image ?? this.image,
-      agreedTermId: agreedTermId ?? this.agreedTermId,
       description: description ?? this.description,
       isServiceTermsAgreed: isServiceTermsAgreed ?? this.isServiceTermsAgreed,
       isPrivacyPolicyAgreed:

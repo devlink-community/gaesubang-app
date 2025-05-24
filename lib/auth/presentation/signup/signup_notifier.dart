@@ -1,12 +1,10 @@
 // lib/auth/presentation/signup/signup_notifier.dart
 
-import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/check_email_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/check_nickname_availability_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/terms/save_terms_agreement_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_from_memory_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_state.dart';
@@ -24,8 +22,7 @@ class SignupNotifier extends _$SignupNotifier {
   late final LoginUseCase _loginUseCase;
   late final CheckNicknameAvailabilityUseCase _checkNicknameAvailabilityUseCase;
   late final CheckEmailAvailabilityUseCase _checkEmailAvailabilityUseCase;
-  late final GetTermsInfoUseCase _getTermsInfoUseCase;
-  late final SaveTermsAgreementUseCase _saveTermsAgreementUseCase;
+  late final GetTermsFromMemoryUseCase _getTermsFromMemoryUseCase;
 
   @override
   SignupState build() {
@@ -39,8 +36,7 @@ class SignupNotifier extends _$SignupNotifier {
     _checkEmailAvailabilityUseCase = ref.watch(
       checkEmailAvailabilityUseCaseProvider,
     );
-    _getTermsInfoUseCase = ref.watch(getTermsInfoUseCaseProvider);
-    _saveTermsAgreementUseCase = ref.watch(saveTermsAgreementUseCaseProvider);
+    _getTermsFromMemoryUseCase = ref.watch(getTermsFromMemoryUseCaseProvider);
 
     AppLogger.authInfo('SignupNotifier 초기화 완료');
     return const SignupState();
@@ -212,45 +208,9 @@ class SignupNotifier extends _$SignupNotifier {
     try {
       AppLogger.logStep(2, 3, '약관 정보 조회 중');
       // 새 약관 정보 생성
-      final termsResult = await _getTermsInfoUseCase.execute(null);
+      final termsResult = await _getTermsFromMemoryUseCase.execute();
 
       if (termsResult.hasValue && termsResult.value != null) {
-        final termsId = termsResult.value!.id;
-        AppLogger.authInfo('약관 정보 조회 성공: $termsId');
-
-        AppLogger.logStep(3, 3, '약관 동의 정보 저장 중');
-        // 모든 약관에 동의하는 TermsAgreement 객체 생성
-        final termsAgreement = TermsAgreement(
-          id: termsId,
-          isAllAgreed: true,
-          isServiceTermsAgreed: true,
-          isPrivacyPolicyAgreed: true,
-          isMarketingAgreed: true,
-          agreedAt: DateTime.now(),
-        );
-
-        // 약관 동의 저장
-        final saveResult = await _saveTermsAgreementUseCase.execute(
-          termsAgreement,
-        );
-
-        if (saveResult.hasValue) {
-          // 약관 동의 상태 업데이트
-          state = state.copyWith(
-            agreedTermsId: termsId,
-            isTermsAgreed: true,
-            termsError: null,
-          );
-
-          AppLogger.logBox('약관 자동 동의 완료', '약관 ID: $termsId');
-        } else {
-          AppLogger.error('약관 저장 실패', error: saveResult.error);
-          // 실패 시 체크박스 상태를 원래대로 되돌림
-          state = state.copyWith(
-            agreeToTerms: false,
-            formErrorMessage: AuthErrorMessages.termsProcessFailed,
-          );
-        }
       } else {
         AppLogger.error('약관 정보 조회 실패', error: termsResult.error);
         state = state.copyWith(

@@ -23,6 +23,8 @@ import 'package:devlink_mobile_app/auth/domain/usecase/core/signup_use_case.dart
 import 'package:devlink_mobile_app/auth/domain/usecase/profile/get_user_profile_usecase.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_image_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/clear_terms_from_memory_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_from_memory_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/terms/get_terms_info_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/terms/save_terms_agreement_use_case.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
@@ -169,6 +171,20 @@ GetTermsInfoUseCase getTermsInfoUseCase(Ref ref) {
 @riverpod
 SaveTermsAgreementUseCase saveTermsAgreementUseCase(Ref ref) {
   return SaveTermsAgreementUseCase(
+    repository: ref.watch(authTermsRepositoryProvider),
+  );
+}
+
+@riverpod
+GetTermsFromMemoryUseCase getTermsFromMemoryUseCase(Ref ref) {
+  return GetTermsFromMemoryUseCase(
+    repository: ref.watch(authTermsRepositoryProvider),
+  );
+}
+
+@riverpod
+ClearTermsFromMemoryUseCase clearTermsFromMemoryUseCase(Ref ref) {
+  return ClearTermsFromMemoryUseCase(
     repository: ref.watch(authTermsRepositoryProvider),
   );
 }
