@@ -1,6 +1,7 @@
 // lib/core/component/app_image.dart
 import 'dart:io';
 
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 
 /// 이미지 경로 타입에 따라 자동으로 적절한 이미지 위젯을 반환하는 공통 컴포넌트입니다.
@@ -486,7 +487,11 @@ class AppImage extends StatelessWidget {
         }
       } catch (e) {
         // 이미지 사전 로딩 중 오류가 발생해도 다른 이미지에 영향을 주지 않도록 처리
-        debugPrint('이미지 사전 캐싱 오류: $e');
+        AppLogger.error(
+          '이미지 사전 캐싱 오류',
+          tag: 'AppImage',
+          error: e,
+        );
       }
     }
   }
