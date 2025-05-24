@@ -1,17 +1,38 @@
 // lib/group/domain/model/timer_activity_type.dart
+/// 타이머 활동 타입을 정의하는 enum
 enum TimerActivityType {
-  start('start'),
-  pause('pause'),
-  resume('resume'),
-  end('end');
+  start,
+  pause,
+  resume,
+  end;
 
-  final String value;
-  const TimerActivityType(this.value);
+  /// 문자열을 TimerActivityType으로 변환
+  static TimerActivityType fromString(String typeString) {
+    switch (typeString.toLowerCase()) {
+      case 'start':
+        return TimerActivityType.start;
+      case 'pause':
+        return TimerActivityType.pause;
+      case 'resume':
+        return TimerActivityType.resume;
+      case 'end':
+        return TimerActivityType.end;
+      default:
+        throw ArgumentError('Unknown timer activity type: $typeString');
+    }
+  }
 
-  static TimerActivityType fromString(String value) {
-    return TimerActivityType.values.firstWhere(
-      (type) => type.value == value,
-      orElse: () => throw ArgumentError('Invalid timer activity type: $value'),
-    );
+  /// TimerActivityType을 문자열로 변환
+  String toStringValue() {
+    switch (this) {
+      case TimerActivityType.start:
+        return 'start';
+      case TimerActivityType.pause:
+        return 'pause';
+      case TimerActivityType.resume:
+        return 'resume';
+      case TimerActivityType.end:
+        return 'end';
+    }
   }
 }

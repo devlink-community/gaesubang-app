@@ -36,7 +36,8 @@ extension ChatMessageModelMapper on ChatMessage {
 
 /// List<GroupChatMessageDto> → List<ChatMessage> 변환
 extension GroupChatMessageDtoListMapper on List<GroupChatMessageDto>? {
-  List<ChatMessage> toModelList() => this?.map((e) => e.toModel()).toList() ?? [];
+  List<ChatMessage> toModelList() =>
+      this?.map((e) => e.toModel()).toList() ?? [];
 }
 
 /// List<ChatMessage> → List<GroupChatMessageDto> 변환
@@ -46,5 +47,6 @@ extension ChatMessageModelListMapper on List<ChatMessage> {
 
 /// Map<String, dynamic> → GroupChatMessageDto 변환
 extension MapToGroupChatMessageDtoMapper on Map<String, dynamic> {
-  GroupChatMessageDto toGroupChatMessageDto() => GroupChatMessageDto.fromJson(this);
+  GroupChatMessageDto toGroupChatMessageDto() =>
+      GroupChatMessageDto.fromJson(this);
 }
