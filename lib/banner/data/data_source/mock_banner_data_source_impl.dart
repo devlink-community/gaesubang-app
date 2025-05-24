@@ -1,3 +1,4 @@
+// lib/banner/data/data_source/mock_banner_data_source_impl.dart
 import 'banner_data_source.dart';
 import '../dto/banner_dto.dart';
 import '../../../core/utils/app_logger.dart';
@@ -132,12 +133,12 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     return activeBanners;
   }
 
-  // Mock 데이터 정의 - assets 이미지 사용
+  // 🔧 수정된 Mock 데이터 정의 - 빈 title 제거 및 실제 제목 추가
   static final List<BannerDto> _mockBanners = [
     BannerDto(
       id: 'banner_001',
-      title: '',
-      imageUrl: 'assets/images/banner_001.png', // assets 이미지 사용
+      title: '개발자 프로그램', // ← 빈 문자열에서 실제 제목으로 변경
+      imageUrl: 'assets/images/banner_001.png',
       linkUrl: 'https://example.com/developer-program',
       isActive: true,
       displayOrder: 1,
@@ -148,8 +149,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_002',
-      title: '',
-      imageUrl: 'assets/images/banner_002.png', // assets 이미지 사용
+      title: 'Flutter 마스터클래스', // ← 빈 문자열에서 실제 제목으로 변경
+      imageUrl: 'assets/images/banner_002.png',
       linkUrl: 'https://example.com/flutter-masterclass',
       isActive: true,
       displayOrder: 2,
@@ -160,8 +161,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_003',
-      title: '',
-      imageUrl: 'assets/images/banner_003.png', // assets 이미지 사용
+      title: 'AI 부트캠프', // ← 빈 문자열에서 실제 제목으로 변경
+      imageUrl: 'assets/images/banner_003.png',
       linkUrl: 'https://example.com/ai-bootcamp',
       isActive: true,
       displayOrder: 3,
@@ -172,8 +173,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_004',
-      title: ' ',
-      imageUrl: 'assets/images/banner_004.png', // assets 이미지 사용
+      title: '비활성 배너', // ← 공백에서 실제 제목으로 변경
+      imageUrl: 'assets/images/banner_004.png',
       linkUrl: 'https://example.com/inactive',
       isActive: false,
       displayOrder: 4,
@@ -184,8 +185,8 @@ class MockBannerDataSourceImpl implements BannerDataSource {
     ),
     BannerDto(
       id: 'banner_005',
-      title: '',
-      imageUrl: 'assets/images/banner_005.png', // assets 이미지 사용
+      title: '만료된 배너', // ← 빈 문자열에서 실제 제목으로 변경
+      imageUrl: 'assets/images/banner_005.png',
       linkUrl: 'https://example.com/expired',
       isActive: true,
       displayOrder: 5,
