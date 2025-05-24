@@ -31,9 +31,8 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
             'isOnline': true,
           }, SetOptions(merge: true));
     } catch (e, st) {
-      // ✅ Firebase 통신 오류: 원본 예외 정보 보존
       AppLogger.error(
-        '멤버 위치 업데이트 Firebase 통신 오류',
+        '멤버 위치 업데이트 실패 - groupId: $groupId, userId: $userId',
         tag: 'GroupLocationDataSource',
         error: e,
         stackTrace: st,
@@ -59,9 +58,8 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
         return GroupMemberLocationDto.fromJson({...data, 'id': doc.id});
       }).toList();
     } catch (e, st) {
-      // ✅ Firebase 통신 오류: 원본 예외 정보 보존
       AppLogger.error(
-        '그룹 멤버 위치 조회 Firebase 통신 오류',
+        '그룹 멤버 위치 조회 실패 - groupId: $groupId',
         tag: 'GroupLocationDataSource',
         error: e,
         stackTrace: st,
@@ -87,9 +85,8 @@ class GroupLocationDataSourceImpl implements GroupLocationDataSource {
             }).toList();
           });
     } catch (e, st) {
-      // ✅ Firebase 스트림 구독 오류: 원본 예외 정보 보존
       AppLogger.error(
-        '그룹 멤버 위치 스트림 구독 Firebase 오류',
+        '그룹 멤버 위치 스트림 구독 실패 - groupId: $groupId',
         tag: 'GroupLocationDataSource',
         error: e,
         stackTrace: st,
