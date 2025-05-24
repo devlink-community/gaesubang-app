@@ -1,7 +1,6 @@
-import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
-import 'package:devlink_mobile_app/banner/module/banner_di.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_joined_group_use_case.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_streak_days_use_case.dart';
@@ -52,7 +51,7 @@ GetStreakDaysUseCase getStreakDaysUseCase(Ref ref) =>
 
 @riverpod
 GetCurrentUserUseCase getCurrentUserUseCase(Ref ref) =>
-    GetCurrentUserUseCase(repository: ref.watch(authRepositoryProvider));
+    GetCurrentUserUseCase(repository: ref.watch(authCoreRepositoryProvider));
 // 라우트 정의
 final homeRoutes = [
   // 홈 화면 경로 등록
