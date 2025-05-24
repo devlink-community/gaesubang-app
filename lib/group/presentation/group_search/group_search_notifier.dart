@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/service/search_history_service.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
@@ -49,7 +50,7 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
 
       state = state.copyWith(recentSearches: recentSearches);
     } catch (e) {
-      print('그룹 검색어 히스토리 로드 실패: $e');
+      AppLogger.error('그룹 검색어 히스토리 로드 실패', tag: 'GroupSearch', error: e);
     }
   }
 
@@ -177,7 +178,7 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
       // 백그라운드에서 전체 히스토리 다시 로드
       _loadSearchHistory();
     } catch (e) {
-      print('그룹 검색어 히스토리 추가 실패: $e');
+      AppLogger.error('그룹 검색어 히스토리 추가 실패', tag: 'GroupSearch', error: e);
     }
   }
 
@@ -211,7 +212,7 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
       final updatedSearches = [...state.recentSearches]..remove(query);
       state = state.copyWith(recentSearches: updatedSearches);
     } catch (e) {
-      print('그룹 검색어 삭제 실패: $e');
+      AppLogger.error('그룹 검색어 삭제 실패', tag: 'GroupSearch', error: e);
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
     }
@@ -226,7 +227,7 @@ class GroupSearchNotifier extends _$GroupSearchNotifier {
       // 상태에서도 전체 삭제
       state = state.copyWith(recentSearches: []);
     } catch (e) {
-      print('모든 그룹 검색어 삭제 실패: $e');
+      AppLogger.error('모든 그룹 검색어 삭제 실패', tag: 'GroupSearch', error: e);
       // 실패 시 다시 로드하여 동기화
       await _loadSearchHistory();
     }
