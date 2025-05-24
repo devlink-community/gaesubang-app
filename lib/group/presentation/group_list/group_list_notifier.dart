@@ -63,7 +63,7 @@ class GroupListNotifier extends _$GroupListNotifier {
     if (state.groupList is AsyncData) {
       final groups = (state.groupList as AsyncData<List<Group>>).value;
       final selectedGroup = groups.firstWhere(
-        (group) => group.id == groupId,
+            (group) => group.id == groupId,
         orElse: () => throw Exception('그룹을 찾을 수 없습니다'),
       );
       state = state.copyWith(selectedGroup: AsyncData(selectedGroup));
@@ -91,8 +91,11 @@ class GroupListNotifier extends _$GroupListNotifier {
       case OnJoinGroup(:final groupId):
         await _joinGroup(groupId);
       case ResetSelectedGroup():
-        // selectedGroup 초기화
+      // selectedGroup 초기화
         state = state.copyWith(selectedGroup: const AsyncData(null));
+      case OnShowFullGroupDialog():
+      // 인원 마감 다이얼로그 액션 - Root에서 처리하므로 여기서는 단순 분기만
+        break;
       case OnTapSearch():
         break;
       case OnCloseDialog():
@@ -106,4 +109,4 @@ class GroupListNotifier extends _$GroupListNotifier {
         _changeSortType(sortType);
     }
   }
-}
+}    

@@ -301,47 +301,6 @@ class _GroupListScreenState extends State<GroupListScreen> {
                 ),
               ],
             ),
-
-            // 정렬 버튼 - CompositedTransformTarget으로 위치 링크
-            CompositedTransformTarget(
-              link: _sortButtonLayerLink,
-              child: TextButton(
-                onPressed: () {
-                  // 드롭다운 표시 메서드 호출
-                  _showSortDropdown();
-                },
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  backgroundColor: AppColorStyles.gray40.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      widget.state.sortType.label,
-                      style: TextStyle(
-                        color: AppColorStyles.primary100,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_drop_down,
-                      size: 18,
-                      color: AppColorStyles.primary100,
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
