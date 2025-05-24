@@ -16,69 +16,52 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
 
   const GroupSettingsScreenRoot({super.key, required this.groupId});
 
+  // lib/group/presentation/group_setting/group_settings_screen_root.dart
+  // 통합된 상태 변경 리스너 (스낵바 관리) - 계속
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 그룹 ID로 Provider 초기화 - 여기가 핵심!
     final state = ref.watch(groupSettingsNotifierProvider(groupId));
     final notifier = ref.read(groupSettingsNotifierProvider(groupId).notifier);
 
-    // 성공 메시지 리스너
-    ref.listen(
-      groupSettingsNotifierProvider(
-        groupId,
-      ).select((value) => value.successMessage),
-      (previous, next) {
-        if (next != null && previous != next) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next),
-              backgroundColor: AppColorStyles.primary100,
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
+    // 통합된 상태 변경 리스너
+    ref.listen<GroupSettingsState>(
+      groupSettingsNotifierProvider(groupId),
+      (previous, current) {
+        // 작업 타입 분리
+        final prevAction = previous?.currentAction;
+        final currentAction = current.currentAction;
 
-          // 탈퇴 성공 시 그룹 목록으로 이동
-          if (next.contains('탈퇴')) {
-            context.go('/group');
+        // 로딩 상태 변경 감지
+        final wasSubmitting = previous?.isSubmitting ?? false;
+        final isSubmitting = current.isSubmitting;
+
+        // 이미지 업로드 상태 변경 감지
+        final prevUploadStatus = previous?.imageUploadStatus;
+        final uploadStatus = current.imageUploadStatus;
+
+        // 작업 시작 시 스낵바 표시
+        if (!wasSubmitting && isSubmitting) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+          // 작업 타입에 따라 다른 메시지 표시
+          String message = '';
+          switch (current.currentAction) {
+            case GroupAction.imageUpload:
+              message = '이미지 업로드 중...';
+              break;
+            case GroupAction.save:
+              message = '그룹 정보 저장 중...';
+              break;
+            case GroupAction.leave:
+              message = '그룹 탈퇴 처리 중...';
+              break;
+            default:
+              message = '처리 중...';
+              break;
           }
-        }
-      },
-    );
 
-    // 에러 메시지 리스너
-    ref.listen(
-      groupSettingsNotifierProvider(
-        groupId,
-      ).select((value) => value.errorMessage),
-      (previous, next) {
-        if (next != null && previous != next) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
-      },
-    );
-
-    // 이미지 업로드 진행 상태 리스너
-    ref.listen(
-      groupSettingsNotifierProvider(
-        groupId,
-      ).select((value) => value.isSubmitting),
-      (previous, next) {
-        // 이미지 업로드 시작 시 로딩 스낵바 표시
-        if (previous == false && next == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -92,7 +75,7 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text('이미지 업로드 중...'),
+                  Text(message),
                 ],
               ),
               backgroundColor: AppColorStyles.primary100,
@@ -101,16 +84,109 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              duration: const Duration(minutes: 1), // 길게 표시
+              duration: const Duration(seconds: 10),
             ),
           );
         }
-        // 이미지 업로드 완료 시 로딩 스낵바 제거
-        else if (previous == true && next == false) {
+
+        // 작업 완료 시 (로딩이 끝났을 때)
+        if (wasSubmitting && !isSubmitting) {
+          // 기본적으로 스낵바 숨기기
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+
+        // 이미지 업로드 완료 시 성공 스낵바 표시
+        if (prevUploadStatus != ImageUploadStatus.completed &&
+            uploadStatus == ImageUploadStatus.completed) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Text('이미지 업로드가 완료되었습니다'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+
+        // 이미지 업로드 실패 시 오류 스낵바 표시
+        if (prevUploadStatus != ImageUploadStatus.failed &&
+            uploadStatus == ImageUploadStatus.failed) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Text('이미지 업로드에 실패했습니다'),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+
+        // 성공 메시지 처리
+        if (previous?.successMessage != current.successMessage &&
+            current.successMessage != null) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(current.successMessage!),
+              backgroundColor: AppColorStyles.primary100,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
+          // 탈퇴 성공 시 그룹 목록으로 이동
+          if (current.successMessage!.contains('탈퇴')) {
+            context.go('/group');
+          }
+        }
+
+        // 에러 메시지 처리
+        if (previous?.errorMessage != current.errorMessage &&
+            current.errorMessage != null) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(current.errorMessage!),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
         }
       },
     );
+
+    // 성공 메시지 리스너 - 제거 (통합 리스너에서 처리)
+    // 에러 메시지 리스너 - 제거 (통합 리스너에서 처리)
+    // 이미지 업로드 진행 상태 리스너 - 제거 (통합 리스너에서 처리)
 
     return GroupSettingsScreen(
       state: state,
@@ -169,14 +245,28 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
           if (!shouldContinue) return;
         }
 
-        // 로컬 파일 경로로 Notifier에 전달 (file:// 프로토콜 포함)
-        final String localImagePath = 'file://${image.path}';
+        // 이미지 경로 로깅 추가
+        debugPrint('📸 선택된 이미지 경로: ${image.path}');
+
+        // 로컬 파일 경로 (file:// 프로토콜 포함)
+        String localImagePath = image.path;
+
+        // 안드로이드에서는 file:// 접두사가 필요할 수 있음
+        if (!localImagePath.startsWith('file://') &&
+            !localImagePath.startsWith('content://')) {
+          localImagePath = 'file://$localImagePath';
+        }
+
+        debugPrint('📸 최종 이미지 경로: $localImagePath');
 
         // ImageUrlChanged 액션으로 전달하면 Notifier에서 자동으로 업로드 처리
         notifier.onAction(GroupSettingsAction.imageUrlChanged(localImagePath));
       }
-    } catch (e) {
+    } catch (e, st) {
       // 이미지 선택 중 오류 발생 시 처리
+      debugPrint('📸 이미지 선택 오류: $e');
+      debugPrint('📸 StackTrace: $st');
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -4,16 +4,16 @@ import '../dto/banner_dto.dart';
 class MockBannerDataSourceImpl implements BannerDataSource {
   @override
   Future<List<BannerDto>> fetchAllBanners() async {
-    // 네트워크 지연 시뮬레이션
-    await Future.delayed(const Duration(milliseconds: 800));
+    // 네트워크 지연 시뮬레이션 - 실제적인 시간으로 단축
+    await Future.delayed(const Duration(milliseconds: 150)); // 800ms → 150ms
 
     return _mockBanners;
   }
 
   @override
   Future<BannerDto> fetchBannerById(String bannerId) async {
-    // 네트워크 지연 시뮬레이션
-    await Future.delayed(const Duration(milliseconds: 500));
+    // 캐시된 데이터 조회 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 50)); // 500ms → 50ms
 
     final banner = _mockBanners.firstWhere(
           (banner) => banner.id == bannerId,
@@ -25,10 +25,17 @@ class MockBannerDataSourceImpl implements BannerDataSource {
 
   @override
   Future<List<BannerDto>> fetchActiveBanners() async {
-    // 네트워크 지연 시뮬레이션
-    await Future.delayed(const Duration(milliseconds: 600));
+    // 필터링된 데이터 조회 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 100)); // 600ms → 100ms
 
-    return _mockBanners.where((banner) => banner.isActive == true).toList();
+    final now = DateTime.now();
+
+    // 서버에서 필터링해서 보내주는 것을 시뮬레이션
+    return _mockBanners.where((banner) {
+      return banner.isActive == true &&
+          (banner.startDate?.isBefore(now) ?? false) &&
+          (banner.endDate?.isAfter(now) ?? false);
+    }).toList();
   }
 
   // Mock 데이터 정의 - assets 이미지 사용

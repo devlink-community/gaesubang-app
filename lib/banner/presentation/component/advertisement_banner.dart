@@ -1,4 +1,4 @@
-// // import 'package:cached_network_image/cached_network_image.dart'; // 기본 Image.network 사용으로 제거 // 패키지 없으면 주석 처리
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart' hide Banner;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -60,18 +60,17 @@ class AdvertisementBanner extends ConsumerWidget {
                 return _buildImageErrorState();
               },
             )
-                : Image.network(
-              banner.imageUrl,
+                : CachedNetworkImage(
+              imageUrl: banner.imageUrl,
               width: 380,
               height: 220,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return _buildImageLoadingState();
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return _buildImageErrorState();
-              },
+              memCacheWidth: 380, // 메모리 최적화
+              memCacheHeight: 220,
+              placeholder: (context, url) => _buildImageLoadingState(),
+              errorWidget: (context, url, error) => _buildImageErrorState(),
+              fadeInDuration: const Duration(milliseconds: 200),
+              fadeOutDuration: const Duration(milliseconds: 100),
             ),
           ),
 
@@ -111,7 +110,6 @@ class AdvertisementBanner extends ConsumerWidget {
                   bottomLeft: Radius.circular(24),
                   bottomRight: Radius.circular(24),
                 ),
-
               ),
               child: Text(
                 banner.title,
@@ -134,13 +132,13 @@ class AdvertisementBanner extends ConsumerWidget {
       width: 380,
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: AppColorStyles.gray40,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Center(
         child: CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(
-            AppColorStyles.primary80,
+            AppColorStyles.primary100,
           ),
           strokeWidth: 2,
         ),
@@ -153,9 +151,9 @@ class AdvertisementBanner extends ConsumerWidget {
       width: 380,
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColorStyles.gray40,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: AppColorStyles.gray60),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -163,13 +161,13 @@ class AdvertisementBanner extends ConsumerWidget {
           Icon(
             Icons.image_not_supported_outlined,
             size: 48,
-            color: Colors.grey.shade400,
+            color: AppColorStyles.gray100,
           ),
           const SizedBox(height: 8),
           Text(
             '이미지를 불러올 수 없습니다',
             style: AppTextStyles.body2Regular.copyWith(
-              color: Colors.grey.shade600,
+              color: AppColorStyles.gray100,
             ),
           ),
         ],
@@ -182,7 +180,7 @@ class AdvertisementBanner extends ConsumerWidget {
       width: 380,
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColorStyles.gray40,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Center(
@@ -191,7 +189,7 @@ class AdvertisementBanner extends ConsumerWidget {
           children: [
             CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                AppColorStyles.primary80,
+                AppColorStyles.primary100,
               ),
               strokeWidth: 2,
             ),
@@ -199,7 +197,7 @@ class AdvertisementBanner extends ConsumerWidget {
             Text(
               '광고를 불러오는 중...',
               style: AppTextStyles.body2Regular.copyWith(
-                color: Colors.grey.shade600,
+                color: AppColorStyles.gray100,
               ),
             ),
           ],
@@ -213,9 +211,9 @@ class AdvertisementBanner extends ConsumerWidget {
       width: 380,
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: AppColorStyles.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColorStyles.gray40),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -223,13 +221,13 @@ class AdvertisementBanner extends ConsumerWidget {
           Icon(
             Icons.campaign_outlined,
             size: 48,
-            color: Colors.grey.shade400,
+            color: AppColorStyles.gray80,
           ),
           const SizedBox(height: 12),
           Text(
             '현재 표시할 광고가 없습니다',
             style: AppTextStyles.body1Regular.copyWith(
-              color: Colors.grey.shade600,
+              color: AppColorStyles.gray100,
             ),
           ),
         ],
@@ -242,9 +240,9 @@ class AdvertisementBanner extends ConsumerWidget {
       width: 380,
       height: 220,
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: AppColorStyles.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.red.shade200),
+        border: Border.all(color: AppColorStyles.error.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -252,13 +250,13 @@ class AdvertisementBanner extends ConsumerWidget {
           Icon(
             Icons.error_outline,
             size: 48,
-            color: Colors.red.shade400,
+            color: AppColorStyles.error,
           ),
           const SizedBox(height: 12),
           Text(
             '광고를 불러오는데 실패했습니다',
             style: AppTextStyles.body1Regular.copyWith(
-              color: Colors.red.shade700,
+              color: AppColorStyles.error,
             ),
           ),
           const SizedBox(height: 8),
@@ -269,7 +267,7 @@ class AdvertisementBanner extends ConsumerWidget {
             child: Text(
               '다시 시도',
               style: AppTextStyles.button2Regular.copyWith(
-                color: Colors.red.shade700,
+                color: AppColorStyles.error,
               ),
             ),
           ),

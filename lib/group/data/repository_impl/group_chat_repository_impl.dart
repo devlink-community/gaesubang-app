@@ -169,4 +169,46 @@ class GroupChatRepositoryImpl implements GroupChatRepository {
       );
     }
   }
+
+  @override
+  Future<Result<ChatMessage>> sendBotMessage(
+    String groupId,
+    String content,
+    String botId,
+    String botName,
+  ) async {
+    try {
+      // 메시지 크기 검증 (1KB 제한)
+      final bytes = utf8.encode(content);
+      if (bytes.length > 1024) {
+        return Result.error(
+          const Failure(FailureType.validation, '메시지 크기가 1KB를 초과합니다'),
+        );
+      }
+
+      // 🔧 봇 메시지 직접 전송 (현재 사용자 정보 사용 안 함)
+      final messageData = await _dataSource.sendMessage(
+        groupId,
+        content,
+        botId, // 🔧 봇 ID 직접 전달
+        botName, // 🔧 봇 이름 직접 전달
+        null, // 봇은 이미지 없음
+      );
+
+      // 변환 및 반환
+      final messageDto = GroupChatMessageDto.fromJson(messageData);
+      final message = messageDto.toModel();
+
+      return Result.success(message);
+    } catch (e, st) {
+      return Result.error(
+        Failure(
+          FailureType.server,
+          '봇 메시지 전송에 실패했습니다',
+          cause: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
 }

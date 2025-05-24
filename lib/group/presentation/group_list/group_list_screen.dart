@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../domain/model/group.dart';
+import 'components/sort_options_drop_down.dart';
 
 enum GroupFilter {
   all('전체'),
@@ -19,6 +20,7 @@ enum GroupFilter {
   open('참여 가능');
 
   final String label;
+
   const GroupFilter(this.label);
 }
 
@@ -38,6 +40,15 @@ class GroupListScreen extends StatefulWidget {
 
 class _GroupListScreenState extends State<GroupListScreen> {
   GroupFilter _selectedFilter = GroupFilter.all;
+  bool _isSortDropdownVisible = false; // 드롭다운 표시 여부
+  final LayerLink _sortButtonLayerLink = LayerLink(); // 드롭다운 위치 연결
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void dispose() {
+    _removeDropdown();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -67,6 +78,35 @@ class _GroupListScreenState extends State<GroupListScreen> {
     if (imageUrls.isNotEmpty) {
       AppImage.precacheImages(imageUrls, context);
     }
+  }
+
+  // 드롭다운 표시 메서드
+  void _showSortDropdown() {
+    _removeDropdown(); // 이미 표시된 드롭다운이 있다면 제거
+
+    final overlay = Overlay.of(context);
+
+    _overlayEntry = OverlayEntry(
+      builder:
+          (context) => SortOptionsDropdown(
+            currentSortType: widget.state.sortType,
+            onAction: (action) {
+              _removeDropdown(); // 액션 처리 후 드롭다운 닫기
+              widget.onAction(action);
+            },
+            layerLink: _sortButtonLayerLink,
+          ),
+    );
+
+    if (_overlayEntry != null) {
+      overlay.insert(_overlayEntry!);
+    }
+  }
+
+  // 드롭다운 제거 메서드
+  void _removeDropdown() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 
   @override
@@ -261,26 +301,45 @@ class _GroupListScreenState extends State<GroupListScreen> {
                 ),
               ],
             ),
-            TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    '정렬',
-                    style: TextStyle(
-                      color: AppColorStyles.primary100,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+
+            // 정렬 버튼 - CompositedTransformTarget으로 위치 링크
+            CompositedTransformTarget(
+              link: _sortButtonLayerLink,
+              child: TextButton(
+                onPressed: () {
+                  // 드롭다운 표시 메서드 호출
+                  _showSortDropdown();
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.sort, size: 16, color: AppColorStyles.primary100),
-                ],
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: AppColorStyles.gray40.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      widget.state.sortType.label,
+                      style: TextStyle(
+                        color: AppColorStyles.primary100,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      size: 18,
+                      color: AppColorStyles.primary100,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
