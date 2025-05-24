@@ -16,31 +16,25 @@ class MemberGrid extends StatelessWidget {
     required this.onMemberTap,
   });
 
-  // 🔧 시간 포맷팅 헬퍼 메서드 추가
+  // 🔧 통일된 시간 포맷팅 헬퍼 메서드 (timer_display.dart와 동일)
   String _formatTime(GroupMember member) {
-    int seconds;
+    int totalSeconds;
 
     if (member.isActive && member.timerStartTime != null) {
       // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
       final now = DateTime.now();
-      seconds =
-          now.difference(member.timerStartTime!).inSeconds +
-          member.elapsedSeconds;
+      totalSeconds = now.difference(member.timerStartTime!).inSeconds;
     } else {
       // 비활성 상태이면 저장된 경과 시간 사용
-      seconds = member.elapsedSeconds;
+      totalSeconds = member.elapsedSeconds;
     }
 
-    // 시간 포맷팅
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final remainingSeconds = seconds % 60;
+    // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
 
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-    } else {
-      return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-    }
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -110,7 +104,7 @@ class MemberGrid extends StatelessWidget {
                     MemberTimerItem(
                       imageUrl: member.profileUrl ?? '',
                       isActive: member.isActive,
-                      timeDisplay: _formatTime(member), // 🔧 직접 계산된 시간 사용
+                      timeDisplay: _formatTime(member), // 🔧 통일된 포맷 사용
                     ),
 
                     Text(
