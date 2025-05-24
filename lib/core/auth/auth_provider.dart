@@ -3,7 +3,7 @@ import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../auth/data/mapper/user_mapper.dart';
+import '../../auth/data/mapper/member_mapper.dart';
 import '../../auth/domain/model/member.dart';
 import '../../auth/module/auth_di.dart';
 import '../utils/app_logger.dart';

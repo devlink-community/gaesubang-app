@@ -16,7 +16,14 @@ class DailyQuizBanner extends ConsumerWidget {
   final String? skills;
   final Random _random = Random();
 
-  DailyQuizBanner({super.key, this.skills});
+  // 🆕 다이얼로그 상태 변경 콜백 추가
+  final Function(bool isVisible)? onDialogStateChanged;
+
+  DailyQuizBanner({
+    super.key,
+    this.skills,
+    this.onDialogStateChanged, // 🆕 콜백 매개변수 추가
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -242,15 +249,15 @@ class DailyQuizBanner extends ConsumerWidget {
     }
 
     final skillList =
-        skills
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+    skills
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     // 최대 3개 스킬로 제한
     final limitedSkills =
-        skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
+    skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
 
     AppLogger.debug(
       '파싱된 스킬 목록(최대 3개): $limitedSkills (${limitedSkills.length}개)',
@@ -258,6 +265,17 @@ class DailyQuizBanner extends ConsumerWidget {
     );
 
     return limitedSkills.isEmpty ? ['컴퓨터 기초'] : limitedSkills;
+  }
+
+  // 🔧 다이얼로그 상태 알림 기능 추가
+  void _notifyDialogState(bool isVisible) {
+    if (onDialogStateChanged != null) {
+      onDialogStateChanged!(isVisible);
+      AppLogger.debug(
+        'CarouselSlider 상태 변경 알림: isVisible=$isVisible',
+        tag: 'QuizDialog',
+      );
+    }
   }
 
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
@@ -275,7 +293,7 @@ class DailyQuizBanner extends ConsumerWidget {
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty)
             .toList() ??
-        [];
+            [];
 
     // 제한된 스킬 목록 생성 (최대 3개)
     final skillList = _parseSkillList(skills);
@@ -339,6 +357,9 @@ class DailyQuizBanner extends ConsumerWidget {
     // 로딩 타이머 및 리스너 관리를 위한 변수
     Timer? loadingTimer;
 
+    // 취소 여부 추적
+    bool isCancelled = false;
+
     // 로딩 다이얼로그에 고유 키 부여
     final loadingDialogKey = UniqueKey();
 
@@ -347,47 +368,77 @@ class DailyQuizBanner extends ConsumerWidget {
       tag: 'QuizUI',
     );
 
-    // 퀴즈 로딩 중 표시할 다이얼로그
+    // 🆕 로딩 다이얼로그 표시 전 배너 자동재생 중지
+    _notifyDialogState(true);
+
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (dialogContext) {
         // 다이얼로그 컨텍스트 저장
         loadingDialogContext = dialogContext;
 
-        return Dialog(
-          key: loadingDialogKey,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColorStyles.primary80,
+        return PopScope(
+          canPop: true,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) {
+              // 뒤로가기 버튼으로 취소 처리
+              isCancelled = true;
+              loadingTimer?.cancel();
+
+              // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+              _notifyDialogState(false);
+
+              AppLogger.info('사용자가 퀴즈 로딩을 취소했습니다', tag: 'QuizGeneration');
+            }
+          },
+          child: Dialog(
+            key: loadingDialogKey,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 기존 로딩 스피너 그대로 유지
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColorStyles.primary80,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text('퀴즈를 준비하고 있습니다...', style: AppTextStyles.subtitle1Bold),
-                const SizedBox(height: 8),
-                Text(
-                  '잠시만 기다려주세요.',
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: Colors.grey[600],
+                  const SizedBox(height: 24),
+
+                  Text('퀴즈를 준비하고 있습니다...', style: AppTextStyles.subtitle1Bold),
+                  const SizedBox(height: 8),
+                  Text(
+                    '잠시만 기다려주세요.',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: Colors.grey[600],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
-    );
+    ).then((_) {
+      // 다이얼로그가 닫혔을 때 취소 처리 및 배너 자동재생 재개
+      if (!isCancelled) {
+        isCancelled = true;
+        loadingTimer?.cancel();
+      }
 
-    // 타임아웃 설정 (20초)
+      // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+      _notifyDialogState(false);
+    });
+
+    // 타임아웃 설정 (기존 20초 유지)
     loadingTimer = Timer(const Duration(seconds: 20), () {
+      if (isCancelled) return;
+
       final duration = DateTime.now().difference(startTime);
 
       AppLogger.warning(
@@ -397,7 +448,7 @@ class DailyQuizBanner extends ConsumerWidget {
 
       _closeLoadingDialog(loadingDialogContext);
 
-      if (context.mounted) {
+      if (context.mounted && !isCancelled) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('퀴즈 로딩이 지연되고 있습니다. 기본 퀴즈를 표시합니다.'),
@@ -430,6 +481,12 @@ class DailyQuizBanner extends ConsumerWidget {
       // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
       final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);
 
+      // 취소되었으면 더 이상 진행하지 않음
+      if (isCancelled) {
+        AppLogger.info('로딩이 취소되어 결과를 무시합니다', tag: 'QuizGeneration');
+        return;
+      }
+
       // 타이머 취소
       loadingTimer.cancel();
 
@@ -457,6 +514,8 @@ class DailyQuizBanner extends ConsumerWidget {
               tag: 'QuizGeneration',
             );
 
+            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+            _notifyDialogState(false);
             // 백업 퀴즈 표시
             _showBackupQuiz(context, ref, selectedSkill);
           }
@@ -483,6 +542,9 @@ class DailyQuizBanner extends ConsumerWidget {
               '오류로 인한 백업 퀴즈 표시: $selectedSkill',
               tag: 'QuizFallback',
             );
+
+            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+            _notifyDialogState(false);
             _showBackupQuiz(context, ref, selectedSkill);
           }
         },
@@ -494,10 +556,19 @@ class DailyQuizBanner extends ConsumerWidget {
           );
 
           _closeLoadingDialog(loadingDialogContext);
+
+          // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+          _notifyDialogState(false);
           _showBackupQuiz(context, ref, selectedSkill);
         },
       );
     } catch (e) {
+      // 취소되었으면 더 이상 진행하지 않음
+      if (isCancelled) {
+        AppLogger.info('로딩이 취소되어 예외 처리를 무시합니다', tag: 'QuizGeneration');
+        return;
+      }
+
       // 예외 발생 시 타이머 취소 및 백업 퀴즈 표시
       loadingTimer.cancel();
       _closeLoadingDialog(loadingDialogContext);
@@ -524,6 +595,9 @@ class DailyQuizBanner extends ConsumerWidget {
           '예외로 인한 백업 퀴즈 표시: $selectedSkill',
           tag: 'QuizFallback',
         );
+
+        // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
+        _notifyDialogState(false);
         _showBackupQuiz(context, ref, selectedSkill);
       }
     }
@@ -551,9 +625,12 @@ class DailyQuizBanner extends ConsumerWidget {
       tag: 'QuizUI',
     );
 
+    // 🆕 퀴즈 다이얼로그 표시 시에는 여전히 배너 자동재생 중지 상태 유지
+    // (이미 _notifyDialogState(true)가 호출된 상태)
+
     showDialog(
       context: context,
-      barrierDismissible: true, // 바탕 클릭으로 닫기 가능
+      barrierDismissible: true,
       builder: (dialogContext) {
         // 화면 크기를 가져와서 다이얼로그 크기를 적절히 조정
         final screenSize = MediaQuery.of(context).size;
@@ -597,7 +674,7 @@ class DailyQuizBanner extends ConsumerWidget {
                     // 약간의 지연 후 새 퀴즈 로딩 다이얼로그 표시
                     Future.delayed(const Duration(milliseconds: 100), () {
                       if (context.mounted) {
-                        // 새 퀴즈 로딩 시작
+                        // 새 퀴즈 로딩 시작 (여전히 배너 자동재생 중지 상태 유지)
                         _handleQuizTap(context, ref);
                       }
                     });
@@ -616,6 +693,9 @@ class DailyQuizBanner extends ConsumerWidget {
                       tag: 'QuizUI',
                     );
                     Navigator.of(dialogContext).pop();
+
+                    // 🆕 퀴즈 다이얼로그 닫힐 때 배너 자동재생 재개
+                    _notifyDialogState(false);
                     break;
                 }
               },
@@ -623,7 +703,10 @@ class DailyQuizBanner extends ConsumerWidget {
           ),
         );
       },
-    );
+    ).then((_) {
+      // 🆕 다이얼로그가 외부에서 닫혔을 때도 배너 자동재생 재개
+      _notifyDialogState(false);
+    });
   }
 
   // 백업 퀴즈 표시 메서드
@@ -657,7 +740,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "버그 방지 기능",
         ],
         explanation:
-            "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
+        "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
         correctOptionIndex: 1,
         relatedSkill: "Python",
       );
@@ -672,7 +755,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "StatelessWidget은 항상 더 적은 메모리를 사용함",
         ],
         explanation:
-            "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
+        "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
         correctOptionIndex: 2,
         relatedSkill: "Flutter",
       );
@@ -687,7 +770,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "const는 호이스팅되지 않지만, let은 호이스팅됩니다.",
         ],
         explanation:
-            "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
+        "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
         correctOptionIndex: 1,
         relatedSkill: "JavaScript",
       );
@@ -701,7 +784,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "항상 useEffect 내부에서 호출해야 한다",
         ],
         explanation:
-            "React Hooks는 컴포넌트 최상위 레벨에서만 호출해야 하며, 반복문, 조건문, 중첩 함수 내에서 호출하면 안 됩니다. 이는 React가 hooks의 호출 순서에 의존하기 때문입니다.",
+        "React Hooks는 컴포넌트 최상위 레벨에서만 호출해야 하며, 반복문, 조건문, 중첩 함수 내에서 호출하면 안 됩니다. 이는 React가 hooks의 호출 순서에 의존하기 때문입니다.",
         correctOptionIndex: 2,
         relatedSkill: "React",
       );
