@@ -1,5 +1,5 @@
 // lib/core/utils/api_call_logger.dart
-import 'dart:developer' as developer;
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 
 import '../config/app_config.dart';
 
@@ -17,10 +17,9 @@ class ApiCallLogger {
     final paramStr =
         AppConfig.enableVerboseLogging && params != null ? ' - $params' : '';
 
-    developer.log(
+    AppLogger.info(
       'API START: $apiName$paramStr',
-      name: 'AuthAPI',
-      time: DateTime.now(),
+      tag: 'API',
     );
   }
 
@@ -32,12 +31,17 @@ class ApiCallLogger {
     if (stats != null) {
       stats._endCall(success, error);
 
-      developer.log(
-        'API END: $apiName - ${success ? 'SUCCESS' : 'ERROR: $error'} '
-        '(${stats.lastCallDuration}ms)',
-        name: 'AuthAPI',
-        time: DateTime.now(),
-      );
+      if (success) {
+        AppLogger.info(
+          'API END: $apiName - SUCCESS (${stats.lastCallDuration}ms)',
+          tag: 'API',
+        );
+      } else {
+        AppLogger.error(
+          'API END: $apiName - ERROR: $error (${stats.lastCallDuration}ms)',
+          tag: 'API',
+        );
+      }
     }
   }
 
@@ -46,10 +50,9 @@ class ApiCallLogger {
     if (!AppConfig.enableVerboseLogging) return;
 
     if (timeSinceLastCall.inMilliseconds < 1000) {
-      developer.log(
+      AppLogger.warning(
         'DUPLICATE CALL WARNING: $apiName called again within ${timeSinceLastCall.inMilliseconds}ms',
-        name: 'AuthAPI',
-        level: 900, // Warning level
+        tag: 'API',
       );
     }
   }
@@ -58,18 +61,18 @@ class ApiCallLogger {
   static void printStats() {
     if (!AppConfig.enableApiLogging || _stats.isEmpty) return;
 
-    developer.log('=== API Call Statistics ===', name: 'AuthAPI');
+    AppLogger.info('=== API Call Statistics ===', tag: 'API');
 
     for (final stats in _stats.values) {
-      developer.log(
+      AppLogger.info(
         '${stats.apiName}: ${stats.totalCalls} calls, '
         'avg: ${stats.averageDuration}ms, '
         'success: ${stats.successRate.toStringAsFixed(1)}%',
-        name: 'AuthAPI',
+        tag: 'API',
       );
     }
 
-    developer.log('==========================', name: 'AuthAPI');
+    AppLogger.info('==========================', tag: 'API');
   }
 
   /// 특정 API의 상세 통계 조회
