@@ -61,7 +61,7 @@ class _OnboardingShellState extends State<OnboardingShell> {
 @riverpod
 GoRouter appRouter(Ref ref) {
   // 인증 상태 스트림을 Listenable로 변환
-  final authRepo = ref.watch(authRepositoryProvider);
+  final authRepo = ref.watch(authCoreRepositoryProvider);
   final authStateListenable = StreamListenable(authRepo.authStateChanges);
 
   // 온보딩 상태 구독

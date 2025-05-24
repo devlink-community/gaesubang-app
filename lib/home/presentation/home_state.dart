@@ -1,9 +1,9 @@
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
+import 'package:devlink_mobile_app/banner/domain/model/banner.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/home/domain/model/notice.dart';
-import 'package:devlink_mobile_app/banner/domain/model/banner.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -22,7 +22,7 @@ class HomeState with _$HomeState {
   });
 
   @override
-  final AsyncValue<Member> currentMember;
+  final AsyncValue<User> currentMember;
   final AsyncValue<List<Notice>> notices;
   @override
   final AsyncValue<List<Group>> joinedGroups;

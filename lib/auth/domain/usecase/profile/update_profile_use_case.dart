@@ -1,16 +1,16 @@
-// lib/auth/domain/usecase/update_profile_use_case.dart
-import 'package:devlink_mobile_app/auth/domain/model/member.dart';
-import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+// lib/auth/domain/usecase/profile/update_profile_use_case.dart
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
+import 'package:devlink_mobile_app/auth/domain/repository/auth_profile_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class UpdateProfileUseCase {
-  final AuthRepository _repository;
+  final AuthProfileRepository _repository;
 
-  UpdateProfileUseCase({required AuthRepository repository})
+  UpdateProfileUseCase({required AuthProfileRepository repository})
     : _repository = repository;
 
-  Future<AsyncValue<Member>> execute({
+  Future<AsyncValue<User>> execute({
     required String nickname,
     String? description,
     String? position,

@@ -1,7 +1,7 @@
 // lib/core/auth/auth_state.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../auth/domain/model/member.dart';
+import '../../auth/domain/model/user.dart';
 
 part 'auth_state.freezed.dart';
 
@@ -10,7 +10,7 @@ part 'auth_state.freezed.dart';
 @freezed
 sealed class AuthState with _$AuthState {
   /// 인증된 상태 - 사용자 정보 포함
-  const factory AuthState.authenticated(Member user) = Authenticated;
+  const factory AuthState.authenticated(User user) = Authenticated;
 
   /// 인증되지 않은 상태
   const factory AuthState.unauthenticated() = Unauthenticated;
@@ -30,9 +30,9 @@ extension AuthStateExtension on AuthState {
   }
 
   /// 현재 사용자 정보 (인증된 경우만, 안전한 null 반환)
-  Member? get user {
+  User? get user {
     return switch (this) {
-      Authenticated(user: final member) => member,
+      Authenticated(user: final user) => user,
       _ => null,
     };
   }

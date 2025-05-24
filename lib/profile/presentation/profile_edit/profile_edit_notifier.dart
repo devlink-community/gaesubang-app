@@ -1,17 +1,16 @@
 import 'dart:io';
 
-import 'package:devlink_mobile_app/auth/domain/usecase/check_nickname_availability_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/get_current_user_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_image_use_case.dart';
-import 'package:devlink_mobile_app/auth/domain/usecase/update_profile_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/check_nickname_availability_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_image_use_case.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/profile/update_profile_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
+import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
-import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
