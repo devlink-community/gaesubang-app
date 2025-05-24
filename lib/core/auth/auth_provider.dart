@@ -1,10 +1,10 @@
 // lib/core/auth/auth_provider.dart
+import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../auth/data/mapper/member_mapper.dart';
-import '../../auth/domain/model/member.dart';
+import '../../auth/domain/model/user.dart';
 import '../../auth/module/auth_di.dart';
 import '../utils/app_logger.dart';
 import 'auth_state.dart';
@@ -26,19 +26,19 @@ Stream<AuthState> authState(Ref ref) {
           return const AuthState.unauthenticated();
         }
 
-        final member = userData.toMemberWithCalculatedStats();
+        final user = userData.toUser();
         AppLogger.authInfo(
-          '사용자 로그인 상태 감지: ${PrivacyMaskUtil.maskNickname(member.nickname)} (${PrivacyMaskUtil.maskEmail(member.email)})', // 변경
+          '사용자 로그인 상태 감지: ${PrivacyMaskUtil.maskNickname(user.nickname)} (${PrivacyMaskUtil.maskEmail(user.email)})',
         );
         AppLogger.logState('AuthenticatedUser', {
-          'userId': PrivacyMaskUtil.maskUserId(member.uid), // 변경
-          'email': PrivacyMaskUtil.maskEmail(member.email), // 변경
-          'nickname': PrivacyMaskUtil.maskNickname(member.nickname), // 변경
-          'streakDays': member.streakDays,
-          'totalFocusMinutes': member.focusStats?.totalMinutes ?? 0,
+          'userId': PrivacyMaskUtil.maskUserId(user.uid),
+          'email': PrivacyMaskUtil.maskEmail(user.email),
+          'nickname': PrivacyMaskUtil.maskNickname(user.nickname),
+          'streakDays': user.streakDays,
+          'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
         });
 
-        return AuthState.authenticated(member);
+        return AuthState.authenticated(user);
       })
       .handleError((error, stackTrace) {
         AppLogger.error('인증 상태 스트림 에러', error: error, stackTrace: stackTrace);
@@ -77,7 +77,7 @@ bool isAuthenticated(Ref ref) {
 /// 현재 사용자 정보 Provider (편의용)
 /// UI에서 사용자 정보가 필요할 때 사용
 @riverpod
-Member? currentUser(Ref ref) {
+User? currentUser(Ref ref) {
   final authState = ref.watch(authStateProvider);
 
   return authState.when(
@@ -126,10 +126,10 @@ Future<AuthState> currentAuthState(Ref ref) async {
       return const AuthState.unauthenticated();
     }
 
-    final member = userData.toMemberWithCalculatedStats();
-    AppLogger.authInfo('동기 인증 확인 결과: 로그인 상태 (${member.nickname})');
+    final user = userData.toUser();
+    AppLogger.authInfo('동기 인증 확인 결과: 로그인 상태 (${user.nickname})');
 
-    return AuthState.authenticated(member);
+    return AuthState.authenticated(user);
   } catch (e, st) {
     final duration = DateTime.now().difference(startTime);
     AppLogger.logPerformance('동기 인증 상태 확인 실패', duration);
@@ -172,7 +172,7 @@ class SessionWatcher extends _$SessionWatcher {
     // 예: 로그인 화면으로 리다이렉트, 캐시 클리어 등
   }
 
-  void _handleSessionStarted(Member user) {
+  void _handleSessionStarted(User user) {
     AppLogger.logBox('세션 시작', '${user.nickname}님 환영합니다!');
     AppLogger.logState('NewSession', {
       'userId': user.uid,
@@ -219,10 +219,8 @@ class AuthUtils extends _$AuthUtils {
     if (user.nickname.isNotEmpty) completedFields++;
     if (user.email.isNotEmpty) completedFields++;
     if (user.image.isNotEmpty) completedFields++;
-    if (user.position?.isNotEmpty ?? false)
-      completedFields++; // nullable String 처리
-    if (user.description.isNotEmpty ?? false)
-      completedFields++; // nullable String 처리
+    if (user.position?.isNotEmpty ?? false) completedFields++;
+    if (user.description?.isNotEmpty ?? false) completedFields++;
 
     completeness = completedFields / totalFields;
 
@@ -243,8 +241,7 @@ class AuthUtils extends _$AuthUtils {
       'activity': activity,
       'timestamp': DateTime.now().toIso8601String(),
       'streakDays': user.streakDays,
-      // ✅ null 안전 접근
-      'totalFocusMinutes': user.focusStats?.totalMinutes ?? 0,
+      'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
       'position': user.position ?? '미설정',
     });
   }
@@ -254,18 +251,21 @@ class AuthUtils extends _$AuthUtils {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
+    final summary = user.summary;
+    final weeklyTotal =
+        summary?.last7DaysActivityMap.values.fold(
+          0,
+          (sum, seconds) => sum + seconds,
+        ) ??
+        0;
+
     AppLogger.logState('UserStats', {
       'userId': user.uid,
       'nickname': user.nickname,
       'streakDays': user.streakDays,
-      'totalFocusMinutes': user.focusStats?.totalMinutes ?? 0,
-      'weeklyFocusMinutes':
-          user.focusStats?.weeklyMinutes.values.fold(
-            0,
-            (sum, minutes) => sum + minutes,
-          ) ??
-          0,
-      'joinedGroupsCount': user.joinedGroups.length ?? 0,
+      'totalHours': summary?.totalHours ?? 0,
+      'weeklySeconds': weeklyTotal,
+      'joinedGroupsCount': user.joinedGroups.length,
       'profileCompleteness': getProfileCompleteness(),
       'hasOnAir': user.onAir,
     });
@@ -276,24 +276,27 @@ class AuthUtils extends _$AuthUtils {
     final user = ref.read(currentUserProvider);
     if (user == null) return {};
 
-    final weeklyMinutes = user.focusStats?.weeklyMinutes ?? {};
-    final totalWeeklyMinutes = weeklyMinutes.values.fold(
+    final weeklyActivity = user.summary?.last7DaysActivityMap ?? {};
+    final totalWeeklySeconds = weeklyActivity.values.fold(
       0,
-      (sum, minutes) => sum + minutes,
+      (sum, seconds) => sum + seconds,
     );
     final activeDays =
-        weeklyMinutes.values.where((minutes) => minutes > 0).length;
+        weeklyActivity.values.where((seconds) => seconds > 0).length;
 
     final summary = {
-      'totalWeeklyMinutes': totalWeeklyMinutes,
+      'totalWeeklySeconds': totalWeeklySeconds,
+      'totalWeeklyMinutes': totalWeeklySeconds ~/ 60,
       'activeDays': activeDays,
       'dailyAverage':
-          activeDays > 0 ? (totalWeeklyMinutes / activeDays).round() : 0,
+          activeDays > 0 ? (totalWeeklySeconds / activeDays).round() : 0,
       'streakDays': user.streakDays,
-      'weeklyDetails': weeklyMinutes,
+      'weeklyDetails': weeklyActivity,
     };
 
-    AppLogger.debug('주간 활동 요약: 총 $totalWeeklyMinutes분, $activeDays일 활동');
+    AppLogger.debug(
+      '주간 활동 요약: 총 ${totalWeeklySeconds ~/ 60}분, $activeDays일 활동',
+    );
 
     return summary;
   }

@@ -1,13 +1,13 @@
-// lib/auth/domain/usecase/check_nickname_availability_use_case.dart
-import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+// lib/auth/domain/usecase/core/check_nickname_availability_use_case.dart
+import 'package:devlink_mobile_app/auth/domain/repository/auth_core_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class CheckNicknameAvailabilityUseCase {
-  final AuthRepository _repository;
+  final AuthCoreRepository _repository;
 
-  CheckNicknameAvailabilityUseCase({required AuthRepository repository})
-      : _repository = repository;
+  CheckNicknameAvailabilityUseCase({required AuthCoreRepository repository})
+    : _repository = repository;
 
   Future<AsyncValue<bool>> execute(String nickname) async {
     final result = await _repository.checkNicknameAvailability(nickname);

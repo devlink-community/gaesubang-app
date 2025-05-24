@@ -1,13 +1,13 @@
-// lib/auth/domain/usecase/check_email_availability_use_case.dart
-import 'package:devlink_mobile_app/auth/domain/repository/auth_repository.dart';
+// lib/auth/domain/usecase/core/check_email_availability_use_case.dart
+import 'package:devlink_mobile_app/auth/domain/repository/auth_core_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class CheckEmailAvailabilityUseCase {
-  final AuthRepository _repository;
+  final AuthCoreRepository _repository;
 
-  CheckEmailAvailabilityUseCase({required AuthRepository repository})
-      : _repository = repository;
+  CheckEmailAvailabilityUseCase({required AuthCoreRepository repository})
+    : _repository = repository;
 
   Future<AsyncValue<bool>> execute(String email) async {
     // UseCase에서는 이메일을 그대로 전달

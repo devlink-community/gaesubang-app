@@ -1,13 +1,13 @@
 // lib/profile/presentation/user_profile/user_profile_notifier.dart
 
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
-import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_action.dart';
-import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_state.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_action.dart';
+import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'get_user_profile_usecase.dart';
+import '../../../auth/domain/usecase/profile/get_user_profile_usecase.dart';
 
 part 'user_profile_notifier.g.dart';
 

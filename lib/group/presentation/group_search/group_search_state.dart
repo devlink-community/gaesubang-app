@@ -1,8 +1,7 @@
+import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-import '../../../auth/domain/model/member.dart';
 
 part 'group_search_state.freezed.dart';
 
@@ -25,5 +24,5 @@ class GroupSearchState with _$GroupSearchState {
   final List<String> recentSearches;
   final AsyncValue<Group?> selectedGroup;
   final AsyncValue<void> joinGroupResult;
-  final Member? currentMember;
+  final User? currentMember;
 }

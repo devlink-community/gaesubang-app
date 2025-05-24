@@ -1,12 +1,13 @@
+// lib/auth/domain/usecase/core/signout_use_case.dart
+import 'package:devlink_mobile_app/auth/domain/repository/auth_core_repository.dart';
+import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../auth/domain/repository/auth_repository.dart';
-import '../../../core/result/result.dart';
+class SignoutUseCase {
+  final AuthCoreRepository _repository;
 
-class LogoutUseCase {
-  final AuthRepository _repository;
-
-  LogoutUseCase(this._repository);
+  SignoutUseCase({required AuthCoreRepository repository})
+    : _repository = repository;
 
   Future<AsyncValue<void>> execute() async {
     final result = await _repository.signOut();
