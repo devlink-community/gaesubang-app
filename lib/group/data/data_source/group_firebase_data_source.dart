@@ -1719,9 +1719,16 @@ class GroupFirebaseDataSource implements GroupDataSource {
       await _deleteGroupFolder(groupId);
 
       // 3. 그룹 문서 삭제는 별도 메서드에서 처리하도록 함
-      print('🗑️ Group images cleanup completed for groupId: $groupId');
+      AppLogger.info(
+        'Group images cleanup completed for groupId: $groupId',
+        tag: 'GroupFirebase',
+      );
     } catch (e) {
-      print('❌ Failed to delete group images: $e');
+      AppLogger.error(
+        'Failed to delete group images',
+        tag: 'GroupFirebase',
+        error: e,
+      );
       // 이미지 삭제 실패는 로그만 남기고 계속 진행
     }
   }
