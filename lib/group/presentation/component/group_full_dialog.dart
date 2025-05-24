@@ -57,7 +57,7 @@ class GroupFullDialog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '인원 마감',
+            '모집 마감',
             style: AppTextStyles.subtitle1Bold.copyWith(
               color: AppColorStyles.primary100,
               fontSize: 18,
@@ -74,7 +74,7 @@ class GroupFullDialog extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            '이 그룹은 인원 마감으로\n참여하실 수 없습니다',
+            '이 그룹은 모집 마감으로\n참여하실 수 없습니다',
             textAlign: TextAlign.center,
             style: AppTextStyles.body1Regular.copyWith(
               fontSize: 16,

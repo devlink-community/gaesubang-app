@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../domain/model/group.dart';
+import 'components/sort_options_drop_down.dart';
 
 enum GroupFilter {
   all('전체'),
@@ -19,6 +20,7 @@ enum GroupFilter {
   open('참여 가능');
 
   final String label;
+
   const GroupFilter(this.label);
 }
 
@@ -38,6 +40,15 @@ class GroupListScreen extends StatefulWidget {
 
 class _GroupListScreenState extends State<GroupListScreen> {
   GroupFilter _selectedFilter = GroupFilter.all;
+  bool _isSortDropdownVisible = false; // 드롭다운 표시 여부
+  final LayerLink _sortButtonLayerLink = LayerLink(); // 드롭다운 위치 연결
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void dispose() {
+    _removeDropdown();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -67,6 +78,35 @@ class _GroupListScreenState extends State<GroupListScreen> {
     if (imageUrls.isNotEmpty) {
       AppImage.precacheImages(imageUrls, context);
     }
+  }
+
+  // 드롭다운 표시 메서드
+  void _showSortDropdown() {
+    _removeDropdown(); // 이미 표시된 드롭다운이 있다면 제거
+
+    final overlay = Overlay.of(context);
+
+    _overlayEntry = OverlayEntry(
+      builder:
+          (context) => SortOptionsDropdown(
+            currentSortType: widget.state.sortType,
+            onAction: (action) {
+              _removeDropdown(); // 액션 처리 후 드롭다운 닫기
+              widget.onAction(action);
+            },
+            layerLink: _sortButtonLayerLink,
+          ),
+    );
+
+    if (_overlayEntry != null) {
+      overlay.insert(_overlayEntry!);
+    }
+  }
+
+  // 드롭다운 제거 메서드
+  void _removeDropdown() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 
   @override
@@ -242,19 +282,24 @@ class _GroupListScreenState extends State<GroupListScreen> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                color: AppColorStyles.primary100,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              headingText,
-              style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.primary100,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  headingText,
+                  style: AppTextStyles.subtitle1Bold.copyWith(fontSize: 18),
+                ),
+              ],
             ),
           ],
         ),

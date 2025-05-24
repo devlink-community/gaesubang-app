@@ -90,6 +90,12 @@ class GroupListScreenRoot extends ConsumerWidget {
           // 다이얼로그 닫을 때 selectedGroup 초기화
             notifier.onAction(const GroupListAction.resetSelectedGroup());
             Navigator.of(context).pop();
+          case OnTapSort():
+            // 이 액션은 GroupListScreen에서 처리되므로 여기서는 무시
+            break;
+          case OnChangeSortType():
+            // 정렬 타입 변경 액션 처리 - 바로 notifier에 전달
+            notifier.onAction(action);
           default:
             notifier.onAction(action);
         }
