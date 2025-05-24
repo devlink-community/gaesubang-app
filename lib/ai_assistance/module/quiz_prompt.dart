@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 
 /// AI 프롬프트 생성을 전담하는 서비스 클래스
 /// 모든 프롬프트 생성 로직을 중앙 집중화하여 관리합니다.
@@ -36,8 +36,9 @@ class PromptService {
     final selectedLevel = randomLevels[_random.nextInt(randomLevels.length)];
     final uniqueId = DateTime.now().millisecondsSinceEpoch;
 
-    debugPrint(
+    AppLogger.info(
       '퀴즈 프롬프트 생성: 스킬=$cleanSkill, 주제=$selectedTopic, 난이도=$selectedLevel',
+      tag: 'QuizPrompt',
     );
 
     // 프롬프트 템플릿 생성
@@ -78,7 +79,10 @@ class PromptService {
       skills = ['프로그래밍 기초'];
     }
 
-    debugPrint('다중 퀴즈 프롬프트 생성: 스킬=${skills.join(", ")}, 문제 수=$questionCount');
+    AppLogger.info(
+      '다중 퀴즈 프롬프트 생성: 스킬=${skills.join(", ")}, 문제 수=$questionCount',
+      tag: 'QuizPrompt',
+    );
 
     // 프롬프트 템플릿 생성
     return """
@@ -115,7 +119,10 @@ JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요
       int questionCount, {
         String difficultyLevel = '중간',
       }) {
-    debugPrint('일반 컴퓨터 지식 퀴즈 프롬프트 생성: 문제 수=$questionCount');
+    AppLogger.info(
+      '일반 컴퓨터 지식 퀴즈 프롬프트 생성: 문제 수=$questionCount',
+      tag: 'QuizPrompt',
+    );
 
     return """
 당신은 프로그래밍 및 컴퓨터 기초 지식 퀴즈 생성 전문가입니다. 다음 조건에 맞는 퀴즈를 정확히 JSON 형식으로 생성해주세요:
@@ -165,8 +172,9 @@ JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요
     final uniqueId = DateTime.now().millisecondsSinceEpoch;
     final randomSeed = _random.nextInt(10000);
 
-    debugPrint(
+    AppLogger.info(
       '학습 팁 프롬프트 생성: 스킬=$cleanSkill, 카테고리=$category, 스타일=$englishStyle, 템플릿=$template, 관점=$perspective',
+      tag: 'QuizPrompt',
     );
 
     // 6. 선택된 템플릿에 따른 프롬프트 생성
