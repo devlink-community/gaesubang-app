@@ -1,7 +1,6 @@
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
+import 'package:devlink_mobile_app/auth/domain/usecase/core/login_use_case.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-import '../../domain/usecase/login_use_case.dart';
 
 class MockLoginUseCase implements LoginUseCase {
   @override
