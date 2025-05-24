@@ -1,4 +1,5 @@
 // lib/core/utils/privacy_mask_util.dart
+import 'package:flutter/foundation.dart';
 
 /// 개인정보 보호를 위한 마스킹 유틸리티
 /// 로깅 시 민감한 정보를 안전하게 처리하기 위해 사용
@@ -146,13 +147,9 @@ class PrivacyMaskUtil {
     String sensitiveData,
     String Function(String) maskFunction,
   ) {
-    // 개발 환경 판단 (kDebugMode 또는 환경 변수로 판단)
-    const isProduction = bool.fromEnvironment(
-      'dart.vm.product',
-      defaultValue: false,
-    );
-
-    if (isProduction) {
+    // Flutter의 빌드 모드로 환경 판단
+    if (kReleaseMode) {
+      // 프로덕션 환경: 마스킹 적용
       return maskFunction(sensitiveData);
     } else {
       // 개발 환경에서는 원본 반환 (단, 주의 메시지 추가)
