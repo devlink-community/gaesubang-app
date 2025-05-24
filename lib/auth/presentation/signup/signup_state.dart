@@ -37,7 +37,6 @@ class SignupState with _$SignupState {
     this.signupResult,
 
     // 약관 동의 ID 추가
-    this.agreedTermsId,
     this.isTermsAgreed = false,
   });
 
@@ -65,6 +64,5 @@ class SignupState with _$SignupState {
 
   final AsyncValue<User>? signupResult;
 
-  final String? agreedTermsId;
   final bool isTermsAgreed; // 약관 동의 여부
 }

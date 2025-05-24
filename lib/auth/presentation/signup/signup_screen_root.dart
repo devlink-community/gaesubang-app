@@ -1,20 +1,17 @@
 // lib/auth/presentation/signup/signup_screen_root.dart
 
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_action.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart';
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SignupScreenRoot extends ConsumerStatefulWidget {
-  final String? agreedTermsId;
-
   const SignupScreenRoot({
     super.key,
-    this.agreedTermsId,
   });
 
   @override
@@ -25,16 +22,6 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
   @override
   void initState() {
     super.initState();
-
-    // 약관 동의 ID가 있으면 설정
-    if (widget.agreedTermsId != null) {
-      // 다음 프레임에서 notifier 접근 (initState에서 ref.read 사용)
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref
-            .read(signupNotifierProvider.notifier)
-            .setAgreedTermsId(widget.agreedTermsId!);
-      });
-    }
   }
 
   @override

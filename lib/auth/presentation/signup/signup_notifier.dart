@@ -104,7 +104,7 @@ class SignupNotifier extends _$SignupNotifier {
         } else {
           AppLogger.authInfo('약관 동의 해제 - 상태 초기화');
           // 체크 해제된 경우 약관 동의 상태 초기화
-          state = state.copyWith(agreedTermsId: null, isTermsAgreed: false);
+          state = state.copyWith(isTermsAgreed: false);
         }
 
       // 포커스 변경 액션 처리 (필드 유효성 검증)
@@ -437,7 +437,6 @@ class SignupNotifier extends _$SignupNotifier {
       'email': PrivacyMaskUtil.maskEmail(state.email), // 변경
       'nickname': PrivacyMaskUtil.maskNickname(state.nickname), // 변경
       'password_length': state.password.length,
-      'agreed_terms_id': state.agreedTermsId,
       'is_terms_agreed': state.isTermsAgreed,
     });
 
@@ -451,7 +450,6 @@ class SignupNotifier extends _$SignupNotifier {
       email: state.email,
       password: state.password,
       nickname: state.nickname,
-      agreedTermsId: state.agreedTermsId,
     );
 
     AppLogger.logStep(4, 6, '회원가입 API 응답 처리');
@@ -503,24 +501,15 @@ class SignupNotifier extends _$SignupNotifier {
     state = const SignupState();
   }
 
-  // 약관 동의 ID 설정
-  void setAgreedTermsId(String termsId) {
-    AppLogger.authInfo('약관 동의 ID 설정: $termsId');
-    state = state.copyWith(agreedTermsId: termsId, formErrorMessage: null);
-  }
-
   // 약관 동의 상태 업데이트
   void updateTermsAgreement({
-    required String? agreedTermsId,
     required bool isAgreed,
   }) {
     AppLogger.logState('약관 동의 상태 업데이트', {
-      'agreed_terms_id': agreedTermsId,
       'is_agreed': isAgreed,
     });
 
     state = state.copyWith(
-      agreedTermsId: agreedTermsId,
       isTermsAgreed: isAgreed,
       termsError: null, // 약관 에러 메시지 초기화 추가
       formErrorMessage: null, // 통합 에러 메시지도 초기화
