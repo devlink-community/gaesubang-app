@@ -353,13 +353,10 @@ Widget _buildSafeProfileImage(String? imageUrl) {
     );
   }
 
+  // 정상적인 네트워크 이미지인 경우
   return CircleAvatar(
     radius: 12,
     backgroundColor: AppColorStyles.gray40,
-    onBackgroundImageError: (exception, stackTrace) {
-      // 이미지 로드 실패 시 로그 출력
-      AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
-    },
     child: ClipOval(
       child: Image.network(
         cleanUrl,
@@ -367,6 +364,7 @@ Widget _buildSafeProfileImage(String? imageUrl) {
         height: 24,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
+          AppLogger.warning('프로필 이미지 로드 실패: $cleanUrl');
           return Icon(
             Icons.person,
             size: 16,
