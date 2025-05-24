@@ -695,116 +695,26 @@ class MockGroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    await _initializeIfNeeded();
-
-    // 현재 사용자 정보 가져오기
-    final userInfo = _getCurrentUserInfo();
-    final userId = userInfo['userId']!;
-    final userName = userInfo['userName']!;
-
-    // 그룹 존재 확인
-    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
-    if (groupIndex == -1) {
-      throw Exception(GroupErrorMessages.notFound);
-    }
-
-    // 새 타이머 시작 활동 생성
-    final now = DateTime.now();
-    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
-    final activity = {
-      'id': activityId,
-      'userId': userId,
-      'userName': userName,
-      'type': 'start',
-      'timestamp': _dateFormat.format(now),
-      'groupId': groupId,
-    };
-
-    // 타이머 활동 저장
-    _timerActivities[groupId] ??= [];
-    _timerActivities[groupId]!.add(activity);
-
-    // 🔧 실시간 스트림으로 변경 알림
-    _notifyTimerStatusChange(groupId);
-
-    return activity;
-  }
-
-  @override
-  Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    await _initializeIfNeeded();
-
-    // 현재 사용자 정보 가져오기
-    final userInfo = _getCurrentUserInfo();
-    final userId = userInfo['userId']!;
-    final userName = userInfo['userName']!;
-
-    // 그룹 존재 확인
-    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
-    if (groupIndex == -1) {
-      throw Exception(GroupErrorMessages.notFound);
-    }
-
-    // 새 타이머 종료 활동 생성
-    final now = DateTime.now();
-    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
-    final activity = {
-      'id': activityId,
-      'userId': userId,
-      'userName': userName,
-      'type': 'end',
-      'timestamp': _dateFormat.format(now),
-      'groupId': groupId,
-    };
-
-    // 타이머 활동 저장
-    _timerActivities[groupId] ??= [];
-    _timerActivities[groupId]!.add(activity);
-
-    // 🔧 실시간 스트림으로 변경 알림
-    _notifyTimerStatusChange(groupId);
-
-    return activity;
+    // 일관된 방식으로 recordTimerActivityWithTimestamp 메서드 호출
+    return recordTimerActivityWithTimestamp(groupId, 'start', DateTime.now());
   }
 
   @override
   Future<Map<String, dynamic>> pauseMemberTimer(String groupId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _initializeIfNeeded();
+    // 일관된 방식으로 recordTimerActivityWithTimestamp 메서드 호출
+    return recordTimerActivityWithTimestamp(groupId, 'pause', DateTime.now());
+  }
 
-    // 현재 사용자 정보 가져오기
-    final userInfo = _getCurrentUserInfo();
-    final userId = userInfo['userId']!;
-    final userName = userInfo['userName']!;
+  @override
+  Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
+    // 일관된 방식으로 recordTimerActivityWithTimestamp 메서드 호출
+    return recordTimerActivityWithTimestamp(groupId, 'end', DateTime.now());
+  }
 
-    // 그룹 존재 확인
-    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
-    if (groupIndex == -1) {
-      throw Exception(GroupErrorMessages.notFound);
-    }
-
-    // 새 타이머 일시정지 활동 생성
-    final now = DateTime.now();
-    final activityId = 'activity_${userId}_${now.millisecondsSinceEpoch}';
-    final activity = {
-      'id': activityId,
-      'userId': userId,
-      'userName': userName,
-      'type': 'pause',
-      'timestamp': _dateFormat.format(now),
-      'groupId': groupId,
-    };
-
-    // 타이머 활동 저장
-    _timerActivities[groupId] ??= [];
-    _timerActivities[groupId]!.add(activity);
-
-    // 🔧 실시간 스트림으로 변경 알림
-    _notifyTimerStatusChange(groupId);
-
-    return activity;
+  @override
+  Future<Map<String, dynamic>> resumeMemberTimer(String groupId) async {
+    // 일관된 방식으로 recordTimerActivityWithTimestamp 메서드 호출
+    return recordTimerActivityWithTimestamp(groupId, 'resume', DateTime.now());
   }
 
   @override
@@ -864,61 +774,162 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     String activityType,
     DateTime timestamp,
   ) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _initializeIfNeeded();
-
-    // 현재 사용자 정보 가져오기
-    final userInfo = _getCurrentUserInfo();
-    final userId = userInfo['userId']!;
-    final userName = userInfo['userName']!;
+    // 지연 시뮬레이션
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // 그룹 존재 확인
-    final groupIndex = _groups.indexWhere((g) => g['id'] == groupId);
-    if (groupIndex == -1) {
+    if (!_groups.containsKey(groupId)) {
       throw Exception(GroupErrorMessages.notFound);
     }
 
-    // 타이머 활동 생성
-    final activityId = 'activity_${userId}_${timestamp.millisecondsSinceEpoch}';
-    final activity = {
-      'id': activityId,
-      'userId': userId,
-      'userName': userName,
-      'type': activityType,
-      'timestamp': _dateFormat.format(timestamp), // 특정 시간으로 설정
-      'groupId': groupId,
-      'metadata': {
-        'isManualTimestamp': true, // 수동으로 설정된 타임스탬프 표시
-        'recordedAt': _dateFormat.format(DateTime.now()), // 실제 기록 시간
-      },
-    };
+    // 현재 활동 상태 찾기
+    final activityData = _findMemberActivity(groupId, _mockUserId);
+    final dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
 
-    // 타이머 활동 저장
-    _timerActivities[groupId] ??= [];
-    _timerActivities[groupId]!.add(activity);
+    // 활동 타입에 따라 처리
+    switch (activityType) {
+      case 'start':
+        // 이미 실행 중인 타이머 확인
+        if (activityData!['state'] == 'running' ||
+            activityData['state'] == 'resume') {
+          throw Exception(GroupErrorMessages.timerAlreadyRunning);
+        }
 
-    // 타이머 활동을 시간순으로 정렬 (중요!)
-    _timerActivities[groupId]!.sort((a, b) {
-      final timestampA = a['timestamp'] as String?;
-      final timestampB = b['timestamp'] as String?;
+        // 새 타이머 시작
+        activityData['state'] = 'running';
+        activityData['startAt'] = timestamp;
+        activityData['lastUpdatedAt'] = timestamp;
+        activityData['elapsed'] = 0;
 
-      if (timestampA == null || timestampB == null) return 0;
+        // monthlyDurations 초기화 (없는 경우)
+        if (!activityData.containsKey('monthlyDurations')) {
+          activityData['monthlyDurations'] = {};
+        }
 
-      try {
-        final dateA = _dateFormat.parse(timestampA);
-        final dateB = _dateFormat.parse(timestampB);
-        return dateA.compareTo(dateB); // 오름차순 (시간순)
-      } catch (e) {
-        return 0;
-      }
-    });
+        // 해당 날짜에 대한 초기값 설정 (없는 경우)
+        final monthlyDurations =
+            activityData['monthlyDurations'] as Map<dynamic, dynamic>;
+        if (!monthlyDurations.containsKey(dateKey)) {
+          monthlyDurations[dateKey] = 0;
+        }
+        break;
 
-    // 🔧 실시간 스트림으로 변경 알림
-    _notifyTimerStatusChange(groupId);
+      case 'pause':
+        // 타이머 실행 중인지 확인
+        if (activityData!['state'] != 'running' &&
+            activityData['state'] != 'resume') {
+          throw Exception(GroupErrorMessages.timerNotRunning);
+        }
 
-    print('✅ Mock 타이머 활동 기록 완료: $activityType at $timestamp');
+        // 시작 시간
+        final startAt = activityData['startAt'] as DateTime?;
+        if (startAt == null) {
+          throw Exception(GroupErrorMessages.invalidTimerState);
+        }
 
-    return activity;
+        // 현재 세션 경과 시간 계산
+        final sessionDuration = timestamp.difference(startAt).inSeconds;
+        final previousElapsed = activityData['elapsed'] as int? ?? 0;
+        final totalElapsed = previousElapsed + sessionDuration;
+
+        // 오늘 누적 시간 업데이트
+        final todayDuration = activityData['todayDuration'] as int? ?? 0;
+        final newTodayDuration = todayDuration + sessionDuration;
+
+        // 월별 누적 시간 업데이트
+        final monthlyDurations =
+            activityData['monthlyDurations'] as Map<dynamic, dynamic>;
+        final todayMinutes = monthlyDurations[dateKey] as int? ?? 0;
+        monthlyDurations[dateKey] = todayMinutes + sessionDuration;
+
+        // 전체 누적 시간 업데이트
+        final totalDuration = activityData['totalDuration'] as int? ?? 0;
+        final newTotalDuration = totalDuration + sessionDuration;
+
+        // 타이머 일시정지
+        activityData['state'] = 'paused';
+        activityData['startAt'] = null;
+        activityData['lastUpdatedAt'] = timestamp;
+        activityData['elapsed'] = totalElapsed;
+        activityData['todayDuration'] = newTodayDuration;
+        activityData['totalDuration'] = newTotalDuration;
+        break;
+
+      case 'resume':
+        // 타이머가 일시정지 상태인지 확인
+        if (activityData!['state'] != 'paused') {
+          throw Exception(GroupErrorMessages.timerNotPaused);
+        }
+
+        // 타이머 재개
+        activityData['state'] = 'resume';
+        activityData['startAt'] = timestamp;
+        activityData['lastUpdatedAt'] = timestamp;
+        break;
+
+      case 'end':
+        // 타이머 상태 확인
+        if (activityData!['state'] != 'running' &&
+            activityData['state'] != 'paused' &&
+            activityData['state'] != 'resume') {
+          throw Exception(GroupErrorMessages.timerNotActive);
+        }
+
+        int sessionDuration = 0;
+
+        // 실행 중인 타이머는 경과 시간 계산이 필요
+        if (activityData['state'] == 'running' ||
+            activityData['state'] == 'resume') {
+          // 시작 시간
+          final startAt = activityData['startAt'] as DateTime?;
+          if (startAt == null) {
+            throw Exception(GroupErrorMessages.invalidTimerState);
+          }
+
+          // 현재 세션 경과 시간 계산
+          sessionDuration = timestamp.difference(startAt).inSeconds;
+          final previousElapsed = activityData['elapsed'] as int? ?? 0;
+          final totalElapsed = previousElapsed + sessionDuration;
+          activityData['elapsed'] = totalElapsed;
+        }
+
+        // 오늘 누적 시간 업데이트
+        final todayDuration = activityData['todayDuration'] as int? ?? 0;
+        final newTodayDuration = todayDuration + sessionDuration;
+
+        // 월별 누적 시간 업데이트
+        final monthlyDurations =
+            activityData['monthlyDurations'] as Map<dynamic, dynamic>;
+        final todayMinutes = monthlyDurations[dateKey] as int? ?? 0;
+        monthlyDurations[dateKey] = todayMinutes + sessionDuration;
+
+        // 전체 누적 시간 업데이트
+        final totalDuration = activityData['totalDuration'] as int? ?? 0;
+        final newTotalDuration = totalDuration + sessionDuration;
+
+        // 타이머 종료
+        activityData['state'] = 'idle';
+        activityData['startAt'] = null;
+        activityData['lastUpdatedAt'] = timestamp;
+        activityData['elapsed'] = 0;
+        activityData['todayDuration'] = newTodayDuration;
+        activityData['totalDuration'] = newTotalDuration;
+
+        // 월별 통계 업데이트
+        _updateMonthlyStats(
+          groupId,
+          _mockUserId,
+          _mockUserName,
+          timestamp,
+          sessionDuration,
+        );
+        break;
+
+      default:
+        throw Exception('지원하지 않는 활동 타입입니다: $activityType');
+    }
+
+    return {...activityData};
   }
 
   @override
@@ -945,12 +956,12 @@ class MockGroupDataSourceImpl implements GroupDataSource {
     return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
   }
 
-  // 🔧 리소스 정리 메소드 추가
-  Future<void> dispose() async {
-    for (final controller in _timerStatusControllers.values) {
-      await controller.close();
-    }
-    _timerStatusControllers.clear();
+  @override
+  Future<Map<String, dynamic>> resumeMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivityWithTimestamp(groupId, 'resume', timestamp);
   }
 
   @override
