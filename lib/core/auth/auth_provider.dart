@@ -219,6 +219,7 @@ class AuthUtils extends _$AuthUtils {
     if (user.email.isNotEmpty) completedFields++;
     if (user.image.isNotEmpty) completedFields++;
     if (user.position?.isNotEmpty ?? false) completedFields++;
+    if (user.description.isNotEmpty) completedFields++;
 
     completeness = completedFields / totalFields;
 
