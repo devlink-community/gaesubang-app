@@ -1,29 +1,30 @@
+// lib/profile/presentation/component/summary_chart.dart
 import 'dart:math';
 
+import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
+import 'package:devlink_mobile_app/auth/domain/service/summary_calculator.dart';
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/styles/app_color_styles.dart';
-import '../../../core/utils/app_logger.dart';
-import '../../domain/model/focus_time_stats.dart';
-
-class FocusStatsChart extends StatefulWidget {
-  final FocusTimeStats stats;
+class SummaryChart extends StatefulWidget {
+  final Summary summary;
   final bool animate;
   final Duration animationDuration;
 
-  const FocusStatsChart({
+  const SummaryChart({
     super.key,
-    required this.stats,
+    required this.summary,
     this.animate = false,
     this.animationDuration = const Duration(milliseconds: 800),
   });
 
   @override
-  State<FocusStatsChart> createState() => _FocusStatsChartState();
+  State<SummaryChart> createState() => _SummaryChartState();
 }
 
-class _FocusStatsChartState extends State<FocusStatsChart>
+class _SummaryChartState extends State<SummaryChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -57,30 +58,32 @@ class _FocusStatsChartState extends State<FocusStatsChart>
   @override
   Widget build(BuildContext context) {
     AppLogger.debug(
-      'FocusStatsChart: 받은 stats = ${widget.stats}',
-      tag: 'FocusStatsChart',
+      'SummaryChart: 받은 summary = ${widget.summary}',
+      tag: 'SummaryChart',
     );
     AppLogger.debug(
-      'FocusStatsChart: totalMinutes = ${widget.stats.totalMinutes}',
-      tag: 'FocusStatsChart',
+      'SummaryChart: allTimeTotalSeconds = ${widget.summary.allTimeTotalSeconds}',
+      tag: 'SummaryChart',
     );
     AppLogger.debug(
-      'FocusStatsChart: weeklyMinutes = ${widget.stats.weeklyMinutes}',
-      tag: 'FocusStatsChart',
+      'SummaryChart: last7DaysActivityMap = ${widget.summary.last7DaysActivityMap}',
+      tag: 'SummaryChart',
     );
 
-    // 1) 원본 데이터 정렬
-    final entries =
-        widget.stats.weeklyMinutes.entries.toList()..sort(
-          (a, b) => _weekdayIndex(a.key).compareTo(_weekdayIndex(b.key)),
-        );
+    // 1) 요일별 활동 데이터 가져오기
+    final weeklyMinutes = SummaryCalculator.getSortedWeeklyActivity(
+      widget.summary,
+    );
+
+    // 2) Map을 리스트로 변환 (순서 유지)
+    final entries = weeklyMinutes.entries.toList();
 
     AppLogger.debug(
-      'FocusStatsChart: 정렬된 entries = $entries',
-      tag: 'FocusStatsChart',
+      'SummaryChart: 변환된 주간 데이터 = $entries',
+      tag: 'SummaryChart',
     );
 
-    // 2) 최대값 계산 - 모든 값이 0이면 기본값 설정
+    // 3) 최대값 계산 - 모든 값이 0이면 기본값 설정
     final maxVal = entries
         .map((e) => e.value.toDouble())
         .fold<double>(0, (prev, curr) => max(prev, curr));
@@ -89,15 +92,15 @@ class _FocusStatsChartState extends State<FocusStatsChart>
     final chartMaxY = maxVal > 0 ? maxVal : 60.0; // 60분을 기본 최대값으로 설정
 
     AppLogger.debug(
-      'FocusStatsChart: maxVal = $maxVal, chartMaxY = $chartMaxY',
-      tag: 'FocusStatsChart',
+      'SummaryChart: maxVal = $maxVal, chartMaxY = $chartMaxY',
+      tag: 'SummaryChart',
     );
 
-    // 3) 색상 정의 - 살짝 더 깊은 파란색 계열로 수정
+    // 4) 색상 정의 - 살짝 더 깊은 파란색 계열로 수정
     final fillColor = const Color(0xFF4355F9);
     final bgColor = AppColorStyles.gray40.withValues(alpha: 0.2);
 
-    // 4) 한글 요일 배열 (0→월, 1→화, …)
+    // 5) 한글 요일 배열 (0→월, 1→화, …)
     const korDays = ['월', '화', '수', '목', '금', '토', '일'];
 
     return AnimatedBuilder(
@@ -216,10 +219,5 @@ class _FocusStatsChartState extends State<FocusStatsChart>
         );
       },
     );
-  }
-
-  int _weekdayIndex(String day) {
-    const order = ['월', '화', '수', '목', '금', '토', '일'];
-    return order.indexOf(day);
   }
 }

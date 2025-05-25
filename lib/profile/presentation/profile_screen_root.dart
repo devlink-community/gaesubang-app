@@ -41,8 +41,8 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
     if (_isInitialized) return;
 
     if (mounted) {
-      // 초기 데이터 로드 (ProfileNotifier의 갱신 상태 시스템을 통해)
-      await ref.read(profileNotifierProvider.notifier).refresh();
+      // 초기 데이터 로드 (ProfileNotifier의 loadData 메서드 호출)
+      await ref.read(profileNotifierProvider.notifier).loadData();
     }
 
     _isInitialized = true;
@@ -69,7 +69,7 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
           // 백그라운드에서 돌아왔을 때 자동 갱신
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              ref.read(profileNotifierProvider.notifier).refresh();
+              ref.read(profileNotifierProvider.notifier).loadData();
             }
           });
         }
@@ -102,11 +102,11 @@ class _ProfileScreenRootState extends ConsumerState<ProfileScreenRoot>
               await context.push('/settings');
               // 설정에서 돌아왔을 때도 갱신 가능성이 있으므로 처리
               if (mounted) {
-                ref.read(profileNotifierProvider.notifier).refresh();
+                notifier.loadData();
               }
               break;
             case RefreshProfile():
-              // 수동 새로고침 (pull-to-refresh 등)
+              // 수동 새로고침
               await notifier.onAction(action);
               break;
           }

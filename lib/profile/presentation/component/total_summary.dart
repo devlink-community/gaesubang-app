@@ -1,16 +1,23 @@
+// lib/profile/presentation/component/total_summary.dart
+import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
+import 'package:devlink_mobile_app/auth/domain/service/summary_calculator.dart';
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
+import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/styles/app_color_styles.dart';
-import '../../../core/styles/app_text_styles.dart';
+class TotalSummary extends StatelessWidget {
+  final Summary summary;
 
-class TotalTimeInfo extends StatelessWidget {
-  /// 총 집중 시간을 분 단위로 전달합니다.
-  final int totalMinutes;
-
-  const TotalTimeInfo({Key? key, required this.totalMinutes}) : super(key: key);
+  const TotalSummary({
+    super.key,
+    required this.summary,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // 총 집중 시간 (분)
+    final totalMinutes = SummaryCalculator.getTotalMinutes(summary);
+
     // 시간·분으로 변환 (예: 125분 → 2시간 5분)
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
