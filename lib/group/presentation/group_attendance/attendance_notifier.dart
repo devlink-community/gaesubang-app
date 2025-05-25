@@ -44,7 +44,10 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       case LoadAttendanceData():
         await _loadAttendanceData();
       case ShowDateAttendanceBottomSheet():
-        // 이 액션은 Root에서 처리하므로 여기서는 아무것도 하지 않음
+      // 이 액션은 Root에서 처리하므로 여기서는 아무것도 하지 않음
+      case NavigateToUserProfile():
+        // 노티파이어에서는 아무것도 하지 않음
+        // 네비게이션은 Root에서 처리
         break;
     }
   }

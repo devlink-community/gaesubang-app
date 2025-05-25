@@ -22,4 +22,6 @@ sealed class AttendanceAction with _$AttendanceAction {
   // 🔧 새로 추가: 날짜별 출석 정보 버텀 시트 표시
   const factory AttendanceAction.showDateAttendanceBottomSheet(DateTime date) =
       ShowDateAttendanceBottomSheet;
+  const factory AttendanceAction.navigateToUserProfile(String userId) =
+      NavigateToUserProfile;
 }

@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -82,6 +83,9 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
         switch (action) {
           case ShowDateAttendanceBottomSheet(:final date):
             await _showAttendanceBottomSheet(context, date, state, notifier);
+          case NavigateToUserProfile(:final userId):
+            // 사용자 프로필로 이동
+            await context.push('/user/$userId/profile');
           default:
             await notifier.onAction(action);
         }
@@ -319,11 +323,21 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
           return totalB.compareTo(totalA);
         });
 
+    // 총 학습 시간 계산
+    final totalMinutes = attendancesForDate.fold<int>(
+      0,
+      (sum, attendance) => sum + (attendance.timeInMinutes as int),
+    );
+
+    // 평균 학습 시간 계산
+    final memberCount = groupedByMember.length;
+    final avgMinutes = memberCount > 0 ? totalMinutes ~/ memberCount : 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 요약 정보
-        _buildSummaryCard(attendancesForDate),
+        _buildSummaryCard(totalMinutes, memberCount, avgMinutes),
         const SizedBox(height: 24),
 
         // 멤버별 상세 정보
@@ -352,6 +366,7 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
         ),
         const SizedBox(height: 16),
 
+        // 멤버 리스트 (개선된 카드 사용)
         ...sortedEntries.asMap().entries.map((entry) {
           final index = entry.key;
           final memberAttendances = entry.value.value;
@@ -408,20 +423,20 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
     );
   }
 
-  Widget _buildSummaryCard(List<dynamic> attendances) {
-    final totalMinutes = attendances.fold<int>(
-      0,
-      (sum, attendance) => sum + (attendance.timeInMinutes as int),
-    );
-    final memberCount = attendances.map((a) => a.userId).toSet().length;
-    final avgMinutes = memberCount > 0 ? totalMinutes ~/ memberCount : 0;
-
+  Widget _buildSummaryCard(int totalMinutes, int memberCount, int avgMinutes) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColorStyles.primaryGradient,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColorStyles.primary100.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,9 +444,9 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
           Row(
             children: [
               Icon(
-                Icons.groups,
+                Icons.calendar_today,
                 color: AppColorStyles.white,
-                size: 24,
+                size: 20,
               ),
               const SizedBox(width: 8),
               Text(
@@ -519,6 +534,34 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // 활동량 시각화 (추가)
+          Container(
+            width: double.infinity,
+            height: 8,
+            decoration: BoxDecoration(
+              color: AppColorStyles.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width:
+                      (totalMinutes > 0)
+                          ? (totalMinutes /
+                              (totalMinutes + 120) *
+                              MediaQuery.of(context).size.width *
+                              0.8)
+                          : 0,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -528,104 +571,147 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
     final color = _getColorByTime(totalMinutes);
     final icon = _getIconByTime(totalMinutes);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 1,
+    return InkWell(
+      // 탭 가능한 위젯으로 변경
+      onTap: () {
+        // 사용자 ID가 있을 때만 네비게이션 수행
+        final userId = attendance.userId;
+        if (userId != null && userId.isNotEmpty) {
+          context.push('/user/$userId/profile');
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.2),
+            width: 1,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          // 순위
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: rank <= 3 ? _getRankColor(rank) : AppColorStyles.gray80,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '$rank',
-                style: AppTextStyles.captionRegular.copyWith(
-                  color: AppColorStyles.white,
-                  fontWeight: FontWeight.bold,
-                ),
+        child: Row(
+          children: [
+            // 순위
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: rank <= 3 ? _getRankColor(rank) : AppColorStyles.gray80,
+                shape: BoxShape.circle,
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // 프로필
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                attendance.userName?.substring(0, 1) ?? '?',
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color: AppColorStyles.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // 정보
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      attendance.userName ?? '멤버 ${attendance.userId}',
-                      style: AppTextStyles.subtitle1Bold,
-                    ),
-                    if (rank == 1) ...[
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.emoji_events,
-                        size: 16,
-                        color: Colors.amber,
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '학습시간: ${_formatMinutes(totalMinutes)}',
-                  style: AppTextStyles.body2Regular.copyWith(
-                    color: AppColorStyles.gray100,
+              child: Center(
+                child: Text(
+                  '$rank',
+                  style: AppTextStyles.captionRegular.copyWith(
+                    color: AppColorStyles.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
 
-          // 상태 아이콘
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+            // 프로필 - 프로필 이미지 사용 또는 이니셜 표시
+            _buildProfileAvatar(attendance, color),
+            const SizedBox(width: 16),
+
+            // 정보
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        attendance.userName ?? '멤버 ${attendance.userId}',
+                        style: AppTextStyles.subtitle1Bold,
+                      ),
+                      if (rank == 1) ...[
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.emoji_events,
+                          size: 16,
+                          color: Colors.amber,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '학습시간: ${_formatMinutes(totalMinutes)}',
+                    style: AppTextStyles.body2Regular.copyWith(
+                      color: AppColorStyles.gray100,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color,
+
+            // 상태 아이콘
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+
+            // 프로필 이동 아이콘 추가
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: AppColorStyles.gray80,
               size: 20,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 프로필 아바타 빌드 (URL 또는 이니셜)
+  Widget _buildProfileAvatar(dynamic attendance, Color color) {
+    // 프로필 URL이 있으면 네트워크 이미지 사용
+    if (attendance.profileUrl != null && attendance.profileUrl.isNotEmpty) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 2,
           ),
-        ],
+          image: DecorationImage(
+            image: NetworkImage(attendance.profileUrl),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    // 프로필 URL이 없으면 이니셜 표시
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          _getInitial(attendance.userName),
+          style: AppTextStyles.subtitle1Bold.copyWith(
+            color: AppColorStyles.white,
+          ),
+        ),
       ),
     );
   }
@@ -677,5 +763,11 @@ class _AttendanceScreenRootState extends ConsumerState<AttendanceScreenRoot> {
     } else {
       return '$mins분';
     }
+  }
+
+  // 이름에서 이니셜 추출
+  String _getInitial(String? name) {
+    if (name == null || name.isEmpty) return '?';
+    return name.substring(0, 1);
   }
 }
