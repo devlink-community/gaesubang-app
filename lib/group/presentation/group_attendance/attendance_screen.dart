@@ -182,16 +182,7 @@ class AttendanceScreen extends StatelessWidget {
 
   // 세련된 요일 라벨
   Widget _buildWeekdayLabels() {
-    final weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    final weekdayColors = [
-      AppColorStyles.error, // 일요일
-      AppColorStyles.textPrimary, // 월요일
-      AppColorStyles.textPrimary, // 화요일
-      AppColorStyles.textPrimary, // 수요일
-      AppColorStyles.textPrimary, // 목요일
-      AppColorStyles.textPrimary, // 금요일
-      AppColorStyles.primary100, // 토요일
-    ];
+    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -199,11 +190,10 @@ class AttendanceScreen extends StatelessWidget {
           weekdays.asMap().entries.map((entry) {
             final index = entry.key;
             final day = entry.value;
-            final color = weekdayColors[index];
+            final color = _getWeekdayColor(index);
 
-            return Container(
+            return SizedBox(
               width: 40,
-              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
                 day,
                 textAlign: TextAlign.center,
@@ -217,114 +207,122 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
+  // 요일별 색상 반환
+  Color _getWeekdayColor(int index) {
+    switch (index) {
+      case 0: // 일요일
+        return AppColorStyles.error;
+      case 6: // 토요일
+        return AppColorStyles.primary100;
+      default: // 평일
+        return AppColorStyles.textPrimary;
+    }
+  }
+
   // 캘린더 본문
   Widget _buildCalendarBody() {
-    switch (state.attendanceList) {
-      case AsyncLoading():
-        return Container(
-          height: 300,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColorStyles.primary100.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: CircularProgressIndicator(
-                  color: AppColorStyles.primary100,
-                  strokeWidth: 3,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '출석 데이터를 불러오는 중...',
-                style: AppTextStyles.body1Regular.copyWith(
-                  color: AppColorStyles.gray100,
-                ),
-              ),
-            ],
-          ),
-        );
+    return switch (state.attendanceList) {
+      AsyncLoading() => _buildLoadingCalendar(),
+      AsyncError(:final error) => _buildErrorCalendar(error),
+      AsyncData() => _buildCalendarGrid(),
+      _ => _buildLoadingCalendar(),
+    };
+  }
 
-      case AsyncError(:final error):
-        return Container(
-          height: 300,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColorStyles.error.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.error_outline,
-                  size: 32,
-                  color: AppColorStyles.error,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '출석 데이터를 불러올 수 없습니다',
-                style: AppTextStyles.subtitle1Bold.copyWith(
-                  color: AppColorStyles.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: AppTextStyles.body2Regular.copyWith(
-                  color: AppColorStyles.gray100,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed:
-                    () => onAction(const AttendanceAction.loadAttendanceData()),
-                icon: const Icon(Icons.refresh),
-                label: const Text('다시 시도'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorStyles.primary100,
-                  foregroundColor: AppColorStyles.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildLoadingCalendar() {
+    return Container(
+      height: 300,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColorStyles.primary100.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: CircularProgressIndicator(
+              color: AppColorStyles.primary100,
+              strokeWidth: 3,
+            ),
           ),
-        );
-
-      case AsyncData():
-        return _buildCalendarGrid();
-
-      default:
-        return Container(
-          height: 300,
-          alignment: Alignment.center,
-          child: CircularProgressIndicator(
-            color: AppColorStyles.primary100,
+          const SizedBox(height: 16),
+          Text(
+            '출석 데이터를 불러오는 중...',
+            style: AppTextStyles.body1Regular.copyWith(
+              color: AppColorStyles.gray100,
+            ),
           ),
-        );
-    }
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCalendar(Object error) {
+    return Container(
+      height: 300,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColorStyles.error.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline,
+              size: 32,
+              color: AppColorStyles.error,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '출석 데이터를 불러올 수 없습니다',
+            style: AppTextStyles.subtitle1Bold.copyWith(
+              color: AppColorStyles.textPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error.toString(),
+            style: AppTextStyles.body2Regular.copyWith(
+              color: AppColorStyles.gray100,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed:
+                () => onAction(const AttendanceAction.loadAttendanceData()),
+            icon: const Icon(Icons.refresh),
+            label: const Text('다시 시도'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColorStyles.primary100,
+              foregroundColor: AppColorStyles.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // 향상된 캘린더 그리드
   Widget _buildCalendarGrid() {
-    final colorMap = _getAttendanceColorMap();
+    // 순수하게 상태에서 가져온 색상 맵만 사용
+    final colorMap = state.attendanceColorMap;
 
     return CalendarGrid(
       year: state.displayedMonth.year,
@@ -337,47 +335,5 @@ class AttendanceScreen extends StatelessWidget {
         onAction(AttendanceAction.showDateAttendanceBottomSheet(date));
       },
     );
-  }
-
-  // 날짜별 출석 상태 색상 맵 생성
-  Map<String, Color> _getAttendanceColorMap() {
-    final colorMap = <String, Color>{};
-    final attendances = state.attendanceList.valueOrNull ?? [];
-
-    // 날짜별로 그룹화하여 해당 날짜의 총 활동량 계산
-    final dateGrouped = <String, List<dynamic>>{};
-    for (final attendance in attendances) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
-      dateGrouped.putIfAbsent(dateKey, () => []);
-      dateGrouped[dateKey]!.add(attendance);
-    }
-
-    // 각 날짜별로 색상 결정
-    for (final entry in dateGrouped.entries) {
-      final dateKey = entry.key;
-      final dayAttendances = entry.value;
-
-      // 해당 날짜의 총 학습 시간
-      final totalMinutes = dayAttendances.fold<int>(
-        0,
-        (sum, attendance) => sum + (attendance.timeInMinutes as int),
-      );
-
-      // 참여 멤버 수
-      final memberCount = dayAttendances.map((a) => a.userId).toSet().length;
-
-      // 멤버 수와 총 시간을 고려한 색상 결정
-      if (memberCount >= 3 && totalMinutes >= 240) {
-        colorMap[dateKey] = AppColorStyles.primary100; // 매우 활발
-      } else if (memberCount >= 2 && totalMinutes >= 120) {
-        colorMap[dateKey] = AppColorStyles.primary80; // 활발
-      } else if (memberCount >= 1 && totalMinutes >= 30) {
-        colorMap[dateKey] = AppColorStyles.primary60; // 보통
-      } else {
-        colorMap[dateKey] = AppColorStyles.gray40.withValues(alpha: 0.5); // 낮음
-      }
-    }
-
-    return colorMap;
   }
 }

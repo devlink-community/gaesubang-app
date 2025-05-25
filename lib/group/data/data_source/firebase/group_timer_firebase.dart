@@ -53,9 +53,6 @@ class GroupTimerFirebase {
   CollectionReference<Map<String, dynamic>> get _groupsCollection =>
       _firestore.collection('groups');
 
-  CollectionReference<Map<String, dynamic>> get _usersCollection =>
-      _firestore.collection('users');
-
   /// 현재 사용자 정보 가져오기 헬퍼 메서드 (캐싱 적용)
   Future<Map<String, String>> _getCurrentUserInfo() async {
     final user = _auth.currentUser;

@@ -64,9 +64,6 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(currentMember: const AsyncLoading());
     final result = await _getCurrentUserUseCase.execute();
 
-    final seconds = result.valueOrNull?.summary?.allTimeTotalSeconds ?? 0;
-    AppLogger.debug('Summary 시간 로딩: allTimeTotalSeconds=$seconds초');
-
     state = state.copyWith(
       currentMember: result,
       totalStudyTimeMinutes: result.when(
@@ -79,7 +76,16 @@ class HomeNotifier extends _$HomeNotifier {
         loading: () => const AsyncLoading(),
         error: (error, stack) => AsyncError(error, stack),
       ),
-      // ... 나머지 코드 ...
+      streakDays: result.when(
+        data: (user) {
+          // streak 값 가져오기
+          final streak = user.summary?.currentStreakDays ?? 0;
+          AppLogger.debug('연속 출석일: $streak일');
+          return AsyncData(streak);
+        },
+        loading: () => const AsyncLoading(),
+        error: (error, stack) => AsyncError(error, stack),
+      ),
     );
   }
 

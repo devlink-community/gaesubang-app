@@ -4,7 +4,6 @@ import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
-import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 
 abstract interface class GroupRepository {
   Future<Result<List<Group>>> getGroupList();
@@ -98,11 +97,12 @@ abstract interface class GroupRepository {
     DateTime timestamp,
   );
 
-  // ===== 사용자 통계 관련 메서드 =====
+  // 캐시된 멤버 정보 가져오기
+  Result<List<GroupMember>> getCachedGroupMembers(String groupId);
 
-  /// 현재 로그인한 사용자가 가입한 모든 그룹 중 최대 연속 출석일 조회
-  Future<Result<UserStreak>> getUserMaxStreakDays();
+  // 멤버 정보 캐시에 저장
+  void cacheGroupMembers(String groupId, List<GroupMember> members);
 
-  /// 현재 사용자의 이번 주 공부 시간 조회 (분 단위)
-  Future<Result<int>> getWeeklyStudyTimeMinutes();
+  // 캐시 무효화
+  void invalidateGroupMemberCache(String groupId);
 }

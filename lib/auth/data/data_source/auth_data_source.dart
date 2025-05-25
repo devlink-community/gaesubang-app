@@ -35,17 +35,6 @@ abstract interface class AuthDataSource {
   /// 계정삭제
   Future<void> deleteAccount(String email);
 
-  /// 약관 동의 정보 저장
-  Future<Map<String, dynamic>> saveTermsAgreement(
-    Map<String, dynamic> termsData,
-  );
-
-  /// 약관 정보 조회
-  Future<Map<String, dynamic>> fetchTermsInfo();
-
-  /// 특정 약관 정보 조회
-  Future<Map<String, dynamic>?> getTermsInfo(String termsId);
-
   /// 사용자 정보 업데이트
   Future<Map<String, dynamic>> updateUser({
     required String nickname,
@@ -76,15 +65,4 @@ abstract interface class AuthDataSource {
     required String userId,
     required SummaryDto summary,
   });
-
-  // ===== Deprecated 메서드 (추후 삭제 예정) =====
-
-  /// @deprecated - Summary/Activity 사용
-  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId);
-
-  /// @deprecated - updateGroupActivity 사용
-  Future<void> saveTimerActivity(
-    String userId,
-    Map<String, dynamic> activityData,
-  );
 }

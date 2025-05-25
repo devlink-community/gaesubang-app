@@ -1,4 +1,5 @@
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
+import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -15,6 +16,10 @@ class AttendanceState with _$AttendanceState {
 
     // 출석 정보 목록 (AsyncValue로 로딩/에러/데이터 상태 관리)
     this.attendanceList = const AsyncValue.loading(),
+
+    // 날짜별 출석 상태 색상 맵
+    this.attendanceColorMap = const <String, Color>{},
+
     this.isLocaleInitialized = false,
   });
 
@@ -24,6 +29,8 @@ class AttendanceState with _$AttendanceState {
   final DateTime selectedDate;
   @override
   final AsyncValue<List<Attendance>> attendanceList;
+  @override
+  final Map<String, Color> attendanceColorMap;
   @override
   final bool isLocaleInitialized;
 }

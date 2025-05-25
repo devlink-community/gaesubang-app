@@ -1,4 +1,6 @@
+import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/attendance/get_attendance_by_month_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +29,8 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       displayedMonth: DateTime(now.year, now.month),
       selectedDate: now,
       attendanceList: const AsyncValue.loading(),
-      isLocaleInitialized: false, // 🔧 초기값은 false
+      attendanceColorMap: const <String, Color>{},
+      isLocaleInitialized: false,
     );
   }
 
@@ -44,12 +47,14 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       case LoadAttendanceData():
         await _loadAttendanceData();
       case ShowDateAttendanceBottomSheet():
-        // 이 액션은 Root에서 처리하므로 여기서는 아무것도 하지 않음
+      // 이 액션은 Root에서 처리하므로 여기서는 아무것도 하지 않음
+      case NavigateToUserProfile():
+        // 노티파이어에서는 아무것도 하지 않음
+        // 네비게이션은 Root에서 처리
         break;
     }
   }
 
-  // 🔧 새로 추가: 로케일 초기화 처리
   Future<void> _handleInitializeLocale() async {
     try {
       await initializeDateFormatting('ko_KR', null);
@@ -96,6 +101,11 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   Future<void> _loadAttendanceData() async {
     if (_groupId == null) return;
 
+    AppLogger.debug(
+      '출석 데이터 로드 시작: 그룹=$_groupId, 년=${state.displayedMonth.year}, 월=${state.displayedMonth.month}',
+      tag: 'AttendanceNotifier',
+    );
+
     // 단일 API 호출로 출석 데이터 가져오기
     final asyncResult = await _getAttendancesByMonthUseCase.execute(
       groupId: _groupId!,
@@ -103,35 +113,175 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       month: state.displayedMonth.month,
     );
 
-    state = state.copyWith(attendanceList: asyncResult);
+    // 데이터 확인 로그
+    if (asyncResult is AsyncData) {
+      final attendances = asyncResult.value ?? [];
+      AppLogger.debug(
+        '출석 데이터 로드 성공: ${attendances.length}개 항목, 첫 항목 시간=${attendances.isNotEmpty ? attendances.first.timeInMinutes : "없음"}',
+        tag: 'AttendanceNotifier',
+      );
+
+      // 0분 항목 확인
+      final zeroMinutes = attendances.where((a) => a.timeInMinutes == 0).length;
+      if (zeroMinutes > 0) {
+        AppLogger.warning(
+          '출석 데이터 중 0분 항목 발견: $zeroMinutes개',
+          tag: 'AttendanceNotifier',
+        );
+      }
+    } else if (asyncResult is AsyncError) {
+      AppLogger.error(
+        '출석 데이터 로드 실패',
+        tag: 'AttendanceNotifier',
+        error: asyncResult.error,
+      );
+    }
+
+    // 색상 맵 계산
+    final colorMap = _calculateAttendanceColorMap(
+      asyncResult.valueOrNull ?? [],
+    );
+
+    // 상태 업데이트 (출석 데이터와 색상 맵 동시에)
+    state = state.copyWith(
+      attendanceList: asyncResult,
+      attendanceColorMap: colorMap,
+    );
   }
 
-  // 날짜별 출석 상태 색상 맵 생성 (UI에서 사용)
-  Map<String, Color> getAttendanceColorMap() {
+  // 날짜별 출석 상태 색상 맵 계산
+  // 날짜별 출석 상태 색상 맵 계산
+  Map<String, Color> _calculateAttendanceColorMap(
+    List<Attendance> attendances,
+  ) {
     final colorMap = <String, Color>{};
 
-    final attendances = state.attendanceList.valueOrNull ?? [];
+    // 날짜별로 그룹화하여 해당 날짜의 총 활동량 계산
+    final dateGrouped = <String, List<Attendance>>{};
     for (final attendance in attendances) {
       final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
+      dateGrouped.putIfAbsent(dateKey, () => []);
+      dateGrouped[dateKey]!.add(attendance);
+    }
 
-      if (attendance.timeInMinutes >= 240) {
-        // 4시간 이상
-        colorMap[dateKey] = const Color(0xFF5D5FEF); // primary100
-      } else if (attendance.timeInMinutes >= 120) {
-        // 2시간 이상
-        colorMap[dateKey] = const Color(0xFF7879F1); // primary80
-      } else if (attendance.timeInMinutes >= 30) {
-        // 30분 이상
-        colorMap[dateKey] = const Color(0xFFA5A6F6); // primary60
+    // 각 날짜별로 색상 결정
+    for (final entry in dateGrouped.entries) {
+      final dateKey = entry.key;
+      final dayAttendances = entry.value;
+
+      // 해당 날짜의 총 학습 시간
+      final totalMinutes = dayAttendances.fold<int>(
+        0,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+      );
+
+      // 참여 멤버 수 (0분 이상 활동한 멤버만 카운트)
+      final activeMembers =
+          dayAttendances
+              .where((a) => a.timeInMinutes > 0)
+              .map((a) => a.userId)
+              .toSet();
+      final memberCount = activeMembers.length;
+
+      // 멤버 수와 총 시간을 고려한 색상 결정
+      if (memberCount >= 3 && totalMinutes >= 240) {
+        colorMap[dateKey] = AppColorStyles.primary100; // 매우 활발
+      } else if (memberCount >= 2 && totalMinutes >= 120) {
+        colorMap[dateKey] = AppColorStyles.primary80; // 활발
+      } else if (memberCount >= 1 && totalMinutes >= 30) {
+        colorMap[dateKey] = AppColorStyles.primary60; // 보통
+      } else if (memberCount >= 1 && totalMinutes > 0) {
+        colorMap[dateKey] = AppColorStyles.gray60; // 낮은 활동
       } else {
-        colorMap[dateKey] = Colors.grey.withValues(alpha: 0.3);
+        colorMap[dateKey] = AppColorStyles.gray40.withValues(
+          alpha: 0.5,
+        ); // 매우 낮음/없음
       }
     }
 
     return colorMap;
   }
 
-  // 🔧 새로 추가: 안전한 한국어 날짜 포맷팅
+  // 선택된 날짜의 출석 데이터 가져오기
+  List<Attendance> getSelectedDateAttendances() {
+    final selectedDateStr = DateFormat('yyyy-MM-dd').format(state.selectedDate);
+    final attendances = state.attendanceList.valueOrNull ?? <Attendance>[];
+
+    return attendances.where((attendance) {
+      final dateKey = DateFormat('yyyy-MM-dd').format(attendance.date);
+      return dateKey == selectedDateStr;
+    }).toList();
+  }
+
+  // 멤버별로 그룹화된 출석 데이터 가져오기
+  Map<String, List<Attendance>> getGroupedAttendancesByMember() {
+    final attendances = getSelectedDateAttendances();
+    final groupedByMember = <String, List<Attendance>>{};
+
+    for (final attendance in attendances) {
+      final userId = attendance.userId;
+      groupedByMember.putIfAbsent(userId, () => []);
+      groupedByMember[userId]!.add(attendance);
+    }
+
+    return groupedByMember;
+  }
+
+  // 멤버별 총 학습 시간 계산 및 정렬된 데이터 가져오기
+  List<MapEntry<String, List<Attendance>>> getSortedMemberAttendances() {
+    final groupedByMember = getGroupedAttendancesByMember();
+
+    // 활동 시간이 0보다 큰 멤버만 포함
+    final filteredEntries =
+        groupedByMember.entries.where((entry) {
+          final totalMinutes = entry.value.fold<int>(
+            0,
+            (sum, attendance) =>
+                sum +
+                (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+          );
+          return totalMinutes > 0;
+        }).toList();
+
+    // 학습 시간 기준으로 정렬
+    filteredEntries.sort((a, b) {
+      final totalA = a.value.fold<int>(
+        0,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+      );
+      final totalB = b.value.fold<int>(
+        0,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+      );
+      return totalB.compareTo(totalA);
+    });
+
+    return filteredEntries;
+  }
+
+  // 총 학습 시간 계산
+  int getTotalMinutes() {
+    final attendances = getSelectedDateAttendances();
+    return attendances.fold<int>(
+      0,
+      (sum, attendance) =>
+          sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+    );
+  }
+
+  // 평균 학습 시간 계산
+  int getAverageMinutes() {
+    final groupedByMember = getGroupedAttendancesByMember();
+    final totalMinutes = getTotalMinutes();
+    final memberCount = groupedByMember.length;
+
+    return memberCount > 0 ? totalMinutes ~/ memberCount : 0;
+  }
+
+  // 안전한 한국어 날짜 포맷팅
   String formatDateSafely(DateTime date, {String pattern = 'M월 d일 (E)'}) {
     if (!state.isLocaleInitialized) {
       // 로케일이 초기화되지 않은 경우 기본 포맷 사용

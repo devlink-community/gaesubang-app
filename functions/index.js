@@ -705,6 +705,9 @@ exports.processAttendanceRecords = functions.pubsub
           }
 
           // 4. 각 멤버별 처리
+          const memberUpdateBatch = admin.firestore().batch();
+          let memberUpdatesCount = 0;
+
           for (const memberDoc of membersSnapshot.docs) {
             const memberId = memberDoc.id;
             const memberData = memberDoc.data();
@@ -720,13 +723,45 @@ exports.processAttendanceRecords = functions.pubsub
 
             // 어제 활동 시간이 있으면 출석부에 기록
             if (yesterdayDuration > 0) {
-              // 초 단위를 분 단위로 변환 (올림)
-              const activityMinutes = Math.ceil(yesterdayDuration / 60);
-              monthlyStatsData[yesterdayKey].members[userId] = activityMinutes;
+              // 출석부에는 초 단위 값 그대로 저장
+              monthlyStatsData[yesterdayKey].members[userId] = yesterdayDuration;
               updatedAttendances++;
 
-              console.log(`  - 멤버 ${userId} 활동 기록: ${yesterdayDuration}초 (${activityMinutes}분)`);
+              console.log(`  - 멤버 ${userId} 활동 기록: ${yesterdayDuration}초`);
+
+              // timerMonthlyDurations에서 어제 날짜 데이터 제거
+              if (timerMonthlyDurations[yesterdayKey]) {
+                const memberRef = admin.firestore()
+                  .collection('groups')
+                  .doc(groupId)
+                  .collection('members')
+                  .doc(memberId);
+
+                // FieldValue.delete()로 해당 필드만 제거
+                const updatedDurations = {...timerMonthlyDurations};
+                delete updatedDurations[yesterdayKey];
+
+                memberUpdateBatch.update(memberRef, {
+                  [`timerMonthlyDurations.${yesterdayKey}`]: admin.firestore.FieldValue.delete()
+                });
+
+                memberUpdatesCount++;
+
+                // Firestore 제한(500개)에 도달하면 batch 실행 후 초기화
+                if (memberUpdatesCount >= 450) {
+                  await memberUpdateBatch.commit();
+                  console.log(`  - ${memberUpdatesCount}개 멤버 업데이트 완료`);
+                  memberUpdateBatch = admin.firestore().batch();
+                  memberUpdatesCount = 0;
+                }
+              }
             }
+          }
+
+          // 남은 batch 업데이트 실행
+          if (memberUpdatesCount > 0) {
+            await memberUpdateBatch.commit();
+            console.log(`  - ${memberUpdatesCount}개 멤버 업데이트 완료`);
           }
 
           // 5. 월별 통계 문서 업데이트

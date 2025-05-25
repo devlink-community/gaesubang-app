@@ -2,23 +2,33 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
+import 'package:devlink_mobile_app/group/data/dto/attendance_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
+import 'package:devlink_mobile_app/group/data/mapper/attendance_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
-import 'package:devlink_mobile_app/group/data/mapper/user_streak_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
-import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:intl/intl.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;
 
   GroupRepositoryImpl({required GroupDataSource dataSource})
     : _dataSource = dataSource;
+
+  // 그룹 ID별 멤버 정보 캐시
+  static final Map<String, List<GroupMember>> _memberCache = {};
+
+  // 캐시 타임스탬프
+  static final Map<String, DateTime> _memberCacheTimestamp = {};
+
+  // 최대 캐시 유지 시간 (분 단위)
+  static const int _maxCacheAgeMinutes = 30;
 
   @override
   Future<Result<List<Group>>> getGroupList() async {
@@ -281,15 +291,16 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<List<GroupMember>>> getGroupMembers(String groupId) async {
     try {
-      // 그룹 멤버 정보 조회 (새 구조에서는 멤버 문서에 타이머 정보 포함됨)
+      // 그룹 멤버 정보 조회
       final membersData = await _dataSource.fetchGroupMembers(groupId);
 
       // DTO 변환 및 모델 변환
       final memberDtos =
           membersData.map((data) => GroupMemberDto.fromJson(data)).toList();
-
-      // 멤버 목록 변환 (새 구조에서는 별도의 타이머 활동 데이터가 필요 없음)
       final members = memberDtos.toModelList();
+
+      // 멤버 정보를 캐시에 저장
+      cacheGroupMembers(groupId, members);
 
       return Result.success(members);
     } catch (e, st) {
@@ -402,12 +413,141 @@ class GroupRepositoryImpl implements GroupRepository {
     int month,
   ) async {
     try {
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '미구현된 데이터입니다.',
-        ),
+      // 1. 월별 출석 데이터 조회 (과거 데이터)
+      final attendanceData = await _dataSource.fetchMonthlyAttendances(
+        groupId,
+        year,
+        month,
       );
+
+      // 2. DTO로 변환
+      final attendanceDtos =
+          attendanceData.map((data) => AttendanceDto.fromJson(data)).toList();
+
+      // 3. 캐시된 멤버 정보 조회
+      final memberResult = getCachedGroupMembers(groupId);
+      final Map<String, String> userNames = {};
+      final Map<String, String> profileUrls = {};
+      final List<GroupMember> members = [];
+
+      // 캐시된 멤버 정보가 있으면 Map으로 변환 (userId를 키로)
+      if (memberResult is Success<List<GroupMember>>) {
+        members.addAll(memberResult.data);
+        for (final member in members) {
+          userNames[member.userId] = member.userName;
+          if (member.profileUrl != null) {
+            profileUrls[member.userId] = member.profileUrl!;
+          }
+        }
+      }
+
+      // 4. DTO를 도메인 모델로 변환
+      final attendances = attendanceDtos.toModelList(
+        userNames: userNames,
+        profileUrls: profileUrls,
+      );
+
+      // 5. API에서 가져온 데이터 날짜 추적을 위한 Set
+      final Set<String> existingDates = {};
+      for (final attendance in attendances) {
+        final dateStr = DateFormat('yyyy-MM-dd').format(attendance.date);
+        existingDates.add(
+          '$dateStr-${attendance.userId}',
+        ); // 날짜-사용자ID 조합으로 고유키 생성
+      }
+
+      // 6. 현재 월 확인
+      final now = DateTime.now();
+      final isCurrentMonth = (year == now.year && month == now.month);
+
+      // 7. 멤버의 timerMonthlyDurations와 timerTodayDuration으로 데이터 보완
+      if (members.isNotEmpty) {
+        AppLogger.info(
+          '월간 출석 데이터 보완 시작: $year년 $month월, 멤버 ${members.length}명',
+          tag: 'GroupRepositoryImpl',
+        );
+
+        for (final member in members) {
+          // 7.1 timerMonthlyDurations에서 데이터 보완
+          final monthlyDurations = member.timerMonthlyDurations;
+          if (monthlyDurations.isNotEmpty) {
+            for (final entry in monthlyDurations.entries) {
+              final dateStr = entry.key;
+              final seconds = entry.value;
+
+              // 해당 월의 데이터인지 확인
+              if (dateStr.startsWith(
+                '$year-${month.toString().padLeft(2, '0')}',
+              )) {
+                final uniqueKey = '$dateStr-${member.userId}';
+
+                // 이미 있는 데이터인지 확인
+                if (!existingDates.contains(uniqueKey) && seconds > 0) {
+                  try {
+                    final date = DateTime.parse(dateStr);
+                    final minutes = seconds ~/ 60;
+
+                    attendances.add(
+                      Attendance(
+                        groupId: groupId,
+                        userId: member.userId,
+                        userName: member.userName,
+                        profileUrl: member.profileUrl,
+                        date: date,
+                        timeInMinutes: minutes,
+                      ),
+                    );
+
+                    existingDates.add(uniqueKey);
+                    AppLogger.debug(
+                      'timerMonthlyDurations에서 데이터 추가: $dateStr, ${member.userName}, ${minutes}분',
+                      tag: 'GroupRepositoryImpl',
+                    );
+                  } catch (e) {
+                    AppLogger.warning(
+                      '날짜 파싱 오류: $dateStr',
+                      tag: 'GroupRepositoryImpl',
+                      error: e,
+                    );
+                  }
+                }
+              }
+            }
+          }
+
+          // 7.2 오늘 데이터(timerTodayDuration) 보완 - 현재 월인 경우만
+          if (isCurrentMonth) {
+            final todayStr = DateFormat('yyyy-MM-dd').format(now);
+            final uniqueKey = '$todayStr-${member.userId}';
+
+            // 오늘 데이터가 없고, timerTodayDuration이 있으면 추가
+            if (!existingDates.contains(uniqueKey) &&
+                member.timerTodayDuration > 0) {
+              attendances.add(
+                Attendance(
+                  groupId: groupId,
+                  userId: member.userId,
+                  userName: member.userName,
+                  profileUrl: member.profileUrl,
+                  date: DateTime(now.year, now.month, now.day),
+                  timeInMinutes: member.timerTodayDuration ~/ 60, // 초 → 분 변환
+                ),
+              );
+
+              existingDates.add(uniqueKey);
+              AppLogger.debug(
+                '오늘 활동 추가: ${member.userName}, ${member.timerTodayDuration ~/ 60}분',
+                tag: 'GroupRepositoryImpl',
+              );
+            }
+          }
+        }
+      }
+
+      // 8. 날짜 기준으로 정렬
+      attendances.sort((a, b) => a.date.compareTo(b.date));
+
+      return Result.success(attendances);
     } catch (e, st) {
       return Result.error(
         Failure(
@@ -508,44 +648,59 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<UserStreak>> getUserMaxStreakDays() async {
-    try {
-      // 1. 현재 사용자가 가입한 모든 그룹의 연속 출석일 정보 조회
-      final userStreakData = await _dataSource.fetchUserMaxStreakDays();
+  Result<List<GroupMember>> getCachedGroupMembers(String groupId) {
+    final cachedMembers = _memberCache[groupId];
+    final cachedTime = _memberCacheTimestamp[groupId];
 
-      // 2. DTO → Model 변환
-      final userStreakDto = userStreakData.toUserStreakDto();
-      final userStreak = userStreakDto.toModel();
-
-      return Result.success(userStreak);
-    } catch (e, st) {
-      return Result.error(
+    // 캐시가 없는 경우
+    if (cachedMembers == null || cachedTime == null) {
+      return const Result.error(
         Failure(
-          FailureType.unknown,
-          '연속 출석일을 불러오는데 실패했습니다.',
-          cause: e,
-          stackTrace: st,
+          FailureType.notFound,
+          '캐시된 멤버 정보가 없습니다.',
         ),
       );
     }
+
+    // 캐시 만료 확인
+    final now = DateTime.now();
+    final cacheAge = now.difference(cachedTime).inMinutes;
+    if (cacheAge > _maxCacheAgeMinutes) {
+      // 캐시 삭제
+      _memberCache.remove(groupId);
+      _memberCacheTimestamp.remove(groupId);
+
+      return const Result.error(
+        Failure(
+          FailureType.notFound,
+          '캐시된 멤버 정보가 만료되었습니다.',
+        ),
+      );
+    }
+
+    // 캐시된 멤버 정보 복사본 반환
+    return Result.success(List.from(cachedMembers));
   }
 
   @override
-  Future<Result<int>> getWeeklyStudyTimeMinutes() async {
-    try {
-      // DataSource에서 이번 주 공부 시간 데이터 조회
-      final weeklyStudyData = await _dataSource.fetchWeeklyStudyTimeMinutes();
+  void cacheGroupMembers(String groupId, List<GroupMember> members) {
+    _memberCache[groupId] = List.from(members);
+    _memberCacheTimestamp[groupId] = DateTime.now();
 
-      return Result.success(weeklyStudyData);
-    } catch (e, st) {
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '이번 주 공부 시간을 불러오는데 실패했습니다.',
-          cause: e,
-          stackTrace: st,
-        ),
-      );
-    }
+    AppLogger.debug(
+      '그룹 멤버 정보 캐시됨: $groupId (${members.length}명)',
+      tag: 'GroupRepositoryImpl',
+    );
+  }
+
+  @override
+  void invalidateGroupMemberCache(String groupId) {
+    _memberCache.remove(groupId);
+    _memberCacheTimestamp.remove(groupId);
+
+    AppLogger.debug(
+      '그룹 멤버 캐시 무효화: $groupId',
+      tag: 'GroupRepositoryImpl',
+    );
   }
 }
