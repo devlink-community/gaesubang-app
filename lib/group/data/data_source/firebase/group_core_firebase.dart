@@ -444,7 +444,7 @@ class GroupCoreFirebase {
       } catch (e) {
         AppLogger.error(
           '그룹 이미지 업데이트 오류',
-          tag: 'GroupStatsFirebase',
+          tag: 'GroupCoreFirebase',
           error: e,
         );
         throw Exception('그룹 이미지 업데이트에 실패했습니다');
