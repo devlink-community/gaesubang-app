@@ -1,5 +1,4 @@
 // lib/auth/domain/repository/auth_activity_repository.dart 수정
-import 'package:devlink_mobile_app/auth/domain/model/activity.dart';
 import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 
@@ -13,15 +12,6 @@ abstract interface class AuthActivityRepository {
   Future<Result<void>> updateUserSummary({
     required String userId,
     required Summary summary,
-  });
-
-  /// 사용자 Activity 조회
-  Future<Result<Activity?>> getUserActivity(String userId);
-
-  /// 사용자 Activity 업데이트
-  Future<Result<void>> updateUserActivity({
-    required String userId,
-    required Activity activity,
   });
 
   /// 타이머 활동에 따른 Summary 업데이트
