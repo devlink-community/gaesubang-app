@@ -2,7 +2,6 @@ import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/banner/domain/model/banner.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
-import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/home/domain/model/notice.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -33,7 +32,7 @@ class HomeState with _$HomeState {
   @override
   final AsyncValue<int> totalStudyTimeMinutes;
   @override
-  final AsyncValue<UserStreak> streakDays;
+  final AsyncValue<int> streakDays; // UserStreak 대신 int로 변경
 
   // Helper getters
   String get currentMemberName => currentMember.valueOrNull?.nickname ?? '개발자';
@@ -47,7 +46,7 @@ class HomeState with _$HomeState {
   }
 
   String get streakDaysDisplay {
-    final days = streakDays.valueOrNull?.maxStreakDays ?? 0;
+    final days = streakDays.valueOrNull ?? 0;
     return '$days일';
   }
 
