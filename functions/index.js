@@ -3,6 +3,18 @@ const admin = require('firebase-admin');
 
 // Admin SDK 초기화 - 권한 문제 해결
 admin.initializeApp();
+/**
+ * Returns a Firestore Timestamp offset by the given number of days.
+ * @param {number} daysOffset - Number of days to offset (negative for past days).
+ * @returns {admin.firestore.Timestamp}
+ */
+function createTimestamp(daysOffset = 0) {
+  const date = new Date();
+  if (daysOffset !== 0) {
+    date.setDate(date.getDate() + daysOffset);
+  }
+  return admin.firestore.Timestamp.fromDate(date);
+}
 
 // FCM 토큰 조회 함수 - 에러 처리 강화
 async function getUserFCMTokens(userId) {
@@ -15,9 +27,7 @@ async function getUserFCMTokens(userId) {
       .collection('private')
       .doc('fcmTokens')
       .collection('tokens')
-      .where('lastUsed', '>', admin.firestore.Timestamp.fromDate(
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30일 이내
-      ))
+      .where('lastUsed', '>', createTimestamp(-30))
       .get();
     
     const tokens = tokensSnapshot.docs.map(doc => doc.data().token).filter(token => token);
@@ -496,8 +506,7 @@ exports.cleanupOldNotifications = functions.pubsub
     try {
       console.log('=== 오래된 알림 정리 시작 ===');
       
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+      const thirtyDaysAgoTimestamp = createTimestamp(-30);
       
       console.log('기준 날짜:', thirtyDaysAgo.toISOString());
       
@@ -561,8 +570,7 @@ exports.cleanupExpiredFCMTokens = functions.pubsub
     try {
       console.log('=== 만료된 FCM 토큰 정리 시작 ===');
       
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      const ninetyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(ninetyDaysAgo);
+      const ninetyDaysAgoTimestamp = createTimestamp(-90);
       
       console.log('기준 날짜 (90일 전):', ninetyDaysAgo.toISOString());
       

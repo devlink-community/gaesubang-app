@@ -4,25 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirebaseTimestampConverter {
   FirebaseTimestampConverter._(); // 인스턴스화 방지
 
-  /// Firebase Timestamp, String, int를 DateTime으로 변환
-  static DateTime? timestampFromJson(dynamic value) {
+  /// 일관된 서버 타임스탬프 생성
+  static dynamic createServerTimestamp() {
+    return FieldValue.serverTimestamp();
+  }
+
+  /// 안전한 DateTime 변환 (Timestamp, DateTime, int, String 지원)
+  static DateTime? toDateTime(dynamic value) {
     if (value == null) return null;
 
-    // Firebase Timestamp 객체인 경우
     if (value is Timestamp) {
       return value.toDate();
     }
 
-    // ISO 8601 문자열인 경우
-    if (value is String) {
-      try {
-        return DateTime.parse(value);
-      } catch (_) {
-        return null;
-      }
+    if (value is DateTime) {
+      return value;
     }
 
-    // Unix timestamp (밀리초)인 경우
     if (value is int) {
       try {
         return DateTime.fromMillisecondsSinceEpoch(value);
@@ -31,11 +29,17 @@ class FirebaseTimestampConverter {
       }
     }
 
+    if (value is String) {
+      // ISO 8601 등 지원
+      return DateTime.tryParse(value);
+    }
+
     return null;
   }
 
-  /// DateTime을 Firebase Timestamp로 변환
-  static dynamic timestampToJson(DateTime? dateTime) {
+  /// 모든 입력 값을 Firebase Timestamp로 변환
+  static Timestamp? toFirebaseTimestamp(dynamic value) {
+    final dateTime = toDateTime(value);
     if (dateTime == null) return null;
     return Timestamp.fromDate(dateTime);
   }
