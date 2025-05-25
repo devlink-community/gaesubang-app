@@ -35,4 +35,22 @@ enum TimerActivityType {
         return 'end';
     }
   }
+
+  /// 타이머 상태 문자열로 변환 - 파이어스토어 저장 값과 동일하게
+  String toTimerStateString() {
+    switch (this) {
+      case TimerActivityType.start:
+        return 'start';
+      case TimerActivityType.pause:
+        return 'pause';
+      case TimerActivityType.resume:
+        return 'resume';
+      case TimerActivityType.end:
+        return 'end';
+    }
+  }
+
+  /// 활성 상태인지 확인
+  bool get isActive =>
+      this == TimerActivityType.start || this == TimerActivityType.resume;
 }

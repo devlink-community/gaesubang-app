@@ -1,4 +1,4 @@
-// lib/group/data/data_source/firebase/group_timer_firebase.dart
+﻿// lib/group/data/data_source/firebase/group_timer_firebase.dart
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,29 +12,51 @@ import 'package:intl/intl.dart';
 
 /// 그룹 타이머 기능 (타이머 제어, 실시간 상태, 출석 데이터)
 ///
-/// 상태 기반 구조:
-/// - 개별 이벤트 대신 멤버별 단일 상태 문서 사용 (`activity/current`)
-/// - 타이머 상태: running, paused, idle
+/// 새로운 구조:
+/// - 멤버 문서에 타이머 상태 직접 통합
+/// - 멤버 문서의 타이머 필드: timerState, timerStartAt, timerElapsed 등
 /// - 월별 통계 자동 업데이트
 class GroupTimerFirebase {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  // 캐싱을 위한 변수들
+  String? _currentUserId;
+  Map<String, DocumentReference<Map<String, dynamic>>> _memberDocRefs = {};
+  Map<String, Map<String, dynamic>?> _cachedGroupDocs = {};
+
   GroupTimerFirebase({
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
   }) : _firestore = firestore,
-       _auth = auth;
+       _auth = auth {
+    // 인증 상태 변경 감지하여 캐시 클리어
+    _auth.authStateChanges().listen((user) {
+      if (_currentUserId != user?.uid) {
+        _clearCaches();
+        _currentUserId = user?.uid;
+      }
+    });
+  }
+
+  // 캐시 초기화 메서드
+  void _clearCaches() {
+    _memberDocRefs.clear();
+    _cachedGroupDocs.clear();
+    AppLogger.debug(
+      '타이머 관련 캐시가 초기화되었습니다',
+      tag: 'GroupTimerFirebase',
+    );
+  }
 
   // Collection 참조들
   CollectionReference<Map<String, dynamic>> get _groupsCollection =>
       _firestore.collection('groups');
 
-  //TODO: 언젠간 사용할 것 같은데....
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
-  /// 현재 사용자 정보 가져오기 헬퍼 메서드
+  /// 현재 사용자 정보 가져오기 헬퍼 메서드 (캐싱 적용)
   Future<Map<String, String>> _getCurrentUserInfo() async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -42,6 +64,7 @@ class GroupTimerFirebase {
     }
 
     final userId = user.uid;
+    _currentUserId = userId; // 캐시 업데이트
     final userName = user.displayName ?? '';
     final profileUrl = user.photoURL ?? '';
 
@@ -52,17 +75,45 @@ class GroupTimerFirebase {
     };
   }
 
-  /// 멤버 활동 문서 참조 가져오기 헬퍼 메서드
-  DocumentReference<Map<String, dynamic>> _getMemberActivityRef(
+  /// 멤버 문서 참조 가져오기 헬퍼 메서드 (캐싱 적용)
+  Future<DocumentReference<Map<String, dynamic>>> _getMemberDocRef(
     String groupId,
     String userId,
-  ) {
-    return _groupsCollection
-        .doc(groupId)
-        .collection('members')
-        .doc(userId)
-        .collection('activity')
-        .doc('current');
+  ) async {
+    final cacheKey = '$groupId:$userId';
+
+    if (!_memberDocRefs.containsKey(cacheKey)) {
+      // 캐시에 없으면 새 참조 생성 및 캐싱
+      final memberDocRef = _groupsCollection
+          .doc(groupId)
+          .collection('members')
+          .doc(userId);
+
+      _memberDocRefs[cacheKey] = memberDocRef;
+    }
+
+    return _memberDocRefs[cacheKey]!;
+  }
+
+  /// 그룹 문서 가져오기 헬퍼 메서드 (캐싱 적용)
+  Future<Map<String, dynamic>?> _getGroupDoc(String groupId) async {
+    // 캐시 확인
+    if (_cachedGroupDocs.containsKey(groupId)) {
+      return _cachedGroupDocs[groupId];
+    }
+
+    // 그룹 문서 조회
+    final groupDoc = await _groupsCollection.doc(groupId).get();
+
+    if (!groupDoc.exists) {
+      _cachedGroupDocs[groupId] = null;
+      return null;
+    }
+
+    final data = groupDoc.data();
+    _cachedGroupDocs[groupId] = data;
+
+    return data;
   }
 
   /// 월별 통계 문서 참조 가져오기 헬퍼 메서드
@@ -89,62 +140,20 @@ class GroupTimerFirebase {
     String groupId,
   ) {
     // 멤버 컬렉션 변경 감지 스트림
-    final membersStream =
-        _groupsCollection.doc(groupId).collection('members').snapshots();
-
-    // 각 멤버의 activity 문서 변경 감지를 위한 StreamTransformer
-    return membersStream.asyncMap((snapshot) async {
-      try {
-        // 멤버 목록 추출
-        final members =
-            snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList();
-
-        if (members.isEmpty) {
-          return [];
-        }
-
-        // 각 멤버의 활동 정보 조회
-        final results = <Map<String, dynamic>>[];
-
-        for (final member in members) {
-          final userId = member['userId'] as String?;
-          if (userId == null) continue;
-
-          // 멤버 활동 정보 조회
-          final activityRef = _getMemberActivityRef(groupId, userId);
-          final activityDoc = await activityRef.get();
-
-          // 활동 문서가 없으면 기본 정보만 포함
-          final memberDto = {
-            'memberDto': member,
-          };
-
-          // 활동 문서가 있으면 타이머 정보 추가
-          if (activityDoc.exists) {
-            final activityData = activityDoc.data() ?? {};
-            memberDto['timerActivityDto'] = activityData;
-          }
-
-          results.add(memberDto);
-        }
-
-        return results;
-      } catch (e) {
-        AppLogger.error(
-          '실시간 멤버 타이머 상태 조회 오류',
-          tag: 'GroupTimerFirebase',
-          error: e,
-        );
-        return [];
-      }
-    });
+    return _groupsCollection.doc(groupId).collection('members').snapshots().map(
+      (snapshot) {
+        // 멤버 문서들을 바로 반환 (필드에 타이머 상태가 포함됨)
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          // 멤버 문서가 바로 DTO로 사용됨 (timerState 등의 필드 포함)
+          return {'memberDto': data};
+        }).toList();
+      },
+    );
   }
 
-  /// 그룹의 모든 타이머 활동 조회 - 멤버별 activity 문서 기반
+  /// 그룹의 모든 타이머 활동 조회 - 멤버 문서 기반
   Future<List<Map<String, dynamic>>> fetchGroupTimerActivities(
     String groupId,
   ) async {
@@ -153,8 +162,8 @@ class GroupTimerFirebase {
       () async {
         try {
           // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-          if (!groupDoc.exists) {
+          final groupData = await _getGroupDoc(groupId);
+          if (groupData == null) {
             throw Exception(GroupErrorMessages.notFound);
           }
 
@@ -162,7 +171,7 @@ class GroupTimerFirebase {
           final membersSnapshot =
               await _groupsCollection.doc(groupId).collection('members').get();
 
-          // 각 멤버의 활동 정보 조회
+          // 각 멤버의 타이머 상태 정보 추출
           final activities = <Map<String, dynamic>>[];
 
           for (final memberDoc in membersSnapshot.docs) {
@@ -170,23 +179,9 @@ class GroupTimerFirebase {
             final userId = memberData['userId'] as String?;
             if (userId == null) continue;
 
-            // 멤버 활동 정보 조회
-            final activityRef = _getMemberActivityRef(groupId, userId);
-            final activityDoc = await activityRef.get();
-
-            if (activityDoc.exists) {
-              final activityData = activityDoc.data() ?? {};
-
-              // 필요한 정보 조합
-              final result = {
-                'userId': userId,
-                'userName': memberData['userName'] ?? '',
-                'profileUrl': memberData['profileUrl'],
-                'groupId': groupId,
-                ...activityData,
-              };
-
-              activities.add(result);
+            // 타이머 관련 필드가 있는 경우만 활동 정보로 추가
+            if (memberData.containsKey('timerState')) {
+              activities.add(memberData);
             }
           }
 
@@ -215,8 +210,8 @@ class GroupTimerFirebase {
       () async {
         try {
           // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-          if (!groupDoc.exists) {
+          final groupData = await _getGroupDoc(groupId);
+          if (groupData == null) {
             throw Exception(GroupErrorMessages.notFound);
           }
 
@@ -240,15 +235,6 @@ class GroupTimerFirebase {
               // 각 멤버별 출석 데이터 생성
               membersData.forEach((userId, durationInSeconds) {
                 if (durationInSeconds is! int) return;
-
-                // 날짜 문자열을 DateTime으로 변환
-                // TODO: 왜 넣은거지? 검토 필요함
-                DateTime? date;
-                try {
-                  date = DateFormat('yyyy-MM-dd').parse(dateKey);
-                } catch (e) {
-                  return; // 날짜 형식이 올바르지 않으면 건너뜀
-                }
 
                 // 출석 데이터 추가
                 attendances.add({
@@ -283,7 +269,7 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 활동 기록 (상태 기반) - TimerActivityType enum 사용
+  /// 타이머 활동 기록 - 멤버 문서 직접 업데이트
   Future<Map<String, dynamic>> recordTimerActivityWithTimestamp(
     String groupId,
     TimerActivityType activityType,
@@ -298,33 +284,35 @@ class GroupTimerFirebase {
           final userId = userInfo['userId']!;
 
           // 그룹 존재 확인
-          final groupDoc = await _groupsCollection.doc(groupId).get();
-          if (!groupDoc.exists) {
+          final groupData = await _getGroupDoc(groupId);
+          if (groupData == null) {
             throw Exception(GroupErrorMessages.notFound);
           }
 
           // 날짜 키 - 타임스탬프 기준
           final dateKey = _getDateKey(timestamp);
 
+          // 멤버 문서 참조 가져오기
+          final memberDocRef = await _getMemberDocRef(groupId, userId);
+
           // 활동 타입에 따른 처리
           switch (activityType) {
             case TimerActivityType.start:
-              return _handleTimerStart(groupId, userId, timestamp, dateKey);
+              return _handleTimerStart(memberDocRef, timestamp, dateKey);
             case TimerActivityType.pause:
-              // 이미 조회한 groupDoc을 전달
               return _handleTimerPause(
-                groupId,
-                userId,
+                memberDocRef,
                 timestamp,
                 dateKey,
-                groupDoc, // 기존에 조회한 groupDoc 전달
+                groupData,
               );
             case TimerActivityType.resume:
-              return _handleTimerResume(groupId, userId, timestamp, dateKey);
+              return _handleTimerResume(memberDocRef, timestamp, dateKey);
             case TimerActivityType.end:
               return _handleTimerEnd(
                 groupId,
                 userId,
+                memberDocRef,
                 timestamp,
                 dateKey,
               );
@@ -346,107 +334,100 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 시작 처리
+  /// 타이머 시작 처리 - 멤버 문서 직접 업데이트
   Future<Map<String, dynamic>> _handleTimerStart(
-    String groupId,
-    String userId,
+    DocumentReference<Map<String, dynamic>> memberDocRef,
     DateTime timestamp,
     String dateKey,
   ) async {
-    final activityRef = _getMemberActivityRef(groupId, userId);
+    // 현재 멤버 상태 확인
+    final memberDoc = await memberDocRef.get();
 
-    // 현재 활동 상태 확인
-    final activityDoc = await activityRef.get();
-
-    // 이미 활성화된 타이머가 있는지 확인
-    if (activityDoc.exists) {
-      final activityData = activityDoc.data() ?? {};
-      final state = activityData['state'] as String? ?? '';
-
-      if (state == 'running' || state == 'resume') {
-        throw Exception(GroupErrorMessages.timerAlreadyRunning);
-      }
-
-      // 기존 데이터가 있으면 상태만 업데이트
-      await activityRef.update({
-        'state': 'running',
-        'startAt': Timestamp.fromDate(timestamp),
-        'lastUpdatedAt': Timestamp.fromDate(timestamp),
-        'elapsed': 0, // 새 세션 시작시 경과 시간 초기화
-      });
-    } else {
-      // 활동 문서가 없으면 새로 생성
-      await activityRef.set({
-        'state': 'running',
-        'startAt': Timestamp.fromDate(timestamp),
-        'lastUpdatedAt': Timestamp.fromDate(timestamp),
-        'elapsed': 0,
-        'todayDuration': 0,
-        'monthlyDurations': {
-          dateKey: 0,
-        },
-        'totalDuration': 0,
-      });
+    // 멤버 문서가 존재하는지 확인
+    if (!memberDoc.exists) {
+      throw Exception(GroupErrorMessages.notMember);
     }
 
+    final memberData = memberDoc.data() ?? {};
+    final timerState =
+        memberData['timerState'] as String? ??
+        TimerActivityType.end.toTimerStateString();
+
+    // 이미 활성화된 타이머가 있는지 확인
+    if (timerState == TimerActivityType.start.toTimerStateString() ||
+        timerState == TimerActivityType.resume.toTimerStateString()) {
+      throw Exception(GroupErrorMessages.timerAlreadyRunning);
+    }
+
+    // 타이머 필드 업데이트
+    await memberDocRef.update({
+      'timerState': TimerActivityType.start.toTimerStateString(),
+      'timerStartAt': Timestamp.fromDate(timestamp),
+      'timerLastUpdatedAt': Timestamp.fromDate(timestamp),
+      'timerElapsed': 0, // 새 세션 시작 시 경과 시간 초기화
+      'timerTodayDuration': memberData['timerTodayDuration'] ?? 0,
+      'timerMonthlyDurations':
+          memberData['timerMonthlyDurations'] ?? {dateKey: 0},
+      'timerTotalDuration': memberData['timerTotalDuration'] ?? 0,
+    });
+
     // 업데이트된 문서 반환
-    final updatedDoc = await activityRef.get();
+    final updatedDoc = await memberDocRef.get();
     return updatedDoc.data() ?? {};
   }
 
-  /// 타이머 일시정지 처리
+  /// 타이머 일시정지 처리 - 멤버 문서 직접 업데이트
   Future<Map<String, dynamic>> _handleTimerPause(
-    String groupId,
-    String userId,
+    DocumentReference<Map<String, dynamic>> memberDocRef,
     DateTime timestamp,
     String dateKey,
-    DocumentSnapshot<Map<String, dynamic>> existingGroupDoc, // 추가된 파라미터
+    Map<String, dynamic> groupData,
   ) async {
-    final activityRef = _getMemberActivityRef(groupId, userId);
-
-    // 현재 활동 상태 확인
-    final activityDoc = await activityRef.get();
-    if (!activityDoc.exists) {
-      throw Exception(GroupErrorMessages.timerNotActive);
+    // 현재 멤버 상태 확인
+    final memberDoc = await memberDocRef.get();
+    if (!memberDoc.exists) {
+      throw Exception(GroupErrorMessages.notMember);
     }
 
-    final activityData = activityDoc.data() ?? {};
-    final state = activityData['state'] as String? ?? '';
+    final memberData = memberDoc.data() ?? {};
+    final timerState =
+        memberData['timerState'] as String? ??
+        TimerActivityType.end.toTimerStateString();
 
     // 타이머가 실행 중인지 확인
-    if (state != 'running' && state != 'resume') {
+    if (timerState != TimerActivityType.start.toTimerStateString() &&
+        timerState != TimerActivityType.resume.toTimerStateString()) {
       throw Exception(GroupErrorMessages.timerNotRunning);
     }
 
     // 시작 시간
-    final startAt = (activityData['startAt'] as Timestamp?)?.toDate();
-    if (startAt == null) {
+    final timerStartAt = (memberData['timerStartAt'] as Timestamp?)?.toDate();
+    if (timerStartAt == null) {
       throw Exception(GroupErrorMessages.invalidTimerState);
     }
 
     // 경과 시간 계산
-    final elapsedSeconds = timestamp.difference(startAt).inSeconds;
-    final previousElapsed = activityData['elapsed'] as int? ?? 0;
+    final elapsedSeconds = timestamp.difference(timerStartAt).inSeconds;
+    final previousElapsed = memberData['timerElapsed'] as int? ?? 0;
     final totalElapsed = previousElapsed + elapsedSeconds;
 
     // 오늘 누적 시간 업데이트
-    final todayDuration = activityData['todayDuration'] as int? ?? 0;
+    final todayDuration = memberData['timerTodayDuration'] as int? ?? 0;
     final newTodayDuration = todayDuration + elapsedSeconds;
 
     // 월별 누적 시간 업데이트
-    final monthlyDurations = Map<String, dynamic>.from(
-      activityData['monthlyDurations'] as Map<dynamic, dynamic>? ?? {},
+    final Map<String, dynamic> monthlyDurations = Map<String, dynamic>.from(
+      memberData['timerMonthlyDurations'] as Map<dynamic, dynamic>? ?? {},
     );
     final dateSeconds = monthlyDurations[dateKey] as int? ?? 0;
     monthlyDurations[dateKey] = dateSeconds + elapsedSeconds;
 
     // 전체 누적 시간 업데이트
-    final totalDuration = activityData['totalDuration'] as int? ?? 0;
+    final totalDuration = memberData['timerTotalDuration'] as int? ?? 0;
     final newTotalDuration = totalDuration + elapsedSeconds;
 
     // 일시정지 제한 시간 설정
-    // 전달받은 groupDoc 재사용
-    final raw = existingGroupDoc.data()?['pauseTimeLimit'] as int? ?? 120;
+    final raw = groupData['pauseTimeLimit'] as int? ?? 120;
 
     // 1~720분 사이로 보정 (1분~12시간)
     final pauseTimeLimit = raw.clamp(1, 720);
@@ -466,133 +447,135 @@ class GroupTimerFirebase {
       tag: 'GroupTimerFirebase',
     );
 
-    // 업데이트 데이터
-    await activityRef.update({
-      'state': 'paused',
-      'startAt': null, // 타이머 정지 시 시작 시간 제거
-      'lastUpdatedAt': Timestamp.fromDate(timestamp),
-      'elapsed': totalElapsed,
-      'todayDuration': newTodayDuration,
-      'monthlyDurations': monthlyDurations,
-      'totalDuration': newTotalDuration,
-      'pauseExpiryTime': Timestamp.fromDate(pauseExpiryTime), // 일시정지 만료 시간 추가
+    // 타이머 필드 업데이트
+    await memberDocRef.update({
+      'timerState': TimerActivityType.pause.toTimerStateString(),
+      'timerStartAt': null, // 타이머 정지 시 시작 시간 제거
+      'timerLastUpdatedAt': Timestamp.fromDate(timestamp),
+      'timerElapsed': totalElapsed,
+      'timerTodayDuration': newTodayDuration,
+      'timerMonthlyDurations': monthlyDurations,
+      'timerTotalDuration': newTotalDuration,
+      'timerPauseExpiryTime': Timestamp.fromDate(
+        pauseExpiryTime,
+      ), // 일시정지 만료 시간 추가
     });
 
     // 업데이트된 문서 반환
-    final updatedDoc = await activityRef.get();
+    final updatedDoc = await memberDocRef.get();
     return updatedDoc.data() ?? {};
   }
 
-  /// 타이머 재개 처리
+  /// 타이머 재개 처리 - 멤버 문서 직접 업데이트
   Future<Map<String, dynamic>> _handleTimerResume(
-    String groupId,
-    String userId,
+    DocumentReference<Map<String, dynamic>> memberDocRef,
     DateTime timestamp,
     String dateKey,
   ) async {
-    final activityRef = _getMemberActivityRef(groupId, userId);
-
-    // 현재 활동 상태 확인
-    final activityDoc = await activityRef.get();
-    if (!activityDoc.exists) {
-      throw Exception(GroupErrorMessages.timerNotActive);
+    // 현재 멤버 상태 확인
+    final memberDoc = await memberDocRef.get();
+    if (!memberDoc.exists) {
+      throw Exception(GroupErrorMessages.notMember);
     }
 
-    final activityData = activityDoc.data() ?? {};
-    final state = activityData['state'] as String? ?? '';
+    final memberData = memberDoc.data() ?? {};
+    final timerState =
+        memberData['timerState'] as String? ??
+        TimerActivityType.end.toTimerStateString();
 
     // 타이머가 일시정지 상태인지 확인
-    if (state != 'paused') {
+    if (timerState != TimerActivityType.pause.toTimerStateString()) {
       throw Exception(GroupErrorMessages.timerNotPaused);
     }
 
-    // 일시정지 만료 시간 확인 (추가된 부분)
+    // 일시정지 만료 시간 확인
     final pauseExpiryTime =
-        (activityData['pauseExpiryTime'] as Timestamp?)?.toDate();
+        (memberData['timerPauseExpiryTime'] as Timestamp?)?.toDate();
     if (pauseExpiryTime != null && timestamp.isAfter(pauseExpiryTime)) {
       // 만료 시간이 지났으면 단순히 상태만 'end'로 변경
-      // 시간 계산은 이미 일시정지 처리 시점에서 완료되었으므로 추가 계산 없음
       AppLogger.info(
         '일시정지 제한 시간 초과 감지: 재개 대신 종료 처리함',
         tag: 'GroupTimerFirebase',
       );
 
-      await activityRef.update({
-        'state': 'end',
-        'pauseExpiryTime': FieldValue.delete(),
-        // 다른 필드(elapsed, todayDuration 등)는 그대로 유지
-        // 이미 일시정지 시점에 모든 시간 계산이 완료되었음
+      await memberDocRef.update({
+        'timerState': TimerActivityType.end.toTimerStateString(),
+        'timerPauseExpiryTime': FieldValue.delete(),
       });
 
       // 업데이트된 문서 반환
-      final updatedDoc = await activityRef.get();
+      final updatedDoc = await memberDocRef.get();
       return updatedDoc.data() ?? {};
     }
 
     // 일시정지 만료되지 않았으면 정상적으로 재개
-    await activityRef.update({
-      'state': 'resume',
-      'startAt': Timestamp.fromDate(timestamp), // 새로운 시작 시간
-      'lastUpdatedAt': Timestamp.fromDate(timestamp),
+    await memberDocRef.update({
+      'timerState': TimerActivityType.resume.toTimerStateString(),
+      'timerStartAt': Timestamp.fromDate(timestamp), // 새로운 시작 시간
+      'timerLastUpdatedAt': Timestamp.fromDate(timestamp),
+      'timerPauseExpiryTime': FieldValue.delete(), // 만료 시간 필드 제거
     });
 
     // 업데이트된 문서 반환
-    final updatedDoc = await activityRef.get();
+    final updatedDoc = await memberDocRef.get();
     return updatedDoc.data() ?? {};
   }
 
-  /// 타이머 종료 처리
+  /// 타이머 종료 처리 - 멤버 문서 직접 업데이트
   Future<Map<String, dynamic>> _handleTimerEnd(
     String groupId,
     String userId,
+    DocumentReference<Map<String, dynamic>> memberDocRef,
     DateTime timestamp,
     String dateKey,
   ) async {
-    final activityRef = _getMemberActivityRef(groupId, userId);
-
-    // 현재 활동 상태 확인
-    final activityDoc = await activityRef.get();
-    if (!activityDoc.exists) {
-      throw Exception(GroupErrorMessages.timerNotActive);
+    // 현재 멤버 상태 확인
+    final memberDoc = await memberDocRef.get();
+    if (!memberDoc.exists) {
+      throw Exception(GroupErrorMessages.notMember);
     }
 
-    final activityData = activityDoc.data() ?? {};
-    final state = activityData['state'] as String? ?? '';
+    final memberData = memberDoc.data() ?? {};
+    final timerState =
+        memberData['timerState'] as String? ??
+        TimerActivityType.end.toTimerStateString();
 
     int elapsedSeconds = 0;
 
     // 활성 상태인 경우 경과 시간 계산
-    if (state == 'running' || state == 'resume') {
-      final startAt = (activityData['startAt'] as Timestamp?)?.toDate();
-      if (startAt != null) {
-        elapsedSeconds = timestamp.difference(startAt).inSeconds;
+    if (timerState == TimerActivityType.start.toTimerStateString() ||
+        timerState == TimerActivityType.resume.toTimerStateString()) {
+      final timerStartAt = (memberData['timerStartAt'] as Timestamp?)?.toDate();
+      if (timerStartAt != null) {
+        elapsedSeconds = timestamp.difference(timerStartAt).inSeconds;
       }
     }
 
     // 오늘 누적 시간 업데이트
-    final todayDuration = activityData['todayDuration'] as int? ?? 0;
+    final todayDuration = memberData['timerTodayDuration'] as int? ?? 0;
     final newTodayDuration = todayDuration + elapsedSeconds;
 
     // 월별 누적 시간 업데이트
-    final monthlyDurations = Map<String, dynamic>.from(
-      activityData['monthlyDurations'] as Map<dynamic, dynamic>? ?? {},
+    final Map<String, dynamic> monthlyDurations = Map<String, dynamic>.from(
+      memberData['timerMonthlyDurations'] as Map<dynamic, dynamic>? ?? {},
     );
     final dateSeconds = monthlyDurations[dateKey] as int? ?? 0;
     monthlyDurations[dateKey] = dateSeconds + elapsedSeconds;
 
     // 전체 누적 시간 업데이트
-    final totalDuration = activityData['totalDuration'] as int? ?? 0;
+    final totalDuration = memberData['timerTotalDuration'] as int? ?? 0;
     final newTotalDuration = totalDuration + elapsedSeconds;
 
-    // 업데이트 데이터
-    await activityRef.update({
-      'state': 'idle',
-      'startAt': null,
-      'lastUpdatedAt': Timestamp.fromDate(timestamp),
-      'elapsed': 0, // 종료 시 경과 시간 초기화
-      'todayDuration': newTodayDuration,
-      'monthlyDurations': monthlyDurations,
-      'totalDuration': newTotalDuration,
+    // 타이머 필드 업데이트
+    await memberDocRef.update({
+      'timerState': TimerActivityType.end.toTimerStateString(),
+      'timerStartAt': null,
+      'timerLastUpdatedAt': Timestamp.fromDate(timestamp),
+      'timerElapsed': 0, // 종료 시 경과 시간 초기화
+      'timerTodayDuration': newTodayDuration,
+      'timerMonthlyDurations': monthlyDurations,
+      'timerTotalDuration': newTotalDuration,
+      'timerPauseExpiryTime': FieldValue.delete(), // 일시정지 만료 시간 필드 제거
     });
 
     // 월별 통계 업데이트
@@ -608,7 +591,7 @@ class GroupTimerFirebase {
     }
 
     // 업데이트된 문서 반환
-    final updatedDoc = await activityRef.get();
+    final updatedDoc = await memberDocRef.get();
     return updatedDoc.data() ?? {};
   }
 
@@ -676,9 +659,11 @@ class GroupTimerFirebase {
     }
   }
 
-  // === 단순화된 인터페이스 메서드들 - TimerActivityType enum 사용 ===
+  // === 간편 인터페이스 메서드: 현재 시간 기준 ===
 
-  /// 타이머 시작 - 현재 시간 기준
+  /// 타이머 시작 - 현재 시간(호출 시점)으로 기록
+  ///
+  /// 일반적인 사용자 UI 액션에 적합합니다.
   Future<Map<String, dynamic>> startMemberTimer(String groupId) async {
     return recordTimerActivityWithTimestamp(
       groupId,
@@ -687,7 +672,9 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 일시정지 - 현재 시간 기준
+  /// 타이머 일시정지 - 현재 시간(호출 시점)으로 기록
+  ///
+  /// 일반적인 사용자 UI 액션에 적합합니다.
   Future<Map<String, dynamic>> pauseMemberTimer(String groupId) async {
     return recordTimerActivityWithTimestamp(
       groupId,
@@ -696,7 +683,9 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 재개 - 현재 시간 기준
+  /// 타이머 재개 - 현재 시간(호출 시점)으로 기록
+  ///
+  /// 일반적인 사용자 UI 액션에 적합합니다.
   Future<Map<String, dynamic>> resumeMemberTimer(String groupId) async {
     return recordTimerActivityWithTimestamp(
       groupId,
@@ -705,7 +694,9 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 종료 - 현재 시간 기준
+  /// 타이머 종료 - 현재 시간(호출 시점)으로 기록
+  ///
+  /// 일반적인 사용자 UI 액션에 적합합니다.
   Future<Map<String, dynamic>> stopMemberTimer(String groupId) async {
     return recordTimerActivityWithTimestamp(
       groupId,
@@ -714,7 +705,12 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 시작 - 지정 시간 기준
+  // === 고급 인터페이스 메서드: 지정 시간 기준 ===
+
+  /// 타이머 시작 - 지정된 시간으로 기록
+  ///
+  /// 자동화된 프로세스나 배치 작업 등에 적합합니다.
+  /// 예: 특정 시점의 상태 복원, 자정 시간 처리 등
   Future<Map<String, dynamic>> startMemberTimerWithTimestamp(
     String groupId,
     DateTime timestamp,
@@ -726,7 +722,10 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 일시정지 - 지정 시간 기준
+  /// 타이머 일시정지 - 지정된 시간으로 기록
+  ///
+  /// 자동화된 프로세스나 배치 작업 등에 적합합니다.
+  /// 예: 특정 시점의 상태 복원, 자정 시간 처리 등
   Future<Map<String, dynamic>> pauseMemberTimerWithTimestamp(
     String groupId,
     DateTime timestamp,
@@ -738,7 +737,10 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 재개 - 지정 시간 기준
+  /// 타이머 재개 - 지정된 시간으로 기록
+  ///
+  /// 자동화된 프로세스나 배치 작업 등에 적합합니다.
+  /// 예: 특정 시점의 상태 복원, 자정 시간 처리 등
   Future<Map<String, dynamic>> resumeMemberTimerWithTimestamp(
     String groupId,
     DateTime timestamp,
@@ -750,7 +752,10 @@ class GroupTimerFirebase {
     );
   }
 
-  /// 타이머 종료 - 지정 시간 기준
+  /// 타이머 종료 - 지정된 시간으로 기록
+  ///
+  /// 자동화된 프로세스나 배치 작업 등에 적합합니다.
+  /// 예: 특정 시점의 상태 복원, 자정 시간 처리 등
   Future<Map<String, dynamic>> stopMemberTimerWithTimestamp(
     String groupId,
     DateTime timestamp,

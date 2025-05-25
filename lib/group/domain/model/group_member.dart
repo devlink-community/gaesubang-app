@@ -1,4 +1,5 @@
 // lib/group/domain/model/group_member.dart
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'group_member.freezed.dart';
@@ -12,30 +13,52 @@ class GroupMember with _$GroupMember {
     this.profileUrl,
     required this.role,
     required this.joinedAt,
-    required this.isActive,
-    this.timerStartTime,
-    required this.elapsedMinutes,
-    required this.elapsedSeconds,
+    required this.timerState,
+    this.timerStartAt,
+    this.timerLastUpdatedAt,
+    required this.timerElapsed,
+    required this.timerTodayDuration,
+    required this.timerMonthlyDurations,
+    required this.timerTotalDuration,
+    this.timerPauseExpiryTime,
   });
 
-  @override
   final String id;
-  @override
   final String userId;
-  @override
   final String userName;
-  @override
   final String? profileUrl;
-  @override
   final String role; // "owner", "member"
-  @override
   final DateTime joinedAt;
-  @override
-  final bool isActive; // 타이머 실행 중 여부
-  @override
-  final DateTime? timerStartTime; // 타이머 시작 시간
-  @override
-  final int elapsedMinutes; // 경과 시간 (분)
-  @override
-  final int elapsedSeconds; // 경과 시간 (초)
+
+  // 타이머 상태 필드 - TimerActivityType 사용
+  final TimerActivityType timerState;
+  final DateTime? timerStartAt;
+  final DateTime? timerLastUpdatedAt;
+  final int timerElapsed;
+  final int timerTodayDuration;
+  final Map<String, int> timerMonthlyDurations;
+  final int timerTotalDuration;
+  final DateTime? timerPauseExpiryTime;
+
+  /// 타이머 상태가 활성화 상태인지 확인
+  bool get isActive =>
+      timerState == TimerActivityType.start ||
+      timerState == TimerActivityType.resume;
+
+  /// 타이머 상태가 일시정지 상태인지 확인
+  bool get isPaused => timerState == TimerActivityType.pause;
+
+  /// 타이머 상태가 종료 상태인지 확인
+  bool get isEnded => timerState == TimerActivityType.end;
+
+  /// 현재 경과 시간 계산 (초)
+  int get currentElapsedSeconds {
+    if (!isActive || timerStartAt == null) return timerElapsed;
+
+    final now = DateTime.now();
+    return timerElapsed + now.difference(timerStartAt!).inSeconds;
+  }
+
+  /// 현재 경과 시간 계산 (분)
+  int get currentElapsedMinutes => (currentElapsedSeconds / 60).floor();
 }
