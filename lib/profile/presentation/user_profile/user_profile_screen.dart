@@ -561,8 +561,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildActivityCard() {
-    final member = widget.state.userProfile.valueOrNull;
-    if (member == null) return const SizedBox.shrink();
+    final user = widget.state.userProfile.valueOrNull;
+    if (user == null) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
@@ -655,7 +655,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${member.streakDays}일',
+                        '${user.summary?.currentStreakDays ?? 0}일',
                         style: AppTextStyles.heading6Bold.copyWith(
                           color: AppColorStyles.primary100,
                         ),
@@ -668,10 +668,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
                 // 기타 정보들
                 _buildInfoRow(
-                  icon: member.onAir ? Icons.circle : Icons.nightlight_round,
+                  icon: user.onAir ? Icons.circle : Icons.nightlight_round,
                   label: '활동 상태',
-                  value: member.onAir ? '활동 중' : '휴식 중',
-                  color: member.onAir ? Colors.green : Colors.grey,
+                  value: user.onAir ? '활동 중' : '휴식 중',
+                  color: user.onAir ? Colors.green : Colors.grey,
                 ),
 
                 const SizedBox(height: 12),
@@ -679,7 +679,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 _buildInfoRow(
                   icon: Icons.group,
                   label: '참여 그룹',
-                  value: '${member.joinedGroups.length}개',
+                  value: '${user.joinedGroups.length}개',
                   color: AppColorStyles.primary100,
                 ),
 

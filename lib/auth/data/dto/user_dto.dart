@@ -71,8 +71,6 @@ class UserDto {
     List<JoinedGroupDto>? joinedGroups,
     String? position,
     String? skills,
-    bool? onAir,
-    int? streakDays,
     SummaryDto? userSummary,
   }) {
     return UserDto(
@@ -89,8 +87,6 @@ class UserDto {
       joinedGroups: joinedGroups ?? this.joinedGroups,
       position: position ?? this.position,
       skills: skills ?? this.skills,
-      onAir: onAir ?? this.onAir,
-      streakDays: streakDays ?? this.streakDays,
       userSummary: userSummary ?? this.userSummary,
     );
   }

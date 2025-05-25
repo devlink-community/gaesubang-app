@@ -11,13 +11,10 @@ extension UserDtoMapper on UserDto {
       nickname: nickname ?? '',
       uid: uid ?? '',
       image: image ?? '',
-      onAir: onAir ?? false,
       description: description ?? '',
-      streakDays: streakDays ?? 0,
       position: position,
       skills: skills,
       joinedGroups: joinedGroups ?? [],
-      focusStats: null, // deprecated - 추후 제거
       summary: userSummary?.toModel(), // SummaryDto를 Summary로 변환
     );
   }
@@ -38,8 +35,6 @@ extension UserModelMapper on User {
       joinedGroups: joinedGroups,
       position: position,
       skills: skills,
-      onAir: onAir,
-      streakDays: streakDays,
       userSummary: summary?.toDto(), // Summary를 SummaryDto로 변환
     );
   }

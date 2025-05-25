@@ -242,10 +242,6 @@ class LoginNotifier extends _$LoginNotifier {
         userId: member.uid,
         email: email,
         nickname: member.nickname,
-        additionalInfo: {
-          'streakDays': member.streakDays,
-          'totalFocusMinutes': member.focusStats?.totalMinutes ?? 0,
-        },
       );
 
       AppLogger.logState('LoginSuccess', safeUserInfo);
