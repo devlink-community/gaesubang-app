@@ -1,12 +1,15 @@
-// lib/core/utils/focus_stats_calculator.dart
+// lib/group/domain/service/focus_stats_calculator.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/data/dto/timer_activity_dto.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/profile/domain/model/focus_time_stats.dart';
 import 'package:intl/intl.dart';
 
+/// 타이머 활동 로그를 기반으로 집중 통계를 계산하는 서비스 클래스
+/// 주로 출석부, 사용자 프로필 등의 히스토리 기반 통계에 사용
 class FocusStatsCalculator {
   const FocusStatsCalculator._();
 
@@ -46,12 +49,16 @@ class FocusStatsCalculator {
       final timestamp = activity.timestamp;
       if (timestamp == null) continue;
 
-      switch (type) {
-        case 'start':
+      // 타이머 활동 유형에 따라 처리
+      if (type == null) continue;
+      final activityType = TimerActivityType.fromString(type);
+
+      switch (activityType) {
+        case TimerActivityType.start:
           // 새 타이머 세션 시작
           startTime = timestamp;
 
-        case 'pause':
+        case TimerActivityType.pause:
           // 현재 실행 중인 타이머가 있는 경우에만 처리
           if (startTime != null) {
             // 시작부터 일시정지까지 시간 계산
@@ -61,7 +68,7 @@ class FocusStatsCalculator {
               totalMinutes += sessionMinutes;
 
               // 요일별 시간 추가 (시작 날짜 기준)
-              final weekday = _getKoreanWeekday(startTime.weekday);
+              final weekday = TimeFormatter.getKoreanWeekday(startTime.weekday);
               weeklyMinutes[weekday] =
                   (weeklyMinutes[weekday] ?? 0) + sessionMinutes;
             }
@@ -70,7 +77,11 @@ class FocusStatsCalculator {
             startTime = null;
           }
 
-        case 'end':
+        case TimerActivityType.resume:
+          // resume은 새로운 세션 시작으로 처리
+          startTime = timestamp;
+
+        case TimerActivityType.end:
           // 타이머가 실행 중인 경우에만 처리
           if (startTime != null) {
             // 시작부터 종료까지 시간 계산
@@ -80,7 +91,7 @@ class FocusStatsCalculator {
               totalMinutes += sessionMinutes;
 
               // 요일별 시간 추가 (시작 날짜 기준)
-              final weekday = _getKoreanWeekday(startTime.weekday);
+              final weekday = TimeFormatter.getKoreanWeekday(startTime.weekday);
               weeklyMinutes[weekday] =
                   (weeklyMinutes[weekday] ?? 0) + sessionMinutes;
             }
@@ -132,12 +143,16 @@ class FocusStatsCalculator {
       final timestamp = activity.timestamp;
       if (timestamp == null) continue;
 
-      switch (type) {
-        case 'start':
+      // 타이머 활동 유형에 따라 처리
+      if (type == null) continue;
+      final activityType = TimerActivityType.fromString(type);
+
+      switch (activityType) {
+        case TimerActivityType.start:
           // 새 타이머 세션 시작
           startTime = timestamp;
 
-        case 'pause':
+        case TimerActivityType.pause:
           // 현재 실행 중인 타이머가 있는 경우에만 처리
           if (startTime != null) {
             // 시작부터 일시정지까지 시간 계산
@@ -151,7 +166,11 @@ class FocusStatsCalculator {
             startTime = null;
           }
 
-        case 'end':
+        case TimerActivityType.resume:
+          // resume은 새로운 세션 시작으로 처리
+          startTime = timestamp;
+
+        case TimerActivityType.end:
           // 타이머가 실행 중인 경우에만 처리
           if (startTime != null) {
             // 시작부터 종료까지 시간 계산
@@ -168,28 +187,6 @@ class FocusStatsCalculator {
     }
 
     return totalMinutes;
-  }
-
-  /// 요일 숫자를 한글 요일로 변환
-  static String _getKoreanWeekday(int weekday) {
-    switch (weekday) {
-      case 1:
-        return '월';
-      case 2:
-        return '화';
-      case 3:
-        return '수';
-      case 4:
-        return '목';
-      case 5:
-        return '금';
-      case 6:
-        return '토';
-      case 7:
-        return '일';
-      default:
-        return '월';
-    }
   }
 
   /// 오늘의 집중 시간 계산
@@ -305,7 +302,7 @@ class FocusStatsCalculator {
 
           // 오늘이면 현재 시간까지, 과거면 그날 23:59:59까지
           final endTime =
-              _isSameDay(date, now)
+              TimeFormatter.isSameDay(date, now)
                   ? now
                   : DateTime(date.year, date.month, date.day, 23, 59, 59);
 
@@ -352,11 +349,5 @@ class FocusStatsCalculator {
       );
       rethrow;
     }
-  }
-
-  static bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
   }
 }

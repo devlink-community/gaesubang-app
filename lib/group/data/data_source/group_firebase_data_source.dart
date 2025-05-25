@@ -54,7 +54,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
     await _core.joinGroup(groupId);
     // 캐시 무효화
     _query.invalidateJoinedGroupsCache();
-    _query.invalidateGroupMembersCache(groupId);
   }
 
   @override
@@ -62,7 +61,6 @@ class GroupFirebaseDataSource implements GroupDataSource {
     await _core.leaveGroup(groupId);
     // 캐시 무효화
     _query.invalidateJoinedGroupsCache();
-    _query.invalidateGroupMembersCache(groupId);
   }
 
   // ===== Query 기능 위임 =====

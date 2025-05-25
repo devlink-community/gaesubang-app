@@ -1,5 +1,6 @@
 // lib/group/domain/model/group_member.dart
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
+import 'package:devlink_mobile_app/group/domain/service/timer_calculation_service.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'group_member.freezed.dart';
@@ -41,9 +42,7 @@ class GroupMember with _$GroupMember {
   final DateTime? timerPauseExpiryTime;
 
   /// 타이머 상태가 활성화 상태인지 확인
-  bool get isActive =>
-      timerState == TimerActivityType.start ||
-      timerState == TimerActivityType.resume;
+  bool get isActive => TimerCalculationService.isTimerActive(timerState);
 
   /// 타이머 상태가 일시정지 상태인지 확인
   bool get isPaused => timerState == TimerActivityType.pause;
@@ -53,12 +52,14 @@ class GroupMember with _$GroupMember {
 
   /// 현재 경과 시간 계산 (초)
   int get currentElapsedSeconds {
-    if (!isActive || timerStartAt == null) return timerElapsed;
-
-    final now = DateTime.now();
-    return timerElapsed + now.difference(timerStartAt!).inSeconds;
+    return TimerCalculationService.calculateMemberElapsed(this);
   }
 
   /// 현재 경과 시간 계산 (분)
-  int get currentElapsedMinutes => (currentElapsedSeconds / 60).floor();
+  int get currentElapsedMinutes => currentElapsedSeconds ~/ 60;
+
+  /// 현재 경과 시간 (포맷팅된 문자열)
+  String get formattedElapsedTime {
+    return TimerCalculationService.formatMemberElapsedTime(this);
+  }
 }

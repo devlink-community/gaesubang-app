@@ -16,26 +16,26 @@ class MemberGrid extends StatelessWidget {
     required this.onMemberTap,
   });
 
-  // 🔧 통일된 시간 포맷팅 헬퍼 메서드 (timer_display.dart와 동일)
-  String _formatTime(GroupMember member) {
-    int totalSeconds;
-
-    if (member.isActive && member.timerStartAt != null) {
-      // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
-      final now = DateTime.now();
-      totalSeconds = now.difference(member.timerStartAt!).inSeconds;
-    } else {
-      // 비활성 상태이면 저장된 경과 시간 사용
-      totalSeconds = member.timerElapsed;
-    }
-
-    // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
+  // // 🔧 통일된 시간 포맷팅 헬퍼 메서드 (timer_display.dart와 동일)
+  // String _formatTime(GroupMember member) {
+  //   int totalSeconds;
+  //
+  //   if (member.isActive && member.timerStartAt != null) {
+  //     // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
+  //     final now = DateTime.now();
+  //     totalSeconds = now.difference(member.timerStartAt!).inSeconds;
+  //   } else {
+  //     // 비활성 상태이면 저장된 경과 시간 사용
+  //     totalSeconds = member.timerElapsed;
+  //   }
+  //
+  //   // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
+  //   final hours = totalSeconds ~/ 3600;
+  //   final minutes = (totalSeconds % 3600) ~/ 60;
+  //   final seconds = totalSeconds % 60;
+  //
+  //   return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +104,7 @@ class MemberGrid extends StatelessWidget {
                     MemberTimerItem(
                       imageUrl: member.profileUrl ?? '',
                       isActive: member.isActive,
-                      timeDisplay: _formatTime(member), // 🔧 통일된 포맷 사용
+                      timeDisplay: member.formattedElapsedTime, // 🔧 통일된 포맷 사용
                     ),
 
                     Text(

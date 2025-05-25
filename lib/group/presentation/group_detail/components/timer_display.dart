@@ -1,4 +1,5 @@
 // lib/group/presentation/group_detail/components/timer_display.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_state.dart';
 import 'package:flutter/material.dart';
 
@@ -17,13 +18,9 @@ class TimerDisplay extends StatelessWidget {
   });
 
   // 🔧 통일된 시간 포맷팅 메서드
+  // _formatTime 메서드 수정
   String _formatTime(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-
-    // 🔧 항상 HH:MM:SS 형식으로 표시
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return TimeFormatter.formatSeconds(totalSeconds);
   }
 
   @override
