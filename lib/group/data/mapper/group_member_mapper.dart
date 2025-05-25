@@ -19,6 +19,21 @@ extension GroupMemberDtoMapper on GroupMemberDto {
       }
     }
 
+    // timerMonthlyDurations를 안전하게 처리
+    final cleanedMonthly = <String, int>{};
+    if (timerMonthlyDurations != null) {
+      timerMonthlyDurations!.forEach((k, dynamic v) {
+        // 타입을 dynamic으로 지정
+        if (v is int) {
+          cleanedMonthly[k] = v;
+        } else if (v is num) {
+          cleanedMonthly[k] = v.toInt();
+        } else {
+          cleanedMonthly[k] = 0;
+        }
+      });
+    }
+
     return GroupMember(
       id: id ?? '',
       userId: userId ?? '',
@@ -31,7 +46,7 @@ extension GroupMemberDtoMapper on GroupMemberDto {
       timerLastUpdatedAt: timerLastUpdatedAt,
       timerElapsed: timerElapsed ?? 0,
       timerTodayDuration: timerTodayDuration ?? 0,
-      timerMonthlyDurations: timerMonthlyDurations?.cast<String, int>() ?? {},
+      timerMonthlyDurations: cleanedMonthly,
       timerTotalDuration: timerTotalDuration ?? 0,
       timerPauseExpiryTime: timerPauseExpiryTime,
     );
