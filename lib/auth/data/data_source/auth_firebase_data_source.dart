@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/firebase/auth_core_firebase.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/firebase/user_activity_firebase.dart';
 import 'package:devlink_mobile_app/auth/data/data_source/firebase/user_profile_firebase.dart';
-import 'package:devlink_mobile_app/auth/data/data_source/firebase/user_terms_firebase.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,7 +16,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
   final AuthCoreFirebase _authCore;
   final UserProfileFirebase _userProfile;
   final UserActivityFirebase _userActivity;
-  final UserTermsFirebase _userTerms;
 
   AuthFirebaseDataSource({
     FirebaseAuth? auth,
@@ -33,9 +31,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
          storage: storage,
        ),
        _userActivity = UserActivityFirebase(
-         firestore: firestore,
-       ),
-       _userTerms = UserTermsFirebase(
          firestore: firestore,
        ) {
     AppLogger.authInfo('AuthFirebaseDataSource (Facade) 초기화 완료');
@@ -113,9 +108,9 @@ class AuthFirebaseDataSource implements AuthDataSource {
       );
 
       // 4. 기본 Summary 생성
-      final defaultSummary = await _userActivity.fetchUserSummary(
-        createdUser.uid,
-      );
+      // final defaultSummary = await _userActivity.fetchUserSummary(
+      //   createdUser.uid,
+      // );
 
       // 5. 생성된 사용자 데이터 반환
       final userData = {
@@ -192,54 +187,6 @@ class AuthFirebaseDataSource implements AuthDataSource {
     }
 
     await _authCore.deleteAccount(currentUser.uid);
-  }
-
-  @override
-  Future<Map<String, dynamic>> saveTermsAgreement(
-    Map<String, dynamic> termsData,
-  ) async {
-    final savedTerms = await _userTerms.saveTermsAgreement(termsData);
-
-    // 현재 사용자가 있으면 사용자 문서도 업데이트
-    final currentUser = _authCore.currentUser;
-    if (currentUser != null) {
-      await _userTerms.updateUserTermsAgreement(
-        userId: currentUser.uid,
-        termsData: savedTerms,
-      );
-    }
-
-    return savedTerms;
-  }
-
-  @override
-  Future<Map<String, dynamic>> fetchTermsInfo() async {
-    return await _userTerms.fetchDefaultTermsInfo();
-  }
-
-  @override
-  Future<Map<String, dynamic>?> getTermsInfo(String termsId) async {
-    return await _userTerms.getTermsInfo(termsId);
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> fetchTimerActivities(String userId) async {
-    // 레거시 메서드 - 새 구조에서는 사용하지 않음
-    AppLogger.warning(
-      'fetchTimerActivities는 deprecated입니다. Summary/Activity를 사용하세요.',
-    );
-    return [];
-  }
-
-  @override
-  Future<void> saveTimerActivity(
-    String userId,
-    Map<String, dynamic> activityData,
-  ) async {
-    // 레거시 메서드 - 새 구조에서는 사용하지 않음
-    AppLogger.warning(
-      'saveTimerActivity는 deprecated입니다. updateGroupActivity를 사용하세요.',
-    );
   }
 
   @override
