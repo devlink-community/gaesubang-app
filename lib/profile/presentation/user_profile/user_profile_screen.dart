@@ -564,6 +564,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final user = widget.state.userProfile.valueOrNull;
     if (user == null) return const SizedBox.shrink();
 
+    // Summary 정보 가져오기
+    final summary = user.summary;
+    final hasSummary = summary != null;
+    final totalSeconds = summary?.allTimeTotalSeconds ?? 0;
+    final streakDays = summary?.currentStreakDays ?? 0;
+
+    // 시간 포맷팅
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final timeDisplay =
+        hours > 0
+            ? (minutes > 0 ? '$hours시간 $minutes분' : '$hours시간')
+            : '$minutes분';
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -615,6 +629,63 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 집중 시간 정보 (추가)
+                if (hasSummary) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorStyles.primary100.withValues(alpha: 0.15),
+                          AppColorStyles.primary80.withValues(alpha: 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.timer_outlined,
+                              color: AppColorStyles.primary100,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '총 집중 시간',
+                              style: AppTextStyles.body2Regular.copyWith(
+                                color: AppColorStyles.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // FittedBox로 자동 크기 조절
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            timeDisplay,
+                            style: AppTextStyles.heading6Bold.copyWith(
+                              color: AppColorStyles.primary100,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+
                 // 연속 학습일 정보
                 Container(
                   width: double.infinity,
@@ -655,7 +726,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${user.summary?.currentStreakDays ?? 0}일',
+                        '$streakDays일',
                         style: AppTextStyles.heading6Bold.copyWith(
                           color: AppColorStyles.primary100,
                         ),
