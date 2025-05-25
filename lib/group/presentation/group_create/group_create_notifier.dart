@@ -5,12 +5,12 @@ import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/create_group_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_state.dart';
-import 'package:devlink_mobile_app/storage/module/storage_di.dart';
 import 'package:devlink_mobile_app/storage/domain/usecase/upload_image_use_case.dart';
+import 'package:devlink_mobile_app/storage/module/storage_di.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'group_create_notifier.g.dart';

@@ -8,26 +8,26 @@ import 'package:devlink_mobile_app/group/data/repository_impl/group_chat_reposit
 import 'package:devlink_mobile_app/group/data/repository_impl/group_repository_impl.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_chat_repository.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/create_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_attendance_by_month_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_group_detail_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/attendance/get_attendance_by_month_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_stream_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/mark_messages_as_read_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/send_message_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_list_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_stream_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/join_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/leave_group_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/mark_messages_as_read_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/record_timer_activity_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/search_groups_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/stream_group_member_timer_status_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/update_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/create_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/get_group_detail_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/join_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/leave_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/management/update_group_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/search/search_groups_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/timer/record_timer_activity_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/timer/stream_group_member_timer_status_use_case.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../domain/usecase/send_bot_use_case.dart';
+import '../domain/usecase/chat/send_bot_use_case.dart';
 
 part 'group_di.g.dart';
 
