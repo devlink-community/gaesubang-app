@@ -101,12 +101,41 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   Future<void> _loadAttendanceData() async {
     if (_groupId == null) return;
 
+    AppLogger.debug(
+      '출석 데이터 로드 시작: 그룹=$_groupId, 년=${state.displayedMonth.year}, 월=${state.displayedMonth.month}',
+      tag: 'AttendanceNotifier',
+    );
+
     // 단일 API 호출로 출석 데이터 가져오기
     final asyncResult = await _getAttendancesByMonthUseCase.execute(
       groupId: _groupId!,
       year: state.displayedMonth.year,
       month: state.displayedMonth.month,
     );
+
+    // 데이터 확인 로그
+    if (asyncResult is AsyncData) {
+      final attendances = asyncResult.value ?? [];
+      AppLogger.debug(
+        '출석 데이터 로드 성공: ${attendances.length}개 항목, 첫 항목 시간=${attendances.isNotEmpty ? attendances.first.timeInMinutes : "없음"}',
+        tag: 'AttendanceNotifier',
+      );
+
+      // 0분 항목 확인
+      final zeroMinutes = attendances.where((a) => a.timeInMinutes == 0).length;
+      if (zeroMinutes > 0) {
+        AppLogger.warning(
+          '출석 데이터 중 0분 항목 발견: $zeroMinutes개',
+          tag: 'AttendanceNotifier',
+        );
+      }
+    } else if (asyncResult is AsyncError) {
+      AppLogger.error(
+        '출석 데이터 로드 실패',
+        tag: 'AttendanceNotifier',
+        error: asyncResult.error,
+      );
+    }
 
     // 색상 맵 계산
     final colorMap = _calculateAttendanceColorMap(
@@ -120,6 +149,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     );
   }
 
+  // 날짜별 출석 상태 색상 맵 계산
   // 날짜별 출석 상태 색상 맵 계산
   Map<String, Color> _calculateAttendanceColorMap(
     List<Attendance> attendances,
@@ -142,11 +172,17 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       // 해당 날짜의 총 학습 시간
       final totalMinutes = dayAttendances.fold<int>(
         0,
-        (sum, attendance) => sum + attendance.timeInMinutes,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
       );
 
-      // 참여 멤버 수
-      final memberCount = dayAttendances.map((a) => a.userId).toSet().length;
+      // 참여 멤버 수 (0분 이상 활동한 멤버만 카운트)
+      final activeMembers =
+          dayAttendances
+              .where((a) => a.timeInMinutes > 0)
+              .map((a) => a.userId)
+              .toSet();
+      final memberCount = activeMembers.length;
 
       // 멤버 수와 총 시간을 고려한 색상 결정
       if (memberCount >= 3 && totalMinutes >= 240) {
@@ -155,8 +191,12 @@ class AttendanceNotifier extends _$AttendanceNotifier {
         colorMap[dateKey] = AppColorStyles.primary80; // 활발
       } else if (memberCount >= 1 && totalMinutes >= 30) {
         colorMap[dateKey] = AppColorStyles.primary60; // 보통
+      } else if (memberCount >= 1 && totalMinutes > 0) {
+        colorMap[dateKey] = AppColorStyles.gray60; // 낮은 활동
       } else {
-        colorMap[dateKey] = AppColorStyles.gray40.withValues(alpha: 0.5); // 낮음
+        colorMap[dateKey] = AppColorStyles.gray40.withValues(
+          alpha: 0.5,
+        ); // 매우 낮음/없음
       }
     }
 
@@ -192,20 +232,34 @@ class AttendanceNotifier extends _$AttendanceNotifier {
   List<MapEntry<String, List<Attendance>>> getSortedMemberAttendances() {
     final groupedByMember = getGroupedAttendancesByMember();
 
-    final sortedEntries =
-        groupedByMember.entries.toList()..sort((a, b) {
-          final totalA = a.value.fold<int>(
+    // 활동 시간이 0보다 큰 멤버만 포함
+    final filteredEntries =
+        groupedByMember.entries.where((entry) {
+          final totalMinutes = entry.value.fold<int>(
             0,
-            (sum, attendance) => sum + attendance.timeInMinutes,
+            (sum, attendance) =>
+                sum +
+                (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
           );
-          final totalB = b.value.fold<int>(
-            0,
-            (sum, attendance) => sum + attendance.timeInMinutes,
-          );
-          return totalB.compareTo(totalA);
-        });
+          return totalMinutes > 0;
+        }).toList();
 
-    return sortedEntries;
+    // 학습 시간 기준으로 정렬
+    filteredEntries.sort((a, b) {
+      final totalA = a.value.fold<int>(
+        0,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+      );
+      final totalB = b.value.fold<int>(
+        0,
+        (sum, attendance) =>
+            sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
+      );
+      return totalB.compareTo(totalA);
+    });
+
+    return filteredEntries;
   }
 
   // 총 학습 시간 계산
@@ -213,7 +267,8 @@ class AttendanceNotifier extends _$AttendanceNotifier {
     final attendances = getSelectedDateAttendances();
     return attendances.fold<int>(
       0,
-      (sum, attendance) => sum + attendance.timeInMinutes,
+      (sum, attendance) =>
+          sum + (attendance.timeInMinutes > 0 ? attendance.timeInMinutes : 0),
     );
   }
 

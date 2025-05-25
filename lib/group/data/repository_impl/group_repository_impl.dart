@@ -2,8 +2,10 @@
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
+import 'package:devlink_mobile_app/group/data/dto/attendance_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
+import 'package:devlink_mobile_app/group/data/mapper/attendance_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
@@ -11,6 +13,7 @@ import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:intl/intl.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;
@@ -410,79 +413,139 @@ class GroupRepositoryImpl implements GroupRepository {
     int month,
   ) async {
     try {
-      // 1. 월별 출석 데이터 조회
+      // 1. 월별 출석 데이터 조회 (과거 데이터)
       final attendanceData = await _dataSource.fetchMonthlyAttendances(
         groupId,
         year,
         month,
       );
 
-      // 2. 출석 데이터를 Attendance 모델로 변환
-      final List<Attendance> attendances = [];
-
-      // 출석 데이터가 없으면 빈 리스트 반환
-      if (attendanceData.isEmpty) {
-        return Result.success(<Attendance>[]);
-      }
+      // 2. DTO로 변환
+      final attendanceDtos =
+          attendanceData.map((data) => AttendanceDto.fromJson(data)).toList();
 
       // 3. 캐시된 멤버 정보 조회
       final memberResult = getCachedGroupMembers(groupId);
-      final Map<String, GroupMember> memberMap = {};
+      final Map<String, String> userNames = {};
+      final Map<String, String> profileUrls = {};
+      final List<GroupMember> members = [];
 
       // 캐시된 멤버 정보가 있으면 Map으로 변환 (userId를 키로)
       if (memberResult is Success<List<GroupMember>>) {
-        for (final member in memberResult.data) {
-          memberMap[member.userId] = member;
+        members.addAll(memberResult.data);
+        for (final member in members) {
+          userNames[member.userId] = member.userName;
+          if (member.profileUrl != null) {
+            profileUrls[member.userId] = member.profileUrl!;
+          }
         }
       }
 
-      // 4. 출석 데이터를 Attendance 모델로 변환
-      for (final data in attendanceData) {
-        final userId = data['userId'] as String?;
-        if (userId == null) continue;
+      // 4. DTO를 도메인 모델로 변환
+      final attendances = attendanceDtos.toModelList(
+        userNames: userNames,
+        profileUrls: profileUrls,
+      );
 
-        final dateStr = data['date'] as String?;
-        if (dateStr == null) continue;
+      // 5. API에서 가져온 데이터 날짜 추적을 위한 Set
+      final Set<String> existingDates = {};
+      for (final attendance in attendances) {
+        final dateStr = DateFormat('yyyy-MM-dd').format(attendance.date);
+        existingDates.add(
+          '$dateStr-${attendance.userId}',
+        ); // 날짜-사용자ID 조합으로 고유키 생성
+      }
 
-        // 날짜 파싱
-        DateTime date;
-        try {
-          date = DateTime.parse(dateStr);
-        } catch (e) {
-          AppLogger.warning(
-            '날짜 파싱 실패: $dateStr',
-            tag: 'GroupRepositoryImpl',
-            error: e,
-          );
-          continue;
-        }
+      // 6. 현재 월 확인
+      final now = DateTime.now();
+      final isCurrentMonth = (year == now.year && month == now.month);
 
-        // 초 단위를 분 단위로 변환 (60으로 나눔)
-        final timeInSeconds = data['timeInSeconds'] as int? ?? 0;
-        final timeInMinutes = timeInSeconds ~/ 60;
-
-        // 멤버 정보 조회 (캐시에 있으면 사용, 없으면 기본값)
-        String userName = 'Unknown';
-        String? profileUrl;
-
-        final member = memberMap[userId];
-        if (member != null) {
-          userName = member.userName;
-          profileUrl = member.profileUrl;
-        }
-
-        // Attendance 객체 생성
-        attendances.add(
-          Attendance(
-            groupId: groupId,
-            userId: userId,
-            userName: userName,
-            profileUrl: profileUrl,
-            date: date,
-            timeInMinutes: timeInMinutes,
-          ),
+      // 7. 멤버의 timerMonthlyDurations와 timerTodayDuration으로 데이터 보완
+      if (members.isNotEmpty) {
+        AppLogger.info(
+          '월간 출석 데이터 보완 시작: $year년 $month월, 멤버 ${members.length}명',
+          tag: 'GroupRepositoryImpl',
         );
+
+        for (final member in members) {
+          // 7.1 timerMonthlyDurations에서 데이터 보완
+          final monthlyDurations = member.timerMonthlyDurations;
+          if (monthlyDurations.isNotEmpty) {
+            for (final entry in monthlyDurations.entries) {
+              final dateStr = entry.key;
+              final seconds = entry.value;
+
+              // 해당 월의 데이터인지 확인
+              if (dateStr.startsWith(
+                '$year-${month.toString().padLeft(2, '0')}',
+              )) {
+                final uniqueKey = '$dateStr-${member.userId}';
+
+                // 이미 있는 데이터인지 확인
+                if (!existingDates.contains(uniqueKey) && seconds > 0) {
+                  try {
+                    final date = DateTime.parse(dateStr);
+                    final minutes = seconds ~/ 60;
+
+                    attendances.add(
+                      Attendance(
+                        groupId: groupId,
+                        userId: member.userId,
+                        userName: member.userName,
+                        profileUrl: member.profileUrl,
+                        date: date,
+                        timeInMinutes: minutes,
+                      ),
+                    );
+
+                    existingDates.add(uniqueKey);
+                    AppLogger.debug(
+                      'timerMonthlyDurations에서 데이터 추가: $dateStr, ${member.userName}, ${minutes}분',
+                      tag: 'GroupRepositoryImpl',
+                    );
+                  } catch (e) {
+                    AppLogger.warning(
+                      '날짜 파싱 오류: $dateStr',
+                      tag: 'GroupRepositoryImpl',
+                      error: e,
+                    );
+                  }
+                }
+              }
+            }
+          }
+
+          // 7.2 오늘 데이터(timerTodayDuration) 보완 - 현재 월인 경우만
+          if (isCurrentMonth) {
+            final todayStr = DateFormat('yyyy-MM-dd').format(now);
+            final uniqueKey = '$todayStr-${member.userId}';
+
+            // 오늘 데이터가 없고, timerTodayDuration이 있으면 추가
+            if (!existingDates.contains(uniqueKey) &&
+                member.timerTodayDuration > 0) {
+              attendances.add(
+                Attendance(
+                  groupId: groupId,
+                  userId: member.userId,
+                  userName: member.userName,
+                  profileUrl: member.profileUrl,
+                  date: DateTime(now.year, now.month, now.day),
+                  timeInMinutes: member.timerTodayDuration ~/ 60, // 초 → 분 변환
+                ),
+              );
+
+              existingDates.add(uniqueKey);
+              AppLogger.debug(
+                '오늘 활동 추가: ${member.userName}, ${member.timerTodayDuration ~/ 60}분',
+                tag: 'GroupRepositoryImpl',
+              );
+            }
+          }
+        }
       }
+
+      // 8. 날짜 기준으로 정렬
+      attendances.sort((a, b) => a.date.compareTo(b.date));
 
       return Result.success(attendances);
     } catch (e, st) {
