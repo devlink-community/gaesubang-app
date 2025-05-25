@@ -311,11 +311,13 @@ class GroupTimerFirebase {
             case TimerActivityType.start:
               return _handleTimerStart(groupId, userId, timestamp, dateKey);
             case TimerActivityType.pause:
+              // 이미 조회한 groupDoc을 전달
               return _handleTimerPause(
                 groupId,
                 userId,
                 timestamp,
                 dateKey,
+                groupDoc, // 기존에 조회한 groupDoc 전달
               );
             case TimerActivityType.resume:
               return _handleTimerResume(groupId, userId, timestamp, dateKey);
@@ -398,6 +400,7 @@ class GroupTimerFirebase {
     String userId,
     DateTime timestamp,
     String dateKey,
+    DocumentSnapshot<Map<String, dynamic>> existingGroupDoc, // 추가된 파라미터
   ) async {
     final activityRef = _getMemberActivityRef(groupId, userId);
 
@@ -441,11 +444,19 @@ class GroupTimerFirebase {
     final totalDuration = activityData['totalDuration'] as int? ?? 0;
     final newTotalDuration = totalDuration + elapsedSeconds;
 
-    // 일시정지 제한 시간 설정 (새로 추가)
-    // 그룹 문서에서 일시정지 제한 시간 가져오기
-    final groupDoc = await _groupsCollection.doc(groupId).get();
-    final pauseTimeLimit =
-        groupDoc.data()?['pauseTimeLimit'] as int? ?? 120; // 기본값 120분
+    // 일시정지 제한 시간 설정
+    // 전달받은 groupDoc 재사용
+    final raw = existingGroupDoc.data()?['pauseTimeLimit'] as int? ?? 120;
+
+    // 1~720분 사이로 보정 (1분~12시간)
+    final pauseTimeLimit = raw.clamp(1, 720);
+
+    if (raw != pauseTimeLimit) {
+      AppLogger.warning(
+        'pauseTimeLimit 값($raw)이 허용 범위를 벗어나 $pauseTimeLimit으로 보정되었습니다.',
+        tag: 'GroupTimerFirebase',
+      );
+    }
 
     // 일시정지 만료 시간 계산
     final pauseExpiryTime = timestamp.add(Duration(minutes: pauseTimeLimit));
