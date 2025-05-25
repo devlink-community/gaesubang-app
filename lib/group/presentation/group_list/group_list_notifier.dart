@@ -4,11 +4,10 @@ import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_list_state.dart';
 import 'package:devlink_mobile_app/group/presentation/group_list/group_sort_type.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/usecase/get_group_list_use_case.dart';
-import '../../domain/usecase/join_group_use_case.dart';
+import '../../domain/usecase/management/join_group_use_case.dart';
 
 part 'group_list_notifier.g.dart';
 

@@ -1,9 +1,9 @@
 // lib/group/domain/usecase/get_attendance_by_month_use_case.dart
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../core/result/result.dart';
-import '../model/attendance.dart';
-import '../repository/group_repository.dart';
+import '../../../../core/result/result.dart';
+import '../../model/attendance.dart';
+import '../../repository/group_repository.dart';
 
 class GetAttendancesByMonthUseCase {
   final GroupRepository _repository;

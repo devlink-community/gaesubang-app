@@ -4,19 +4,18 @@ import 'dart:async';
 import 'package:devlink_mobile_app/ai_assistance/module/ai_client_di.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_stream_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/mark_messages_as_read_use_case.dart';
+import 'package:devlink_mobile_app/group/domain/usecase/chat/send_message_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_stream_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/get_group_messages_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/mark_messages_as_read_use_case.dart';
-import 'package:devlink_mobile_app/group/domain/usecase/send_message_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/group_chat_state.dart';
-import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../ai_assistance/module/group_chat_bot_service.dart';
-import '../../domain/usecase/send_bot_use_case.dart';
+import '../../domain/usecase/chat/send_bot_use_case.dart';
 
 part 'group_chat_notifier.g.dart';
 
