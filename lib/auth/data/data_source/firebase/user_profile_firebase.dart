@@ -322,7 +322,7 @@ class UserProfileFirebase {
     }
   }
 
-  /// 특정 사용자 프로필 조회 (다른 사용자)
+  /// 특정 사용자 프로필 조회 (다른 사용자) - Summary 정보 포함
   Future<UserDto> fetchOtherUserProfile(String userId) async {
     return ApiCallDecorator.wrap(
       'UserProfileFirebase.fetchOtherUserProfile',
@@ -330,6 +330,7 @@ class UserProfileFirebase {
         AppLogger.debug('Firebase 다른 사용자 프로필 조회: $userId');
 
         try {
+          // 1. 기본 사용자 프로필 정보 조회
           final docSnapshot = await _usersCollection.doc(userId).get();
 
           if (!docSnapshot.exists) {
@@ -340,12 +341,33 @@ class UserProfileFirebase {
           final userData = docSnapshot.data()!;
           userData['uid'] = docSnapshot.id;
 
+          // 2. Summary 정보 조회 (추가)
+          try {
+            final summaryDoc =
+                await _usersCollection
+                    .doc(userId)
+                    .collection('summary')
+                    .doc('current')
+                    .get();
+
+            if (summaryDoc.exists) {
+              userData['summary'] = summaryDoc.data();
+            }
+          } catch (summaryError) {
+            AppLogger.warning(
+              'Summary 정보 조회 실패 (무시)',
+              error: summaryError,
+            );
+            // Summary 조회 실패는 무시하고 기본 프로필 정보만 반환
+          }
+
           AppLogger.authInfo('Firebase 사용자 프로필 조회 성공: $userId');
           AppLogger.logState('조회된 사용자 프로필', {
             'uid': userId,
             'nickname': userData['nickname'] ?? '',
             'email': userData['email'] ?? '',
             'position': userData['position'] ?? '',
+            'has_summary': userData.containsKey('summary'),
           });
 
           return UserDto.fromJson(userData);

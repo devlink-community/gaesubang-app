@@ -118,7 +118,7 @@ class UserProfileNotifier extends _$UserProfileNotifier {
             'has_position': value.position?.isNotEmpty ?? false,
             'has_skills': value.skills?.isNotEmpty ?? false,
             'has_image': value.image.isNotEmpty,
-            'streak_days': value.streakDays,
+            'streak_days': value.summary?.currentStreakDays,
           });
 
           // 요청 ID가 여전히 유효한지 한 번 더 확인

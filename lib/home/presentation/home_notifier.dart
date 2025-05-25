@@ -1,10 +1,9 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/banner/domain/usecase/get_active_banners_use_case.dart';
 import 'package:devlink_mobile_app/banner/module/banner_di.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_joined_group_use_case.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_popular_posts_use_case.dart';
-import 'package:devlink_mobile_app/home/domain/usecase/get_streak_days_use_case.dart';
-import 'package:devlink_mobile_app/home/domain/usecase/get_total_study_times_use_case.dart';
 import 'package:devlink_mobile_app/home/module/home_di.dart';
 import 'package:devlink_mobile_app/home/presentation/home_action.dart';
 import 'package:devlink_mobile_app/home/presentation/home_state.dart';
@@ -17,9 +16,7 @@ class HomeNotifier extends _$HomeNotifier {
   // late final GetNoticesUseCase _getNoticesUseCase;
   late final GetPopularPostsUseCase _getPopularPostsUseCase;
   late final GetActiveBannersUseCase _getActiveBannersUseCase;
-  late final GetTotalStudyTimesUseCase _getTotalStudyTimesUseCase;
   late final GetJoinedGroupUseCase _getJoinedGroupUseCase;
-  late final GetStreakDaysUseCase _getStreakDaysUseCase;
   late final GetCurrentUserUseCase _getCurrentUserUseCase;
 
   @override
@@ -27,9 +24,7 @@ class HomeNotifier extends _$HomeNotifier {
     // _getNoticesUseCase = ref.watch(getNoticesUseCaseProvider);
     _getPopularPostsUseCase = ref.watch(getPopularPostsUseCaseProvider);
     _getActiveBannersUseCase = ref.watch(getActiveBannersUseCaseProvider);
-    _getTotalStudyTimesUseCase = ref.watch(getTotalStudyTimesUseCaseProvider);
     _getJoinedGroupUseCase = ref.watch(getJoinedGroupUseCaseProvider);
-    _getStreakDaysUseCase = ref.watch(getStreakDaysUseCaseProvider);
     _getCurrentUserUseCase = ref.watch(getCurrentUserUseCaseProvider);
 
     // ref.onDispose 이전에 로딩 시작 (빌드 후 바로 로딩 시작)
@@ -42,24 +37,10 @@ class HomeNotifier extends _$HomeNotifier {
     await Future.wait([
       _loadPopularPosts(),
       _loadActiveBanner(),
-      _loadTotalStudyTime(),
-      _loadStreakDays(),
       _loadJoinedGroups(),
       _loadCurrentMember(),
     ]);
   }
-
-  // Future<void> _loadUserGroups() async {
-  //   state = state.copyWith(joinedGroups: const AsyncLoading());
-  //
-  //   try {
-  //     // 사용자의 joinedGroups 정보를 Group 목록으로 변환 (매퍼 사용)
-  //     final groups = await _getJoinedGroupUseCase.execute();
-  //     state = state.copyWith(joinedGroups: groups);
-  //   } catch (e, stackTrace) {
-  //     state = state.copyWith(joinedGroups: AsyncError(e, stackTrace));
-  //   }
-  // }
 
   Future<void> _loadPopularPosts() async {
     state = state.copyWith(popularPosts: const AsyncLoading());
@@ -73,18 +54,6 @@ class HomeNotifier extends _$HomeNotifier {
     state = state.copyWith(activeBanner: result);
   }
 
-  Future<void> _loadTotalStudyTime() async {
-    state = state.copyWith(totalStudyTimeMinutes: const AsyncLoading());
-    final result = await _getTotalStudyTimesUseCase.execute();
-    state = state.copyWith(totalStudyTimeMinutes: result);
-  }
-
-  Future<void> _loadStreakDays() async {
-    state = state.copyWith(streakDays: const AsyncLoading());
-    final result = await _getStreakDaysUseCase.execute();
-    state = state.copyWith(streakDays: result);
-  }
-
   Future<void> _loadJoinedGroups() async {
     state = state.copyWith(joinedGroups: const AsyncLoading());
     final result = await _getJoinedGroupUseCase.execute();
@@ -94,7 +63,24 @@ class HomeNotifier extends _$HomeNotifier {
   Future<void> _loadCurrentMember() async {
     state = state.copyWith(currentMember: const AsyncLoading());
     final result = await _getCurrentUserUseCase.execute();
-    state = state.copyWith(currentMember: result);
+
+    final seconds = result.valueOrNull?.summary?.allTimeTotalSeconds ?? 0;
+    AppLogger.debug('Summary 시간 로딩: allTimeTotalSeconds=$seconds초');
+
+    state = state.copyWith(
+      currentMember: result,
+      totalStudyTimeMinutes: result.when(
+        data: (user) {
+          final seconds = user.summary?.allTimeTotalSeconds ?? 0;
+          final minutes = seconds ~/ 60;
+          AppLogger.debug('Study Time: $seconds초 → $minutes분');
+          return AsyncData(minutes); // 분 단위로 저장
+        },
+        loading: () => const AsyncLoading(),
+        error: (error, stack) => AsyncError(error, stack),
+      ),
+      // ... 나머지 코드 ...
+    );
   }
 
   Future<void> onAction(HomeAction action) async {

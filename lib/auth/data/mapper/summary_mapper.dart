@@ -1,21 +1,50 @@
 // lib/auth/data/mapper/summary_mapper.dart
-import '../../domain/model/summary.dart';
-import '../dto/summary_dto.dart';
+import 'package:devlink_mobile_app/auth/data/dto/summary_dto.dart';
+import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart'; // 추가: TimerActivityType import
 
-extension SummaryDtoMapper on SummaryDto {
-  Summary toModel() {
+/// SummaryDto -> Summary 변환
+extension SummaryDtoMapper on SummaryDto? {
+  Summary? toModel() {
+    final dto = this;
+    if (dto == null) return null;
+
     return Summary(
-      allTimeTotalSeconds: allTimeTotalSeconds ?? 0,
-      groupTotalSecondsMap: groupTotalSecondsMap ?? {},
-      last7DaysActivityMap: last7DaysActivityMap ?? {},
-      currentStreakDays: currentStreakDays ?? 0,
-      lastActivityDate: lastActivityDate,
-      longestStreakDays: longestStreakDays ?? 0,
+      allTimeTotalSeconds: dto.allTimeTotalSeconds ?? 0,
+      groupTotalSecondsMap: dto.groupTotalSecondsMap ?? {},
+      last7DaysActivityMap: dto.last7DaysActivityMap ?? {},
+      currentStreakDays: dto.currentStreakDays ?? 0,
+      lastActivityDate: dto.lastActivityDate,
+      longestStreakDays: dto.longestStreakDays ?? 0,
+      // 추가: 타이머 상태 문자열을 TimerActivityType으로 변환
+      lastTimerState:
+          dto.lastTimerState != null
+              ? _stringToTimerActivityType(dto.lastTimerState!)
+              : null,
+      lastTimerGroupId: dto.lastTimerGroupId,
+      lastTimerTimestamp: dto.lastTimerTimestamp,
     );
+  }
+
+  /// 문자열을 TimerActivityType으로 변환하는 내부 헬퍼 메서드
+  TimerActivityType? _stringToTimerActivityType(String value) {
+    switch (value) {
+      case 'start':
+        return TimerActivityType.start;
+      case 'pause':
+        return TimerActivityType.pause;
+      case 'resume':
+        return TimerActivityType.resume;
+      case 'end':
+        return TimerActivityType.end;
+      default:
+        return null;
+    }
   }
 }
 
-extension SummaryModelMapper on Summary {
+/// Summary -> SummaryDto 변환
+extension SummaryMapper on Summary {
   SummaryDto toDto() {
     return SummaryDto(
       allTimeTotalSeconds: allTimeTotalSeconds,
@@ -24,42 +53,10 @@ extension SummaryModelMapper on Summary {
       currentStreakDays: currentStreakDays,
       lastActivityDate: lastActivityDate,
       longestStreakDays: longestStreakDays,
+      // 추가: TimerActivityType을 문자열로 변환
+      lastTimerState: lastTimerState?.toStringValue(),
+      lastTimerGroupId: lastTimerGroupId,
+      lastTimerTimestamp: lastTimerTimestamp,
     );
-  }
-}
-
-// Map에서 직접 Summary로 변환 (Firebase 데이터용)
-extension MapToSummaryMapper on Map<String, dynamic> {
-  Summary toSummary() {
-    return Summary(
-      allTimeTotalSeconds: this['allTimeTotalSeconds'] as int? ?? 0,
-      groupTotalSecondsMap:
-          (this['groupTotalSecondsMap'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, value as int),
-          ) ??
-          {},
-      last7DaysActivityMap:
-          (this['last7DaysActivityMap'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, value as int),
-          ) ??
-          {},
-      currentStreakDays: this['currentStreakDays'] as int? ?? 0,
-      lastActivityDate: this['lastActivityDate'] as String?,
-      longestStreakDays: this['longestStreakDays'] as int? ?? 0,
-    );
-  }
-}
-
-// Summary에서 Firebase Map으로 변환
-extension SummaryToMapMapper on Summary {
-  Map<String, dynamic> toFirebaseMap() {
-    return {
-      'allTimeTotalSeconds': allTimeTotalSeconds,
-      'groupTotalSecondsMap': groupTotalSecondsMap,
-      'last7DaysActivityMap': last7DaysActivityMap,
-      'currentStreakDays': currentStreakDays,
-      'lastActivityDate': lastActivityDate,
-      'longestStreakDays': longestStreakDays,
-    };
   }
 }

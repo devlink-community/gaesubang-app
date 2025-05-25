@@ -34,7 +34,7 @@ Stream<AuthState> authState(Ref ref) {
           'userId': PrivacyMaskUtil.maskUserId(user.uid),
           'email': PrivacyMaskUtil.maskEmail(user.email),
           'nickname': PrivacyMaskUtil.maskNickname(user.nickname),
-          'streakDays': user.streakDays,
+          'streakDays': user.summary?.currentStreakDays ?? 0,
           'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
         });
 
@@ -177,7 +177,6 @@ class SessionWatcher extends _$SessionWatcher {
     AppLogger.logState('NewSession', {
       'userId': user.uid,
       'loginTime': DateTime.now().toIso8601String(),
-      'streakDays': user.streakDays,
     });
   }
 }
@@ -220,7 +219,7 @@ class AuthUtils extends _$AuthUtils {
     if (user.email.isNotEmpty) completedFields++;
     if (user.image.isNotEmpty) completedFields++;
     if (user.position?.isNotEmpty ?? false) completedFields++;
-    if (user.description?.isNotEmpty ?? false) completedFields++;
+    if (user.description.isNotEmpty) completedFields++;
 
     completeness = completedFields / totalFields;
 
@@ -240,7 +239,7 @@ class AuthUtils extends _$AuthUtils {
       'userId': user.uid,
       'activity': activity,
       'timestamp': DateTime.now().toIso8601String(),
-      'streakDays': user.streakDays,
+      'streakDays': user.summary?.currentStreakDays ?? 0,
       'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
       'position': user.position ?? '미설정',
     });
@@ -262,7 +261,7 @@ class AuthUtils extends _$AuthUtils {
     AppLogger.logState('UserStats', {
       'userId': user.uid,
       'nickname': user.nickname,
-      'streakDays': user.streakDays,
+      'streakDays': summary?.currentStreakDays ?? 0,
       'totalHours': summary?.totalHours ?? 0,
       'weeklySeconds': weeklyTotal,
       'joinedGroupsCount': user.joinedGroups.length,
@@ -284,13 +283,15 @@ class AuthUtils extends _$AuthUtils {
     final activeDays =
         weeklyActivity.values.where((seconds) => seconds > 0).length;
 
+    final streakDays = user.summary?.currentStreakDays ?? 0;
+
     final summary = {
       'totalWeeklySeconds': totalWeeklySeconds,
       'totalWeeklyMinutes': totalWeeklySeconds ~/ 60,
       'activeDays': activeDays,
       'dailyAverage':
           activeDays > 0 ? (totalWeeklySeconds / activeDays).round() : 0,
-      'streakDays': user.streakDays,
+      'streakDays': streakDays,
       'weeklyDetails': weeklyActivity,
     };
 

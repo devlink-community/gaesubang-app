@@ -561,8 +561,22 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildActivityCard() {
-    final member = widget.state.userProfile.valueOrNull;
-    if (member == null) return const SizedBox.shrink();
+    final user = widget.state.userProfile.valueOrNull;
+    if (user == null) return const SizedBox.shrink();
+
+    // Summary 정보 가져오기
+    final summary = user.summary;
+    final hasSummary = summary != null;
+    final totalSeconds = summary?.allTimeTotalSeconds ?? 0;
+    final streakDays = summary?.currentStreakDays ?? 0;
+
+    // 시간 포맷팅
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final timeDisplay =
+        hours > 0
+            ? (minutes > 0 ? '$hours시간 $minutes분' : '$hours시간')
+            : '$minutes분';
 
     return Container(
       width: double.infinity,
@@ -615,6 +629,63 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 집중 시간 정보 (추가)
+                if (hasSummary) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColorStyles.primary100.withValues(alpha: 0.15),
+                          AppColorStyles.primary80.withValues(alpha: 0.08),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.timer_outlined,
+                              color: AppColorStyles.primary100,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '총 집중 시간',
+                              style: AppTextStyles.body2Regular.copyWith(
+                                color: AppColorStyles.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // FittedBox로 자동 크기 조절
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            timeDisplay,
+                            style: AppTextStyles.heading6Bold.copyWith(
+                              color: AppColorStyles.primary100,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+
                 // 연속 학습일 정보
                 Container(
                   width: double.infinity,
@@ -655,7 +726,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${member.streakDays}일',
+                        '$streakDays일',
                         style: AppTextStyles.heading6Bold.copyWith(
                           color: AppColorStyles.primary100,
                         ),
@@ -668,10 +739,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
                 // 기타 정보들
                 _buildInfoRow(
-                  icon: member.onAir ? Icons.circle : Icons.nightlight_round,
+                  icon: user.onAir ? Icons.circle : Icons.nightlight_round,
                   label: '활동 상태',
-                  value: member.onAir ? '활동 중' : '휴식 중',
-                  color: member.onAir ? Colors.green : Colors.grey,
+                  value: user.onAir ? '활동 중' : '휴식 중',
+                  color: user.onAir ? Colors.green : Colors.grey,
                 ),
 
                 const SizedBox(height: 12),
@@ -679,7 +750,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 _buildInfoRow(
                   icon: Icons.group,
                   label: '참여 그룹',
-                  value: '${member.joinedGroups.length}개',
+                  value: '${user.joinedGroups.length}개',
                   color: AppColorStyles.primary100,
                 ),
 

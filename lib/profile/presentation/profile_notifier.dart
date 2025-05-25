@@ -83,7 +83,7 @@ class ProfileNotifier extends _$ProfileNotifier {
           AppLogger.logState('로드된 사용자 정보', {
             'user_id': PrivacyMaskUtil.maskUserId(value.uid),
             'nickname': PrivacyMaskUtil.maskNickname(value.nickname),
-            'streak_days': value.streakDays,
+            'streak_days': value.summary?.currentStreakDays ?? 0,
             'has_summary': value.summary != null,
           });
 

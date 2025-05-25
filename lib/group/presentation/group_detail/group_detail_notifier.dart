@@ -93,6 +93,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   }
 
   // 추가: 타이머 활동 기록 및 Summary 업데이트를 위한 공통 메서드
+  // 기존 _recordTimerActivityAndUpdateSummary 메서드를 다음과 같이 수정
+
+  // 타이머 활동 기록 및 Summary 업데이트를 위한 공통 메서드
   Future<void> _recordTimerActivityAndUpdateSummary({
     required TimerActivityType activityType,
     DateTime? timestamp,
@@ -130,29 +133,34 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         }
       }
 
-      // 2. Summary 업데이트 (필요한 경우만)
-      // 일시정지나 종료 시에만 Summary 업데이트
-      if (updateSummary &&
-          (activityType == TimerActivityType.pause ||
-              activityType == TimerActivityType.end)) {
-        try {
-          await _updateSummaryForTimerUseCase?.execute(
-            groupId: _groupId,
-            elapsedSeconds: currentElapsed,
-            timestamp: currentTime,
-          );
+      // 2. Summary 업데이트 (모든 타이머 상태에 대해 업데이트)
+      // elapsedSeconds는 pause/end 상태에서만 필요하므로 조건부로 전달
+      try {
+        await _updateSummaryForTimerUseCase?.execute(
+          groupId: _groupId,
+          timerState: activityType, // 타이머 상태 전달
+          elapsedSeconds:
+              (activityType == TimerActivityType.pause ||
+                      activityType == TimerActivityType.end)
+                  ? currentElapsed
+                  : null, // 조건부로 elapsedSeconds 전달
+          timestamp: currentTime,
+        );
 
-          AppLogger.info(
-            '${activityType.name} 후 Summary 업데이트 성공: ${currentElapsed}초',
-            tag: 'GroupDetailNotifier',
-          );
-        } catch (summaryError) {
-          AppLogger.warning(
-            '${activityType.name} 후 Summary 업데이트 실패 (무시)',
-            tag: 'GroupDetailNotifier',
-            error: summaryError,
-          );
-        }
+        AppLogger.info(
+          '${activityType.name} 후 Summary 업데이트 성공: 상태=${activityType.name}' +
+              ((activityType == TimerActivityType.pause ||
+                      activityType == TimerActivityType.end)
+                  ? ', ${currentElapsed}초'
+                  : ''),
+          tag: 'GroupDetailNotifier',
+        );
+      } catch (summaryError) {
+        AppLogger.warning(
+          '${activityType.name} 후 Summary 업데이트 실패 (무시)',
+          tag: 'GroupDetailNotifier',
+          error: summaryError,
+        );
       }
     } catch (e) {
       AppLogger.error(

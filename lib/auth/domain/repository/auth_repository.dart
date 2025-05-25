@@ -1,4 +1,3 @@
-import 'package:devlink_mobile_app/auth/domain/model/activity.dart';
 import 'package:devlink_mobile_app/auth/domain/model/summary.dart';
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
@@ -67,15 +66,6 @@ abstract interface class AuthRepository {
   Future<Result<void>> updateUserSummary({
     required String userId,
     required Summary summary,
-  });
-
-  /// 사용자 Activity 조회
-  Future<Result<Activity?>> getUserActivity(String userId);
-
-  /// 사용자 Activity 업데이트
-  Future<Result<void>> updateUserActivity({
-    required String userId,
-    required Activity activity,
   });
 
   // === 인증 상태 관련 메서드 ===
