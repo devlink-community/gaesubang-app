@@ -5,7 +5,6 @@ import 'package:devlink_mobile_app/core/utils/focus_stats_calculator.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
-import 'package:devlink_mobile_app/group/data/dto/group_timer_activity_dto.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/group_member_mapper.dart';
 import 'package:devlink_mobile_app/group/data/mapper/user_streak_mapper.dart';
@@ -283,24 +282,17 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<List<GroupMember>>> getGroupMembers(String groupId) async {
     try {
-      // 1. 그룹 멤버 정보 조회
+      // 그룹 멤버 정보 조회 (새 구조에서는 멤버 문서에 타이머 정보 포함됨)
       final membersData = await _dataSource.fetchGroupMembers(groupId);
+
+      // DTO 변환 및 모델 변환
       final memberDtos =
           membersData.map((data) => GroupMemberDto.fromJson(data)).toList();
 
-      // 2. 타이머 활동 정보 조회
-      final timerActivitiesData = await _dataSource.fetchGroupTimerActivities(
-        groupId,
-      );
-      final timerActivityDtos =
-          timerActivitiesData
-              .map((data) => GroupTimerActivityDto.fromJson(data))
-              .toList();
+      // 멤버 목록 변환 (새 구조에서는 별도의 타이머 활동 데이터가 필요 없음)
+      final members = memberDtos.toModelList();
 
-      // 3. 멤버와 타이머 활동 정보 결합
-      final groupMembers = memberDtos.toModelList(timerActivityDtos);
-
-      return Result.success(groupMembers);
+      return Result.success(members);
     } catch (e, st) {
       return Result.error(
         Failure(
@@ -313,7 +305,6 @@ class GroupRepositoryImpl implements GroupRepository {
     }
   }
 
-  // 🔧 새로운 실시간 스트림 메소드 - 기존 Mapper 활용
   @override
   Stream<Result<List<GroupMember>>> streamGroupMemberTimerStatus(
     String groupId,
@@ -322,27 +313,17 @@ class GroupRepositoryImpl implements GroupRepository {
       combinedData,
     ) {
       try {
-        // 🚀 DTO 분리
-        final memberDtos = <GroupMemberDto>[];
-        final timerActivityDtos = <GroupTimerActivityDto>[];
+        // 새 구조에서는 멤버 문서에 타이머 상태가 포함됨
+        final List<GroupMemberDto> memberDtos = [];
 
         for (final item in combinedData) {
           // 멤버 DTO 추출
           final memberData = item['memberDto'] as Map<String, dynamic>;
           memberDtos.add(GroupMemberDto.fromJson(memberData));
-
-          // 타이머 활동 DTO 추출 (있는 경우만)
-          final timerActivityData =
-              item['timerActivityDto'] as Map<String, dynamic>?;
-          if (timerActivityData != null) {
-            timerActivityDtos.add(
-              GroupTimerActivityDto.fromJson(timerActivityData),
-            );
-          }
         }
 
-        // 🔧 기존 Mapper 사용
-        final groupMembers = memberDtos.toModelList(timerActivityDtos);
+        // 멤버 목록 변환
+        final groupMembers = memberDtos.toModelList();
 
         AppLogger.info(
           '실시간 멤버 상태 변환 완료: ${groupMembers.length}명',

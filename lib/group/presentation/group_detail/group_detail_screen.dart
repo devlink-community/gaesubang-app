@@ -385,14 +385,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     String getTimeDisplay() {
       int totalSeconds;
 
-      if (member.isActive && member.timerStartTime != null) {
+      if (member.isActive && member.timerStartAt != null) {
         // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
         final now = DateTime.now();
-        totalSeconds = now.difference(member.timerStartTime!).inSeconds;
+        totalSeconds = now.difference(member.timerStartAt!).inSeconds;
         // ❌ member.elapsedSeconds를 더하면 안됨! (중복 계산)
       } else {
         // 비활성 상태이면 저장된 경과 시간 사용
-        totalSeconds = member.elapsedSeconds;
+        totalSeconds = member.timerElapsed;
       }
 
       // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
