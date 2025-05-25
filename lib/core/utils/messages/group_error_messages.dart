@@ -33,4 +33,9 @@ class GroupErrorMessages {
   // 타이머 관련
   static const String operationFailed = '작업을 완료할 수 없습니다';
   static const String timerNotActive = '활성화된 타이머가 없습니다';
+  static const String timerAlreadyRunning = '이미 실행 중인 타이머가 있습니다';
+  static const String timerNotRunning = '실행 중인 타이머가 없습니다';
+  static const String timerNotPaused = '일시정지 상태가 아닙니다';
+  static const String invalidTimerState = '타이머 상태가 올바르지 않습니다';
+  static const String pauseTimeExceeded = '일시정지 제한 시간이 초과되었습니다';
 }

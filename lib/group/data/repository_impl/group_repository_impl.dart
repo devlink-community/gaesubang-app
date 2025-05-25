@@ -12,6 +12,7 @@ import 'package:devlink_mobile_app/group/data/mapper/user_streak_mapper.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
+import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 
@@ -364,29 +365,29 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<void>> startMemberTimer(String groupId) async {
+  Future<Result<void>> recordTimerActivity(
+    String groupId,
+    TimerActivityType activityType, {
+    DateTime? timestamp,
+  }) async {
     try {
-      // DataSource에서 직접 타이머 시작 처리 (내부에서 현재 사용자 정보 처리)
-      await _dataSource.startMemberTimer(groupId);
+      // 타임스탬프가 없으면 현재 시간 사용
+      final actualTimestamp = timestamp ?? DateTime.now();
+
+      // DataSource에서 직접 타이머 활동 기록
+      await _dataSource.recordTimerActivityWithTimestamp(
+        groupId,
+        activityType,
+        actualTimestamp,
+      );
 
       return const Result.success(null);
     } catch (e, st) {
-      // 특정 오류 타입 처리
-      if (e.toString().contains('이미 진행 중인 타이머 세션이 있습니다')) {
-        return Result.error(
-          Failure(
-            FailureType.validation,
-            '이미 진행 중인 타이머 세션이 있습니다.',
-            cause: e,
-            stackTrace: st,
-          ),
-        );
-      }
-
+      // 특정 오류 타입 처리 (필요한 경우)
       return Result.error(
         Failure(
           FailureType.unknown,
-          '타이머 시작에 실패했습니다.',
+          '타이머 활동 기록에 실패했습니다.',
           cause: e,
           stackTrace: st,
         ),
@@ -395,65 +396,23 @@ class GroupRepositoryImpl implements GroupRepository {
   }
 
   @override
-  Future<Result<void>> stopMemberTimer(String groupId) async {
-    try {
-      // DataSource에서 직접 타이머 정지 처리 (내부에서 현재 사용자 정보 처리)
-      await _dataSource.stopMemberTimer(groupId);
-
-      return const Result.success(null);
-    } catch (e, st) {
-      // 특정 오류 타입 처리
-      if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
-        return Result.error(
-          Failure(
-            FailureType.validation,
-            '타이머가 활성화되어 있지 않습니다.',
-            cause: e,
-            stackTrace: st,
-          ),
-        );
-      }
-
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '타이머 정지에 실패했습니다.',
-          cause: e,
-          stackTrace: st,
-        ),
-      );
-    }
+  Future<Result<void>> startMemberTimer(String groupId) async {
+    return recordTimerActivity(groupId, TimerActivityType.start);
   }
 
   @override
   Future<Result<void>> pauseMemberTimer(String groupId) async {
-    try {
-      // DataSource에서 직접 타이머 일시정지 처리 (내부에서 현재 사용자 정보 처리)
-      await _dataSource.pauseMemberTimer(groupId);
+    return recordTimerActivity(groupId, TimerActivityType.pause);
+  }
 
-      return const Result.success(null);
-    } catch (e, st) {
-      // 특정 오류 타입 처리
-      if (e.toString().contains('타이머가 활성화되어 있지 않습니다')) {
-        return Result.error(
-          Failure(
-            FailureType.validation,
-            '타이머가 활성화되어 있지 않습니다.',
-            cause: e,
-            stackTrace: st,
-          ),
-        );
-      }
+  @override
+  Future<Result<void>> resumeMemberTimer(String groupId) async {
+    return recordTimerActivity(groupId, TimerActivityType.resume);
+  }
 
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '타이머 일시정지에 실패했습니다.',
-          cause: e,
-          stackTrace: st,
-        ),
-      );
-    }
+  @override
+  Future<Result<void>> stopMemberTimer(String groupId) async {
+    return recordTimerActivity(groupId, TimerActivityType.end);
   }
 
   @override
@@ -494,7 +453,7 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<void>> recordTimerActivityWithTimestamp(
     String groupId,
-    String activityType,
+    TimerActivityType activityType,
     DateTime timestamp,
   ) async {
     try {
@@ -534,7 +493,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'start', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.start,
+      timestamp,
+    );
   }
 
   @override
@@ -542,7 +505,11 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'pause', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.pause,
+      timestamp,
+    );
   }
 
   @override
@@ -550,7 +517,23 @@ class GroupRepositoryImpl implements GroupRepository {
     String groupId,
     DateTime timestamp,
   ) async {
-    return recordTimerActivityWithTimestamp(groupId, 'end', timestamp);
+    return recordTimerActivityWithTimestamp(
+      groupId,
+      TimerActivityType.end,
+      timestamp,
+    );
+  }
+
+  @override
+  Future<Result<void>> resumeMemberTimerWithTimestamp(
+    String groupId,
+    DateTime timestamp,
+  ) async {
+    return recordTimerActivity(
+      groupId,
+      TimerActivityType.resume,
+      timestamp: timestamp,
+    );
   }
 
   @override

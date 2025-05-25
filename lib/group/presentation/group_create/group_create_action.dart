@@ -56,4 +56,14 @@ sealed class GroupCreateAction with _$GroupCreateAction {
 
   /// 실시간 유효성 검사 트리거
   const factory GroupCreateAction.validateForm() = ValidateForm;
+
+  // 🆕 추가: 이미지 업로드 관련 액션들
+
+  /// 이미지 업로드 에러만 초기화
+  const factory GroupCreateAction.clearImageUploadError() =
+      ClearImageUploadError;
+
+  /// 이미지 업로드 상태 초기화
+  const factory GroupCreateAction.resetImageUploadState() =
+      ResetImageUploadState;
 }
