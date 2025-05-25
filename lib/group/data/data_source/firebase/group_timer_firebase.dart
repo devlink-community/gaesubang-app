@@ -296,7 +296,6 @@ class GroupTimerFirebase {
           // 현재 사용자 정보 가져오기
           final userInfo = await _getCurrentUserInfo();
           final userId = userInfo['userId']!;
-          final userName = userInfo['userName']!;
 
           // 그룹 존재 확인
           final groupDoc = await _groupsCollection.doc(groupId).get();
@@ -315,7 +314,6 @@ class GroupTimerFirebase {
               return _handleTimerPause(
                 groupId,
                 userId,
-                userName,
                 timestamp,
                 dateKey,
               );
@@ -325,7 +323,6 @@ class GroupTimerFirebase {
               return _handleTimerEnd(
                 groupId,
                 userId,
-                userName,
                 timestamp,
                 dateKey,
               );
@@ -399,7 +396,6 @@ class GroupTimerFirebase {
   Future<Map<String, dynamic>> _handleTimerPause(
     String groupId,
     String userId,
-    String userName,
     DateTime timestamp,
     String dateKey,
   ) async {
@@ -445,6 +441,20 @@ class GroupTimerFirebase {
     final totalDuration = activityData['totalDuration'] as int? ?? 0;
     final newTotalDuration = totalDuration + elapsedSeconds;
 
+    // 일시정지 제한 시간 설정 (새로 추가)
+    // 그룹 문서에서 일시정지 제한 시간 가져오기
+    final groupDoc = await _groupsCollection.doc(groupId).get();
+    final pauseTimeLimit =
+        groupDoc.data()?['pauseTimeLimit'] as int? ?? 120; // 기본값 120분
+
+    // 일시정지 만료 시간 계산
+    final pauseExpiryTime = timestamp.add(Duration(minutes: pauseTimeLimit));
+
+    AppLogger.debug(
+      '일시정지 제한 시간 설정: $pauseTimeLimit분, 만료 시간: $pauseExpiryTime',
+      tag: 'GroupTimerFirebase',
+    );
+
     // 업데이트 데이터
     await activityRef.update({
       'state': 'paused',
@@ -454,6 +464,7 @@ class GroupTimerFirebase {
       'todayDuration': newTodayDuration,
       'monthlyDurations': monthlyDurations,
       'totalDuration': newTotalDuration,
+      'pauseExpiryTime': Timestamp.fromDate(pauseExpiryTime), // 일시정지 만료 시간 추가
     });
 
     // 업데이트된 문서 반환
@@ -484,7 +495,30 @@ class GroupTimerFirebase {
       throw Exception(GroupErrorMessages.timerNotPaused);
     }
 
-    // 타이머 재개
+    // 일시정지 만료 시간 확인 (추가된 부분)
+    final pauseExpiryTime =
+        (activityData['pauseExpiryTime'] as Timestamp?)?.toDate();
+    if (pauseExpiryTime != null && timestamp.isAfter(pauseExpiryTime)) {
+      // 만료 시간이 지났으면 단순히 상태만 'end'로 변경
+      // 시간 계산은 이미 일시정지 처리 시점에서 완료되었으므로 추가 계산 없음
+      AppLogger.info(
+        '일시정지 제한 시간 초과 감지: 재개 대신 종료 처리함',
+        tag: 'GroupTimerFirebase',
+      );
+
+      await activityRef.update({
+        'state': 'end',
+        'pauseExpiryTime': FieldValue.delete(),
+        // 다른 필드(elapsed, todayDuration 등)는 그대로 유지
+        // 이미 일시정지 시점에 모든 시간 계산이 완료되었음
+      });
+
+      // 업데이트된 문서 반환
+      final updatedDoc = await activityRef.get();
+      return updatedDoc.data() ?? {};
+    }
+
+    // 일시정지 만료되지 않았으면 정상적으로 재개
     await activityRef.update({
       'state': 'resume',
       'startAt': Timestamp.fromDate(timestamp), // 새로운 시작 시간
@@ -500,7 +534,6 @@ class GroupTimerFirebase {
   Future<Map<String, dynamic>> _handleTimerEnd(
     String groupId,
     String userId,
-    String userName,
     DateTime timestamp,
     String dateKey,
   ) async {
@@ -556,7 +589,6 @@ class GroupTimerFirebase {
       await _updateMonthlyStats(
         groupId,
         userId,
-        userName,
         timestamp.year,
         timestamp.month,
         dateKey,
@@ -573,7 +605,6 @@ class GroupTimerFirebase {
   Future<void> _updateMonthlyStats(
     String groupId,
     String userId,
-    String userName,
     int year,
     int month,
     String dateKey,
