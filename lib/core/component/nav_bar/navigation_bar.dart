@@ -199,10 +199,10 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
           // 내비게이션 바
           SafeArea(
             top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Container(
+              height: 64, // 고정 높이 설정
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildNavItem(0, LineIcons.paw),
                   _buildNavItem(1, LineIcons.comment),
@@ -221,50 +221,77 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
 
   Widget _buildNavItem(int index, IconData iconData) {
     final isSelected = widget.currentIndex == index;
-    return InkWell(
-      onTap: () => widget.onTap(index),
-      child: Icon(
-        iconData,
-        size: 26,
-        color: isSelected ? AppColorStyles.primary100 : Colors.grey,
+    return Expanded(
+      child: InkWell(
+        onTap: () => widget.onTap(index),
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: double.infinity, // 부모의 전체 높이 사용
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                iconData,
+                size: 26,
+                color: isSelected ? AppColorStyles.primary100 : Colors.grey,
+              ),
+              // 선택된 항목에 작은 점 표시 (아이콘 아래쪽에 절대 위치)
+              if (isSelected)
+                Positioned(
+                  bottom: 8,
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColorStyles.primary100,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildCenterButton() {
-    return GestureDetector(
-      onTap: _toggleMenu,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColorStyles.primary100,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColorStyles.primary100.withOpacity(0.3),
-              blurRadius: 8,
-              spreadRadius: 1,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child:
-              _isExpanded
-                  ? const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                    key: ValueKey('close'),
-                  )
-                  : const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 28,
-                    key: ValueKey('add'),
-                  ),
+    return Container(
+      width: 52,
+      height: 52,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: GestureDetector(
+        onTap: _toggleMenu,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColorStyles.primary100,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColorStyles.primary100.withOpacity(0.3),
+                blurRadius: 8,
+                spreadRadius: 1,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child:
+                _isExpanded
+                    ? const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                      key: ValueKey('close'),
+                    )
+                    : const Icon(
+                      Icons.add,
+                      color: Colors.white,
+                      size: 28,
+                      key: ValueKey('add'),
+                    ),
+          ),
         ),
       ),
     );
@@ -273,19 +300,46 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
   Widget _buildProfileItem(int index) {
     final isSelected = widget.currentIndex == index;
 
-    return InkWell(
-      onTap: () => widget.onTap(index),
-      child: Container(
-        width: 35,
-        height: 35,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected ? AppColorStyles.primary100 : Colors.transparent,
-            width: 2,
+    return Expanded(
+      child: InkWell(
+        onTap: () => widget.onTap(index),
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: double.infinity, // 부모의 전체 높이 사용
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color:
+                        isSelected
+                            ? AppColorStyles.primary100
+                            : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: _buildProfileImage(),
+              ),
+              // 선택된 항목에 작은 점 표시 (프로필 이미지 아래쪽에 절대 위치)
+              if (isSelected)
+                Positioned(
+                  bottom: 8,
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColorStyles.primary100,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        child: _buildProfileImage(),
       ),
     );
   }
@@ -295,9 +349,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     if (widget.profileImageUrl == null ||
         widget.profileImageUrl!.trim().isEmpty) {
       return CircleAvatar(
-        radius: 11,
+        radius: 14,
         backgroundColor: Colors.grey.shade200,
-        child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+        child: Icon(Icons.person, size: 14, color: Colors.grey.shade400),
       );
     }
 
@@ -307,7 +361,7 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
       try {
         return CircleAvatar(
-          radius: 11,
+          radius: 14,
           backgroundImage: FileImage(File(cleanUrl)),
           backgroundColor: Colors.grey.shade200,
           onBackgroundImageError: (exception, stackTrace) {
@@ -327,9 +381,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
           error: e,
         );
         return CircleAvatar(
-          radius: 11,
+          radius: 14,
           backgroundColor: Colors.grey.shade200,
-          child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+          child: Icon(Icons.person, size: 14, color: Colors.grey.shade400),
         );
       }
     }
@@ -344,20 +398,20 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
             tag: 'NavigationBar',
           );
           return CircleAvatar(
-            radius: 11,
+            radius: 14,
             backgroundColor: Colors.grey.shade200,
-            child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+            child: Icon(Icons.person, size: 14, color: Colors.grey.shade400),
           );
         }
 
         return CircleAvatar(
-          radius: 11,
+          radius: 14,
           backgroundColor: Colors.grey.shade200,
           child: ClipOval(
             child: Image.network(
               cleanUrl,
-              width: 22,
-              height: 22,
+              width: 28,
+              height: 28,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 AppLogger.error(
@@ -368,15 +422,15 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
                 );
                 return Icon(
                   Icons.person,
-                  size: 11,
+                  size: 14,
                   color: Colors.grey.shade400,
                 );
               },
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 28,
+                  height: 28,
                   child: Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 1,
@@ -395,9 +449,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
           error: e,
         );
         return CircleAvatar(
-          radius: 11,
+          radius: 14,
           backgroundColor: Colors.grey.shade200,
-          child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+          child: Icon(Icons.person, size: 14, color: Colors.grey.shade400),
         );
       }
     }
@@ -405,9 +459,9 @@ class _AppBottomNavigationBarState extends State<AppBottomNavigationBar>
     // 지원하지 않는 형식의 경우
     AppLogger.warning('지원하지 않는 이미지 경로 형식: $cleanUrl', tag: 'NavigationBar');
     return CircleAvatar(
-      radius: 11,
+      radius: 14,
       backgroundColor: Colors.grey.shade200,
-      child: Icon(Icons.person, size: 11, color: Colors.grey.shade400),
+      child: Icon(Icons.person, size: 14, color: Colors.grey.shade400),
     );
   }
 
