@@ -2,7 +2,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
-import 'package:line_icons/line_icons.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -32,7 +31,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentBannerIndex = 0;
-  final CarouselSliderController _carouselController = CarouselSliderController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
 
   // 🆕 다이얼로그 및 포커스 상태 관리
   bool _isDialogVisible = false;
@@ -64,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -362,7 +363,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     // 🔧 이미지 URL이 있고 로딩에 실패하지 않은 경우에만 이미지 표시
-    final hasValidImage = widget.state.currentMemberImage != null &&
+    final hasValidImage =
+        widget.state.currentMemberImage != null &&
         widget.state.currentMemberImage!.isNotEmpty &&
         !_profileImageLoadFailed;
 
@@ -374,33 +376,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           color: Colors.white,
           width: 2,
         ),
-        image: hasValidImage
-            ? DecorationImage(
-          image: NetworkImage(widget.state.currentMemberImage!),
-          fit: BoxFit.cover,
-          onError: (error, stackTrace) {
-            // 🆕 이미지 로딩 실패 시 상태 업데이트
-            if (mounted) {
-              setState(() {
-                _profileImageLoadFailed = true;
-              });
-            }
-          },
-        )
-            : null,
+        image:
+            hasValidImage
+                ? DecorationImage(
+                  image: NetworkImage(widget.state.currentMemberImage!),
+                  fit: BoxFit.cover,
+                  onError: (error, stackTrace) {
+                    // 🆕 이미지 로딩 실패 시 상태 업데이트
+                    if (mounted) {
+                      setState(() {
+                        _profileImageLoadFailed = true;
+                      });
+                    }
+                  },
+                )
+                : null,
       ),
-      child: !hasValidImage
-          ? Center(
-        child: Text(
-          widget.state.currentMemberName.isNotEmpty
-              ? widget.state.currentMemberName[0].toUpperCase()
-              : 'U',
-          style: AppTextStyles.heading6Bold.copyWith(
-            color: Colors.white,
-          ),
-        ),
-      )
-          : null,
+      child:
+          !hasValidImage
+              ? Center(
+                child: Text(
+                  widget.state.currentMemberName.isNotEmpty
+                      ? widget.state.currentMemberName[0].toUpperCase()
+                      : 'U',
+                  style: AppTextStyles.heading6Bold.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              )
+              : null,
     );
   }
 
@@ -430,11 +434,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               size: 24,
             ),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTextStyles.subtitle1Bold.copyWith(
-                color: color,
-                fontSize: 20,
+            // 수정: FittedBox로 텍스트 크기 자동 조절
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: AppTextStyles.subtitle1Bold.copyWith(
+                  color: color,
+                  fontSize: 20,
+                ),
+                maxLines: 1,
               ),
             ),
             const SizedBox(height: 4),
@@ -488,28 +497,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           items:
-          bannerWidgets.map((banner) {
-            return Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+              bannerWidgets.map((banner) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: banner,
-              ),
-            );
-          }).toList(),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: banner,
+                  ),
+                );
+              }).toList(),
         ),
         const SizedBox(height: 16), // 🔧 배너와 인디케이터 사이 간격 조정
         AnimatedSmoothIndicator(
@@ -544,7 +553,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             groups: widget.state.joinedGroups,
             onTapGroup:
                 (groupId) => widget.onAction(HomeAction.onTapGroup(groupId)),
-            onTapCreateGroup: () => widget.onAction(const HomeAction.onTapCreateGroup()), // 🆕 그룹 생성 콜백 추가
+            onTapCreateGroup:
+                () => widget.onAction(
+                  const HomeAction.onTapCreateGroup(),
+                ), // 🆕 그룹 생성 콜백 추가
           ),
           const SizedBox(height: 32), // 🔧 그룹과 인기 게시글 사이 간격 조정
           _buildSectionHeader(
@@ -557,7 +569,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             posts: widget.state.popularPosts,
             onTapPost:
                 (postId) =>
-                widget.onAction(HomeAction.onTapPopularPost(postId)),
+                    widget.onAction(HomeAction.onTapPopularPost(postId)),
           ),
           const SizedBox(height: 60), // 🔧 하단 여백 조정 (탭바 고려)
         ],

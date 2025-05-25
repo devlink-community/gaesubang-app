@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/banner/domain/usecase/get_active_banners_use_case.dart';
 import 'package:devlink_mobile_app/banner/module/banner_di.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_joined_group_use_case.dart';
 import 'package:devlink_mobile_app/home/domain/usecase/get_popular_posts_use_case.dart';
 import 'package:devlink_mobile_app/home/module/home_di.dart';
@@ -62,19 +63,23 @@ class HomeNotifier extends _$HomeNotifier {
   Future<void> _loadCurrentMember() async {
     state = state.copyWith(currentMember: const AsyncLoading());
     final result = await _getCurrentUserUseCase.execute();
+
+    final seconds = result.valueOrNull?.summary?.allTimeTotalSeconds ?? 0;
+    AppLogger.debug('Summary 시간 로딩: allTimeTotalSeconds=$seconds초');
+
     state = state.copyWith(
       currentMember: result,
-      // 사용자 정보에서 직접 Summary 데이터 추출
       totalStudyTimeMinutes: result.when(
-        data: (user) => AsyncData(user.summary?.allTimeTotalSeconds ?? 0 ~/ 60),
+        data: (user) {
+          final seconds = user.summary?.allTimeTotalSeconds ?? 0;
+          final minutes = seconds ~/ 60;
+          AppLogger.debug('Study Time: $seconds초 → $minutes분');
+          return AsyncData(minutes); // 분 단위로 저장
+        },
         loading: () => const AsyncLoading(),
         error: (error, stack) => AsyncError(error, stack),
       ),
-      streakDays: result.when(
-        data: (user) => AsyncData(user.summary?.currentStreakDays ?? 0),
-        loading: () => const AsyncLoading(),
-        error: (error, stack) => AsyncError(error, stack),
-      ),
+      // ... 나머지 코드 ...
     );
   }
 

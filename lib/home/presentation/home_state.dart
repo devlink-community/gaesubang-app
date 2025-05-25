@@ -20,19 +20,13 @@ class HomeState with _$HomeState {
     this.streakDays = const AsyncLoading(),
   });
 
-  @override
   final AsyncValue<User> currentMember;
   final AsyncValue<List<Notice>> notices;
-  @override
   final AsyncValue<List<Group>> joinedGroups;
-  @override
   final AsyncValue<List<Post>> popularPosts;
-  @override
   final AsyncValue<Banner?> activeBanner;
-  @override
   final AsyncValue<int> totalStudyTimeMinutes;
-  @override
-  final AsyncValue<int> streakDays; // UserStreak 대신 int로 변경
+  final AsyncValue<int> streakDays;
 
   // Helper getters
   String get currentMemberName => currentMember.valueOrNull?.nickname ?? '개발자';
@@ -42,7 +36,15 @@ class HomeState with _$HomeState {
   String get totalStudyTimeDisplay {
     final minutes = totalStudyTimeMinutes.valueOrNull ?? 0;
     final hours = minutes ~/ 60;
-    return '$hours시간';
+    final remainingMinutes = minutes % 60;
+
+    if (hours > 0 && remainingMinutes > 0) {
+      return '$hours시간 $remainingMinutes분';
+    } else if (hours > 0) {
+      return '$hours시간';
+    } else {
+      return '$remainingMinutes분';
+    }
   }
 
   String get streakDaysDisplay {
