@@ -1,6 +1,7 @@
 # 🧩 Group
 
 ---
+TODO: 이 문서는 업데이트가 필요합니다.
 
 ## 📁 1. 컬렉션 구조: `groups/{groupId}`
 
