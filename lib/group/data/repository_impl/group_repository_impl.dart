@@ -288,15 +288,16 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   Future<Result<List<GroupMember>>> getGroupMembers(String groupId) async {
     try {
-      // 그룹 멤버 정보 조회 (새 구조에서는 멤버 문서에 타이머 정보 포함됨)
+      // 그룹 멤버 정보 조회
       final membersData = await _dataSource.fetchGroupMembers(groupId);
 
       // DTO 변환 및 모델 변환
       final memberDtos =
           membersData.map((data) => GroupMemberDto.fromJson(data)).toList();
-
-      // 멤버 목록 변환 (새 구조에서는 별도의 타이머 활동 데이터가 필요 없음)
       final members = memberDtos.toModelList();
+
+      // 멤버 정보를 캐시에 저장
+      cacheGroupMembers(groupId, members);
 
       return Result.success(members);
     } catch (e, st) {
@@ -409,12 +410,81 @@ class GroupRepositoryImpl implements GroupRepository {
     int month,
   ) async {
     try {
-      return Result.error(
-        Failure(
-          FailureType.unknown,
-          '미구현된 데이터입니다.',
-        ),
+      // 1. 월별 출석 데이터 조회
+      final attendanceData = await _dataSource.fetchMonthlyAttendances(
+        groupId,
+        year,
+        month,
       );
+
+      // 2. 출석 데이터를 Attendance 모델로 변환
+      final List<Attendance> attendances = [];
+
+      // 출석 데이터가 없으면 빈 리스트 반환
+      if (attendanceData.isEmpty) {
+        return Result.success(<Attendance>[]);
+      }
+
+      // 3. 캐시된 멤버 정보 조회
+      final memberResult = getCachedGroupMembers(groupId);
+      final Map<String, GroupMember> memberMap = {};
+
+      // 캐시된 멤버 정보가 있으면 Map으로 변환 (userId를 키로)
+      if (memberResult is Success<List<GroupMember>>) {
+        for (final member in memberResult.data) {
+          memberMap[member.userId] = member;
+        }
+      }
+
+      // 4. 출석 데이터를 Attendance 모델로 변환
+      for (final data in attendanceData) {
+        final userId = data['userId'] as String?;
+        if (userId == null) continue;
+
+        final dateStr = data['date'] as String?;
+        if (dateStr == null) continue;
+
+        // 날짜 파싱
+        DateTime date;
+        try {
+          date = DateTime.parse(dateStr);
+        } catch (e) {
+          AppLogger.warning(
+            '날짜 파싱 실패: $dateStr',
+            tag: 'GroupRepositoryImpl',
+            error: e,
+          );
+          continue;
+        }
+
+        // 초 단위를 분 단위로 변환 (60으로 나눔)
+        final timeInSeconds = data['timeInSeconds'] as int? ?? 0;
+        final timeInMinutes = timeInSeconds ~/ 60;
+
+        // 멤버 정보 조회 (캐시에 있으면 사용, 없으면 기본값)
+        String userName = 'Unknown';
+        String? profileUrl;
+
+        final member = memberMap[userId];
+        if (member != null) {
+          userName = member.userName;
+          profileUrl = member.profileUrl;
+        }
+
+        // Attendance 객체 생성
+        attendances.add(
+          Attendance(
+            groupId: groupId,
+            userId: userId,
+            userName: userName,
+            profileUrl: profileUrl,
+            date: date,
+            timeInMinutes: timeInMinutes,
+          ),
+        );
+      }
+
+      return Result.success(attendances);
     } catch (e, st) {
       return Result.error(
         Failure(
