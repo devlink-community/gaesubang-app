@@ -115,32 +115,67 @@ class GradientAppBar extends StatelessWidget {
               // 배경 장식 요소
               ...decorations,
 
-              // 콘텐츠
-              Padding(
-                padding: EdgeInsets.fromLTRB(24, expandedHeight * 0.45, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      topText,
-                      style: AppTextStyles.body1Regular.copyWith(
-                        color: AppColorStyles.gray100,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      mainText,
-                      style: AppTextStyles.heading6Bold.copyWith(
-                        fontSize: 20,
-                        color: AppColorStyles.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+              // 콘텐츠 - 오버플로우 방지를 위해 SingleChildScrollView로 감싸기
+              Positioned.fill(
+                child: SafeArea(
+                  bottom: false,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // 사용 가능한 높이 계산
+                      final availableHeight = constraints.maxHeight;
+                      final minPadding = 16.0;
+                      final maxPadding = 24.0;
+
+                      // 높이에 따라 적응적 패딩 계산
+                      final topPadding =
+                          availableHeight > 100 ? maxPadding : minPadding;
+                      final bottomPadding =
+                          availableHeight > 80 ? maxPadding : minPadding;
+
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          maxPadding,
+                          topPadding,
+                          maxPadding,
+                          bottomPadding,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Spacer(), // 유연한 공간 확보
+                            // 텍스트 컨테이너 - 최소 높이 보장
+                            Flexible(
+                              flex: 0,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    topText,
+                                    style: AppTextStyles.body1Regular.copyWith(
+                                      color: AppColorStyles.gray100,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    mainText,
+                                    style: AppTextStyles.heading6Bold.copyWith(
+                                      fontSize: 20,
+                                      color: AppColorStyles.textPrimary,
+                                    ),
+                                    maxLines: 2, // 2줄까지 허용
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

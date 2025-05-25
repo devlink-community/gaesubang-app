@@ -28,6 +28,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   bool _isInitialized = false;
   bool _wasInBackground = false;
   bool _isInitializing = false;
+  bool _isDisposing = false; // 🔧 dispose 상태 추가
 
   // 🔧 상태 메시지 표시 관리
   String? _lastShownStatusMessage;
@@ -37,17 +38,17 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
   void initState() {
     super.initState();
 
-    AppLogger.debug('GroupDetailScreenRoot initState - groupId: ${widget.groupId}', tag: 'GroupDetailRoot');
+    AppLogger.debug(
+      'GroupDetailScreenRoot initState - groupId: ${widget.groupId}',
+      tag: 'GroupDetailRoot',
+    );
 
     WidgetsBinding.instance.addObserver(this);
     _isInitializing = true;
 
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   _initializeScreen();
-    // });
-    // addPostFrameCallback 대신 Future.microtask 사용
+    // Future.microtask를 사용하여 안전한 초기화
     Future.microtask(() {
-      if (mounted) {
+      if (mounted && !_isDisposing) {
         _initializeScreen();
       }
     });
@@ -55,100 +56,137 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
 
   @override
   void dispose() {
-    // 🔧 dispose 시 화면 비활성 상태 알림
-    if (_isInitialized) {
-      AppLogger.debug('화면 dispose - Notifier에 비활성 상태 알림', tag: 'GroupDetailRoot');
-      final notifier = ref.read(groupDetailNotifierProvider.notifier);
-      notifier.setScreenActive(false);
-    }
+    // 🔧 dispose 시작 플래그 설정
+    _isDisposing = true;
 
+    AppLogger.debug('화면 dispose 시작', tag: 'GroupDetailRoot');
+
+    // 🔧 안전한 notifier 정리
+    _safeNotifierCleanup();
+
+    // 🔧 생명주기 observer 제거
     WidgetsBinding.instance.removeObserver(this);
+
+    AppLogger.debug('화면 dispose 완료', tag: 'GroupDetailRoot');
+
+    // 🔧 부모 dispose 호출
     super.dispose();
   }
 
-  // 🔧 개선된 생명주기 처리
+  /// 🔧 안전한 notifier 정리 메서드
+  void _safeNotifierCleanup() {
+    if (!_isInitialized || _isDisposing) {
+      AppLogger.debug(
+        'Notifier 정리 건너뛰기: 초기화되지 않았거나 이미 dispose 중',
+        tag: 'GroupDetailRoot',
+      );
+      return;
+    }
+
+    try {
+      // 🔧 mounted 상태 다시 확인
+      if (mounted) {
+        final notifier = ref.read(groupDetailNotifierProvider.notifier);
+
+        // 🔧 비동기 정리를 동기로 변경하여 즉시 처리
+        notifier.setScreenActive(false);
+
+        AppLogger.debug('Notifier 정리 완료', tag: 'GroupDetailRoot');
+      }
+    } catch (e) {
+      // 🔧 dispose 중 ref 접근 실패는 정상적인 경우
+      AppLogger.debug(
+        'Notifier 정리 중 예상된 에러 (정상): ${e.runtimeType}',
+        tag: 'GroupDetailRoot',
+      );
+    }
+  }
+
+  /// 🔧 생명주기 상태 변경 처리 - dispose 상태 체크 추가
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+
+    // 🔧 dispose 중이면 생명주기 이벤트 무시
+    if (_isDisposing || !mounted) {
+      return;
+    }
 
     if (_isInitializing) {
       AppLogger.debug('초기화 중이므로 생명주기 이벤트 무시: $state', tag: 'GroupDetailRoot');
       return;
     }
 
-    final notifier = ref.read(groupDetailNotifierProvider.notifier);
+    // 🔧 안전한 notifier 접근
+    _safeLifecycleNotifierAccess(state);
+  }
 
-    switch (state) {
-      case AppLifecycleState.paused:
-        if (_isInitialized && !_isInitializing && !_wasInBackground) {
-          AppLogger.info('앱이 백그라운드로 전환됨', tag: 'GroupDetailRoot');
-          _wasInBackground = true;
+  /// 🔧 안전한 생명주기 notifier 접근
+  void _safeLifecycleNotifierAccess(AppLifecycleState state) {
+    try {
+      if (!mounted || _isDisposing) return;
 
-          notifier.setAppForeground(false);
+      final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
-          // 🔧 백그라운드 진입 시 타이머 강제 종료 처리
-          if (mounted) {
-            notifier.handleBackgroundTransition();
-          }
-        }
-        break;
-
-      case AppLifecycleState.inactive:
-        // 🔧 일시적 비활성 상태에서도 준비
-        if (_isInitialized && !_wasInBackground) {
-          AppLogger.info('앱이 일시적으로 비활성화됨', tag: 'GroupDetailRoot');
-          notifier.setAppForeground(false);
-        }
-        break;
-
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        // 🔧 앱 종료 시에도 동일한 처리 (더 빠르게)
-        AppLogger.info('앱 종료 감지: $state', tag: 'GroupDetailRoot');
-        if (_isInitialized) {
-          notifier.setAppForeground(false);
-          notifier.setScreenActive(false);
-
-          // 🔧 앱 종료 시에도 백그라운드 처리와 동일하게 타이머 종료
-          // 하지만 더 빠르게 처리해야 함
-          if (mounted) {
-            final currentState = ref.read(groupDetailNotifierProvider);
-            if (currentState.timerStatus == TimerStatus.running) {
-              AppLogger.warning('앱 종료 - 긴급 타이머 종료 처리', tag: 'GroupDetailRoot');
+      switch (state) {
+        case AppLifecycleState.paused:
+          if (_isInitialized && !_isInitializing && !_wasInBackground) {
+            AppLogger.info('앱이 백그라운드로 전환됨', tag: 'GroupDetailRoot');
+            _wasInBackground = true;
+            notifier.setAppForeground(false);
+            if (mounted && !_isDisposing) {
               notifier.handleBackgroundTransition();
             }
           }
-        }
-        break;
+          break;
 
-      case AppLifecycleState.resumed:
-        if (_wasInBackground && mounted && _isInitialized && !_isInitializing) {
-          AppLogger.info('백그라운드에서 앱 재개 - 데이터 갱신', tag: 'GroupDetailRoot');
+        case AppLifecycleState.resumed:
+          if (_wasInBackground &&
+              mounted &&
+              _isInitialized &&
+              !_isInitializing &&
+              !_isDisposing) {
+            AppLogger.info('백그라운드에서 앱 재개 - 데이터 갱신', tag: 'GroupDetailRoot');
+            notifier.setAppForeground(true);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_isDisposing) {
+                notifier.onScreenReenter();
+                _showAppResumedMessage();
+              }
+            });
+          }
+          _wasInBackground = false;
+          break;
 
-          notifier.setAppForeground(true);
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              notifier.onScreenReenter();
-              _showAppResumedMessage();
-            }
-          });
-        }
-        _wasInBackground = false;
-        break;
+        // 기타 생명주기 상태들...
+        default:
+          break;
+      }
+    } catch (e) {
+      AppLogger.debug(
+        '생명주기 처리 중 notifier 접근 실패: ${e.runtimeType}',
+        tag: 'GroupDetailRoot',
+      );
     }
   }
 
+  /// 🔧 안전한 화면 초기화
   Future<void> _initializeScreen() async {
     // 중복 초기화 방지
-    if (_isInitialized) return;
+    if (_isInitialized || _isDisposing) return;
 
-    AppLogger.info('화면 초기화 시작 - groupId: ${widget.groupId}', tag: 'GroupDetailRoot');
+    AppLogger.info(
+      '화면 초기화 시작 - groupId: ${widget.groupId}',
+      tag: 'GroupDetailRoot',
+    );
 
     try {
+      // 🔧 mounted 상태 확인
+      if (!mounted || _isDisposing) return;
+
       final notifier = ref.read(groupDetailNotifierProvider.notifier);
 
-      // 1. 먼저 화면 활성 상태 설정 (await 없이)
+      // 1. 먼저 화면 활성 상태 설정
       notifier.setScreenActive(true);
       notifier.setAppForeground(true);
 
@@ -156,7 +194,7 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
       await Future.delayed(const Duration(milliseconds: 100));
 
       // 3. 그룹 ID 설정 및 데이터 로드
-      if (mounted) {
+      if (mounted && !_isDisposing) {
         await notifier.onAction(GroupDetailAction.setGroupId(widget.groupId));
 
         // 4. 알림 권한 요청
