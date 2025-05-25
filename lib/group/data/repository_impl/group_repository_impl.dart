@@ -1,7 +1,6 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
-import 'package:devlink_mobile_app/core/utils/focus_stats_calculator.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
@@ -14,6 +13,7 @@ import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
+import 'package:devlink_mobile_app/group/domain/service/focus_stats_calculator.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;

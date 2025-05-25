@@ -14,10 +14,6 @@ class GroupQueryFirebase {
   Set<String>? _cachedJoinedGroups;
   String? _lastUserId;
 
-  // 멤버 정보 캐싱을 위한 변수들
-  List<Map<String, dynamic>>? _cachedGroupMembers;
-  String? _lastGroupId;
-
   GroupQueryFirebase({
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
@@ -28,9 +24,7 @@ class GroupQueryFirebase {
       if (user?.uid != _lastUserId) {
         // 사용자가 바뀌면 모든 캐시 초기화
         _cachedJoinedGroups = null;
-        _cachedGroupMembers = null;
         _lastUserId = user?.uid;
-        _lastGroupId = null;
       }
     });
   }
@@ -127,30 +121,6 @@ class GroupQueryFirebase {
     }
   }
 
-  /// 그룹 ID 변경 시 멤버 캐시 무효화
-  void _invalidateMemberCacheIfNeeded(String newGroupId) {
-    if (_lastGroupId != null && _lastGroupId != newGroupId) {
-      AppLogger.info(
-        'Group ID changed ($_lastGroupId → $newGroupId), invalidating member cache',
-        tag: 'GroupQueryFirebase',
-      );
-      _cachedGroupMembers = null;
-      _lastGroupId = null;
-    }
-  }
-
-  /// 멤버 정보 캐시 무효화
-  void _invalidateMemberCache(String groupId) {
-    if (_lastGroupId == groupId) {
-      AppLogger.info(
-        'Invalidating member cache for group: $groupId',
-        tag: 'GroupQueryFirebase',
-      );
-      _cachedGroupMembers = null;
-      _lastGroupId = null;
-    }
-  }
-
   /// 전체 그룹 목록 조회
   Future<List<Map<String, dynamic>>> fetchGroupList() async {
     return ApiCallDecorator.wrap('GroupQuery.fetchGroupList', () async {
@@ -208,9 +178,6 @@ class GroupQueryFirebase {
   Future<Map<String, dynamic>> fetchGroupDetail(String groupId) async {
     return ApiCallDecorator.wrap('GroupQuery.fetchGroupDetail', () async {
       try {
-        // 그룹 ID 변경 감지
-        _invalidateMemberCacheIfNeeded(groupId);
-
         // 1. 그룹 문서 조회
         final docSnapshot = await _groupsCollection.doc(groupId).get();
 
@@ -253,60 +220,38 @@ class GroupQueryFirebase {
     }, params: {'groupId': groupId});
   }
 
-  /// 그룹의 모든 멤버 조회 (캐싱 적용)
+  /// 그룹의 모든 멤버 조회
   Future<List<Map<String, dynamic>>> fetchGroupMembers(String groupId) async {
-    return ApiCallDecorator.wrap('GroupQuery.fetchGroupMembers', () async {
-      try {
-        // 캐시 확인
-        if (_cachedGroupMembers != null && _lastGroupId == groupId) {
-          AppLogger.debug(
-            'Using cached group members',
-            tag: 'GroupQueryFirebase',
-          );
-          return List<Map<String, dynamic>>.from(_cachedGroupMembers!);
-        }
+    try {
+      // 항상 Firestore에서 최신 데이터 가져오기 (캐싱 제거)
+      final membersSnapshot =
+          await _firestore
+              .collection('groups')
+              .doc(groupId)
+              .collection('members')
+              .get();
 
-        AppLogger.info(
-          'Fetching group members from Firestore',
-          tag: 'GroupQueryFirebase',
-        );
+      final members =
+          membersSnapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
 
-        // 그룹 존재 확인
-        final groupDoc = await _groupsCollection.doc(groupId).get();
-        if (!groupDoc.exists) {
-          throw Exception(GroupErrorMessages.notFound);
-        }
+      AppLogger.debug(
+        'Fetched ${members.length} group members from Firestore',
+        tag: 'GroupQueryFirebase',
+      );
 
-        // 멤버 컬렉션 조회
-        final membersSnapshot =
-            await _groupsCollection.doc(groupId).collection('members').get();
-
-        // 멤버 데이터 변환
-        final members =
-            membersSnapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList();
-
-        // 캐시 업데이트
-        _cachedGroupMembers = List<Map<String, dynamic>>.from(members);
-        _lastGroupId = groupId;
-        AppLogger.debug(
-          'Cached group members for groupId: $groupId',
-          tag: 'GroupQueryFirebase',
-        );
-
-        return members;
-      } catch (e) {
-        AppLogger.error(
-          '그룹 멤버 조회 오류',
-          tag: 'GroupQueryFirebase',
-          error: e,
-        );
-        throw Exception(GroupErrorMessages.loadFailed);
-      }
-    }, params: {'groupId': groupId});
+      return members;
+    } catch (e) {
+      AppLogger.error(
+        'fetchGroupMembers 실패',
+        tag: 'GroupQueryFirebase',
+        error: e,
+      );
+      rethrow;
+    }
   }
 
   /// 통합 그룹 검색
@@ -463,51 +408,8 @@ class GroupQueryFirebase {
     );
   }
 
-  /// 그룹 멤버 목록 조회 (내부 헬퍼 메서드)
-  Future<List<String>> getGroupMemberUserIds(String groupId) async {
-    try {
-      // 멤버 정보 캐시 확인
-      List<Map<String, dynamic>> members;
-
-      if (_cachedGroupMembers != null && _lastGroupId == groupId) {
-        AppLogger.debug(
-          'Using cached group members for memberUserIds',
-          tag: 'GroupQueryFirebase',
-        );
-        members = _cachedGroupMembers!;
-      } else {
-        final membersSnapshot =
-            await _groupsCollection.doc(groupId).collection('members').get();
-
-        members =
-            membersSnapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList();
-      }
-
-      return members
-          .map((member) => member['userId'] as String?)
-          .where((userId) => userId != null)
-          .cast<String>()
-          .toList();
-    } catch (e) {
-      AppLogger.error(
-        '그룹 멤버 조회 오류',
-        tag: 'GroupQueryFirebase',
-        error: e,
-      );
-      return [];
-    }
-  }
-
   /// 캐시 무효화 메서드들 (외부에서 호출 가능)
   void invalidateJoinedGroupsCache() {
     _cachedJoinedGroups = null;
-  }
-
-  void invalidateGroupMembersCache(String groupId) {
-    _invalidateMemberCache(groupId);
   }
 }

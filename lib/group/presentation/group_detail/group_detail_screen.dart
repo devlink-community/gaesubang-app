@@ -380,28 +380,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   }
 
   // 🔧 개별 멤버 아이템 - 실시간 시간 표시 (수정됨)
+  // _buildMemberItem 메서드 수정
   Widget _buildMemberItem(GroupMember member) {
-    // 🔧 올바른 시간 계산 로직
-    String getTimeDisplay() {
-      int totalSeconds;
-
-      if (member.isActive && member.timerStartAt != null) {
-        // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
-        final now = DateTime.now();
-        totalSeconds = now.difference(member.timerStartAt!).inSeconds;
-        // ❌ member.elapsedSeconds를 더하면 안됨! (중복 계산)
-      } else {
-        // 비활성 상태이면 저장된 경과 시간 사용
-        totalSeconds = member.timerElapsed;
-      }
-
-      // 🔧 시간 포맷팅 - 항상 HH:MM:SS 형식
-      final hours = totalSeconds ~/ 3600;
-      final minutes = (totalSeconds % 3600) ~/ 60;
-      final seconds = totalSeconds % 60;
-
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
+    // 로그인 사용자인 경우 타이머 시간 직접 사용
+    // final bool isCurrentUser = member.userId == _currentUserId;
+    // final String timeDisplay =
+    //     isCurrentUser
+    //         ? TimeFormatter.formatSeconds(widget.state.elapsedSeconds)
+    //         : member.formattedElapsedTime;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -464,7 +450,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ),
         const SizedBox(height: 8),
 
-        // 🔧 타이머 표시 - 수정된 시간 계산 사용
+        // 타이머 표시 - 모델에서 계산된 시간 사용
         member.isActive
             ? Container(
               padding: const EdgeInsets.symmetric(
@@ -476,7 +462,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                getTimeDisplay(), // 🔧 수정된 시간 표시
+                member.formattedElapsedTime, // 모델의 메서드 사용
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

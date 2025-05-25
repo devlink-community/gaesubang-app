@@ -348,18 +348,36 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _startMidnightDetection(); // 추가: 자정 감지 시작
   }
 
-  // 🔧 타이머 일시정지 처리
   Future<void> _handlePauseTimer() async {
     if (state.timerStatus != TimerStatus.running) return;
 
     _timer?.cancel();
+
+    // 현재 경과 시간 저장
+    final currentElapsedSeconds = state.elapsedSeconds;
+
     state = state.copyWith(timerStatus: TimerStatus.paused);
 
-    _updateCurrentUserInMemberList(isActive: false);
+    _updateCurrentUserInMemberList(
+      isActive: false,
+      timerElapsed: currentElapsedSeconds, // 명시적으로 현재 경과 시간 전달
+    );
 
-    // API 호출 (실패해도 로컬 상태는 유지)
+    // API 호출
     try {
       await _recordTimerActivityUseCase?.pause(_groupId);
+
+      // 추가: 일시정지 후 즉시 멤버 정보 갱신 (캐시 무효화)
+      if (_getGroupMembersUseCase != null) {
+        final result = await _getGroupMembersUseCase?.execute(_groupId);
+        if (result is AsyncData<List<GroupMember>> && mounted) {
+          state = state.copyWith(groupMembersResult: result);
+          AppLogger.info(
+            '일시정지 후 멤버 정보 갱신 - 경과 시간: $currentElapsedSeconds초',
+            tag: 'GroupDetailNotifier',
+          );
+        }
+      }
     } catch (e) {
       AppLogger.warning(
         'PauseTimer API 호출 실패',
@@ -743,6 +761,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   void _updateCurrentUserInMemberList({
     required bool isActive,
     DateTime? timerStartTime,
+    int? timerElapsed, // 추가: 명시적인 타이머 경과 시간
   }) {
     if (_currentUserId == null) {
       AppLogger.warning(
@@ -768,9 +787,10 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
 
     final int elapsedSeconds =
-        isActive && timerStartTime != null
+        timerElapsed ??
+        (isActive && timerStartTime != null
             ? DateTime.now().difference(timerStartTime).inSeconds
-            : 0;
+            : 0);
 
     final updatedMembers =
         currentMembers.map((member) {
@@ -802,6 +822,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     if (_currentUserId == null) return remoteMembers;
 
     final isLocalTimerActive = state.timerStatus == TimerStatus.running;
+    final isLocalTimerPaused = state.timerStatus == TimerStatus.paused;
     final localStartTime = _localTimerStartTime;
 
     return remoteMembers.map((member) {
@@ -849,30 +870,34 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
           }
         }
 
-        final elapsedSeconds =
-            isLocalTimerActive && localStartTime != null
-                ? DateTime.now().difference(localStartTime).inSeconds
-                : (serverIsActive && serverStartTime != null
-                    ? DateTime.now().difference(serverStartTime).inSeconds
-                    : member.timerElapsed);
+        // 로컬 타이머 상태에 따라 적절한 TimerActivityType 설정
+        final TimerActivityType localTimerState;
+        if (isLocalTimerActive) {
+          localTimerState = TimerActivityType.start;
+        } else if (isLocalTimerPaused) {
+          localTimerState = TimerActivityType.pause;
+        } else {
+          localTimerState = TimerActivityType.end;
+        }
+
+        // 상세 로그 추가
+        AppLogger.debug(
+          '로컬 타이머 상태로 동기화 - '
+          'timerStatus: ${state.timerStatus}, '
+          'elapsedSeconds: ${state.elapsedSeconds}, '
+          'localTimerState: $localTimerState',
+          tag: 'GroupDetailNotifier',
+        );
 
         return member.copyWith(
-          timerState:
-              isLocalTimerActive
-                  ? TimerActivityType.start
-                  : TimerActivityType.end,
+          timerState: localTimerState,
           timerStartAt: localStartTime ?? serverStartTime,
-          timerElapsed: elapsedSeconds,
+          timerElapsed: state.elapsedSeconds, // 항상 로컬 타이머 값(정수) 사용
         );
       } else {
-        final elapsedSeconds =
-            (member.timerState.isActive && member.timerStartAt != null)
-                ? DateTime.now().difference(member.timerStartAt!).inSeconds
-                : member.timerElapsed;
-
-        return member.copyWith(
-          timerElapsed: elapsedSeconds,
-        );
+        // 변경된 부분: 다른 멤버는 서버에서 온 상태 그대로 유지
+        // 불필요한 계산 제거 - 원본 데이터 유지
+        return member;
       }
     }).toList();
   }
@@ -925,12 +950,12 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 단순히 1초씩 증가 (이미 서버에서 받은 초기값부터 시작)
     state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
 
-    if (_localTimerStartTime != null) {
-      _updateCurrentUserInMemberList(
-        isActive: true,
-        timerStartTime: _localTimerStartTime,
-      );
-    }
+    // if (_localTimerStartTime != null) {
+    //   _updateCurrentUserInMemberList(
+    //     isActive: true,
+    //     timerStartTime: _localTimerStartTime,
+    //   );
+    // }
   }
 
   // 모든 데이터 새로고침
@@ -999,6 +1024,16 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
       return;
     }
 
+    // 상세 로그 추가
+    AppLogger.info(
+      '멤버 상태 검증 시작 - 사용자: ${currentUserMember.userName}, '
+      '상태: ${currentUserMember.timerState}, '
+      '시작시간: ${currentUserMember.timerStartAt}, '
+      '경과시간: ${currentUserMember.timerElapsed}초, '
+      '현재경과시간: ${currentUserMember.currentElapsedSeconds}초',
+      tag: 'GroupDetailNotifier',
+    );
+
     // 1. 활성 상태인 경우 처리
     if (currentUserMember.timerState.isActive &&
         currentUserMember.timerStartAt != null) {
@@ -1013,7 +1048,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
         return;
       }
 
-      // 정상적인 활성 상태라면 복원
+      // 정상적인 활성 상태라면 복원 (타이머 상태 및 경과 시간 동기화)
       AppLogger.info('서버에서 활성 타이머 감지 - 상태 복원', tag: 'GroupDetailNotifier');
       _restoreActiveState(currentUserMember);
       return;
@@ -1021,9 +1056,9 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 2. 비활성 상태(pause)인 경우
     if (currentUserMember.timerState == TimerActivityType.pause &&
-        currentUserMember.timerStartAt != null) {
+        currentUserMember.timerLastUpdatedAt != null) {
       // 이미 검증한 일시정지 시간이면 스킵 (중복 처리 방지)
-      if (_lastValidatedPauseTime == currentUserMember.timerStartAt) {
+      if (_lastValidatedPauseTime == currentUserMember.timerLastUpdatedAt) {
         return;
       }
 
@@ -1035,20 +1070,36 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
           120; // 기본값 120분
 
       if (TimeFormatter.isPauseTimeExceeded(
-        currentUserMember.timerStartAt!,
+        currentUserMember.timerLastUpdatedAt!,
         pauseLimit,
       )) {
         AppLogger.warning(
           '일시정지 제한 시간 초과 감지 - 자동 종료 처리',
           tag: 'GroupDetailNotifier',
         );
-        _handleAutoEnd(currentUserMember.timerStartAt!);
-        _lastValidatedPauseTime = currentUserMember.timerStartAt;
+        _handleAutoEnd(currentUserMember.timerLastUpdatedAt!);
+        _lastValidatedPauseTime = currentUserMember.timerLastUpdatedAt;
       } else {
-        // 제한 시간 내라면 이전 상태 복원
+        // 제한 시간 내라면 일시정지 상태 복원 (추가: 타이머 상태 및 경과 시간 동기화)
         AppLogger.info('일시정지 상태 복원 - 제한 시간 내', tag: 'GroupDetailNotifier');
-        _restorePausedState(currentUserMember.timerStartAt!);
+        _restorePausedState(currentUserMember);
       }
+      return;
+    }
+
+    // 3. 종료 상태인 경우 (추가)
+    if (currentUserMember.timerState == TimerActivityType.end) {
+      // 종료 상태로 동기화
+      AppLogger.info('종료 상태 감지 - 타이머 초기화', tag: 'GroupDetailNotifier');
+      _timer?.cancel();
+      _midnightTimer?.cancel();
+      _localTimerStartTime = null;
+
+      state = state.copyWith(
+        timerStatus: TimerStatus.stop,
+        elapsedSeconds: 0,
+      );
+      return;
     }
   }
 
@@ -1158,18 +1209,29 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   }
 
   // 🔧 일시정지 상태 복원
-  void _restorePausedState(DateTime pauseTime) {
-    // pause 시점부터 현재까지의 시간은 계산하지 않음
-    // pause 시점의 상태 그대로 복원
+  void _restorePausedState(GroupMember member) {
+    // 타이머 상태 및 경과 시간 동기화
+    // 중요: currentElapsedSeconds 사용 (모든 계산이 포함된 값)
+    final elapsedSeconds = member.currentElapsedSeconds;
 
-    _localTimerStartTime = pauseTime;
+    // 상세 로그 추가
+    AppLogger.info(
+      '일시정지 상태 복원 - timerElapsed(원본): ${member.timerElapsed}초, '
+      'currentElapsedSeconds(계산값): ${elapsedSeconds}초',
+      tag: 'GroupDetailNotifier',
+    );
 
     state = state.copyWith(
       timerStatus: TimerStatus.paused,
-      // elapsedSeconds는 서버에서 받은 값 그대로 유지
+      elapsedSeconds: elapsedSeconds, // 계산된 총 경과 시간 사용
     );
 
-    AppLogger.info('일시정지 상태 복원 완료', tag: 'GroupDetailNotifier');
+    _localTimerStartTime = member.timerStartAt;
+
+    AppLogger.info(
+      '일시정지 상태 복원 완료: ${elapsedSeconds}초 경과',
+      tag: 'GroupDetailNotifier',
+    );
   }
 
   // 🔧 자정 감지 시작
@@ -1262,11 +1324,19 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
   // 🔧 활성 상태 복원 (새로 추가)
   void _restoreActiveState(GroupMember member) {
-    // 서버의 시작 시간을 그대로 사용
+    // 서버의 시작 시간 사용
     _localTimerStartTime = member.timerStartAt;
 
-    // 서버 시작 시간부터 현재까지의 경과 시간 계산
-    final elapsedSeconds = member.timerElapsed;
+    // 계산된 총 경과 시간 사용
+    final elapsedSeconds = member.currentElapsedSeconds;
+
+    // 상세 로그 추가
+    AppLogger.info(
+      '활성 상태 복원 - timerElapsed(원본): ${member.timerElapsed}초, '
+      'currentElapsedSeconds(계산값): ${elapsedSeconds}초, '
+      'timerStartAt: ${member.timerStartAt}',
+      tag: 'GroupDetailNotifier',
+    );
 
     state = state.copyWith(
       timerStatus: TimerStatus.running,
@@ -1278,7 +1348,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     _startMidnightDetection();
 
     AppLogger.info(
-      '타이머 상태 복원 완료: ${elapsedSeconds}초 경과',
+      '활성 상태 복원 완료: ${elapsedSeconds}초 경과',
       tag: 'GroupDetailNotifier',
     );
   }
