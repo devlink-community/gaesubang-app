@@ -152,13 +152,13 @@ class AuthActivityRepositoryImpl implements AuthActivityRepository {
 
     if (timerState == TimerActivityType.pause ||
         timerState == TimerActivityType.end) {
-      // 이전 활동일과 오늘의 차이 계산
+      // 이전 활동일과 오늘의 차이 계산 (UTC 기준)
       int daysGap = 0;
       if (existingSummary.lastActivityDate != null) {
         try {
-          final lastDate = DateTime.parse(existingSummary.lastActivityDate!);
-          final today = DateTime.parse(dateKey);
-          daysGap = today.difference(lastDate).inDays;
+          final lastDate = DateTime.parse(existingSummary.lastActivityDate!).toUtc();
+          final todayUtc = DateTime.parse(dateKey).toUtc();
+          daysGap = todayUtc.difference(lastDate).inDays;
         } catch (e) {
           AppLogger.warning(
             '날짜 파싱 오류',
