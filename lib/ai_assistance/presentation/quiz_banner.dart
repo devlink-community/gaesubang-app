@@ -249,15 +249,15 @@ class DailyQuizBanner extends ConsumerWidget {
     }
 
     final skillList =
-    skills
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+        skills
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
 
     // 최대 3개 스킬로 제한
     final limitedSkills =
-    skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
+        skillList.length > 3 ? skillList.sublist(0, 3) : skillList;
 
     AppLogger.debug(
       '파싱된 스킬 목록(최대 3개): $limitedSkills (${limitedSkills.length}개)',
@@ -293,7 +293,7 @@ class DailyQuizBanner extends ConsumerWidget {
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty)
             .toList() ??
-            [];
+        [];
 
     // 제한된 스킬 목록 생성 (최대 3개)
     final skillList = _parseSkillList(skills);
@@ -347,377 +347,33 @@ class DailyQuizBanner extends ConsumerWidget {
       tag: 'QuizGeneration',
     );
 
-    // 타임스탬프를 추가하여 캐시 방지
-    final currentTime = DateTime.now().millisecondsSinceEpoch;
-    final quizPrompt = '$selectedSkill-$currentTime';
-
-    // 대화상자 컨텍스트 추적을 위한 변수
-    BuildContext? loadingDialogContext;
-
-    // 로딩 타이머 및 리스너 관리를 위한 변수
-    Timer? loadingTimer;
-
-    // 취소 여부 추적
-    bool isCancelled = false;
-
-    // 로딩 다이얼로그에 고유 키 부여
-    final loadingDialogKey = UniqueKey();
-
-    AppLogger.info(
-      '퀴즈 로딩 다이얼로그 표시 시작',
-      tag: 'QuizUI',
-    );
-
-    // 🆕 로딩 다이얼로그 표시 전 배너 자동재생 중지
+    // 🆕 배너 자동재생 중지
     _notifyDialogState(true);
 
+    // 🆕 통합된 퀴즈 다이얼로그 표시 (로딩 포함)
+    _showQuizDialogWithLoading(context, ref, selectedSkill);
+  }
+
+  // 🆕 로딩과 퀴즈 화면을 통합한 다이얼로그
+  void _showQuizDialogWithLoading(
+    BuildContext context,
+    WidgetRef ref,
+    String selectedSkill,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        // 다이얼로그 컨텍스트 저장
-        loadingDialogContext = dialogContext;
-
-        return PopScope(
-          canPop: true,
-          onPopInvokedWithResult: (didPop, result) {
-            if (didPop) {
-              // 뒤로가기 버튼으로 취소 처리
-              isCancelled = true;
-              loadingTimer?.cancel();
-
-              // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
-              _notifyDialogState(false);
-
-              AppLogger.info('사용자가 퀴즈 로딩을 취소했습니다', tag: 'QuizGeneration');
-            }
-          },
-          child: Dialog(
-            key: loadingDialogKey,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 기존 로딩 스피너 그대로 유지
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColorStyles.primary80,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Text('퀴즈를 준비하고 있습니다...', style: AppTextStyles.subtitle1Bold),
-                  const SizedBox(height: 8),
-                  Text(
-                    '잠시만 기다려주세요.',
-                    style: AppTextStyles.body2Regular.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return _QuizDialogWithLoading(
+          skills: skills,
+          selectedSkill: selectedSkill,
+          onDialogClosed: () => _notifyDialogState(false), // 배너 자동재생 재개
         );
       },
     ).then((_) {
-      // 다이얼로그가 닫혔을 때 취소 처리 및 배너 자동재생 재개
-      if (!isCancelled) {
-        isCancelled = true;
-        loadingTimer?.cancel();
-      }
-
-      // 🆕 다이얼로그 닫힐 때 배너 자동재생 재개
+      // 다이얼로그가 외부에서 닫혔을 때도 배너 자동재생 재개
       _notifyDialogState(false);
     });
-
-    // 타임아웃 설정 (기존 20초 유지)
-    loadingTimer = Timer(const Duration(seconds: 20), () {
-      if (isCancelled) return;
-
-      final duration = DateTime.now().difference(startTime);
-
-      AppLogger.warning(
-        '퀴즈 로딩 타임아웃 (${duration.inSeconds}초)',
-        tag: 'QuizGeneration',
-      );
-
-      _closeLoadingDialog(loadingDialogContext);
-
-      if (context.mounted && !isCancelled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('퀴즈 로딩이 지연되고 있습니다. 기본 퀴즈를 표시합니다.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        // 백업 퀴즈 표시 - 선택된 스킬 전달
-        AppLogger.info(
-          '타임아웃으로 인한 백업 퀴즈 표시: $selectedSkill',
-          tag: 'QuizFallback',
-        );
-        _showBackupQuiz(context, ref, selectedSkill);
-      }
-    });
-
-    try {
-      // 퀴즈 생성 UseCase 직접 사용
-      final generateQuizUseCase = ref.read(generateQuizUseCaseProvider);
-
-      // 타임스탬프를 추가하여 캐시 방지
-      final currentTime = DateTime.now().millisecondsSinceEpoch;
-      final quizPrompt = '$selectedSkill-$currentTime';
-
-      AppLogger.info(
-        '퀴즈 생성 요청: $quizPrompt',
-        tag: 'QuizGeneration',
-      );
-
-      // 퀴즈 생성 (타이머보다 먼저 완료되면 타이머 취소)
-      final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);
-
-      // 취소되었으면 더 이상 진행하지 않음
-      if (isCancelled) {
-        AppLogger.info('로딩이 취소되어 결과를 무시합니다', tag: 'QuizGeneration');
-        return;
-      }
-
-      // 타이머 취소
-      loadingTimer.cancel();
-
-      // 로딩 다이얼로그 닫기
-      _closeLoadingDialog(loadingDialogContext);
-
-      final duration = DateTime.now().difference(startTime);
-
-      // 퀴즈 결과 처리
-      asyncQuizResult.when(
-        data: (quiz) {
-          if (context.mounted) {
-            AppLogger.logPerformance('퀴즈 생성 성공', duration);
-            AppLogger.info(
-              '퀴즈 생성 성공 (${quiz.relatedSkill}): ${quiz.question.substring(0, min(30, quiz.question.length))}...',
-              tag: 'QuizGeneration',
-            );
-
-            // 퀴즈 표시 - 원본 skills 목록 전달
-            _showQuizDialog(context, ref, quiz);
-          } else {
-            AppLogger.logPerformance('퀴즈 생성 실패 (quiz null)', duration);
-            AppLogger.warning(
-              '퀴즈 생성 결과가 null입니다',
-              tag: 'QuizGeneration',
-            );
-
-            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
-            _notifyDialogState(false);
-            // 백업 퀴즈 표시
-            _showBackupQuiz(context, ref, selectedSkill);
-          }
-        },
-        error: (error, _) {
-          AppLogger.logPerformance('퀴즈 생성 오류', duration);
-          AppLogger.error(
-            '퀴즈 생성 오류',
-            tag: 'QuizGeneration',
-            error: error,
-          );
-
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('퀴즈 생성 오류: $error'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red,
-              ),
-            );
-
-            // 백업 퀴즈 표시
-            AppLogger.info(
-              '오류로 인한 백업 퀴즈 표시: $selectedSkill',
-              tag: 'QuizFallback',
-            );
-
-            // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
-            _notifyDialogState(false);
-            _showBackupQuiz(context, ref, selectedSkill);
-          }
-        },
-        loading: () {
-          // 일반적으로 여기에 도달하지 않지만, 도달했다면 백업 퀴즈 표시
-          AppLogger.warning(
-            '예상치 못한 로딩 상태 발생',
-            tag: 'QuizGeneration',
-          );
-
-          _closeLoadingDialog(loadingDialogContext);
-
-          // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
-          _notifyDialogState(false);
-          _showBackupQuiz(context, ref, selectedSkill);
-        },
-      );
-    } catch (e) {
-      // 취소되었으면 더 이상 진행하지 않음
-      if (isCancelled) {
-        AppLogger.info('로딩이 취소되어 예외 처리를 무시합니다', tag: 'QuizGeneration');
-        return;
-      }
-
-      // 예외 발생 시 타이머 취소 및 백업 퀴즈 표시
-      loadingTimer.cancel();
-      _closeLoadingDialog(loadingDialogContext);
-
-      final duration = DateTime.now().difference(startTime);
-      AppLogger.logPerformance('퀴즈 생성 예외 발생', duration);
-      AppLogger.error(
-        '퀴즈 생성 예외 발생',
-        tag: 'QuizGeneration',
-        error: e,
-      );
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('예상치 못한 오류: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
-          ),
-        );
-
-        // 백업 퀴즈 표시
-        AppLogger.info(
-          '예외로 인한 백업 퀴즈 표시: $selectedSkill',
-          tag: 'QuizFallback',
-        );
-
-        // 🆕 백업 퀴즈 표시 전 배너 자동재생 재개
-        _notifyDialogState(false);
-        _showBackupQuiz(context, ref, selectedSkill);
-      }
-    }
-  }
-
-  // 로딩 다이얼로그 닫기 유틸리티 메서드
-  void _closeLoadingDialog(BuildContext? dialogContext) {
-    if (dialogContext != null && Navigator.of(dialogContext).canPop()) {
-      Navigator.of(dialogContext).pop();
-
-      AppLogger.debug(
-        '퀴즈 로딩 다이얼로그 닫기 완료',
-        tag: 'QuizUI',
-      );
-    }
-  }
-
-  // 퀴즈 표시 메서드
-  void _showQuizDialog(BuildContext context, WidgetRef ref, Quiz quiz) {
-    // StatefulWidget의 상태를 초기화하기 위한 키 생성
-    final uniqueKey = UniqueKey();
-
-    AppLogger.info(
-      '퀴즈 다이얼로그 표시: ${quiz.question.substring(0, min(30, quiz.question.length))}...',
-      tag: 'QuizUI',
-    );
-
-    // 🆕 퀴즈 다이얼로그 표시 시에는 여전히 배너 자동재생 중지 상태 유지
-    // (이미 _notifyDialogState(true)가 호출된 상태)
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        // 화면 크기를 가져와서 다이얼로그 크기를 적절히 조정
-        final screenSize = MediaQuery.of(context).size;
-
-        return Dialog(
-          key: uniqueKey, // 매번 새로운 키 사용으로 상태 리셋 보장
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          // 화면의 최대 90%까지 확장 가능하도록 설정
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: screenSize.width * 0.05,
-            vertical: screenSize.height * 0.05,
-          ),
-          // 크기 제한을 좀 더 넓게 설정
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: screenSize.width * 0.9,
-              maxHeight: screenSize.height * 0.8,
-            ),
-            child: QuizScreen(
-              key: uniqueKey, // QuizScreen에도 고유 키 전달
-              quiz: quiz,
-              skills: skills,
-              onAction: (action) {
-                AppLogger.debug(
-                  'QuizScreen 액션 수신: ${action.runtimeType}',
-                  tag: 'QuizUI',
-                );
-
-                switch (action) {
-                  case LoadQuiz(:final skills):
-                    AppLogger.info(
-                      '새 퀴즈 로드 요청: $skills',
-                      tag: 'QuizUI',
-                    );
-
-                    // 현재 다이얼로그 닫기
-                    Navigator.of(dialogContext).pop();
-
-                    // 약간의 지연 후 새 퀴즈 로딩 다이얼로그 표시
-                    Future.delayed(const Duration(milliseconds: 100), () {
-                      if (context.mounted) {
-                        // 새 퀴즈 로딩 시작 (여전히 배너 자동재생 중지 상태 유지)
-                        _handleQuizTap(context, ref);
-                      }
-                    });
-                    break;
-
-                  case SubmitAnswer(:final answerIndex):
-                    AppLogger.info(
-                      '퀴즈 답변 제출: 인덱스 $answerIndex',
-                      tag: 'QuizAnswer',
-                    );
-                    break;
-
-                  case CloseQuiz():
-                    AppLogger.info(
-                      '퀴즈 다이얼로그 닫기',
-                      tag: 'QuizUI',
-                    );
-                    Navigator.of(dialogContext).pop();
-
-                    // 🆕 퀴즈 다이얼로그 닫힐 때 배너 자동재생 재개
-                    _notifyDialogState(false);
-                    break;
-                }
-              },
-            ),
-          ),
-        );
-      },
-    ).then((_) {
-      // 🆕 다이얼로그가 외부에서 닫혔을 때도 배너 자동재생 재개
-      _notifyDialogState(false);
-    });
-  }
-
-  // 백업 퀴즈 표시 메서드
-  void _showBackupQuiz(BuildContext context, WidgetRef ref, String skillArea) {
-    AppLogger.info(
-      '백업 퀴즈 표시: 스킬=$skillArea',
-      tag: 'QuizFallback',
-    );
-
-    final fallbackQuiz = _generateFallbackQuiz(skillArea);
-    _showQuizDialog(context, ref, fallbackQuiz);
   }
 
   // 백업 퀴즈 생성 메서드
@@ -740,7 +396,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "버그 방지 기능",
         ],
         explanation:
-        "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
+            "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
         correctOptionIndex: 1,
         relatedSkill: "Python",
       );
@@ -755,7 +411,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "StatelessWidget은 항상 더 적은 메모리를 사용함",
         ],
         explanation:
-        "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
+            "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
         correctOptionIndex: 2,
         relatedSkill: "Flutter",
       );
@@ -770,7 +426,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "const는 호이스팅되지 않지만, let은 호이스팅됩니다.",
         ],
         explanation:
-        "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
+            "const로 선언된 변수는 재할당할 수 없지만, let으로 선언된 변수는 재할당이 가능합니다. 둘 다 블록 스코프를 가집니다.",
         correctOptionIndex: 1,
         relatedSkill: "JavaScript",
       );
@@ -784,7 +440,7 @@ class DailyQuizBanner extends ConsumerWidget {
           "항상 useEffect 내부에서 호출해야 한다",
         ],
         explanation:
-        "React Hooks는 컴포넌트 최상위 레벨에서만 호출해야 하며, 반복문, 조건문, 중첩 함수 내에서 호출하면 안 됩니다. 이는 React가 hooks의 호출 순서에 의존하기 때문입니다.",
+            "React Hooks는 컴포넌트 최상위 레벨에서만 호출해야 하며, 반복문, 조건문, 중첩 함수 내에서 호출하면 안 됩니다. 이는 React가 hooks의 호출 순서에 의존하기 때문입니다.",
         correctOptionIndex: 2,
         relatedSkill: "React",
       );
@@ -805,5 +461,336 @@ class DailyQuizBanner extends ConsumerWidget {
     );
 
     return fallbackQuiz;
+  }
+}
+
+// 🆕 로딩과 퀴즈를 통합한 StatefulWidget
+class _QuizDialogWithLoading extends ConsumerStatefulWidget {
+  final String? skills;
+  final String selectedSkill;
+  final VoidCallback onDialogClosed;
+
+  const _QuizDialogWithLoading({
+    required this.skills,
+    required this.selectedSkill,
+    required this.onDialogClosed,
+  });
+
+  @override
+  ConsumerState<_QuizDialogWithLoading> createState() =>
+      _QuizDialogWithLoadingState();
+}
+
+class _QuizDialogWithLoadingState
+    extends ConsumerState<_QuizDialogWithLoading> {
+  bool _isLoading = true;
+  Quiz? _currentQuiz;
+  String? _errorMessage;
+  Timer? _timeoutTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialQuiz();
+  }
+
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialQuiz() async {
+    await _loadQuiz(widget.selectedSkill);
+  }
+
+  Future<void> _loadQuiz(String skillArea) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    AppLogger.info(
+      '퀴즈 로딩 시작: $skillArea',
+      tag: 'QuizLoading',
+    );
+
+    // 타임아웃 타이머 설정 (15초)
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(const Duration(seconds: 15), () {
+      if (mounted && _isLoading) {
+        _handleQuizTimeout();
+      }
+    });
+
+    try {
+      final generateQuizUseCase = ref.read(generateQuizUseCaseProvider);
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final quizPrompt = '$skillArea-$currentTime';
+
+      final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);
+
+      _timeoutTimer?.cancel();
+
+      if (!mounted) return;
+
+      asyncQuizResult.when(
+        data: (quiz) {
+          setState(() {
+            _currentQuiz = quiz;
+            _isLoading = false;
+          });
+
+          AppLogger.info(
+            '퀴즈 로딩 성공: ${quiz.question.substring(0, min(30, quiz.question.length))}...',
+            tag: 'QuizLoading',
+          );
+        },
+        error: (error, _) {
+          _handleQuizError('퀴즈 생성 오류: $error');
+        },
+        loading: () {
+          _handleQuizError('예상치 못한 로딩 상태');
+        },
+      );
+    } catch (e) {
+      _timeoutTimer?.cancel();
+      _handleQuizError('예상치 못한 오류: $e');
+    }
+  }
+
+  void _handleQuizTimeout() {
+    AppLogger.warning('퀴즈 로딩 타임아웃', tag: 'QuizLoading');
+    _handleQuizError('퀴즈 로딩이 지연되고 있습니다');
+  }
+
+  void _handleQuizError(String error) {
+    if (!mounted) return;
+
+    AppLogger.error('퀴즈 로딩 실패: $error', tag: 'QuizLoading');
+
+    // 백업 퀴즈 생성
+    final fallbackQuiz = _generateFallbackQuiz(widget.selectedSkill);
+
+    setState(() {
+      _currentQuiz = fallbackQuiz;
+      _isLoading = false;
+      _errorMessage = error;
+    });
+
+    // 에러 메시지 표시
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$error. 기본 퀴즈를 표시합니다.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.amber.shade700,
+        ),
+      );
+    }
+  }
+
+  Quiz _generateFallbackQuiz(String skillArea) {
+    // DailyQuizBanner의 백업 퀴즈 로직과 동일
+    if (skillArea.toLowerCase().contains('python')) {
+      return Quiz(
+        question: "Python에서 리스트 컴프리헨션의 주요 장점은 무엇인가요?",
+        options: [
+          "메모리 사용량 증가",
+          "코드가 더 간결하고 가독성이 좋아짐",
+          "항상 더 빠른 실행 속도",
+          "버그 방지 기능",
+        ],
+        explanation:
+            "리스트 컴프리헨션은 반복문과 조건문을 한 줄로 작성할 수 있어 코드가 더 간결해지고 가독성이 향상됩니다.",
+        correctOptionIndex: 1,
+        relatedSkill: "Python",
+      );
+    } else if (skillArea.toLowerCase().contains('flutter') ||
+        skillArea.toLowerCase().contains('dart')) {
+      return Quiz(
+        question: "Flutter에서 StatefulWidget과 StatelessWidget의 주요 차이점은 무엇인가요?",
+        options: [
+          "StatefulWidget만 빌드 메서드를 가짐",
+          "StatelessWidget이 더 성능이 좋음",
+          "StatefulWidget은 내부 상태를 가질 수 있음",
+          "StatelessWidget은 항상 더 적은 메모리를 사용함",
+        ],
+        explanation:
+            "StatefulWidget은 내부 상태를 가지고 상태가 변경될 때 UI가 업데이트될 수 있지만, StatelessWidget은 불변이며 내부 상태를 가질 수 없습니다.",
+        correctOptionIndex: 2,
+        relatedSkill: "Flutter",
+      );
+    } else {
+      return Quiz(
+        question: "컴퓨터에서 1바이트는 몇 비트로 구성되어 있나요?",
+        options: ["4비트", "8비트", "16비트", "32비트"],
+        explanation: "1바이트는 8비트로 구성되며, 컴퓨터 메모리의 기본 단위입니다.",
+        correctOptionIndex: 1,
+        relatedSkill: skillArea,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: screenSize.width * 0.05,
+        vertical: screenSize.height * 0.05,
+      ),
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: screenSize.width * 0.9,
+          maxHeight: screenSize.height * 0.8,
+        ),
+        child: _isLoading ? _buildLoadingScreen() : _buildQuizScreen(),
+      ),
+    );
+  }
+
+  // 🆕 꿀팁과 일치하는 로딩 화면 디자인
+  Widget _buildLoadingScreen() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        // 🆕 퀴즈 테마 그라데이션 (초록색)
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF36B37E), Color(0xFF24855E)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF36B37E).withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+            spreadRadius: -3,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 🆕 퀴즈 브랜드 아이콘
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.quiz_outlined,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // 로딩 스피너
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 24),
+
+          // 🆕 퀴즈 전용 메시지
+          Text(
+            '새로운 퀴즈를\n준비하고 있어요 🧩',
+            style: AppTextStyles.subtitle1Bold.copyWith(
+              color: Colors.white,
+              fontSize: 18,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+
+          Text(
+            '당신의 실력을 테스트할 문제를 만들고 있습니다',
+            style: AppTextStyles.body2Regular.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+
+          Text(
+            '잠시만 기다려주세요...',
+            style: AppTextStyles.captionRegular.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizScreen() {
+    if (_currentQuiz == null) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('퀴즈를 불러올 수 없습니다', style: AppTextStyles.subtitle1Bold),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('닫기'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return QuizScreen(
+      quiz: _currentQuiz!,
+      skills: widget.skills,
+      onAction: (action) {
+        switch (action) {
+          case LoadQuiz(:final skills):
+            AppLogger.info('새 퀴즈 로드 요청: $skills', tag: 'QuizDialog');
+
+            // 🔧 새 퀴즈 요청 시 다이얼로그를 닫지 않고 현재 화면에서 로딩 시작
+            final skillList =
+                skills
+                    ?.split(',')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList() ??
+                ['컴퓨터 기초'];
+            final selectedSkill =
+                skillList.isNotEmpty
+                    ? skillList[Random().nextInt(skillList.length)]
+                    : '컴퓨터 기초';
+
+            _loadQuiz(selectedSkill);
+            break;
+
+          case SubmitAnswer(:final answerIndex):
+            AppLogger.info('퀴즈 답변 제출: 인덱스 $answerIndex', tag: 'QuizAnswer');
+            break;
+
+          case CloseQuiz():
+            AppLogger.info('퀴즈 다이얼로그 닫기', tag: 'QuizDialog');
+            widget.onDialogClosed(); // 배너 자동재생 재개
+            Navigator.of(context).pop();
+            break;
+        }
+      },
+    );
   }
 }
