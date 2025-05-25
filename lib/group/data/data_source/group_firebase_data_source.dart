@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_core_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_query_firebase.dart';
-import 'package:devlink_mobile_app/group/data/data_source/firebase/group_stats_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_timer_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
@@ -18,20 +17,18 @@ class GroupFirebaseDataSource implements GroupDataSource {
   final GroupCoreFirebase _core;
   final GroupQueryFirebase _query;
   final GroupTimerFirebase _timer;
-  final GroupStatsFirebase _stats;
 
   GroupFirebaseDataSource({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
     required FirebaseAuth auth,
-  }) : _core = GroupCoreFirebase(firestore: firestore, auth: auth),
-       _query = GroupQueryFirebase(firestore: firestore, auth: auth),
-       _timer = GroupTimerFirebase(firestore: firestore, auth: auth),
-       _stats = GroupStatsFirebase(
+  }) : _core = GroupCoreFirebase(
          firestore: firestore,
-         storage: storage,
          auth: auth,
-       );
+         storage: storage,
+       ),
+       _query = GroupQueryFirebase(firestore: firestore, auth: auth),
+       _timer = GroupTimerFirebase(firestore: firestore, auth: auth);
 
   // ===== Core 기능 위임 =====
   @override
@@ -234,20 +231,9 @@ class GroupFirebaseDataSource implements GroupDataSource {
     );
   }
 
-  // ===== Stats 기능 위임 =====
-  @override
-  Future<Map<String, dynamic>> fetchUserMaxStreakDays() async {
-    return _stats.fetchUserMaxStreakDays();
-  }
-
-  @override
-  Future<int> fetchWeeklyStudyTimeMinutes() async {
-    return _stats.fetchWeeklyStudyTimeMinutes();
-  }
-
   @override
   Future<String> updateGroupImage(String groupId, String localImagePath) async {
-    return _stats.updateGroupImage(groupId, localImagePath);
+    return _core.updateGroupImage(groupId, localImagePath);
   }
 
   /// 리소스 정리 메서드

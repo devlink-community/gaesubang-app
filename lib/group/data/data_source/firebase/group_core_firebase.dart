@@ -1,20 +1,26 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 /// 그룹 핵심 기능 (생성, 수정, 삭제, 가입, 탈퇴)
 class GroupCoreFirebase {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final FirebaseStorage _storage;
 
   GroupCoreFirebase({
     required FirebaseFirestore firestore,
     required FirebaseAuth auth,
+    required FirebaseStorage storage,
   }) : _firestore = firestore,
-       _auth = auth;
+       _auth = auth,
+       _storage = storage;
 
   // Collection 참조들
   CollectionReference<Map<String, dynamic>> get _groupsCollection =>
@@ -395,6 +401,53 @@ class GroupCoreFirebase {
           );
           rethrow;
         }
+      }
+    }, params: {'groupId': groupId});
+  }
+
+  /// 그룹 이미지 업데이트
+  Future<String> updateGroupImage(String groupId, String localImagePath) async {
+    return ApiCallDecorator.wrap('GroupStats.updateGroupImage', () async {
+      try {
+        // 그룹 존재 확인
+        final groupDoc = await _groupsCollection.doc(groupId).get();
+
+        if (!groupDoc.exists) {
+          throw Exception('그룹을 찾을 수 없습니다');
+        }
+
+        String imageUrl;
+
+        // URL인 경우 (이미 업로드된 이미지 사용)
+        if (localImagePath.startsWith('http')) {
+          imageUrl = localImagePath;
+        } else {
+          // 로컬 파일 업로드
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${localImagePath.split('/').last}';
+          final storageRef = _storage.ref().child('groups/$groupId/$fileName');
+
+          // 파일 업로드
+          final uploadTask = await storageRef.putFile(File(localImagePath));
+
+          // 다운로드 URL 가져오기
+          imageUrl = await uploadTask.ref.getDownloadURL();
+        }
+
+        // 그룹 이미지 업데이트
+        await _groupsCollection.doc(groupId).update({
+          'imageUrl': imageUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        return imageUrl;
+      } catch (e) {
+        AppLogger.error(
+          '그룹 이미지 업데이트 오류',
+          tag: 'GroupStatsFirebase',
+          error: e,
+        );
+        throw Exception('그룹 이미지 업데이트에 실패했습니다');
       }
     }, params: {'groupId': groupId});
   }
