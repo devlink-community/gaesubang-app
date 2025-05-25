@@ -13,7 +13,6 @@ import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/model/user_streak.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
-import 'package:devlink_mobile_app/group/domain/service/focus_stats_calculator.dart';
 
 class GroupRepositoryImpl implements GroupRepository {
   final GroupDataSource _dataSource;
@@ -403,21 +402,12 @@ class GroupRepositoryImpl implements GroupRepository {
     int month,
   ) async {
     try {
-      // 1. 월간 타이머 활동 데이터 조회
-      final activitiesData = await _dataSource.fetchMonthlyAttendances(
-        groupId,
-        year,
-        month,
+      return Result.error(
+        Failure(
+          FailureType.unknown,
+          '미구현된 데이터입니다.',
+        ),
       );
-
-      // 2. 유틸리티를 사용하여 출석 기록 계산
-      final attendances =
-          FocusStatsCalculator.calculateAttendancesFromActivities(
-            groupId,
-            activitiesData,
-          );
-
-      return Result.success(attendances);
     } catch (e, st) {
       return Result.error(
         Failure(

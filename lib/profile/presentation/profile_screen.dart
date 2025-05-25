@@ -3,9 +3,9 @@ import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-// ← 임포트 추가
-import 'component/focus_stats_chart.dart';
-import 'component/total_focus.dart';
+// 임포트 수정
+import 'component/summary_chart.dart'; // 새로운 차트 컴포넌트
+import 'component/total_summary.dart'; // 새로운 총집중시간 컴포넌트
 import 'component/user_info_card.dart';
 import 'profile_action.dart';
 import 'profile_state.dart';
@@ -64,9 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColorStyles.primary100.withValues(alpha: 0.3), // 1.0에서 0.8로 낮춤
-            AppColorStyles.primary100.withValues(alpha: 0.05), // 중간 색상
-            AppColorStyles.primary100.withValues(alpha: 0.0), // 그대로 유지
+            AppColorStyles.primary100.withValues(alpha: 0.3),
+            AppColorStyles.primary100.withValues(alpha: 0.05),
+            AppColorStyles.primary100.withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
@@ -78,7 +78,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           centerTitle: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
-          // 앱바 배경 투명
           title: Text(
             '프로필',
             style: AppTextStyles.heading6Bold.copyWith(
@@ -232,7 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // 통계 카드 위젯
+  // 통계 카드 위젯 - Summary 모델 사용하도록 수정
   Widget _buildStatsCard() {
     return Container(
       width: double.infinity,
@@ -249,9 +248,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
         border: Border.all(color: AppColorStyles.gray40, width: 0.5),
       ),
-      child: widget.state.focusStats.when(
+      child: widget.state.summary.when(
+        // focusStats에서 summary로 변경
         data:
-            (stats) => Padding(
+            (summary) => Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
-                      child: TotalTimeInfo(totalMinutes: stats.totalMinutes),
+                      child: TotalSummary(summary: summary), // 새로운 컴포넌트 사용
                     ),
                   ),
 
@@ -303,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                   const SizedBox(height: 16),
 
-                  // 차트 영역
+                  // 차트 영역 - 새로운 SummaryChart 사용
                   Container(
                     height: 240,
                     padding: const EdgeInsets.all(8),
@@ -311,8 +311,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: FocusStatsChart(
-                      stats: stats,
+                    child: SummaryChart(
+                      summary: summary,
                       animate: true,
                       animationDuration: const Duration(milliseconds: 1500),
                     ),

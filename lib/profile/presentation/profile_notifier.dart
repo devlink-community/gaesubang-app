@@ -3,8 +3,8 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../auth/domain/model/summary.dart'; // Summary 모델 임포트로 변경
 import '../../auth/module/auth_di.dart';
-import '../domain/model/focus_time_stats.dart';
 import 'profile_action.dart';
 import 'profile_refresh_state.dart';
 import 'profile_state.dart';
@@ -57,7 +57,7 @@ class ProfileNotifier extends _$ProfileNotifier {
       // 로딩 상태로 변경 + 요청 ID 저장
       state = state.copyWith(
         userProfile: const AsyncLoading(),
-        focusStats: const AsyncLoading(),
+        summary: const AsyncLoading(), // focusStats에서 summary로 변경
         activeRequestId: currentRequestId,
       );
 
@@ -84,22 +84,22 @@ class ProfileNotifier extends _$ProfileNotifier {
             'user_id': PrivacyMaskUtil.maskUserId(value.uid),
             'nickname': PrivacyMaskUtil.maskNickname(value.nickname),
             'streak_days': value.streakDays,
-            'has_focus_stats': value.focusStats != null,
+            'has_summary': value.summary != null,
           });
 
-          // Member에 이미 포함된 focusStats 활용
-          final focusStats = value.focusStats ?? _getDefaultStats();
+          // User에 포함된 summary 활용
+          final summary = value.summary ?? _getDefaultSummary();
           AppLogger.logState('프로필 통계 정보', {
-            'total_minutes': focusStats.totalMinutes,
-            'weekly_minutes_count': focusStats.weeklyMinutes.length,
-            'is_default_stats': value.focusStats == null,
+            'total_seconds': summary.allTimeTotalSeconds,
+            'last_7days_count': summary.last7DaysActivityMap.length,
+            'is_default_summary': value.summary == null,
           });
 
           // ✅ 데이터가 0이어도 정상적으로 AsyncData로 설정
           if (state.activeRequestId == currentRequestId) {
             state = state.copyWith(
               userProfile: userProfileResult,
-              focusStats: AsyncData(focusStats), // 항상 AsyncData로 설정
+              summary: AsyncData(summary), // 항상 AsyncData로 설정
               activeRequestId: null,
             );
 
@@ -108,7 +108,7 @@ class ProfileNotifier extends _$ProfileNotifier {
             AppLogger.logBox(
               '프로필 로드 완료',
               '사용자: ${PrivacyMaskUtil.maskNickname(value.nickname)}\n'
-                  '집중시간: ${focusStats.totalMinutes}분\n'
+                  '총 활동시간: ${summary.allTimeTotalSeconds ~/ 60}분\n'
                   '소요시간: ${duration.inMilliseconds}ms',
             );
           } else {
@@ -132,7 +132,7 @@ class ProfileNotifier extends _$ProfileNotifier {
           if (state.activeRequestId == currentRequestId) {
             state = state.copyWith(
               userProfile: userProfileResult,
-              focusStats: AsyncError(error, stackTrace),
+              summary: AsyncError(error, stackTrace),
               activeRequestId: null, // 에러 발생 후 ID 초기화
             );
           }
@@ -154,19 +154,22 @@ class ProfileNotifier extends _$ProfileNotifier {
       if (currentRequestId != null) {
         state = state.copyWith(
           userProfile: AsyncValue.error(e, st),
-          focusStats: AsyncValue.error(e, st),
+          summary: AsyncValue.error(e, st),
           activeRequestId: null, // 예외 발생 후 ID 초기화
         );
       }
     }
   }
 
-  /// 기본 통계 반환 (데이터가 없을 때 사용)
-  FocusTimeStats _getDefaultStats() {
+  /// 기본 요약 정보 반환 (데이터가 없을 때 사용)
+  Summary _getDefaultSummary() {
     AppLogger.debug('기본(빈) 통계 생성');
-    return const FocusTimeStats(
-      totalMinutes: 0,
-      weeklyMinutes: {'월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0, '일': 0},
+    return const Summary(
+      allTimeTotalSeconds: 0,
+      groupTotalSecondsMap: {},
+      last7DaysActivityMap: {},
+      currentStreakDays: 0,
+      longestStreakDays: 0,
     );
   }
 
