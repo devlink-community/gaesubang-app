@@ -133,13 +133,13 @@ class UserProfileFirebase {
         // 닉네임 유효성 검사
         AuthValidator.validateNicknameFormat(nickname);
 
-        AppLogger.logStep(1, 3, '현재 닉네임과 비교');
+        AppLogger.logStep(1, 4, '현재 닉네임과 비교');
         // 현재 닉네임과 다른 경우에만 중복 확인
         final currentUserDoc = await _usersCollection.doc(userId).get();
         final currentNickname = currentUserDoc.data()?['nickname'] as String?;
 
         if (currentNickname != nickname) {
-          AppLogger.logStep(2, 3, '닉네임 중복 확인');
+          AppLogger.logStep(2, 4, '닉네임 중복 확인');
           // AuthCoreFirebase의 checkNicknameAvailability를 사용해야 함
           // 여기서는 직접 구현
           final query =
@@ -157,7 +157,7 @@ class UserProfileFirebase {
           AppLogger.debug('닉네임 변경 없음 - 중복 확인 건너뜀');
         }
 
-        AppLogger.logStep(3, 3, 'Firestore 프로필 업데이트');
+        AppLogger.logStep(3, 4, 'Firestore 프로필 업데이트');
         // Firestore에 사용자 정보 업데이트
         final updateData = {
           'nickname': nickname,
@@ -174,6 +174,14 @@ class UserProfileFirebase {
           await currentUser.updateDisplayName(nickname);
           await currentUser.reload();
         }
+
+        // 추가된 부분: 그룹 멤버 정보 업데이트
+        AppLogger.logStep(4, 4, '그룹 멤버 정보 업데이트');
+        await _updateUserGroupMembersInfo(
+          userId: userId,
+          nickname: nickname,
+          profileUrl: currentUser?.photoURL,
+        );
 
         AppLogger.authInfo('Firebase 프로필 정보 업데이트 완료: $nickname');
       },
@@ -201,14 +209,14 @@ class UserProfileFirebase {
         });
 
         try {
-          AppLogger.logStep(1, 6, '이미지 파일 검증');
+          AppLogger.logStep(1, 7, '이미지 파일 검증');
           final File imageFile = File(imagePath);
           if (!await imageFile.exists()) {
             AppLogger.error('이미지 파일을 찾을 수 없음: $imagePath');
             throw Exception('이미지 파일을 찾을 수 없습니다');
           }
 
-          AppLogger.logStep(2, 6, '이미지 바이트 읽기');
+          AppLogger.logStep(2, 7, '이미지 바이트 읽기');
           final Uint8List imageBytes = await imageFile.readAsBytes();
 
           AppLogger.logState('Firebase 업로드할 이미지 정보', {
@@ -217,16 +225,16 @@ class UserProfileFirebase {
             'is_compressed': true,
           });
 
-          AppLogger.logStep(3, 6, 'Firebase Storage 경로 설정');
+          AppLogger.logStep(3, 7, 'Firebase Storage 경로 설정');
           final String fileName =
               'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
           final String storagePath = 'users/$userId/$fileName';
           final Reference storageRef = _storage.ref().child(storagePath);
 
-          AppLogger.logStep(4, 6, '기존 프로필 이미지 삭제');
+          AppLogger.logStep(4, 7, '기존 프로필 이미지 삭제');
           await _deleteExistingProfileImage(userId);
 
-          AppLogger.logStep(5, 6, 'Firebase Storage 업로드');
+          AppLogger.logStep(5, 7, 'Firebase Storage 업로드');
           final UploadTask uploadTask = storageRef.putData(
             imageBytes,
             SettableMetadata(
@@ -245,7 +253,7 @@ class UserProfileFirebase {
 
           AppLogger.authInfo('Firebase Storage 이미지 업로드 완료: $downloadUrl');
 
-          AppLogger.logStep(6, 6, 'Firestore 이미지 URL 업데이트');
+          AppLogger.logStep(6, 7, 'Firestore 이미지 URL 업데이트');
           await _usersCollection.doc(userId).update({'image': downloadUrl});
 
           // Firebase Auth photoURL도 업데이트
@@ -254,6 +262,14 @@ class UserProfileFirebase {
             await currentUser.updatePhotoURL(downloadUrl);
             await currentUser.reload();
           }
+
+          // 추가된 부분: 그룹 멤버 프로필 이미지 업데이트
+          AppLogger.logStep(7, 7, '그룹 멤버 프로필 이미지 업데이트');
+          await _updateUserGroupMembersInfo(
+            userId: userId,
+            nickname: currentUser?.displayName ?? '',
+            profileUrl: downloadUrl,
+          );
 
           AppLogger.authInfo('Firebase 프로필 이미지 업데이트 완료');
           return downloadUrl;
@@ -340,5 +356,94 @@ class UserProfileFirebase {
       },
       params: {'userId': PrivacyMaskUtil.maskUserId(userId)},
     );
+  }
+
+  /// 사용자가 속한 모든 그룹의 멤버 정보 업데이트 (최적화 버전)
+  Future<void> _updateUserGroupMembersInfo({
+    required String userId,
+    required String nickname,
+    String? profileUrl,
+  }) async {
+    try {
+      AppLogger.debug('사용자 그룹 멤버 정보 업데이트 시작: $userId');
+
+      // 1. 사용자 문서에서 joingroup 필드 조회
+      final userDocRef = _usersCollection.doc(userId);
+      final userJoinGroupSnapshot = await userDocRef.get();
+
+      if (!userJoinGroupSnapshot.exists) {
+        AppLogger.warning('사용자 문서를 찾을 수 없음: $userId');
+        return;
+      }
+
+      final userData = userJoinGroupSnapshot.data()!;
+      final joinGroups = userData['joingroup'] as List<dynamic>? ?? [];
+
+      if (joinGroups.isEmpty) {
+        AppLogger.debug('사용자가 속한 그룹이 없음: $userId');
+        return;
+      }
+
+      // 2. 업데이트할 데이터 준비
+      final updateData = {
+        'userName': nickname,
+      };
+
+      // 프로필 이미지가 있는 경우 함께 업데이트
+      if (profileUrl != null) {
+        updateData['profileUrl'] = profileUrl;
+      }
+
+      // 3. 배치 처리 준비
+      var batch = _firestore.batch();
+      int groupCount = 0;
+      int batchCount = 0;
+      const int batchLimit = 450; // Firestore 배치 제한(500)보다 약간 낮게 설정
+
+      // 4. 그룹 목록을 처리하면서 여러 배치로 나누어 처리
+      for (final groupInfo in joinGroups) {
+        if (groupInfo is! Map<String, dynamic>) continue;
+
+        final groupId = groupInfo['group_id'] as String?;
+        if (groupId == null || groupId.isEmpty) continue;
+
+        // 해당 그룹의 멤버 문서 참조 가져오기
+        final memberRef = _firestore
+            .collection('groups')
+            .doc(groupId)
+            .collection('members')
+            .doc(userId);
+
+        // 문서 존재 확인 없이 업데이트 시도 (효율성 개선)
+        // 만약 문서가 없으면 업데이트는 무시됨
+        batch.update(memberRef, updateData);
+        groupCount++;
+        batchCount++;
+
+        // 배치 크기 제한에 도달하면 커밋하고 새 배치 시작
+        if (batchCount >= batchLimit) {
+          await batch.commit();
+          AppLogger.info('그룹 멤버 정보 배치 업데이트 완료: $batchCount개');
+          batch = _firestore.batch(); // 새 배치 생성
+          batchCount = 0;
+        }
+      }
+
+      // 5. 남은 배치 처리
+      if (batchCount > 0) {
+        await batch.commit();
+        AppLogger.info('사용자 그룹 멤버 정보 업데이트 완료: $groupCount개 그룹');
+      } else if (groupCount > 0) {
+        AppLogger.info('모든 그룹 멤버 정보 배치 업데이트 완료: $groupCount개 그룹');
+      } else {
+        AppLogger.debug('업데이트할 그룹 멤버 정보 없음');
+      }
+    } catch (e, st) {
+      AppLogger.error(
+        '그룹 멤버 정보 업데이트 실패',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 }
