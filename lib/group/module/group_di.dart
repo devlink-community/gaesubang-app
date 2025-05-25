@@ -1,3 +1,5 @@
+import 'package:devlink_mobile_app/auth/domain/usecase/update_summary_for_timer_use_case.dart';
+import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/firebase/firebase_providers.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
@@ -156,3 +158,12 @@ RecordTimerActivityUseCase recordTimerActivityUseCase(Ref ref) {
 @riverpod
 SendBotMessageUseCase sendBotMessageUseCase(Ref ref) =>
     SendBotMessageUseCase(repository: ref.watch(groupChatRepositoryProvider));
+
+@riverpod
+UpdateSummaryForTimerUseCase updateSummaryForTimerUseCase(
+  Ref ref,
+) {
+  return UpdateSummaryForTimerUseCase(
+    authActivityRepository: ref.watch(authActivityRepositoryProvider),
+  );
+}
