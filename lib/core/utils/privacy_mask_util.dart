@@ -1,4 +1,5 @@
 // lib/core/utils/privacy_mask_util.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/foundation.dart';
 
 /// 개인정보 보호를 위한 마스킹 유틸리티
@@ -135,8 +136,21 @@ class PrivacyMaskUtil {
 
     // 추가 정보가 있으면 그대로 포함 (민감하지 않은 정보들)
     if (additionalInfo != null) {
-      safeInfo.addAll(additionalInfo);
+      // 시간 정보가 포함된 경우, 한국 시간으로 처리
+      if (additionalInfo.containsKey('timestamp') &&
+          additionalInfo['timestamp'] is DateTime) {
+        safeInfo['timestamp'] = TimeFormatter.formatDatetime(
+          TimeFormatter.toSeoulTime(additionalInfo['timestamp'] as DateTime),
+        );
+      } else {
+        safeInfo.addAll(additionalInfo);
+      }
     }
+
+    // 로깅 시 현재 시간 추가 (한국 시간 기준)
+    safeInfo['logTimestamp'] = TimeFormatter.formatDatetime(
+      TimeFormatter.nowInSeoul(),
+    );
 
     return safeInfo;
   }
