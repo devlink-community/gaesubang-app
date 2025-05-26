@@ -66,29 +66,11 @@
 	
 	<!-- 백그라운드 모드 (알림 및 타이머) -->
 	<key>UIBackgroundModes</key>
-	<array>
-		<string>background-fetch</string>
-		<string>remote-notification</string>
-		<string>background-processing</string>
-	</array>
-	
-	<!-- ✅ Firebase 자동 초기화 설정 (선택사항) -->
-    <key>FirebaseAppDelegateProxyEnabled</key>
-    <false/>
-    
-    <!-- ✅ FCM 자동 초기화 설정 (선택사항) -->
-    <key>firebase_messaging_auto_init_enabled</key>
-    <true/>
-    
-    <!-- ✅ 백그라운드 모드 활성화를 위한 설정 -->
-	<key>UIBackgroundModes</key>
-    <array>
-        <string>fetch</string>
-        <string>remote-notification</string>
-    </array>
-    
-    <!-- ✅ 알림 권한 설명 텍스트 -->
-    <key>NSUserNotificationUsageDescription</key>
-    <string>이 앱은 중요한 알림을 보내기 위해 알림 권한이 필요합니다.</string>
+		<array>
+    		<string>fetch</string>                    
+    		<string>remote-notification</string>      
+    		<string>background-processing</string>
+		</array>
+
 </dict>
 </plist>
