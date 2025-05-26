@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_chat_data_source.dart';
 
 class GroupChatFirebaseDataSource implements GroupChatDataSource {
@@ -79,8 +80,9 @@ class GroupChatFirebaseDataSource implements GroupChatDataSource {
           // 생성된 메시지 반환
           final newMessage = {...messageData, 'id': docRef.id};
 
-          // timestamp가 아직 서버에서 설정되지 않았으므로 현재 시간으로 대체
-          newMessage['timestamp'] = Timestamp.now();
+          newMessage['timestamp'] = Timestamp.fromDate(
+            TimeFormatter.nowInSeoul(),
+          );
 
           return newMessage;
         } catch (e) {
