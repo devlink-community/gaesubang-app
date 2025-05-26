@@ -34,6 +34,15 @@ class GroupListNotifier extends _$GroupListNotifier {
     _sortGroupList();
   }
 
+  // 🔥 추가: 외부에서 호출 가능한 refresh 메서드
+  Future<void> refresh() async {
+    // 로딩 상태로 변경
+    state = state.copyWith(groupList: const AsyncValue.loading());
+
+    // 그룹 목록 다시 로드
+    await _loadGroupList();
+  }
+
   // 그룹 목록 정렬 메서드 추가
   void _sortGroupList() {
     if (state.groupList is AsyncData) {
@@ -101,6 +110,8 @@ class GroupListNotifier extends _$GroupListNotifier {
     switch (action) {
       case OnLoadGroupList():
         await _loadGroupList();
+      case OnRefreshGroupList(): // 🔥 추가: 누락된 액션 처리
+        await refresh();
       case OnTapGroup(:final groupId):
         _selectGroup(groupId);
       case OnJoinGroup(:final groupId):
