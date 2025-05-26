@@ -40,14 +40,23 @@ class FCMService {
     try {
       AppLogger.logBanner('FCM Service 초기화 시작');
 
-      // 1. 권한 요청 먼저 수행
+      // 1. 권한 요청 먼저 수행 (iOS 개선)
       final permissionGranted = await requestPermission();
       if (!permissionGranted) {
         AppLogger.warning('FCM 권한이 거부되어 초기화를 중단합니다', tag: 'FCMService');
         return;
       }
 
-      // 2. 앱이 실행중이지 않을 때 받은 알림 처리
+      // 2. iOS 전용: APNs 토큰 대기 및 확인
+      if (Platform.isIOS) {
+        final apnsReady = await _waitForAPNsToken();
+        if (!apnsReady) {
+          AppLogger.error('APNs 토큰 준비 실패 - FCM 초기화 중단', tag: 'FCMService');
+          return;
+        }
+      }
+
+      // 3. 앱이 실행중이지 않을 때 받은 알림 처리
       final initialMessage = await _firebaseMessaging.getInitialMessage();
       if (initialMessage != null) {
         AppLogger.info(
@@ -60,20 +69,20 @@ class FCMService {
         });
       }
 
-      // 3. 포그라운드 알림 설정
+      // 4. 포그라운드 알림 설정
       await _firebaseMessaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,
       );
 
-      // 4. 로컬 알림 설정 (Android)
+      // 5. 로컬 알림 설정 (Android)
       if (Platform.isAndroid) {
         await _setupLocalNotifications();
       }
 
-      // 5. FCM 토큰 얻기 및 로그
-      final token = await _firebaseMessaging.getToken();
+      // 6. FCM 토큰 얻기 및 로그 (이제 안전함)
+      final token = await getToken(); // 개선된 getToken() 사용
       if (token != null) {
         AppLogger.info(
           'FCM Token 획득 성공: ${token.substring(0, 20)}...',
@@ -83,7 +92,7 @@ class FCMService {
         AppLogger.warning('FCM Token 획득 실패', tag: 'FCMService');
       }
 
-      // 6. 각 상태별 메시지 핸들러 등록
+      // 7. 각 상태별 메시지 핸들러 등록
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
         _handleRemoteMessageWithNavigation(message, isAppLaunch: false);
@@ -92,7 +101,7 @@ class FCMService {
         _firebaseMessagingBackgroundHandler,
       );
 
-      // 7. 토큰 갱신 리스너 설정
+      // 8. 토큰 갱신 리스너 설정
       _firebaseMessaging.onTokenRefresh.listen((token) {
         AppLogger.info(
           'FCM Token 갱신됨: ${token.substring(0, 20)}...',
@@ -110,6 +119,38 @@ class FCMService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  Future<bool> _waitForAPNsToken() async {
+    AppLogger.info('iOS APNs 토큰 대기 시작', tag: 'FCMService');
+
+    const maxWaitTime = 10; // 최대 10초 대기
+    const checkInterval = Duration(milliseconds: 500); // 0.5초마다 확인
+
+    for (int i = 0; i < (maxWaitTime * 2); i++) {
+      final apnsToken = await _firebaseMessaging.getAPNSToken();
+
+      if (apnsToken != null) {
+        AppLogger.info(
+          'APNs 토큰 획득 성공 (${(i * 0.5).toStringAsFixed(1)}초 후)',
+          tag: 'FCMService',
+        );
+        return true;
+      }
+
+      if (i % 4 == 0) {
+        // 2초마다 로그
+        AppLogger.debug(
+          'APNs 토큰 대기 중... (${(i * 0.5).toStringAsFixed(1)}초)',
+          tag: 'FCMService',
+        );
+      }
+
+      await Future.delayed(checkInterval);
+    }
+
+    AppLogger.error('APNs 토큰 대기 시간 초과 ($maxWaitTime초)', tag: 'FCMService');
+    return false;
   }
 
   /// 로컬 알림 채널 설정 (Android 전용)
@@ -336,7 +377,7 @@ class FCMService {
         alert: true,
         badge: true,
         sound: true,
-        provisional: false,
+        provisional: true, // iOS 중요: provisional 권한으로 시작
         criticalAlert: false,
         announcement: false,
       );
@@ -350,12 +391,14 @@ class FCMService {
         'isAuthorized': isAuthorized,
       });
 
-      // iOS에서 추가 권한 확인
+      // iOS에서 추가 권한 상세 정보
       if (Platform.isIOS) {
-        AppLogger.logState('iOS 추가 권한', {
+        AppLogger.logState('iOS 세부 권한', {
           'alert': settings.alert.toString(),
           'badge': settings.badge.toString(),
           'sound': settings.sound.toString(),
+          'criticalAlert': settings.criticalAlert.toString(),
+          'announcement': settings.announcement.toString(),
         });
       }
 
@@ -369,7 +412,21 @@ class FCMService {
   /// FCM 토큰 가져오기
   Future<String?> getToken() async {
     try {
+      AppLogger.info('FCM 토큰 요청 시작', tag: 'FCMToken');
+
+      // iOS에서는 이미 APNs 토큰이 준비되어 있어야 함 (initialize에서 확인됨)
+      if (Platform.isIOS) {
+        // 한 번 더 확인 (안전장치)
+        final apnsToken = await _firebaseMessaging.getAPNSToken();
+        if (apnsToken == null) {
+          AppLogger.warning('APNs 토큰이 여전히 없습니다', tag: 'FCMToken');
+          return null;
+        }
+        AppLogger.debug('APNs 토큰 확인됨', tag: 'FCMToken');
+      }
+
       final token = await _firebaseMessaging.getToken();
+
       if (token != null) {
         AppLogger.info(
           'FCM 토큰 조회 성공: ${token.substring(0, 20)}...',
@@ -378,6 +435,7 @@ class FCMService {
       } else {
         AppLogger.warning('FCM 토큰 조회 실패: null 반환', tag: 'FCMToken');
       }
+
       return token;
     } catch (e) {
       AppLogger.error('FCM 토큰 조회 오류', tag: 'FCMToken', error: e);
