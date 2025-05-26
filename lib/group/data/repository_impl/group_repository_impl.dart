@@ -485,7 +485,7 @@ class GroupRepositoryImpl implements GroupRepository {
                 // 이미 있는 데이터인지 확인
                 if (!existingDates.contains(uniqueKey) && seconds > 0) {
                   try {
-                    final date = DateTime.parse(dateStr);
+                    final date = TimeFormatter.parseDate(dateStr);
                     final minutes = seconds ~/ 60;
 
                     attendances.add(

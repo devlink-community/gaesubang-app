@@ -225,7 +225,8 @@ class CacheCleanupService {
       if (parts.length >= 3) {
         try {
           final dateStr = '${parts[0]}-${parts[1]}-${parts[2]}';
-          final cacheDate = DateTime.parse(dateStr);
+          // TimeFormatter.parseDate 사용하여 한국 시간대로 변환
+          final cacheDate = TimeFormatter.parseDate(dateStr);
 
           if (cacheDate.isBefore(cutoffTime)) {
             keysToRemove.add(key);

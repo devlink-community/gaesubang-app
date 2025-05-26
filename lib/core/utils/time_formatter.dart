@@ -68,6 +68,18 @@ class TimeFormatter {
     return DateFormat('yyyy-MM').format(targetDate);
   }
 
+  /// 날짜 문자열(yyyy-MM-dd)을 파싱하여 한국 시간대 DateTime으로 변환
+  static DateTime parseDate(String dateStr) {
+    // 시간이 없는 경우 00:00:00 추가
+    final dateTimeStr =
+        dateStr.contains('T') || dateStr.contains(' ')
+            ? dateStr
+            : '$dateStr 00:00:00';
+
+    // 파싱 후 한국 시간대로 변환
+    return toSeoulTime(DateTime.parse(dateTimeStr));
+  }
+
   /// 초 단위의 시간을 HH:MM:SS 형식으로 변환
   ///
   /// [seconds] 초 단위 시간 (예: 3600 -> 01:00:00)
@@ -274,6 +286,31 @@ class TimeFormatter {
     return seoulDate1.year == seoulDate2.year &&
         seoulDate1.month == seoulDate2.month &&
         seoulDate1.day == seoulDate2.day;
+  }
+
+  /// 두 날짜 문자열(yyyy-MM-dd) 사이의 일수 차이 계산
+  /// 두 날짜 모두 한국 시간대로 처리됨
+  static int daysBetween(String startDateStr, String endDateStr) {
+    // 문자열 날짜를 파싱하여 한국 시간대로 변환
+    final startDate = toSeoulTime(DateTime.parse('$startDateStr 00:00:00'));
+    final endDate = toSeoulTime(DateTime.parse('$endDateStr 00:00:00'));
+
+    // 날짜만 추출하여 시간 요소 제거 (날짜 간의 순수한 차이 계산)
+    final startDateOnly = tz.TZDateTime(
+      _seoulTimeZone,
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
+    final endDateOnly = tz.TZDateTime(
+      _seoulTimeZone,
+      endDate.year,
+      endDate.month,
+      endDate.day,
+    );
+
+    // 두 날짜 간의 일수 차이 계산
+    return endDateOnly.difference(startDateOnly).inDays;
   }
 
   /// 타이머 자동 종료 시간 계산

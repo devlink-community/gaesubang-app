@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/firebase_timestamp_converter.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'notification_dto_old.g.dart';
@@ -9,6 +10,10 @@ class NotificationDto {
   final String? type;
   final String? targetId;
   final String? senderName;
+  @JsonKey(
+    fromJson: FirebaseTimestampConverter.timestampFromJson,
+    toJson: FirebaseTimestampConverter.timestampToJson,
+  )
   final DateTime? createdAt;
   final bool? isRead;
   final String? description;

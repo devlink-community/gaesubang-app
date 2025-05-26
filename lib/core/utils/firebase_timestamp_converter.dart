@@ -1,13 +1,10 @@
 // lib/core/utils/firebase_timestamp_converter.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:timezone/timezone.dart' as tz;
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 /// Firebase Timestamp와 DateTime 간의 변환을 담당하는 유틸리티 클래스
 class FirebaseTimestampConverter {
   FirebaseTimestampConverter._(); // 인스턴스화 방지
-
-  // 한국 시간대 설정
-  static final _seoulTimeZone = tz.getLocation('Asia/Seoul');
 
   /// Firebase Timestamp, String, int를 DateTime으로 변환
   /// 모든 시간은 한국 시간(Asia/Seoul)으로 변환됨
@@ -39,8 +36,8 @@ class FirebaseTimestampConverter {
 
     if (utcTime == null) return null;
 
-    // UTC 시간을 한국 시간대로 변환
-    return tz.TZDateTime.from(utcTime, _seoulTimeZone);
+    // UTC 시간을 한국 시간대로 변환 (TimeFormatter 사용)
+    return TimeFormatter.toSeoulTime(utcTime);
   }
 
   /// DateTime을 Firebase Timestamp로 변환
@@ -66,7 +63,7 @@ class FirebaseTimestampConverter {
     final datetime = timestampFromJson(timestamp);
     if (datetime == null) return '';
 
-    return '${datetime.year}-${datetime.month.toString().padLeft(2, '0')}-${datetime.day.toString().padLeft(2, '0')}';
+    return TimeFormatter.formatDate(datetime);
   }
 
   /// Firebase 타임스탬프를 한국 시간 문자열(YYYY-MM-DD HH:MM)로 변환
@@ -76,7 +73,6 @@ class FirebaseTimestampConverter {
     final datetime = timestampFromJson(timestamp);
     if (datetime == null) return '';
 
-    return '${datetime.year}-${datetime.month.toString().padLeft(2, '0')}-${datetime.day.toString().padLeft(2, '0')} '
-        '${datetime.hour.toString().padLeft(2, '0')}:${datetime.minute.toString().padLeft(2, '0')}';
+    return TimeFormatter.formatDatetime(datetime);
   }
 }

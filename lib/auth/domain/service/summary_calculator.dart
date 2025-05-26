@@ -25,7 +25,8 @@ class SummaryCalculator {
       // 날짜 포맷에서 요일로 변환하여 처리
       summary.last7DaysActivityMap.forEach((dateStr, seconds) {
         try {
-          final date = DateTime.parse(dateStr);
+          // TimeFormatter.parseDate 사용하여 한국 시간대로 변환
+          final date = TimeFormatter.parseDate(dateStr);
           final weekday = TimeFormatter.getKoreanWeekday(date.weekday);
           // 초를 분으로 변환
           final minutes = seconds ~/ 60;
