@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_screen.dart';
 import 'package:devlink_mobile_app/group/presentation/group_setting/group_settings_state.dart';
+import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -17,9 +18,6 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
 
   const GroupSettingsScreenRoot({super.key, required this.groupId});
 
-  // lib/group/presentation/group_setting/group_settings_screen_root.dart
-  // 통합된 상태 변경 리스너 (스낵바 관리) - 계속
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 그룹 ID로 Provider 초기화 - 여기가 핵심!
@@ -29,7 +27,7 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
     // 통합된 상태 변경 리스너
     ref.listen<GroupSettingsState>(
       groupSettingsNotifierProvider(groupId),
-      (previous, current) {
+      (previous, current) async {
         // 작업 타입 분리
         final prevAction = previous?.currentAction;
         final currentAction = current.currentAction;
@@ -160,8 +158,21 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
             ),
           );
 
-          // 탈퇴 성공 시 그룹 목록으로 이동
+          // 🔥 수정: 탈퇴 성공 시 새로운 refresh 메서드 사용
           if (current.successMessage!.contains('탈퇴')) {
+            try {
+              // 그룹 리스트 새로고침
+              await ref.read(groupListNotifierProvider.notifier).refresh();
+              AppLogger.info('그룹 탈퇴 후 리스트 새로고침 완료', tag: 'GroupSettingsRoot');
+            } catch (e) {
+              AppLogger.error(
+                '그룹 리스트 새로고침 실패',
+                tag: 'GroupSettingsRoot',
+                error: e,
+              );
+            }
+
+            // 그룹 목록으로 이동
             context.go('/group');
           }
         }
@@ -184,10 +195,6 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
         }
       },
     );
-
-    // 성공 메시지 리스너 - 제거 (통합 리스너에서 처리)
-    // 에러 메시지 리스너 - 제거 (통합 리스너에서 처리)
-    // 이미지 업로드 진행 상태 리스너 - 제거 (통합 리스너에서 처리)
 
     return GroupSettingsScreen(
       state: state,
@@ -265,7 +272,12 @@ class GroupSettingsScreenRoot extends ConsumerWidget {
       }
     } catch (e, st) {
       // 이미지 선택 중 오류 발생 시 처리
-      AppLogger.error('이미지 선택 오류', tag: 'GroupSettingsRoot', error: e, stackTrace: st);
+      AppLogger.error(
+        '이미지 선택 오류',
+        tag: 'GroupSettingsRoot',
+        error: e,
+        stackTrace: st,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

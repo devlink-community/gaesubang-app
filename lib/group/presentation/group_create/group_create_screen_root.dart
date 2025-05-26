@@ -1,13 +1,18 @@
 // lib/group/presentation/group_create/group_create_screen_root.dart
+import 'dart:io';
+
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_notifier.dart';
 import 'package:devlink_mobile_app/group/presentation/group_create/group_create_screen.dart';
+import 'package:devlink_mobile_app/group/presentation/group_list/group_list_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 // ignore: depend_on_referenced_packages
 import 'package:image_picker/image_picker.dart';
+
+import '../group_list/group_list_action.dart';
 
 class GroupCreateScreenRoot extends ConsumerWidget {
   const GroupCreateScreenRoot({super.key});
@@ -29,6 +34,13 @@ class GroupCreateScreenRoot extends ConsumerWidget {
 
           // 디버깅 정보 출력
           AppLogger.navigation('Navigating to group with ID: $next');
+
+          // 🔥 추가: 그룹 리스트 새로고침
+          ref
+              .read(groupListNotifierProvider.notifier)
+              .onAction(
+                const GroupListAction.onLoadGroupList(),
+              );
 
           // 그룹 상세 페이지로 이동 (확실하게 경로 지정)
           context.pushReplacement('/group/$next');
