@@ -18,15 +18,24 @@ class HomeState with _$HomeState {
     this.activeBanner = const AsyncLoading(),
     this.totalStudyTimeMinutes = const AsyncLoading(),
     this.streakDays = const AsyncLoading(),
+    this.unreadNotificationCount = const AsyncData(0), // 🆕 읽지 않은 알림 수 추가
   });
 
+  @override
   final AsyncValue<User> currentMember;
+  @override
   final AsyncValue<List<Notice>> notices;
+  @override
   final AsyncValue<List<Group>> joinedGroups;
+  @override
   final AsyncValue<List<Post>> popularPosts;
+  @override
   final AsyncValue<Banner?> activeBanner;
+  @override
   final AsyncValue<int> totalStudyTimeMinutes;
+  @override
   final AsyncValue<int> streakDays;
+  final AsyncValue<int> unreadNotificationCount; // 🆕 읽지 않은 알림 수
 
   // Helper getters
   String get currentMemberName => currentMember.valueOrNull?.nickname ?? '개발자';
@@ -55,5 +64,11 @@ class HomeState with _$HomeState {
   String get joinedGroupCountDisplay {
     final count = joinedGroups.valueOrNull?.length ?? 0;
     return '$count개';
+  }
+
+  // 🆕 읽지 않은 알림이 있는지 확인하는 getter
+  bool get hasUnreadNotifications {
+    final count = unreadNotificationCount.valueOrNull ?? 0;
+    return count > 0;
   }
 }

@@ -33,21 +33,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
-        // actions: [
-        //   if ((widget.state.notifications.valueOrNull?.isNotEmpty ?? false) &&
-        //       widget.state.unreadCount > 0)
-        //     TextButton(
-        //       onPressed: () => widget.onAction(const NotificationAction.markAllAsRead()),
-        //       child: const Text('모두 읽음'),
-        //     ),
-        // ],
+        actions: [
+          if ((widget.state.notifications.valueOrNull?.isNotEmpty ?? false) &&
+              widget.state.unreadCount > 0)
+            IconButton(
+              icon: const Icon(Icons.done_all),
+              tooltip: '모두 읽음',
+              onPressed:
+                  () =>
+                      widget.onAction(const NotificationAction.markAllAsRead()),
+            ),
+        ],
       ),
       body: _buildBody(),
     );
   }
 
   Widget _buildBody() {
-    AppLogger.debug('_buildBody 호출됨, 상태: ${widget.state.notifications.runtimeType}', tag: 'NotificationUI');
+    AppLogger.debug(
+      '_buildBody 호출됨, 상태: ${widget.state.notifications.runtimeType}',
+      tag: 'NotificationUI',
+    );
 
     // AsyncValue 패턴 매칭
     switch (widget.state.notifications) {
@@ -60,7 +66,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
         return _buildErrorView();
 
       case AsyncData(:final value):
-        AppLogger.info('데이터 상태 감지됨: ${value.length}개 알림', tag: 'NotificationUI');
+        AppLogger.info(
+          '데이터 상태 감지됨: ${value.length}개 알림',
+          tag: 'NotificationUI',
+        );
         if (value.isEmpty) {
           return _buildEmptyView();
         }
@@ -73,7 +82,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildEmptyView() {
     AppLogger.debug('빈 알림 화면 표시', tag: 'NotificationUI');
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -130,8 +139,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
 
     return RefreshIndicator(
-      onRefresh:
-          () async {
+      onRefresh: () async {
         AppLogger.info('새로고침 제스처 감지', tag: 'NotificationUI');
         widget.onAction(const NotificationAction.refresh());
       },
@@ -145,16 +153,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
               (notification) => NotificationItem(
                 notification: notification,
                 showDate: false,
-                onTap:
-                    () {
-                  AppLogger.info('오늘 알림 탭: ${notification.id}', tag: 'NotificationUI');
+                onTap: () {
+                  AppLogger.info(
+                    '오늘 알림 탭: ${notification.id}',
+                    tag: 'NotificationUI',
+                  );
                   widget.onAction(
                     NotificationAction.tapNotification(notification.id),
                   );
                 },
-                onDelete:
-                    () {
-                  AppLogger.info('오늘 알림 삭제: ${notification.id}', tag: 'NotificationUI');
+                onDelete: () {
+                  AppLogger.info(
+                    '오늘 알림 삭제: ${notification.id}',
+                    tag: 'NotificationUI',
+                  );
                   widget.onAction(
                     NotificationAction.deleteNotification(notification.id),
                   );
@@ -171,16 +183,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
               (notification) => NotificationItem(
                 notification: notification,
                 showDate: false, // false로 변경 (상대적 시간 표시)
-                onTap:
-                    () {
-                  AppLogger.info('최근 알림 탭: ${notification.id}', tag: 'NotificationUI');
+                onTap: () {
+                  AppLogger.info(
+                    '최근 알림 탭: ${notification.id}',
+                    tag: 'NotificationUI',
+                  );
                   widget.onAction(
                     NotificationAction.tapNotification(notification.id),
                   );
                 },
-                onDelete:
-                    () {
-                  AppLogger.info('최근 알림 삭제: ${notification.id}', tag: 'NotificationUI');
+                onDelete: () {
+                  AppLogger.info(
+                    '최근 알림 삭제: ${notification.id}',
+                    tag: 'NotificationUI',
+                  );
                   widget.onAction(
                     NotificationAction.deleteNotification(notification.id),
                   );
@@ -226,15 +242,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
             setState(() {
               _showOlderNotifications = !_showOlderNotifications;
             });
-            
+
             AppLogger.info(
               '이전 활동 토글: ${_showOlderNotifications ? "펼침" : "닫힘"}',
               tag: 'NotificationUI',
             );
-            
+
             // 펼쳐질 때 디버그 로깅
             if (_showOlderNotifications) {
-              AppLogger.debug('이전 알림 ${olderNotifications.length}개 표시', tag: 'NotificationUI');
+              AppLogger.debug(
+                '이전 알림 ${olderNotifications.length}개 표시',
+                tag: 'NotificationUI',
+              );
             }
           },
           child: Padding(
@@ -262,34 +281,41 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
 
         // 펼쳐진 상태일 때만 이전 알림 표시
-        if (_showOlderNotifications) 
+        if (_showOlderNotifications)
           ...olderNotifications.map(
             (notification) => NotificationItem(
               notification: notification,
               showDate: true,
-              onTap:
-                  () {
-                AppLogger.info('이전 알림 탭: ${notification.id}', tag: 'NotificationUI');
+              onTap: () {
+                AppLogger.info(
+                  '이전 알림 탭: ${notification.id}',
+                  tag: 'NotificationUI',
+                );
                 widget.onAction(
                   NotificationAction.tapNotification(notification.id),
                 );
               },
-              onDelete:
-                  () {
-                AppLogger.info('이전 알림 삭제: ${notification.id}', tag: 'NotificationUI');
+              onDelete: () {
+                AppLogger.info(
+                  '이전 알림 삭제: ${notification.id}',
+                  tag: 'NotificationUI',
+                );
                 widget.onAction(
                   NotificationAction.deleteNotification(notification.id),
                 );
               },
             ),
           ),
-        ],
+      ],
     );
   }
 
   Widget _buildErrorView() {
-    AppLogger.warning('에러 화면 표시: ${widget.state.errorMessage}', tag: 'NotificationUI');
-    
+    AppLogger.warning(
+      '에러 화면 표시: ${widget.state.errorMessage}',
+      tag: 'NotificationUI',
+    );
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -299,8 +325,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Text(widget.state.errorMessage ?? '알림을 불러오는데 실패했습니다'),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed:
-                () {
+            onPressed: () {
               AppLogger.info('에러 화면에서 다시 시도 버튼 클릭', tag: 'NotificationUI');
               widget.onAction(const NotificationAction.refresh());
             },

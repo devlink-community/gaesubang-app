@@ -24,7 +24,7 @@ import 'package:devlink_mobile_app/group/presentation/group_setting/group_settin
 import 'package:devlink_mobile_app/home/presentation/home_screen_root.dart';
 import 'package:devlink_mobile_app/map/presentation/group_map_screen_root.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_screen_root.dart';
-import 'package:devlink_mobile_app/onboarding/module.dart/onboarding_completion_status.dart';
+import 'package:devlink_mobile_app/onboarding/module/onboarding_completion_status.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/onboarding_screen_root.dart';
 import 'package:devlink_mobile_app/onboarding/presentation/splash_screen_root.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_screen_root.dart';
@@ -271,12 +271,7 @@ GoRouter appRouter(Ref ref) {
       }
 
       // 인증이 필요하지 않은 경로 목록
-      final publicPaths = [
-        '/login',
-        '/sign-up',
-        '/terms',
-        '/forget-password',
-      ];
+      final publicPaths = ['/login', '/sign-up', '/terms', '/forget-password'];
 
       // 현재 경로가 퍼블릭 경로인지 확인
       final isPublicPath = publicPaths.any(
@@ -285,28 +280,20 @@ GoRouter appRouter(Ref ref) {
 
       // 4. 온보딩 미완료 사용자는 온보딩으로 리디렉션 (퍼블릭 경로는 제외)
       if (!onboardingCompleted && !isPublicPath) {
-        AppLogger.navigation(
-          '온보딩 미완료 사용자 리다이렉트: $currentPath → /onboarding',
-        );
+        AppLogger.navigation('온보딩 미완료 사용자 리다이렉트: $currentPath → /onboarding');
         return '/onboarding';
       }
 
       // 5. 비인증 사용자는 퍼블릭 경로 외에는 로그인으로 리디렉션
       if (!isAuthenticated && !isPublicPath) {
-        AppLogger.warning(
-          '비인증 사용자가 인증 필요 페이지 접근 시도',
-          tag: 'Router',
-        );
+        AppLogger.warning('비인증 사용자가 인증 필요 페이지 접근 시도', tag: 'Router');
         AppLogger.navigation('비인증 사용자 리다이렉트: $currentPath → /login');
         return '/login';
       }
 
       // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리다이렉션
       if (isAuthenticated && isPublicPath) {
-        AppLogger.info(
-          '인증된 사용자가 인증 페이지 접근 시도',
-          tag: 'Router',
-        );
+        AppLogger.info('인증된 사용자가 인증 페이지 접근 시도', tag: 'Router');
         AppLogger.navigation('인증된 사용자 리다이렉트: $currentPath → /home');
         return '/home';
       }
@@ -318,10 +305,7 @@ GoRouter appRouter(Ref ref) {
     // === 에러 페이지 처리 ===
     errorBuilder: (context, state) {
       // 에러 페이지 접근 시에도 로깅
-      AppLogger.error(
-        '페이지를 찾을 수 없음: ${state.matchedLocation}',
-        tag: 'Router',
-      );
+      AppLogger.error('페이지를 찾을 수 없음: ${state.matchedLocation}', tag: 'Router');
 
       return Scaffold(
         appBar: AppBar(title: const Text('페이지를 찾을 수 없습니다')),
