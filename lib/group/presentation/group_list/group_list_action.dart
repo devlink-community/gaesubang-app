@@ -19,4 +19,7 @@ sealed class GroupListAction with _$GroupListAction {
       OnChangeSortType;
 
   const factory GroupListAction.onTapSort() = OnTapSort;
+
+  // 🔥 추가: 리프레시 액션
+  const factory GroupListAction.onRefreshGroupList() = OnRefreshGroupList;
 }

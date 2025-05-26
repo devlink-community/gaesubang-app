@@ -10,17 +10,70 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../domain/model/group.dart';
 
-class GroupListScreenRoot extends ConsumerWidget {
+class GroupListScreenRoot extends ConsumerStatefulWidget {
   const GroupListScreenRoot({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GroupListScreenRoot> createState() =>
+      _GroupListScreenRootState();
+}
+
+class _GroupListScreenRootState extends ConsumerState<GroupListScreenRoot>
+    with WidgetsBindingObserver {
+  bool _hasRefreshedOnResume = false; // 🆕 추가: 중복 새로고침 방지 플래그
+
+  @override
+  void initState() {
+    super.initState();
+    // 앱 생명주기 감지를 위한 옵저버 등록
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // 옵저버 제거
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // 앱이 백그라운드에서 포그라운드로 돌아왔을 때만 새로고침
+    if (state == AppLifecycleState.resumed && !_hasRefreshedOnResume) {
+      _hasRefreshedOnResume = true;
+      _refreshGroupListSafely();
+
+      // 2초 후 플래그 리셋 (중복 호출 방지)
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _hasRefreshedOnResume = false;
+        }
+      });
+    } else if (state == AppLifecycleState.paused) {
+      _hasRefreshedOnResume = false;
+    }
+  }
+
+  // 🆕 추가: 안전한 새로고침 메서드
+  void _refreshGroupListSafely() {
+    if (mounted) {
+      final notifier = ref.read(groupListNotifierProvider.notifier);
+      notifier.onAction(const GroupListAction.onRefreshGroupList());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(groupListNotifierProvider);
     final notifier = ref.watch(groupListNotifierProvider.notifier);
 
+    // 🚫 제거: 무한 루프를 일으키던 ref.listen 제거
+
     ref.listen(
       groupListNotifierProvider.select((value) => value.selectedGroup),
-          (previous, next) {
+      (previous, next) {
         if (next is AsyncData && next.value != null) {
           final group = next.value!;
 
@@ -29,7 +82,10 @@ class GroupListScreenRoot extends ConsumerWidget {
 
           if (isJoined) {
             // 이미 가입된 그룹이면 바로 상세 페이지로 이동
-            context.push('/group/${group.id}');
+            context.push('/group/${group.id}').then((_) {
+              // 🆕 수정: 안전한 새로고침 메서드 사용
+              _refreshGroupListSafely();
+            });
 
             // selectedGroup 초기화
             notifier.onAction(const GroupListAction.resetSelectedGroup());
@@ -49,7 +105,7 @@ class GroupListScreenRoot extends ConsumerWidget {
 
     ref.listen(
       groupListNotifierProvider.select((value) => value.joinGroupResult),
-          (previous, next) {
+      (previous, next) {
         if (previous is AsyncLoading) {
           if (next is AsyncData) {
             final selectedGroup = state.selectedGroup;
@@ -64,7 +120,10 @@ class GroupListScreenRoot extends ConsumerWidget {
                 ),
               );
               final groupId = selectedGroup.value!.id;
-              context.push('/group/$groupId');
+              context.push('/group/$groupId').then((_) {
+                // 🆕 수정: 안전한 새로고침 메서드 사용
+                _refreshGroupListSafely();
+              });
             }
           } else if (next is AsyncError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -83,11 +142,17 @@ class GroupListScreenRoot extends ConsumerWidget {
       onAction: (action) {
         switch (action) {
           case OnTapSearch():
-            context.push('/group/search');
+            context.push('/group/search').then((_) {
+              // 🆕 수정: 안전한 새로고침 메서드 사용
+              _refreshGroupListSafely();
+            });
           case OnTapCreateGroup():
-            context.push('/group/create');
+            context.push('/group/create').then((_) {
+              // 🆕 수정: 안전한 새로고침 메서드 사용
+              _refreshGroupListSafely();
+            });
           case OnCloseDialog():
-          // 다이얼로그 닫을 때 selectedGroup 초기화
+            // 다이얼로그 닫을 때 selectedGroup 초기화
             notifier.onAction(const GroupListAction.resetSelectedGroup());
             Navigator.of(context).pop();
           case OnTapSort():
@@ -104,10 +169,10 @@ class GroupListScreenRoot extends ConsumerWidget {
   }
 
   void _showGroupJoinDialog(
-      BuildContext context,
-      Group group,
-      GroupListNotifier notifier,
-      ) {
+    BuildContext context,
+    Group group,
+    GroupListNotifier notifier,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -117,7 +182,7 @@ class GroupListScreenRoot extends ConsumerWidget {
           onAction: (action) {
             switch (action) {
               case OnCloseDialog():
-              // 다이얼로그 닫을 때 selectedGroup 초기화
+                // 다이얼로그 닫을 때 selectedGroup 초기화
                 notifier.onAction(const GroupListAction.resetSelectedGroup());
                 Navigator.of(context).pop();
 
@@ -144,10 +209,10 @@ class GroupListScreenRoot extends ConsumerWidget {
   }
 
   void _showGroupFullDialog(
-      BuildContext context,
-      Group group,
-      GroupListNotifier notifier,
-      ) {
+    BuildContext context,
+    Group group,
+    GroupListNotifier notifier,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -157,7 +222,7 @@ class GroupListScreenRoot extends ConsumerWidget {
           onAction: (action) {
             switch (action) {
               case OnCloseDialog():
-              // 다이얼로그 닫을 때 selectedGroup 초기화
+                // 다이얼로그 닫을 때 selectedGroup 초기화
                 notifier.onAction(const GroupListAction.resetSelectedGroup());
                 Navigator.of(context).pop();
 
