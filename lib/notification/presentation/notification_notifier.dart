@@ -459,7 +459,9 @@ class NotificationNotifier extends _$NotificationNotifier {
     }
   }
 
-  /// 알림 탭 처리 - 글로벌 네비게이션 사용
+  // NotificationNotifier의 _handleTapNotification 메서드에서 수정할 부분
+
+  /// 알림 탭 처리 - 글로벌 네비게이션 사용 (senderId 안전 처리)
   Future<void> _handleTapNotification(String notificationId) async {
     AppLogger.info('알림 탭 처리 시작: $notificationId', tag: 'NotificationAction');
 
@@ -482,18 +484,16 @@ class NotificationNotifier extends _$NotificationNotifier {
           tag: 'NotificationAction',
         );
 
-        // 3. 글로벌 네비게이션 서비스를 통한 네비게이션
-        await _navigationService.handleNotificationNavigation(
-          type: notification.type.name,
-          targetId: notification.targetId,
-          senderId: notification.userId, // 발송자 ID는 userId 또는 별도 필드 사용
-          additionalData: {
-            'notificationId': notificationId,
-            'senderName': notification.senderName,
-            'description': notification.description,
-            'createdAt': notification.createdAt.toIso8601String(),
-          },
-        );
+        // senderId 안전성 로깅
+        AppLogger.logState('SenderId 정보', {
+          'hasSenderId': notification.hasSenderId,
+          'safeSenderId': notification.safeSenderId,
+          'navigationSenderId': notification.navigationSenderId,
+          'originalUserId': notification.userId,
+        });
+
+        // 3. 알림 타입별 senderId 처리 및 네비게이션
+        await _handleNavigationBySenderIdSafety(notification);
 
         AppLogger.info(
           '알림 탭 처리 완료: $notificationId',
@@ -520,6 +520,58 @@ class NotificationNotifier extends _$NotificationNotifier {
         );
       }
     }
+  }
+
+  /// 알림 타입별 senderId 안전성을 고려한 네비게이션 처리
+  Future<void> _handleNavigationBySenderIdSafety(
+    AppNotification notification,
+  ) async {
+    String? senderIdForNavigation;
+
+    // 알림 타입별 senderId 필요성 검증
+    switch (notification.type) {
+      case NotificationType.follow:
+        // follow는 senderId가 필수 - 없으면 네비게이션 불가
+        if (!notification.hasSenderId) {
+          AppLogger.warning(
+            'follow 알림에 senderId가 없어 네비게이션 불가: ${notification.id}',
+            tag: 'NotificationNavigation',
+          );
+          // 알림 목록으로 대체 이동
+          await _navigationService.pushTo('/notifications');
+          return;
+        }
+        senderIdForNavigation = notification.navigationSenderId;
+        break;
+
+      case NotificationType.like:
+      case NotificationType.comment:
+      case NotificationType.mention:
+        // 이런 타입들은 senderId가 있으면 좋지만 필수는 아님
+        // targetId(게시글 ID)가 더 중요함
+        senderIdForNavigation = notification.navigationSenderId;
+        break;
+    }
+
+    AppLogger.info(
+      '네비게이션 senderId 결정: ${senderIdForNavigation ?? "null"}',
+      tag: 'NotificationNavigation',
+    );
+
+    // 글로벌 네비게이션 서비스를 통한 네비게이션
+    await _navigationService.handleNotificationNavigation(
+      type: notification.type.name,
+      targetId: notification.targetId,
+      senderId: senderIdForNavigation, // null일 수 있음 (안전함)
+      additionalData: {
+        'notificationId': notification.id,
+        'senderName': notification.senderName,
+        'description': notification.description ?? '',
+        'createdAt': notification.createdAt.toIso8601String(),
+        'hasRealSenderId': notification.hasSenderId.toString(),
+        'safeSenderId': notification.safeSenderId, // 항상 안전한 값
+      },
+    );
   }
 
   /// 단일 알림 읽음 처리
