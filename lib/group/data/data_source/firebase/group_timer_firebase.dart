@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -128,7 +129,7 @@ class GroupTimerFirebase {
 
   /// 날짜 키 가져오기 헬퍼 메서드
   String _getDateKey([DateTime? date]) {
-    final targetDate = date ?? DateTime.now();
+    final targetDate = date ?? TimeFormatter.nowInSeoul();
     return DateFormat('yyyy-MM-dd').format(targetDate);
   }
 
