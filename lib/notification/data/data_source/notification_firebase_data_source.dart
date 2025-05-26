@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
+
+import '../dto/notification_dto.dart';
 
 class NotificationFirebaseDataSource implements NotificationDataSource {
   final FirebaseFirestore _firestore;
@@ -45,8 +46,8 @@ class NotificationFirebaseDataSource implements NotificationDataSource {
                   senderName: data['senderName'] as String?,
                   createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
                   isRead: data['isRead'] as bool? ?? false,
-                  description:
-                      data['body'] as String?, // body를 description으로 매핑
+                  description: data['body'] as String?,
+                  // body를 description으로 매핑
                   imageUrl: data['senderProfileImage'] as String?,
                 );
               }).toList();
