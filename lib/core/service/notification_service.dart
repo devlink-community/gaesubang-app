@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -133,12 +134,8 @@ class NotificationService {
     required int elapsedSeconds,
     String titlePrefix = '', // 앱 종료 시 접두사 추가
   }) async {
-    // 시간 포맷팅 (HH:MM:SS)
-    final hours = elapsedSeconds ~/ 3600;
-    final minutes = (elapsedSeconds % 3600) ~/ 60;
-    final seconds = elapsedSeconds % 60;
-    final timeStr =
-        '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    // 시간 포맷팅 (HH:MM:SS) - TimeFormatter 사용
+    final timeStr = TimeFormatter.formatSeconds(elapsedSeconds);
 
     // 안드로이드 알림 상세 설정
     const AndroidNotificationDetails androidDetails =
