@@ -156,18 +156,18 @@ class AuthActivityRepositoryImpl implements AuthActivityRepository {
       // 이전 활동일과 오늘의 차이 계산
       int daysGap = 0;
       if (existingSummary.lastActivityDate != null) {
-        try {
+        if (TimeFormatter.isValidDateKey(existingSummary.lastActivityDate!) &&
+            TimeFormatter.isValidDateKey(dateKey)) {
           daysGap = TimeFormatter.daysBetween(
             existingSummary.lastActivityDate!,
             dateKey,
           );
-        } catch (e) {
+        } else {
           AppLogger.warning(
-            '날짜 파싱 오류',
+            '유효하지 않은 날짜 형식: lastActivityDate=${existingSummary.lastActivityDate}, dateKey=$dateKey',
             tag: 'AuthActivityRepository',
-            error: e,
           );
-          daysGap = 1; // 기본값
+          daysGap = 1; // 형식 오류 시 기본값
         }
       }
 

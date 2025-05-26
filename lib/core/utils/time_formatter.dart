@@ -293,26 +293,65 @@ class TimeFormatter {
   /// 두 날짜 문자열(yyyy-MM-dd) 사이의 일수 차이 계산
   /// 두 날짜 모두 한국 시간대로 처리됨
   static int daysBetween(String startDateStr, String endDateStr) {
-    // 문자열 날짜를 파싱하여 한국 시간대로 변환
-    final startDate = toSeoulTime(DateTime.parse('$startDateStr 00:00:00'));
-    final endDate = toSeoulTime(DateTime.parse('$endDateStr 00:00:00'));
+    try {
+      // parseDate 메서드 사용하여 안전하게 파싱
+      final startDate = parseDate(startDateStr);
+      final endDate = parseDate(endDateStr);
 
-    // 날짜만 추출하여 시간 요소 제거 (날짜 간의 순수한 차이 계산)
-    final startDateOnly = tz.TZDateTime(
-      _seoulTimeZone,
-      startDate.year,
-      startDate.month,
-      startDate.day,
-    );
-    final endDateOnly = tz.TZDateTime(
-      _seoulTimeZone,
-      endDate.year,
-      endDate.month,
-      endDate.day,
-    );
+      // 날짜만 추출하여 시간 요소 제거 (날짜 간의 순수한 차이 계산)
+      final startDateOnly = tz.TZDateTime(
+        _seoulTimeZone,
+        startDate.year,
+        startDate.month,
+        startDate.day,
+      );
+      final endDateOnly = tz.TZDateTime(
+        _seoulTimeZone,
+        endDate.year,
+        endDate.month,
+        endDate.day,
+      );
 
-    // 두 날짜 간의 일수 차이 계산
-    return endDateOnly.difference(startDateOnly).inDays;
+      // 두 날짜 간의 일수 차이 계산
+      return endDateOnly.difference(startDateOnly).inDays;
+    } catch (e) {
+      print('날짜 차이 계산 오류: $e');
+      return 1; // 기본값
+    }
+  }
+
+  /// 날짜 키(yyyy-MM-dd) 형식 검증
+  static bool isValidDateKey(String? dateKey) {
+    if (dateKey == null || dateKey.isEmpty) return false;
+
+    // 정규식으로 "yyyy-MM-dd" 형식 검증
+    final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+    if (!regex.hasMatch(dateKey)) return false;
+
+    try {
+      // 실제 날짜로 파싱하여 유효성 검증
+      final parts = dateKey.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final day = int.parse(parts[2]);
+
+      // 월과 일 범위 검증
+      if (month < 1 || month > 12) return false;
+      if (day < 1 || day > 31) return false;
+
+      // 2월 및 각 월의 일수 검증
+      if (month == 2) {
+        final isLeapYear =
+            (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if (day > (isLeapYear ? 29 : 28)) return false;
+      } else if ([4, 6, 9, 11].contains(month) && day > 30) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /// 타이머 자동 종료 시간 계산
