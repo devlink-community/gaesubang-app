@@ -158,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
       actions: [
+        // 🔧 알림 아이콘 수정 - 조건부 빨간점 표시
         Stack(
           children: [
             _buildAppBarAction(
@@ -165,22 +166,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               onPressed:
                   () => widget.onAction(const HomeAction.onTapNotification()),
             ),
-            Positioned(
-              right: 10,
-              top: 10,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppColorStyles.secondary01,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 1.5,
+            // 🆕 읽지 않은 알림이 있을 때만 빨간점 표시
+            if (widget.state.hasUnreadNotifications)
+              Positioned(
+                right: 10,
+                top: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColorStyles.secondary01,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                 ),
               ),
-            ),
           ],
         ),
         _buildAppBarAction(
@@ -328,16 +328,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
+          border: Border.all(color: Colors.white, width: 2),
         ),
         child: const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
         ),
       );
     }
@@ -347,17 +341,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white,
-            width: 2,
-          ),
+          border: Border.all(color: Colors.white, width: 2),
         ),
         child: const Center(
-          child: Icon(
-            Icons.error_outline,
-            color: Colors.white,
-            size: 30,
-          ),
+          child: Icon(Icons.error_outline, color: Colors.white, size: 30),
         ),
       );
     }
@@ -372,10 +359,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: 2,
-        ),
+        border: Border.all(color: Colors.white, width: 2),
         image:
             hasValidImage
                 ? DecorationImage(
@@ -421,18 +405,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withValues(alpha: 0.2),
-            width: 1,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+            Icon(icon, color: color, size: 24),
             const SizedBox(height: 8),
             // 수정: FittedBox로 텍스트 크기 자동 조절
             FittedBox(
@@ -590,11 +567,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             color: AppColorStyles.primary80.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: AppColorStyles.primary80,
-            size: 20,
-          ),
+          child: Icon(icon, color: AppColorStyles.primary80, size: 20),
         ),
         const SizedBox(width: 12),
         Column(
