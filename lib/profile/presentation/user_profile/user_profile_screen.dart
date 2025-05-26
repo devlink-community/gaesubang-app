@@ -6,6 +6,8 @@ import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profil
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../auth/domain/model/user.dart';
+
 class UserProfileScreen extends StatefulWidget {
   final UserProfileState state;
   final Future<void> Function(UserProfileAction) onAction;
@@ -28,6 +30,29 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   late Animation<double> _fadeInAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _floatingAnimation;
+
+  bool _isUserActive(User user) {
+    // 1. Summary 정보를 활용하여 타이머 활성 상태 확인
+    if (user.summary != null) {
+      // summary.isTimerActive getter 활용
+      if (user.summary!.isTimerActive) {
+        return true;
+      }
+
+      // lastTimerTimestamp가 있고 최근 10분 이내인 경우
+      if (user.summary!.lastTimerTimestamp != null) {
+        final timeDiff = DateTime.now().difference(
+          user.summary!.lastTimerTimestamp!,
+        );
+        if (timeDiff.inMinutes < 10) {
+          return true;
+        }
+      }
+    }
+
+    // 2. onAir 상태 확인 (기존 코드)
+    return user.onAir;
+  }
 
   @override
   void initState() {
@@ -739,10 +764,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
                 // 기타 정보들
                 _buildInfoRow(
-                  icon: user.onAir ? Icons.circle : Icons.nightlight_round,
+                  icon:
+                      _isUserActive(user)
+                          ? Icons.circle
+                          : Icons.nightlight_round,
                   label: '활동 상태',
-                  value: user.onAir ? '활동 중' : '휴식 중',
-                  color: user.onAir ? Colors.green : Colors.grey,
+                  value: _isUserActive(user) ? '활동 중' : '휴식 중',
+                  color: _isUserActive(user) ? Colors.green : Colors.grey,
                 ),
 
                 const SizedBox(height: 12),
@@ -777,7 +805,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '함께 성장하는 개발자입니다!',
+                          '함께 성장하는 ${user.position}입니다!',
                           style: AppTextStyles.body2Regular.copyWith(
                             color: AppColorStyles.textPrimary,
                           ),
