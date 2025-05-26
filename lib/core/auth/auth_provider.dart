@@ -1,6 +1,7 @@
 // lib/core/auth/auth_provider.dart
 import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -176,7 +177,7 @@ class SessionWatcher extends _$SessionWatcher {
     AppLogger.logBox('세션 시작', '${user.nickname}님 환영합니다!');
     AppLogger.logState('NewSession', {
       'userId': user.uid,
-      'loginTime': DateTime.now().toIso8601String(),
+      'timestamp': TimeFormatter.nowInSeoul().toIso8601String(),
     });
   }
 }
