@@ -7,20 +7,10 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   // Flutter 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 시간대 데이터 초기화
-  tz.initializeTimeZones();
-  try {
-    tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
-  } catch (e) {
-    print('시간대 설정 오류: $e');
-  }
 
   // 로거 초기화 (가장 먼저)
   AppLogger.initialize();
