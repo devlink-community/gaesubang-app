@@ -27,6 +27,79 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     return const OnboardingState();
   }
 
+  // 🆕 회원가입 후 온보딩 상태 초기화 메서드
+  Future<void> resetOnboardingForNewUser() async {
+    try {
+      AppLogger.logBanner('신규 사용자 온보딩 상태 초기화 시작');
+      final startTime = DateTime.now();
+
+      // 1. SharedPreferences에서 온보딩 완료 상태 제거
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('hasCompletedOnboarding');
+      
+      AppLogger.logStep(1, 4, 'SharedPreferences 온보딩 상태 제거 완료');
+
+      // 2. 상태를 초기 상태로 리셋
+      state = const OnboardingState(
+        currentPage: 0,
+        notificationPermissionStatus: AsyncLoading(),
+        locationPermissionStatus: AsyncLoading(),
+        onboardingCompletedStatus: AsyncData(false), // 명시적으로 false 설정
+      );
+      
+      AppLogger.logStep(2, 4, '온보딩 상태 초기화 완료');
+
+      // 3. 권한 상태 다시 확인
+      await _checkPermissions();
+      
+      AppLogger.logStep(3, 4, '권한 상태 재확인 완료');
+
+      // 4. 초기 상태 다시 로드
+      await _loadInitialState();
+      
+      AppLogger.logStep(4, 4, '초기 상태 재로딩 완료');
+
+      final duration = DateTime.now().difference(startTime);
+      AppLogger.logPerformance('신규 사용자 온보딩 초기화', duration);
+      
+      AppLogger.logBox(
+        '신규 사용자 온보딩 초기화 완료',
+        '소요시간: ${duration.inMilliseconds}ms\n상태: 온보딩 미완료로 설정됨',
+      );
+    } catch (e, st) {
+      AppLogger.error('신규 사용자 온보딩 초기화 실패', error: e, stackTrace: st);
+      
+      // 실패 시에도 최소한 상태는 리셋
+      state = const OnboardingState(
+        currentPage: 0,
+        notificationPermissionStatus: AsyncError('초기화 실패', StackTrace.empty),
+        locationPermissionStatus: AsyncError('초기화 실패', StackTrace.empty),
+        onboardingCompletedStatus: AsyncData(false),
+      );
+    }
+  }
+
+  // 🆕 온보딩 상태 강제 새로고침 메서드
+  Future<void> refreshOnboardingState() async {
+    try {
+      AppLogger.info('온보딩 상태 강제 새로고침 시작', tag: 'OnboardingRefresh');
+      
+      // 로딩 상태로 설정
+      state = state.copyWith(
+        notificationPermissionStatus: const AsyncLoading(),
+        locationPermissionStatus: const AsyncLoading(),
+        onboardingCompletedStatus: const AsyncLoading(),
+      );
+
+      // 초기 상태 다시 로드
+      await _loadInitialState();
+      
+      AppLogger.info('온보딩 상태 강제 새로고침 완료', tag: 'OnboardingRefresh');
+    } catch (e, st) {
+      AppLogger.error('온보딩 상태 새로고침 실패', error: e, stackTrace: st);
+    }
+  }
+
   // 초기 상태 로드
   Future<void> _loadInitialState() async {
     try {
