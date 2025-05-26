@@ -71,7 +71,16 @@
 		<string>remote-notification</string>
 		<string>background-processing</string>
 	</array>
-
+	
+	<!-- ✅ Firebase 자동 초기화 설정 (선택사항) -->
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+    
+    <!-- ✅ FCM 자동 초기화 설정 (선택사항) -->
+    <key>firebase_messaging_auto_init_enabled</key>
+    <true/>
+    
+    <!-- ✅ 백그라운드 모드 활성화를 위한 설정 -->
 	<key>UIBackgroundModes</key>
     <array>
         <string>fetch</string>
