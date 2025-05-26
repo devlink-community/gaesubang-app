@@ -620,8 +620,6 @@ class FCMTokenService {
         tag: 'FCMDiagnosis',
       );
     } catch (e) {
-      AppLogger.error('진단 중 오류 발생', tag: 'FCMDiagnosis');
-    } catch (e) {
       AppLogger.error('진단 중 오류 발생', tag: 'FCMDiagnosis', error: e);
     }
 
