@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/community/data/dto/post_comment_dto.dart';
 import 'package:devlink_mobile_app/community/data/dto/post_dto.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 import 'post_data_source.dart';
 
@@ -21,7 +22,9 @@ class MockPostDataSourceImpl implements PostDataSource {
       title: '개발팀 앱 제작',
       content: '플러터로 개발하는 방법을 공유합니다.',
       mediaUrls: ['https://picsum.photos/id/237/400/300'],
-      createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(
+        const Duration(days: 2, hours: 4),
+      ),
       hashTags: ['텀프로젝트', 'flutter'],
     ),
     PostDto(
@@ -33,7 +36,9 @@ class MockPostDataSourceImpl implements PostDataSource {
       title: '이것은 인기 게시글 입니다.',
       content: '인기 게시글 내용입니다.',
       mediaUrls: ['https://picsum.photos/id/1/400/300'],
-      createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(
+        const Duration(days: 1, hours: 6),
+      ),
       hashTags: ['인기글'],
     ),
     PostDto(
@@ -45,7 +50,9 @@ class MockPostDataSourceImpl implements PostDataSource {
       title: '개발자커뮤니티 앱 제작',
       content: '함께 개발할 분을 찾습니다.',
       mediaUrls: ['https://picsum.photos/id/20/400/300'],
-      createdAt: DateTime.now().subtract(const Duration(days: 3, hours: 12)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(
+        const Duration(days: 3, hours: 12),
+      ),
       hashTags: ['텀프로젝트', 'flutter'],
     ),
   ];
@@ -59,7 +66,9 @@ class MockPostDataSourceImpl implements PostDataSource {
         userName: '홍길동',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user1',
         text: '댓글 내용 1',
-        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(hours: 1),
+        ),
         likeCount: 3,
       ),
       PostCommentDto(
@@ -68,7 +77,9 @@ class MockPostDataSourceImpl implements PostDataSource {
         userName: '김영희',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user2',
         text: '댓글 내용 2',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(hours: 2),
+        ),
         likeCount: 1,
       ),
     ],
@@ -79,7 +90,9 @@ class MockPostDataSourceImpl implements PostDataSource {
         userName: '박철수',
         userProfileImage: 'https://api.dicebear.com/6.x/micah/png?seed=user3',
         text: '댓글 내용 3',
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(hours: 3),
+        ),
         likeCount: 0,
       ),
     ],
@@ -233,12 +246,12 @@ class MockPostDataSourceImpl implements PostDataSource {
 
       // 새 댓글 생성
       final newComment = PostCommentDto(
-        id: 'comment_${DateTime.now().millisecondsSinceEpoch}',
+        id: 'comment_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}',
         userId: _currentUserId,
         userName: mockUserName,
         userProfileImage: mockUserProfileImage,
         text: content,
-        createdAt: DateTime.now(),
+        createdAt: TimeFormatter.nowInSeoul(),
         likeCount: 0,
         isLikedByCurrentUser: false, // 생성 시 좋아요 상태는 false
       );
@@ -351,7 +364,7 @@ class MockPostDataSourceImpl implements PostDataSource {
         title: title,
         content: content,
         mediaUrls: imageUris.map((uri) => uri.toString()).toList(),
-        createdAt: DateTime.now(),
+        createdAt: TimeFormatter.nowInSeoul(),
         hashTags: hashTags,
         likeCount: 0,
         isLikedByCurrentUser: false,

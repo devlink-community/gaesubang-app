@@ -1,9 +1,10 @@
 // lib/banner/data/repository_impl/banner_repository_impl.dart - 최종 수정버전
 
 import '../../../core/result/result.dart';
-import '../../../core/utils/exception_mappers/banner_exception_mapper.dart';
 import '../../../core/utils/api_call_logger.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/utils/exception_mappers/banner_exception_mapper.dart';
+import '../../../core/utils/time_formatter.dart' show TimeFormatter;
 import '../../domain/model/banner.dart';
 import '../../domain/repository/banner_repository.dart';
 import '../data_source/banner_data_source.dart';
@@ -21,7 +22,7 @@ class BannerRepositoryImpl implements BannerRepository {
   Future<Result<List<Banner>>> getActiveBanners() async {
     return ApiCallDecorator.wrap('BannerRepository.getActiveBanners', () async {
       AppLogger.debug('활성 배너 목록 조회 시작');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         AppLogger.logStep(1, 3, '데이터소스 활성 배너 조회');
@@ -31,7 +32,7 @@ class BannerRepositoryImpl implements BannerRepository {
         final banners = bannerDtos.toModelList();
 
         AppLogger.logStep(3, 3, '활성 배너 조회 결과 처리');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('활성 배너 조회', duration);
 
         AppLogger.ui('활성 배너 조회 성공: ${banners.length}개');
@@ -52,7 +53,7 @@ class BannerRepositoryImpl implements BannerRepository {
 
         return Result.success(banners);
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('활성 배너 조회 실패', duration);
 
         AppLogger.error('활성 배너 조회 실패', error: e, stackTrace: st);
@@ -71,7 +72,7 @@ class BannerRepositoryImpl implements BannerRepository {
   Future<Result<List<Banner>>> getAllBanners() async {
     return ApiCallDecorator.wrap('BannerRepository.getAllBanners', () async {
       AppLogger.debug('전체 배너 목록 조회 시작');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         AppLogger.logStep(1, 3, '데이터소스 전체 배너 조회');
@@ -81,7 +82,7 @@ class BannerRepositoryImpl implements BannerRepository {
         final banners = bannerDtos.toModelList();
 
         AppLogger.logStep(3, 3, '전체 배너 조회 결과 처리');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('전체 배너 조회', duration);
 
         AppLogger.ui('전체 배너 조회 성공: ${banners.length}개');
@@ -94,7 +95,7 @@ class BannerRepositoryImpl implements BannerRepository {
 
         return Result.success(banners);
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('전체 배너 조회 실패', duration);
 
         AppLogger.error('전체 배너 조회 실패', error: e, stackTrace: st);
@@ -113,7 +114,7 @@ class BannerRepositoryImpl implements BannerRepository {
   Future<Result<Banner>> getBannerById(String bannerId) async {
     return ApiCallDecorator.wrap('BannerRepository.getBannerById', () async {
       AppLogger.debug('특정 배너 조회 시작: $bannerId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       AppLogger.logState('특정 배너 조회 요청', {
         'banner_id': bannerId,
@@ -128,7 +129,7 @@ class BannerRepositoryImpl implements BannerRepository {
         final banner = bannerDto.toModel();
 
         AppLogger.logStep(3, 3, '특정 배너 조회 결과 처리');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('특정 배너 조회', duration);
 
         AppLogger.ui('특정 배너 조회 성공: $bannerId');
@@ -143,7 +144,7 @@ class BannerRepositoryImpl implements BannerRepository {
 
         return Result.success(banner);
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('특정 배너 조회 실패', duration);
 
         AppLogger.error('특정 배너 조회 실패', error: e, stackTrace: st);

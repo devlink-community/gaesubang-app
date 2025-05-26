@@ -22,7 +22,7 @@ class MemberGrid extends StatelessWidget {
   //
   //   if (member.isActive && member.timerStartAt != null) {
   //     // 활성 상태이면 현재 시간 기준으로 경과 시간 계산
-  //     final now = DateTime.now();
+  //     final now = TimeFormatter.nowInSeoul();
   //     totalSeconds = now.difference(member.timerStartAt!).inSeconds;
   //   } else {
   //     // 비활성 상태이면 저장된 경과 시간 사용

@@ -112,14 +112,14 @@ User? currentUser(Ref ref) {
 @riverpod
 Future<AuthState> currentAuthState(Ref ref) async {
   AppLogger.authInfo('동기 인증 상태 확인 시작');
-  final startTime = DateTime.now();
+  final startTime = TimeFormatter.nowInSeoul();
 
   final authDataSource = ref.watch(authDataSourceProvider);
 
   try {
     final userData = await authDataSource.getCurrentAuthState();
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('동기 인증 상태 확인', duration);
 
     if (userData == null) {
@@ -132,7 +132,7 @@ Future<AuthState> currentAuthState(Ref ref) async {
 
     return AuthState.authenticated(user);
   } catch (e, st) {
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('동기 인증 상태 확인 실패', duration);
     AppLogger.error('동기 인증 상태 확인 실패', error: e, stackTrace: st);
 
@@ -239,7 +239,7 @@ class AuthUtils extends _$AuthUtils {
     AppLogger.logState('UserActivity', {
       'userId': user.uid,
       'activity': activity,
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': TimeFormatter.nowInSeoul().toIso8601String(),
       'streakDays': user.summary?.currentStreakDays ?? 0,
       'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
       'position': user.position ?? '미설정',

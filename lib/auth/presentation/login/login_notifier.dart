@@ -9,6 +9,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'login_notifier.g.dart';
@@ -51,7 +52,7 @@ class LoginNotifier extends _$LoginNotifier {
 
   Future<void> _handleLogin(String email, String password) async {
     final maskedEmail = PrivacyMaskUtil.maskEmail(email);
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.logBox('로그인 시도', '이메일: $maskedEmail');
 
@@ -105,7 +106,7 @@ class LoginNotifier extends _$LoginNotifier {
       AppLogger.logStep(4, 4, '로그인 결과 처리');
       _processLoginResult(asyncResult, email);
     } catch (e, st) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('로그인 처리 실패', duration);
 
       AppLogger.error(
@@ -163,7 +164,7 @@ class LoginNotifier extends _$LoginNotifier {
 
   /// 로그인 결과 처리 (AsyncValue 기반)
   void _processLoginResult(AsyncValue<User> asyncResult, String email) {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     final maskedEmail = PrivacyMaskUtil.maskEmail(email);
 
     AppLogger.debug(
@@ -220,7 +221,7 @@ class LoginNotifier extends _$LoginNotifier {
         loginUserResult: asyncResult, // AsyncError 그대로 사용
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('로그인 실패 처리', duration);
     } else if (asyncResult.hasValue) {
       // ✅ 성공 시 처리
@@ -231,7 +232,7 @@ class LoginNotifier extends _$LoginNotifier {
         loginUserResult: asyncResult, // AsyncData 그대로 사용
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('로그인 성공 처리', duration);
 
       AppLogger.logBanner('로그인 성공! 🎉');

@@ -11,7 +11,7 @@ extension GroupDtoMapper on GroupDto {
       name: name ?? '',
       description: description ?? '',
       imageUrl: imageUrl,
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       ownerId: ownerId ?? '',
       ownerNickname: ownerNickname,
       ownerProfileImage: ownerProfileImage,
@@ -86,7 +86,7 @@ extension MapListToGroupListMapper on List<Map<String, dynamic>>? {
         name: dto.name ?? '',
         description: dto.description ?? '',
         imageUrl: dto.imageUrl,
-        createdAt: dto.createdAt ?? DateTime.now(),
+        createdAt: dto.createdAt ?? TimeFormatter.nowInSeoul(),
         ownerId: dto.ownerId ?? '',
         ownerNickname: dto.ownerNickname,
         ownerProfileImage: dto.ownerProfileImage,
@@ -108,7 +108,7 @@ extension JoinedGroupDtoToGroupMapper on JoinedGroupDto {
       name: groupName ?? '',
       description: '', // 간소화된 버전이므로 기본값 사용
       imageUrl: groupImage,
-      createdAt: DateTime.now(), // 실제 생성일은 알 수 없으므로 현재 시간 사용
+      createdAt: TimeFormatter.nowInSeoul(), // 실제 생성일은 알 수 없으므로 현재 시간 사용
       ownerId: '', // 간소화된 버전이므로 빈 값 사용
       maxMemberCount: 10, // 기본값 사용
       hashTags: const [], // 빈 리스트 사용

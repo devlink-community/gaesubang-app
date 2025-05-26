@@ -2,6 +2,7 @@
 import 'dart:developer' as developer;
 import 'dart:io';
 
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/foundation.dart';
 
 /// VSCode 환경에 최적화된 앱 로거
@@ -225,7 +226,7 @@ class AppLogger {
       formattedMessage,
       name: tag,
       level: level,
-      time: DateTime.now(),
+      time: TimeFormatter.nowInSeoul(),
     );
 
     // 에러 정보가 있으면 추가 출력
@@ -249,7 +250,7 @@ class AppLogger {
 
   /// 메시지 포맷팅
   static String _formatMessage(String message, String icon) {
-    final timestamp = _formatTimestamp(DateTime.now());
+    final timestamp = _formatTimestamp(TimeFormatter.nowInSeoul());
     return '$icon $timestamp $message';
   }
 

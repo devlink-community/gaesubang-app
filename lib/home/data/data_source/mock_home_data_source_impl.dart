@@ -14,14 +14,14 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         id: '1',
         title: '오늘의 공지사항',
         content: '서비스 이용에 참고하세요.',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 1)),
         linkUrl: '/notice/1',
       ),
       Notice(
         id: '2',
         title: '게시판 이용 공지',
         content: '게시판 이용 규칙에 관한 공지사항입니다.',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 3)),
         linkUrl: '/notice/2',
       ),
     ];
@@ -43,7 +43,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author1',
         boardType: BoardType.free,
-        createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 2, hours: 4),
+        ),
         hashTags: ['텀프로젝트', 'flutter'],
         imageUrls: ['https://picsum.photos/id/237/400/300'], // Lorem Picsum 사용
         likeCount: 7, // like 배열 대신 likeCount 사용
@@ -61,7 +63,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author2',
         boardType: BoardType.free,
-        createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 1, hours: 6),
+        ),
         hashTags: ['인기글'],
         imageUrls: ['https://picsum.photos/id/1/400/300'], // Lorem Picsum 사용
         likeCount: 4, // like 배열 대신 likeCount 사용
@@ -79,7 +83,9 @@ class MockHomeDataSourceImpl implements HomeDataSource {
         userProfileImageUrl:
             'https://api.dicebear.com/6.x/micah/png?seed=author3',
         boardType: BoardType.qna,
-        createdAt: DateTime.now().subtract(const Duration(days: 3, hours: 12)),
+        createdAt: TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 3, hours: 12),
+        ),
         hashTags: ['텀프로젝트', 'flutter'],
         imageUrls: ['https://picsum.photos/id/20/400/300'], // Lorem Picsum 사용
         likeCount: 7, // like 배열 대신 likeCount 사용

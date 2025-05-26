@@ -13,7 +13,7 @@ extension AttendanceDtoMapper on AttendanceDto {
       date = DateTime.parse(this.date ?? '');
     } catch (e) {
       // 기본값으로 현재 날짜 사용
-      date = DateTime.now();
+      date = TimeFormatter.nowInSeoul();
     }
 
     // 초 단위를 분 단위로 변환

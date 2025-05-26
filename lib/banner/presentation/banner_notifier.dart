@@ -1,8 +1,9 @@
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/utils/time_formatter.dart' show TimeFormatter;
 import '../domain/usecase/get_active_banners_use_case.dart';
 import '../module/banner_di.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'banner_action.dart';
 import 'banner_state.dart';
 
@@ -50,7 +51,7 @@ class BannerNotifier extends _$BannerNotifier {
 
   Future<void> _loadActiveBanner() async {
     AppLogger.logBanner('활성 배너 로드 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.logStep(1, 2, '로딩 상태 설정');
     state = state.copyWith(activeBanner: const AsyncLoading());
@@ -58,7 +59,7 @@ class BannerNotifier extends _$BannerNotifier {
     AppLogger.logStep(2, 2, '배너 데이터 조회');
     final result = await _getActiveBannersUseCase.execute();
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('활성 배너 로드', duration);
 
     switch (result) {
@@ -96,7 +97,7 @@ class BannerNotifier extends _$BannerNotifier {
 
     state = state.copyWith(
       activeBanner: result,
-      lastUpdated: DateTime.now(),
+      lastUpdated: TimeFormatter.nowInSeoul(),
     );
   }
 

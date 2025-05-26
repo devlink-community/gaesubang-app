@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/result/result.dart';
@@ -11,7 +12,7 @@ class GetActiveBannersUseCase {
   final Random _random = Random();
 
   GetActiveBannersUseCase({required BannerRepository repository})
-      : _repository = repository;
+    : _repository = repository;
 
   /// 활성 배너 중 랜덤하게 하나를 선택하여 반환
   /// 시간대별 시드를 사용하여 1분마다 다른 배너가 선택되도록 함 (테스트용)
@@ -25,12 +26,13 @@ class GetActiveBannersUseCase {
         }
 
         // 현재 시간 기준 활성 배너 필터링
-        final now = DateTime.now();
-        final activeBanners = data.where((banner) {
-          return banner.isActive &&
-              banner.startDate.isBefore(now) &&
-              banner.endDate.isAfter(now);
-        }).toList();
+        final now = TimeFormatter.nowInSeoul();
+        final activeBanners =
+            data.where((banner) {
+              return banner.isActive &&
+                  banner.startDate.isBefore(now) &&
+                  banner.endDate.isAfter(now);
+            }).toList();
 
         if (activeBanners.isEmpty) {
           return const AsyncData(null);

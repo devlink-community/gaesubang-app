@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -47,7 +48,10 @@ class FirebaseAIClient {
               'Firebase AI 초기화 타임아웃 (30초)',
               tag: 'FirebaseAI',
             );
-            throw TimeoutException('Firebase AI 초기화 타임아웃', const Duration(seconds: 30));
+            throw TimeoutException(
+              'Firebase AI 초기화 타임아웃',
+              const Duration(seconds: 30),
+            );
           },
         );
         return;
@@ -146,7 +150,7 @@ class FirebaseAIClient {
         await initialize();
       }
 
-      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final uniqueId = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
       AppLogger.info(
@@ -188,7 +192,7 @@ class FirebaseAIClient {
         await initialize();
       }
 
-      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final uniqueId = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
       AppLogger.info(
@@ -236,7 +240,7 @@ class FirebaseAIClient {
       final temperature = 0.5 + random.nextDouble() * 0.4; // 0.5~0.9
 
       // 고유 ID 추가
-      final uniqueId = DateTime.now().millisecondsSinceEpoch;
+      final uniqueId = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
       final enhancedPrompt = '$prompt\n\n요청 ID: $uniqueId';
 
       AppLogger.info(

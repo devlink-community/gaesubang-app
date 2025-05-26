@@ -2,6 +2,7 @@
 
 import 'package:devlink_mobile_app/ai_assistance/module/quiz_prompt.dart';
 import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 // 데이터 소스 import
@@ -11,15 +12,15 @@ import '../data/data_source/study_tip_data_source.dart';
 // 레포지토리 구현체 import
 import '../data/repository_impl/quiz_data_repository_impl.dart';
 import '../data/repository_impl/study_tip_repository_impl.dart';
+import '../domain/model/quiz.dart';
+// 도메인 모델 import
+import '../domain/model/study_tip.dart';
 // 도메인 레포지토리 인터페이스 import
 import '../domain/repository/quiz_repository.dart';
 import '../domain/repository/study_tip_repository.dart';
 // 유스케이스 import
 import '../domain/use_case/generate_quiz_use_case.dart';
 import '../domain/use_case/get_study_tip_use_case.dart';
-// 도메인 모델 import
-import '../domain/model/study_tip.dart';
-import '../domain/model/quiz.dart';
 
 //------------------------------------------------------------------
 // 서비스 프로바이더
@@ -130,44 +131,51 @@ final studyTipCacheProvider = StateProvider<Map<String, dynamic>>((ref) {
 });
 
 /// 🆕 강제 새로고침용 학습 팁 프로바이더 (캐시 우회)
-final freshStudyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
-    ref,
-    skills,
+final freshStudyTipProvider = FutureProvider.autoDispose
+    .family<StudyTip?, String?>((
+      ref,
+      skills,
     ) async {
-  // 🔧 캐시를 완전히 우회하고 항상 새로운 데이터 생성
-  final getStudyTipUseCase = ref.watch(getStudyTipUseCaseProvider);
+      // 🔧 캐시를 완전히 우회하고 항상 새로운 데이터 생성
+      final getStudyTipUseCase = ref.watch(getStudyTipUseCaseProvider);
 
-  // 강제 새로고침을 위한 고유 타임스탬프 추가
-  final forceRefreshTimestamp = DateTime.now().millisecondsSinceEpoch;
-  final randomSalt = DateTime.now().microsecond; // 추가 무작위성
-  final skillWithForceRefresh = '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
+      // 강제 새로고침을 위한 고유 타임스탬프 추가
+      final forceRefreshTimestamp =
+          TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
+      final randomSalt = TimeFormatter.nowInSeoul().microsecond; // 추가 무작위성
+      final skillWithForceRefresh =
+          '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
 
-  try {
-    final asyncValue = await getStudyTipUseCase.execute(skillWithForceRefresh);
+      try {
+        final asyncValue = await getStudyTipUseCase.execute(
+          skillWithForceRefresh,
+        );
 
-    if (asyncValue.hasValue && asyncValue.value != null) {
-      return asyncValue.value as StudyTip;
-    }
+        if (asyncValue.hasValue && asyncValue.value != null) {
+          return asyncValue.value as StudyTip;
+        }
 
-    return null;
-  } catch (e) {
-    // 에러 발생 시 null 반환 (fallback 처리는 UI에서)
-    return null;
-  }
-});
+        return null;
+      } catch (e) {
+        // 에러 발생 시 null 반환 (fallback 처리는 UI에서)
+        return null;
+      }
+    });
 
 /// 🆕 강제 새로고침용 퀴즈 프로바이더 (캐시 우회)
 final freshQuizProvider = FutureProvider.autoDispose.family<Quiz?, String?>((
-    ref,
-    skills,
-    ) async {
+  ref,
+  skills,
+) async {
   // 🔧 캐시를 완전히 우회하고 항상 새로운 데이터 생성
   final generateQuizUseCase = ref.watch(generateQuizUseCaseProvider);
 
   // 강제 새로고침을 위한 고유 타임스탬프 추가
-  final forceRefreshTimestamp = DateTime.now().millisecondsSinceEpoch;
-  final randomSalt = DateTime.now().microsecond; // 추가 무작위성
-  final skillWithForceRefresh = '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
+  final forceRefreshTimestamp =
+      TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
+  final randomSalt = TimeFormatter.nowInSeoul().microsecond; // 추가 무작위성
+  final skillWithForceRefresh =
+      '${skills ?? '프로그래밍 기초'}-fresh-$forceRefreshTimestamp-$randomSalt';
 
   try {
     final asyncValue = await generateQuizUseCase.execute(skillWithForceRefresh);
@@ -205,7 +213,7 @@ class CacheCleanupService {
       _ref.read(studyTipCacheProvider),
     );
 
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final cutoffTime = now.subtract(const Duration(hours: 1));
 
     // 캐시 키에서 타임스탬프 추출하여 오래된 항목 제거
@@ -254,17 +262,19 @@ class CacheCleanupService {
       _ref.read(studyTipCacheProvider),
     );
 
-    final skillArea = skills
-        ?.split(',')
-        .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
-        .trim() ?? '프로그래밍 기초';
+    final skillArea =
+        skills
+            ?.split(',')
+            .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
+            .trim() ??
+        '프로그래밍 기초';
 
-    final skillPrefix = skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
+    final skillPrefix =
+        skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
 
     // 해당 스킬과 관련된 캐시 항목들 제거
-    final keysToRemove = currentCache.keys
-        .where((key) => key.contains(skillPrefix))
-        .toList();
+    final keysToRemove =
+        currentCache.keys.where((key) => key.contains(skillPrefix)).toList();
 
     for (final key in keysToRemove) {
       currentCache.remove(key);

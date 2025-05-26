@@ -28,7 +28,7 @@ class SaveTermsAgreementUseCase {
       isServiceTermsAgreed: termsAgreement.isServiceTermsAgreed,
       isPrivacyPolicyAgreed: termsAgreement.isPrivacyPolicyAgreed,
       isMarketingAgreed: termsAgreement.isMarketingAgreed,
-      agreedAt: DateTime.now(), // 현재 시간으로 동의 시간 업데이트
+      agreedAt: TimeFormatter.nowInSeoul(), // 현재 시간으로 동의 시간 업데이트
     );
 
     // 메모리에만 저장

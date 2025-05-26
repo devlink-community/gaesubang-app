@@ -3,6 +3,7 @@
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/user_profile/user_profile_state.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -65,7 +66,7 @@ class UserProfileNotifier extends _$UserProfileNotifier {
 
   Future<void> _loadUserProfile(String userId) async {
     AppLogger.logBanner('사용자 프로필 조회 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.logState('사용자 프로필 조회 요청', {
       'target_user_id': PrivacyMaskUtil.maskUserId(userId),
@@ -75,7 +76,7 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     _currentUserId = userId;
 
     // 중복 요청 방지를 위한 요청 ID 생성
-    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    final currentRequestId = TimeFormatter.nowInSeoul().microsecondsSinceEpoch;
     AppLogger.logState('중복 요청 방지 설정', {
       'request_id': currentRequestId,
       'target_user_id': PrivacyMaskUtil.maskUserId(userId),
@@ -130,7 +131,7 @@ class UserProfileNotifier extends _$UserProfileNotifier {
               activeRequestId: null, // 요청 완료 후 ID 초기화
             );
 
-            final duration = DateTime.now().difference(startTime);
+            final duration = TimeFormatter.nowInSeoul().difference(startTime);
             AppLogger.logPerformance('사용자 프로필 조회', duration);
             AppLogger.logBox(
               '사용자 프로필 조회 완료',

@@ -55,7 +55,7 @@ class SummaryCalculator {
 
   /// 오늘 집중 시간 계산 (분 단위)
   static int getTodayMinutes(Summary summary) {
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = TimeFormatter.nowInSeoul().toIso8601String().split('T')[0];
     final seconds = summary.last7DaysActivityMap[today] ?? 0;
     return seconds ~/ 60;
   }

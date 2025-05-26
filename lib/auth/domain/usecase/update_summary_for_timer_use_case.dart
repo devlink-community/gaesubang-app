@@ -74,7 +74,9 @@ class UpdateSummaryForTimerUseCase {
       }
 
       // 2. 날짜 키 생성 (오늘 날짜 기준)
-      final dateKey = TimeFormatter.formatDate(timestamp ?? DateTime.now());
+      final dateKey = TimeFormatter.formatDate(
+        timestamp ?? TimeFormatter.nowInSeoul(),
+      );
 
       // 3. Summary 업데이트 요청
       final result = await _authActivityRepository

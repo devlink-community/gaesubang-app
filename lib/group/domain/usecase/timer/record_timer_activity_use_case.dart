@@ -20,7 +20,7 @@ class RecordTimerActivityUseCase {
     final result = await _repository.recordTimerActivityWithTimestamp(
       groupId,
       activityType,
-      DateTime.now(), // 현재 시간 사용
+      TimeFormatter.nowInSeoul(), // 현재 시간 사용
     );
 
     return switch (result) {

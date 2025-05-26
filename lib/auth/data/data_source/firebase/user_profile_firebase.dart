@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -227,7 +228,7 @@ class UserProfileFirebase {
 
           AppLogger.logStep(3, 7, 'Firebase Storage 경로 설정');
           final String fileName =
-              'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+              'profile_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}.jpg';
           final String storagePath = 'users/$userId/$fileName';
           final Reference storageRef = _storage.ref().child(storagePath);
 
@@ -241,7 +242,7 @@ class UserProfileFirebase {
               contentType: 'image/jpeg',
               customMetadata: {
                 'userId': userId,
-                'uploadedAt': DateTime.now().toIso8601String(),
+                'uploadedAt': TimeFormatter.nowInSeoul().toIso8601String(),
                 'originalPath': imagePath,
                 'compressedByUseCase': 'true',
               },

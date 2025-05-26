@@ -1,6 +1,7 @@
 // lib/home/presentation/home_screen_root.dart
 import 'dart:async';
 
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -55,7 +56,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
     AppLogger.info('AI 서비스 사전 초기화 시작 (백그라운드)', tag: 'AIPreload');
 
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       // 🔧 fire-and-forget 방식으로 백그라운드 초기화
@@ -88,7 +89,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
         await firebaseAIClient.initialize();
       }
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
       setState(() {
         _isAIInitialized = true;
@@ -105,7 +106,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
       // 🆕 초기화 완료 후 캐시 정리 실행
       _performInitialCacheCleanup();
     } catch (e) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
       setState(() {
         _isAIInitializing = false;
@@ -126,10 +127,10 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
     dynamic firebaseAIClient,
     Duration timeout,
   ) async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     const checkInterval = Duration(milliseconds: 100);
 
-    while (DateTime.now().difference(startTime) < timeout) {
+    while (TimeFormatter.nowInSeoul().difference(startTime) < timeout) {
       if (firebaseAIClient.isInitialized) {
         AppLogger.info('Firebase AI 클라이언트 초기화 완료 대기 성공', tag: 'AIPreload');
         return;
@@ -182,7 +183,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
   }
 
   Future<void> _loadUserSkills() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.debug('사용자 스킬 정보 로드 시작', tag: 'HomeInit');
 
@@ -190,7 +191,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
       final currentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
       final userResult = await currentUserUseCase.execute();
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
       userResult.when(
         data: (user) {
@@ -215,7 +216,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
         },
       );
     } catch (e) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('사용자 스킬 로드 예외', duration);
       AppLogger.error('사용자 스킬 로드 예외', tag: 'HomeInit', error: e);
     }

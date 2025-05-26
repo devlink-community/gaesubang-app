@@ -159,7 +159,7 @@ class NotificationItem extends StatelessWidget {
   }
 
   String _formatTime() {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final difference = now.difference(notification.createdAt);
 
     // 이전 활동만 날짜 형식으로 표시 (7일 이상 지난 경우)

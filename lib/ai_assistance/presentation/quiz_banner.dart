@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:devlink_mobile_app/ai_assistance/presentation/quiz_action.dart';
-import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -279,7 +279,7 @@ class DailyQuizBanner extends ConsumerWidget {
   }
 
   void _handleQuizTap(BuildContext context, WidgetRef ref) async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.info(
       '퀴즈 생성 시작: skills=$skills',
@@ -527,7 +527,7 @@ class _QuizDialogWithLoadingState
 
     try {
       final generateQuizUseCase = ref.read(generateQuizUseCaseProvider);
-      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final currentTime = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
       final quizPrompt = '$skillArea-$currentTime';
 
       final asyncQuizResult = await generateQuizUseCase.execute(quizPrompt);

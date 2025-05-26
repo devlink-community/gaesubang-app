@@ -40,7 +40,7 @@ extension GroupMemberDtoMapper on GroupMemberDto {
       userName: userName ?? '',
       profileUrl: profileUrl,
       role: role ?? 'member',
-      joinedAt: joinedAt ?? DateTime.now(),
+      joinedAt: joinedAt ?? TimeFormatter.nowInSeoul(),
       timerState: timerStateEnum,
       timerStartAt: timerStartAt,
       timerLastUpdatedAt: timerLastUpdatedAt,

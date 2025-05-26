@@ -2,6 +2,8 @@
 
 import 'dart:math';
 
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
+
 import '../../../core/result/result.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../domain/model/study_tip.dart';
@@ -24,7 +26,7 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
 
   @override
   Future<Result<StudyTip>> generateStudyTip(String skillArea) async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.info(
       'StudyTip 생성 시작: $skillArea',
@@ -62,7 +64,7 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
       // 5. 모델로 변환하여 반환
       final studyTip = studyTipDto.toModel();
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('StudyTip 생성 성공', duration);
 
       AppLogger.info(
@@ -72,7 +74,7 @@ class StudyTipRepositoryImpl implements StudyTipRepository {
 
       return Result.success(studyTip);
     } catch (e, st) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('StudyTip 생성 실패', duration);
 
       AppLogger.error(

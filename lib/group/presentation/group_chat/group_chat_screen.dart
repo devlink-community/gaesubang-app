@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/ai_assistance/module/group_chat_bot_service.d
 import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/chat_message.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/presentation/group_chat/components/chat_bubble.dart';
@@ -937,7 +938,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   Widget _buildDateDivider(DateTime timestamp) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final messageDate = DateTime(

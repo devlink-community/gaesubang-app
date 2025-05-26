@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/attendance/get_attendance_by_month_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -24,7 +25,7 @@ class AttendanceNotifier extends _$AttendanceNotifier {
       getAttendancesByMonthUseCaseProvider,
     );
 
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     return AttendanceState(
       displayedMonth: DateTime(now.year, now.month),
       selectedDate: now,

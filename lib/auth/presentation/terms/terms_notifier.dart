@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/auth/presentation/terms/terms_state.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'terms_notifier.g.dart';
@@ -180,7 +181,7 @@ class TermsNotifier extends _$TermsNotifier {
   }
 
   Future<void> _handleSubmit() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.logStep(1, 4, '약관 동의 유효성 확인');
 
     // 필수 약관 체크 확인
@@ -207,7 +208,7 @@ class TermsNotifier extends _$TermsNotifier {
       isServiceTermsAgreed: state.isServiceTermsAgreed,
       isPrivacyPolicyAgreed: state.isPrivacyPolicyAgreed,
       isMarketingAgreed: state.isMarketingAgreed,
-      agreedAt: DateTime.now(),
+      agreedAt: TimeFormatter.nowInSeoul(),
     );
 
     AppLogger.logState('약관 동의 정보', {
@@ -230,7 +231,7 @@ class TermsNotifier extends _$TermsNotifier {
     // 메모리에만 저장
     final result = await _saveTermsAgreementUseCase.execute(termsAgreement);
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('약관 동의 처리', duration);
 
     AppLogger.logStep(4, 4, '약관 동의 저장 결과 처리');

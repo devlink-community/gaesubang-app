@@ -76,7 +76,7 @@ class TimeFormatter {
     DateTime startTime, {
     bool includeSeconds = true,
   }) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final difference = now.difference(startTime);
     return formatSeconds(difference.inSeconds, includeSeconds: includeSeconds);
   }
@@ -140,7 +140,7 @@ class TimeFormatter {
   ///
   /// [hours], [minutes], [seconds]를 각각 지정 가능
   static DateTime addTime({int hours = 0, int minutes = 0, int seconds = 0}) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     return now.add(Duration(hours: hours, minutes: minutes, seconds: seconds));
   }
 
@@ -152,7 +152,7 @@ class TimeFormatter {
   /// [limitMinutes] 제한 시간 (분 단위)
   /// 반환: 초과 여부
   static bool isPauseTimeExceeded(DateTime pauseTime, int limitMinutes) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final pauseDuration = now.difference(pauseTime);
     return pauseDuration.inMinutes >= limitMinutes;
   }
@@ -162,7 +162,7 @@ class TimeFormatter {
   /// [pauseTime] 일시정지 시작 시간
   /// 반환: 경과 시간 (분)
   static int getPauseElapsedMinutes(DateTime pauseTime) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final pauseDuration = now.difference(pauseTime);
     return pauseDuration.inMinutes;
   }

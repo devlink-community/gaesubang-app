@@ -1,6 +1,7 @@
 // lib/group/data/repository_impl/group_repository_impl.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/data/data_source/group_data_source.dart';
 import 'package:devlink_mobile_app/group/data/dto/attendance_dto.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_dto.dart';
@@ -363,7 +364,7 @@ class GroupRepositoryImpl implements GroupRepository {
   }) async {
     try {
       // 타임스탬프가 없으면 현재 시간 사용
-      final actualTimestamp = timestamp ?? DateTime.now();
+      final actualTimestamp = timestamp ?? TimeFormatter.nowInSeoul();
 
       // DataSource에서 직접 타이머 활동 기록
       await _dataSource.recordTimerActivityWithTimestamp(
@@ -457,7 +458,7 @@ class GroupRepositoryImpl implements GroupRepository {
       }
 
       // 6. 현재 월 확인
-      final now = DateTime.now();
+      final now = TimeFormatter.nowInSeoul();
       final isCurrentMonth = (year == now.year && month == now.month);
 
       // 7. 멤버의 timerMonthlyDurations와 timerTodayDuration으로 데이터 보완
@@ -663,7 +664,7 @@ class GroupRepositoryImpl implements GroupRepository {
     }
 
     // 캐시 만료 확인
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final cacheAge = now.difference(cachedTime).inMinutes;
     if (cacheAge > _maxCacheAgeMinutes) {
       // 캐시 삭제
@@ -685,7 +686,7 @@ class GroupRepositoryImpl implements GroupRepository {
   @override
   void cacheGroupMembers(String groupId, List<GroupMember> members) {
     _memberCache[groupId] = List.from(members);
-    _memberCacheTimestamp[groupId] = DateTime.now();
+    _memberCacheTimestamp[groupId] = TimeFormatter.nowInSeoul();
 
     AppLogger.debug(
       '그룹 멤버 정보 캐시됨: $groupId (${members.length}명)',

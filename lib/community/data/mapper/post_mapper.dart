@@ -19,7 +19,7 @@ extension PostDtoMapper on PostDto {
       authorPosition: authorPosition ?? '',
       userProfileImageUrl: userProfileImage ?? '',
       boardType: BoardType.free, // 기본값
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       hashTags: hashTags ?? [],
       imageUrls: mediaUrls ?? [],
       likeCount: likeCount ?? 0,
@@ -39,7 +39,7 @@ extension PostCommentDtoMapper on PostCommentDto {
       userName: userName ?? 'Unknown User',
       userProfileImage: userProfileImage ?? '',
       text: text ?? '',
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       likeCount: likeCount ?? 0,
       isLikedByCurrentUser: isLikedByCurrentUser ?? false,
     );
@@ -52,7 +52,7 @@ extension PostLikeDtoMapper on PostLikeDto {
     return Like(
       userId: userId ?? '',
       userName: userName ?? 'Unknown User',
-      timestamp: timestamp ?? DateTime.now(),
+      timestamp: timestamp ?? TimeFormatter.nowInSeoul(),
     );
   }
 }

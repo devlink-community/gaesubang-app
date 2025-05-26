@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/utils/app_logger.dart';
@@ -45,7 +46,7 @@ class QuizNotifier extends _$QuizNotifier {
   }
 
   Future<void> _loadQuiz(String? skills) async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.logStep(1, 4, '퀴즈 로딩 시작');
 
@@ -69,7 +70,7 @@ class QuizNotifier extends _$QuizNotifier {
 
       // 현재 시간을 추가하여 캐시를 방지 (같은 스킬이라도 항상 새 퀴즈 요청)
       final skillWithTimestamp =
-          '$selectedSkill-${DateTime.now().millisecondsSinceEpoch}';
+          '$selectedSkill-${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}';
 
       AppLogger.info(
         '퀴즈 생성 요청: $skillWithTimestamp',
@@ -91,7 +92,7 @@ class QuizNotifier extends _$QuizNotifier {
             hasAnswered: false,
           );
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('퀴즈 생성 완료', duration);
 
           AppLogger.info(
@@ -106,7 +107,7 @@ class QuizNotifier extends _$QuizNotifier {
             hasAnswered: false,
           );
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('퀴즈 생성 실패', duration);
 
           AppLogger.error(
@@ -125,7 +126,7 @@ class QuizNotifier extends _$QuizNotifier {
           break;
       }
     } catch (e, stack) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('퀴즈 생성 예외 발생', duration);
 
       AppLogger.error(

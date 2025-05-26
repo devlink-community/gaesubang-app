@@ -1,4 +1,5 @@
 // lib/group/presentation/group_detail/group_detail_state.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -66,7 +67,7 @@ class GroupDetailState with _$GroupDetailState {
     }
 
     // 5분 이상 업데이트가 없으면 비정상으로 간주
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final timeSinceLastUpdate = now.difference(lastStreamUpdateTime!);
     return timeSinceLastUpdate.inMinutes < 5;
   }

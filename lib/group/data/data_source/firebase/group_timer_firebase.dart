@@ -666,7 +666,7 @@ class GroupTimerFirebase {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.start,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -677,7 +677,7 @@ class GroupTimerFirebase {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.pause,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -688,7 +688,7 @@ class GroupTimerFirebase {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.resume,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -699,7 +699,7 @@ class GroupTimerFirebase {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.end,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 

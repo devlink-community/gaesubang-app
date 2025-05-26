@@ -16,7 +16,7 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
     try {
       final testUser =
           'testUser'; // NotificationNotifier의 _currentUserId와 일치해야 함
-      final now = DateTime.now();
+      final now = TimeFormatter.nowInSeoul();
 
       // 다양한 날짜의 알림 생성
       final notifications = [

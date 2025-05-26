@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:devlink_mobile_app/ai_assistance/module/ai_client_di.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_stream_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/chat/get_group_messages_use_case.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/chat/mark_messages_as_read_use_case.dart';
@@ -116,7 +117,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
       state = state.copyWith(
         activeBotType: botType,
         isBotActive: true,
-        lastBotInteraction: DateTime.now(),
+        lastBotInteraction: TimeFormatter.nowInSeoul(),
         botResponseStatus: const AsyncValue.data(null),
       );
       AppLogger.info('봇 활성화: ${botType.displayName}', tag: 'GroupChatNotifier');
@@ -157,7 +158,7 @@ class GroupChatNotifier extends _$GroupChatNotifier {
 
       state = state.copyWith(
         botResponseStatus: const AsyncValue.data(null),
-        lastBotInteraction: DateTime.now(),
+        lastBotInteraction: TimeFormatter.nowInSeoul(),
         botMessageHistory: updatedHistory,
       );
 

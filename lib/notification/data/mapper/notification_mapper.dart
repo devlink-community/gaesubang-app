@@ -10,7 +10,7 @@ extension NotificationDtoMapper on NotificationDto {
       type: _mapTypeStringToEnum(type),
       targetId: targetId ?? '',
       senderName: senderName ?? '',
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       isRead: isRead ?? false,
       description: description,
       imageUrl: imageUrl,

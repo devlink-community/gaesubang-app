@@ -12,7 +12,7 @@ extension GroupChatMessageDtoMapper on GroupChatMessageDto {
       senderId: senderId ?? '',
       senderName: senderName ?? '',
       senderImage: senderImage,
-      timestamp: timestamp ?? DateTime.now(),
+      timestamp: timestamp ?? TimeFormatter.nowInSeoul(),
       isRead: isRead ?? false,
     );
   }
