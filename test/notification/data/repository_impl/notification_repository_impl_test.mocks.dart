@@ -7,8 +7,6 @@ import 'dart:async' as _i3;
 
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart'
     as _i2;
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart'
-    as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -35,14 +33,12 @@ class MockNotificationDataSource extends _i1.Mock
   }
 
   @override
-  _i3.Future<List<_i4.NotificationDto>> fetchNotifications(String? userId) =>
+  _i3.Future<List<dynamic>> fetchNotifications(String? userId) =>
       (super.noSuchMethod(
             Invocation.method(#fetchNotifications, [userId]),
-            returnValue: _i3.Future<List<_i4.NotificationDto>>.value(
-              <_i4.NotificationDto>[],
-            ),
+            returnValue: _i3.Future<List<dynamic>>.value(<dynamic>[]),
           )
-          as _i3.Future<List<_i4.NotificationDto>>);
+          as _i3.Future<List<dynamic>>);
 
   @override
   _i3.Future<bool> markAsRead(String? userId, String? notificationId) =>
