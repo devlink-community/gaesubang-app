@@ -805,7 +805,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '함께 성장하는 ${user.position}입니다!',
+                          '함께 성장하는 ${user.position?.isNotEmpty == true ? user.position : '개발자'}입니다!',
                           style: AppTextStyles.body2Regular.copyWith(
                             color: AppColorStyles.textPrimary,
                           ),
