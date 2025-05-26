@@ -10,11 +10,35 @@ extension NotificationDtoMapper on NotificationDto {
       type: _mapTypeStringToEnum(type),
       targetId: targetId ?? '',
       senderName: senderName ?? '',
+      senderId: _extractSafeSenderId(), // 안전한 senderId 추출
       createdAt: createdAt ?? DateTime.now(),
       isRead: isRead ?? false,
       description: description,
       imageUrl: imageUrl,
     );
+  }
+
+  /// 안전한 senderId 추출 로직
+  /// 1. DTO의 senderId 필드 확인
+  /// 2. 값이 유효하면 trim해서 반환
+  /// 3. 없거나 비어있으면 null 반환 (AppNotification.safeSenderId에서 fallback 처리)
+  String? _extractSafeSenderId() {
+    // DTO의 senderId 필드 확인
+    if (senderId != null && senderId!.trim().isNotEmpty) {
+      final trimmedSenderId = senderId!.trim();
+
+      // 'unknown' 같은 무의미한 값 필터링
+      if (trimmedSenderId != 'unknown' &&
+          trimmedSenderId != 'null' &&
+          trimmedSenderId != userId) {
+        // userId와 같으면 의미없음
+        return trimmedSenderId;
+      }
+    }
+
+    // 유효한 senderId가 없으면 null 반환
+    // AppNotification.safeSenderId에서 userId로 fallback 처리됨
+    return null;
   }
 
   NotificationType _mapTypeStringToEnum(String? typeStr) {
@@ -42,6 +66,7 @@ extension NotificationModelMapper on AppNotification {
       type: type.name,
       targetId: targetId,
       senderName: senderName,
+      senderId: senderId, // senderId 필드 추가
       createdAt: createdAt,
       isRead: isRead,
       description: description,

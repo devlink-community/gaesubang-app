@@ -12,6 +12,7 @@ import 'package:devlink_mobile_app/community/presentation/community_search/commu
 import 'package:devlink_mobile_app/community/presentation/community_write/community_write_screen_root.dart';
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/layout/main_shell.dart';
+import 'package:devlink_mobile_app/core/service/global_navigation_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/stream_listenable.dart';
 import 'package:devlink_mobile_app/group/presentation/group_attendance/attendance_screen_root.dart';
@@ -74,7 +75,11 @@ GoRouter appRouter(Ref ref) {
     tag: 'Router',
   );
 
-  return GoRouter(
+  // GoRouter 인스턴스 생성
+  final router = GoRouter(
+    // 글로벌 네비게이션을 위한 NavigatorKey 설정
+    navigatorKey: GlobalNavigationService.navigatorKey,
+
     initialLocation: '/',
     debugLogDiagnostics: kDebugMode,
     // 인증 상태 변경만 감시
@@ -291,7 +296,7 @@ GoRouter appRouter(Ref ref) {
         return '/login';
       }
 
-      // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리다이렉션
+      // 6. 인증된 사용자가 로그인/회원가입 페이지 접근 시 홈으로 리디렉션
       if (isAuthenticated && isPublicPath) {
         AppLogger.info('인증된 사용자가 인증 페이지 접근 시도', tag: 'Router');
         AppLogger.navigation('인증된 사용자 리다이렉트: $currentPath → /home');
@@ -315,4 +320,11 @@ GoRouter appRouter(Ref ref) {
       );
     },
   );
+
+  // GoRouter 인스턴스를 글로벌 네비게이션 서비스에 등록
+  GlobalNavigationService().setRouter(router);
+
+  AppLogger.info('GoRouter 생성 및 글로벌 네비게이션 서비스 등록 완료', tag: 'Router');
+
+  return router;
 }

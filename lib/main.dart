@@ -1,4 +1,4 @@
-// lib/main.dart - 간단한 ErrorApp 구현
+// lib/main.dart - 간소화된 버전
 
 import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/app_initialization_service.dart';
@@ -14,21 +14,15 @@ void main() async {
 
   // 로거 초기화 (가장 먼저)
   AppLogger.initialize();
-  
-  AppLogger.info(
-    'Flutter 바인딩 초기화 완료',
-    tag: 'AppInit',
-  );
+
+  AppLogger.info('Flutter 바인딩 초기화 완료', tag: 'AppInit');
 
   try {
     // 앱 초기화 (Firebase, FCM, 기타 서비스)
     AppLogger.logStep(1, 3, '앱 서비스 초기화 시작');
     await AppInitializationService.initialize();
-    
-    AppLogger.info(
-      '앱 초기화 서비스 완료',
-      tag: 'AppInit',
-    );
+
+    AppLogger.info('앱 초기화 서비스 완료', tag: 'AppInit');
 
     // API 로깅 초기화 (필요시)
     AppLogger.logStep(2, 3, 'API 로깅 시스템 초기화');
@@ -37,9 +31,8 @@ void main() async {
     // 앱 실행
     AppLogger.logStep(3, 3, '앱 실행 시작');
     AppLogger.logBanner('개수방 앱 시작! 🚀');
-    
+
     runApp(const ProviderScope(child: MyApp()));
-    
   } catch (e, st) {
     AppLogger.severe(
       '앱 초기화 중 치명적 오류 발생',
@@ -47,7 +40,7 @@ void main() async {
       error: e,
       stackTrace: st,
     );
-    
+
     // 앱 초기화 실패 시에도 기본 앱은 실행하되, 오류 상태 표시
     runApp(const ProviderScope(child: ErrorApp()));
   }
@@ -57,17 +50,10 @@ void main() async {
 void _initializeApiLogging() {
   try {
     ApiCallLogger.printStats();
-    
-    AppLogger.info(
-      'API 로깅 초기화 완료',
-      tag: 'ApiLogging',
-    );
+
+    AppLogger.info('API 로깅 초기화 완료', tag: 'ApiLogging');
   } catch (e) {
-    AppLogger.error(
-      'API 로깅 초기화 실패',
-      tag: 'ApiLogging',
-      error: e,
-    );
+    AppLogger.error('API 로깅 초기화 실패', tag: 'ApiLogging', error: e);
   }
 }
 
@@ -76,10 +62,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    AppLogger.debug(
-      'MyApp 빌드 시작',
-      tag: 'AppWidget',
-    );
+    AppLogger.debug('MyApp 빌드 시작', tag: 'AppWidget');
 
     final router = ref.watch(appRouterProvider);
 
@@ -129,14 +112,11 @@ class ErrorApp extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     '다음 단계를 따라주세요',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.red.shade600,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // 단계별 안내
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -161,9 +141,9 @@ class ErrorApp extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // 추가 안내
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -225,10 +205,7 @@ class ErrorApp extends StatelessWidget {
         Expanded(
           child: Text(
             description,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
         ),
       ],
