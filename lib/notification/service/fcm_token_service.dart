@@ -232,20 +232,8 @@ class FCMTokenService {
         return 'unknown_platform_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}';
       }
     } catch (e) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-      AppLogger.error(
-        '디바이스 ID 가져오기 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
-      return 'fallback_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}';
-=======
-=======
->>>>>>> 20e739d84ba2475c588596eb7d346e90bc88e2f4
       AppLogger.error('디바이스 ID 가져오기 실패', tag: 'FCMTokenService', error: e);
       return 'fallback_${DateTime.now().millisecondsSinceEpoch}';
->>>>>>> cca5021 (fix: token ios 추가 사항 반영 완료)
     }
   }
 
@@ -629,19 +617,10 @@ class FCMTokenService {
       // 5. 리스너 상태
       AppLogger.info(
         '5. 토큰 갱신 리스너 설정됨: $_isTokenRefreshListenerSetup',
-<<<<<<< HEAD
-<<<<<<< HEAD
         tag: 'FCMDiagnosis',
       );
     } catch (e) {
-      AppLogger.error(
-        '진단 중 오류 발생',
-=======
->>>>>>> cca5021 (fix: token ios 추가 사항 반영 완료)
-=======
->>>>>>> 20e739d84ba2475c588596eb7d346e90bc88e2f4
-        tag: 'FCMDiagnosis',
-      );
+      AppLogger.error('진단 중 오류 발생', tag: 'FCMDiagnosis');
     } catch (e) {
       AppLogger.error('진단 중 오류 발생', tag: 'FCMDiagnosis', error: e);
     }

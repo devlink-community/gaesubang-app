@@ -1,14 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 // lib/core/service/app_initialization_service.dart
-=======
 import 'dart:io';
 
->>>>>>> f4e8711 (fix: ios 초기화 상태 확인)
-=======
-import 'dart:io';
-
->>>>>>> 20e739d84ba2475c588596eb7d346e90bc88e2f4
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';

@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
-=======
->>>>>>> 20e739d84ba2475c588596eb7d346e90bc88e2f4
 import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 
