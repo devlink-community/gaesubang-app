@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:devlink_mobile_app/core/auth/auth_state.dart';
 import 'package:devlink_mobile_app/core/config/app_config.dart';
@@ -15,6 +16,7 @@ import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:devlink_mobile_app/core/service/global_navigation_service.dart';
@@ -38,6 +40,9 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   // 마지막으로 토큰을 등록한 사용자 ID (중복 방지)
   String? _lastRegisteredUserId;
+
+  /// 지연된 토큰 등록 스케줄링 (한 번만 실행)
+  bool _hasScheduledRetry = false; // 중복 방지 플래그
 
   String? get _currentUserId {
     AppLogger.debug('_currentUserId 호출됨', tag: 'NotificationAuth');
@@ -246,7 +251,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
   /// FCM 토큰 등록 (중복 방지)
   Future<void> _registerFCMTokenIfNeeded(String userId) async {
-    // 이미 등록된 사용자인 경우 스킵
+    // 이미 등록된 사용자인 경우 스킵 (기존 코드 유지)
     if (_lastRegisteredUserId == userId) {
       AppLogger.debug('이미 등록된 사용자 - FCM 토큰 등록 스킵', tag: 'FCMToken');
       return;
@@ -255,7 +260,7 @@ class NotificationNotifier extends _$NotificationNotifier {
     try {
       AppLogger.info('FCM 토큰 등록 시작', tag: 'FCMToken');
 
-      // 1. 권한 확인
+      // 1. 권한 확인 (기존 코드 유지)
       final hasPermission = await _fcmTokenService.hasNotificationPermission();
       if (!hasPermission) {
         AppLogger.warning('FCM 권한이 없음 - 권한 요청', tag: 'FCMToken');
@@ -266,16 +271,84 @@ class NotificationNotifier extends _$NotificationNotifier {
         }
       }
 
-      // 2. 토큰 등록
+      // ✅ iOS 전용: APNs 토큰 상태 확인 (새로 추가된 부분)
+      if (Platform.isIOS) {
+        final apnsReady = await _checkAPNsReadinessForRegistration();
+        if (!apnsReady) {
+          AppLogger.warning('APNs 토큰이 준비되지 않아 토큰 등록을 지연합니다', tag: 'FCMToken');
+
+          // 5초 후 재시도 스케줄링 (한 번만)
+          _scheduleDelayedTokenRegistration(userId);
+          return;
+        }
+      }
+
+      // 2. 토큰 등록 (기존 코드 유지)
       await _fcmTokenService.registerDeviceToken(userId);
 
-      // 3. 등록 완료 마킹
+      // 3. 등록 완료 마킹 (기존 코드 유지)
       _lastRegisteredUserId = userId;
 
       AppLogger.info('FCM 토큰 등록 완료', tag: 'FCMToken');
     } catch (e) {
       AppLogger.error('FCM 토큰 등록 실패', tag: 'FCMToken', error: e);
     }
+  }
+
+  /// iOS APNs 토큰 등록 준비 상태 확인
+  Future<bool> _checkAPNsReadinessForRegistration() async {
+    try {
+      AppLogger.debug('iOS APNs 등록 준비 상태 확인', tag: 'FCMToken');
+
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+
+      if (apnsToken != null) {
+        AppLogger.debug('APNs 토큰 등록 준비됨', tag: 'FCMToken');
+        return true;
+      } else {
+        AppLogger.debug('APNs 토큰 아직 준비 안됨', tag: 'FCMToken');
+        return false;
+      }
+    } catch (e) {
+      AppLogger.debug('APNs 상태 확인 실패: $e', tag: 'FCMToken');
+      return false;
+    }
+  }
+
+  void _scheduleDelayedTokenRegistration(String userId) {
+    if (_hasScheduledRetry) {
+      AppLogger.debug('이미 지연 등록이 스케줄됨 - 중복 방지', tag: 'FCMToken');
+      return;
+    }
+
+    _hasScheduledRetry = true;
+
+    AppLogger.info('5초 후 FCM 토큰 등록 재시도 스케줄됨', tag: 'FCMToken');
+
+    Future.delayed(const Duration(seconds: 5), () async {
+      try {
+        AppLogger.info('지연된 FCM 토큰 등록 시도', tag: 'FCMToken');
+
+        // APNs 상태 재확인
+        if (Platform.isIOS) {
+          final apnsReady = await _checkAPNsReadinessForRegistration();
+          if (!apnsReady) {
+            AppLogger.warning('지연 등록 시에도 APNs 토큰이 준비되지 않음', tag: 'FCMToken');
+            return;
+          }
+        }
+
+        // 토큰 등록 시도
+        await _fcmTokenService.registerDeviceToken(userId);
+        _lastRegisteredUserId = userId;
+
+        AppLogger.info('지연된 FCM 토큰 등록 성공', tag: 'FCMToken');
+      } catch (e) {
+        AppLogger.error('지연된 FCM 토큰 등록 실패', tag: 'FCMToken', error: e);
+      } finally {
+        _hasScheduledRetry = false; // 플래그 리셋
+      }
+    });
   }
 
   /// 초기 인증 상태를 확인하고 필요시 알림을 로딩
