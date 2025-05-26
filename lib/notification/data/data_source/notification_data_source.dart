@@ -1,4 +1,4 @@
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
+import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 
 abstract interface class NotificationDataSource {
   /// 알림 목록 조회
