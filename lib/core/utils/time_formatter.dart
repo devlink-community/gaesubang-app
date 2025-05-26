@@ -321,7 +321,7 @@ class TimeFormatter {
       return endDateOnly.difference(startDateOnly).inDays;
     } catch (e) {
       print('날짜 차이 계산 오류: $e');
-      return 1; // 기본값
+      return 0; // 기본값
     }
   }
 
