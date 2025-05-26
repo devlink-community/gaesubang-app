@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/auth/presentation/signup/signup_notifier.dart
 import 'package:devlink_mobile_app/auth/presentation/signup/signup_screen.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/onboarding/presentation/onboarding_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -22,6 +23,28 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
   @override
   void initState() {
     super.initState();
+  }
+
+  /// 🆕 개선된 온보딩 상태 리셋 메서드 (OnboardingNotifier의 새 메서드 사용)
+  Future<void> _resetOnboardingForNewUser() async {
+    try {
+      AppLogger.info('회원가입 후 신규 사용자 온보딩 초기화 시작', tag: 'SignupScreenRoot');
+      
+      // OnboardingNotifier의 새로운 resetOnboardingForNewUser 메서드 호출
+      final onboardingNotifier = ref.read(onboardingNotifierProvider.notifier);
+      await onboardingNotifier.resetOnboardingForNewUser();
+      
+      AppLogger.info('신규 사용자 온보딩 초기화 완료', tag: 'SignupScreenRoot');
+    } catch (e) {
+      AppLogger.error(
+        '신규 사용자 온보딩 초기화 실패',
+        tag: 'SignupScreenRoot',
+        error: e,
+      );
+      
+      // 실패해도 계속 진행 (온보딩 화면에서 다시 시도 가능)
+      AppLogger.warning('온보딩 초기화 실패했지만 온보딩 화면으로 이동 계속 진행');
+    }
   }
 
   @override
@@ -44,20 +67,48 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
         // 성공 메시지를 SnackBar로 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('회원가입이 완료되었습니다. 환영합니다!'),
+            content: const Text('회원가입이 완료되었습니다! 권한 설정을 진행해주세요.'),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: '확인',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
 
-        // 🔥 가장 간단하고 확실한 방법: 충분한 시간 대기 후 이동
-        // 라우터의 authStateChanges가 업데이트되기까지 기다림
-        Future.delayed(const Duration(seconds: 3), () {
+        // 🔥 개선된 온보딩 상태 리셋 후 온보딩 화면으로 이동
+        _resetOnboardingForNewUser().then((_) {
           if (mounted) {
-            AppLogger.info('3초 대기 후 홈으로 이동', tag: 'SignupScreenRoot');
-            context.go('/home');
+            AppLogger.info('회원가입 완료 후 온보딩 화면으로 이동', tag: 'SignupScreenRoot');
+            
+            // 상태 업데이트 완료 후 온보딩 화면으로 이동
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                // pushReplacement를 사용하여 뒤로가기 시 회원가입 화면으로 돌아가지 않도록 함
+                context.pushReplacement('/onboarding');
+              }
+            });
+          }
+        }).catchError((error) {
+          // 온보딩 초기화 실패해도 온보딩 화면으로 이동
+          AppLogger.error(
+            '온보딩 초기화 실패했지만 온보딩 화면으로 이동 계속',
+            tag: 'SignupScreenRoot',
+            error: error,
+          );
+          
+          if (mounted) {
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                context.pushReplacement('/onboarding');
+              }
+            });
           }
         });
       } else if (next.hasError) {
@@ -86,7 +137,14 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
             backgroundColor: Colors.red.shade800,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: '확인',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }
@@ -110,7 +168,14 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
               backgroundColor: Colors.orange.shade800,
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 2),
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: '확인',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
             ),
           );
         }
@@ -122,7 +187,7 @@ class _SignupScreenRootState extends ConsumerState<SignupScreenRoot> {
       onAction: (action) async {
         switch (action) {
           case NavigateToLogin():
-            context.go('/');
+            context.go('/login');
 
           case NavigateToTerms():
             // 약관 화면으로 이동하고 결과 받기 (true = 약관 동의 완료)
