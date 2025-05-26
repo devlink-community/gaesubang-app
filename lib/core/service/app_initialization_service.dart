@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 // lib/core/service/app_initialization_service.dart
+=======
+import 'dart:io';
+
+>>>>>>> f4e8711 (fix: ios 초기화 상태 확인)
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
@@ -6,6 +11,7 @@ import 'package:devlink_mobile_app/firebase_options.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 
 /// 앱 초기화를 담당하는 서비스
@@ -62,11 +68,7 @@ class AppInitializationService {
       // 앱 설정 정보 출력
       AppConfig.printConfig();
     } catch (e) {
-      AppLogger.error(
-        'Firebase 초기화 실패',
-        tag: 'Firebase',
-        error: e,
-      );
+      AppLogger.error('Firebase 초기화 실패', tag: 'Firebase', error: e);
       rethrow;
     }
   }
@@ -76,30 +78,52 @@ class AppInitializationService {
     try {
       AppLogger.logStep(2, 3, 'FCM 서비스 초기화 시작');
 
-      // FCM 서비스 초기화
+      // FCM 서비스 초기화 (기존 코드 유지)
       final fcmService = FCMService();
       await fcmService.initialize();
 
-      // 권한 상태 확인
+      // ✅ iOS 전용: 초기화 결과 간단 확인 (새로 추가된 부분)
+      if (Platform.isIOS) {
+        await _quickIOSFCMCheck(fcmService);
+      }
+
+      // 권한 상태 확인 (기존 코드 유지)
       final fcmTokenService = FCMTokenService();
       final hasPermission = await fcmTokenService.hasNotificationPermission();
       AppLogger.info('FCM 권한 상태: $hasPermission', tag: 'FCM');
 
       if (!hasPermission) {
-        AppLogger.warning(
-          'FCM 권한이 없습니다. 로그인 후 권한을 요청합니다',
-          tag: 'FCM',
-        );
+        AppLogger.warning('FCM 권한이 없습니다. 로그인 후 권한을 요청합니다', tag: 'FCM');
       }
 
       AppLogger.info('FCM 서비스 초기화 완료', tag: 'FCM');
     } catch (e) {
-      AppLogger.error(
-        'FCM 서비스 초기화 실패',
-        tag: 'FCM',
-        error: e,
-      );
-      // FCM 실패가 앱 전체를 중단시키지 않도록 함
+      AppLogger.error('FCM 서비스 초기화 실패', tag: 'FCM', error: e);
+      // FCM 실패가 앱 전체를 중단시키지 않도록 함 (기존 코드 유지)
+    }
+  }
+
+  static Future<void> _quickIOSFCMCheck(FCMService fcmService) async {
+    try {
+      // APNs 토큰 확인
+      final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+
+      if (apnsToken != null) {
+        AppLogger.info('✅ iOS APNs 토큰 준비됨', tag: 'FCM');
+      } else {
+        AppLogger.warning('⚠️ iOS APNs 토큰 아직 없음 (나중에 준비될 예정)', tag: 'FCM');
+      }
+
+      // FCM 토큰 확인 (빠른 체크)
+      final fcmToken = await fcmService.getToken();
+      if (fcmToken != null) {
+        AppLogger.info('✅ iOS FCM 토큰 준비됨', tag: 'FCM');
+      } else {
+        AppLogger.warning('⚠️ iOS FCM 토큰 준비 안됨', tag: 'FCM');
+      }
+    } catch (e) {
+      AppLogger.debug('iOS FCM 상태 확인 중 오류 (무시됨): $e', tag: 'FCM');
+      // 에러는 무시 - 중요하지 않음
     }
   }
 
@@ -117,11 +141,7 @@ class AppInitializationService {
 
       AppLogger.info('기타 서비스 초기화 완료', tag: 'AppInit');
     } catch (e) {
-      AppLogger.error(
-        '기타 서비스 초기화 실패',
-        tag: 'AppInit',
-        error: e,
-      );
+      AppLogger.error('기타 서비스 초기화 실패', tag: 'AppInit', error: e);
       // 기타 서비스 실패가 앱 전체를 중단시키지 않도록 함
     }
   }
@@ -137,21 +157,13 @@ class AppInitializationService {
       await NaverMapSdk.instance.initialize(
         clientId: naverMapClientId,
         onAuthFailed: (ex) {
-          AppLogger.error(
-            '네이버맵 인증오류',
-            tag: 'NaverMap',
-            error: ex,
-          );
+          AppLogger.error('네이버맵 인증오류', tag: 'NaverMap', error: ex);
         },
       );
 
       AppLogger.info('네이버맵 초기화 완료', tag: 'NaverMap');
     } catch (e) {
-      AppLogger.error(
-        '네이버맵 초기화 실패',
-        tag: 'NaverMap',
-        error: e,
-      );
+      AppLogger.error('네이버맵 초기화 실패', tag: 'NaverMap', error: e);
     }
   }
 
@@ -173,11 +185,7 @@ class AppInitializationService {
 
       AppLogger.logBanner('FCM 상태 진단 완료');
     } catch (e) {
-      AppLogger.error(
-        'FCM 상태 진단 실패',
-        tag: 'FCM',
-        error: e,
-      );
+      AppLogger.error('FCM 상태 진단 실패', tag: 'FCM', error: e);
     }
   }
 }
