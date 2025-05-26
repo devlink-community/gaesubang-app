@@ -146,3 +146,7 @@ firebase-debug.log.DS_Store
 ios/Podfile
 ios/Runner.xcodeproj/project.pbxproj
 ios/.DS_Store
+
+
+# test 폴더 전체 무시
+/test/

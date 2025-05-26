@@ -1,4 +1,4 @@
-// lib/main.dart - 간소화된 버전
+// lib/main.dart - 간단한 ErrorApp 구현
 
 import 'package:devlink_mobile_app/core/router/app_router.dart';
 import 'package:devlink_mobile_app/core/service/app_initialization_service.dart';
@@ -15,14 +15,20 @@ void main() async {
   // 로거 초기화 (가장 먼저)
   AppLogger.initialize();
 
-  AppLogger.info('Flutter 바인딩 초기화 완료', tag: 'AppInit');
+  AppLogger.info(
+    'Flutter 바인딩 초기화 완료',
+    tag: 'AppInit',
+  );
 
   try {
     // 앱 초기화 (Firebase, FCM, 기타 서비스)
     AppLogger.logStep(1, 3, '앱 서비스 초기화 시작');
     await AppInitializationService.initialize();
 
-    AppLogger.info('앱 초기화 서비스 완료', tag: 'AppInit');
+    AppLogger.info(
+      '앱 초기화 서비스 완료',
+      tag: 'AppInit',
+    );
 
     // API 로깅 초기화 (필요시)
     AppLogger.logStep(2, 3, 'API 로깅 시스템 초기화');
@@ -51,9 +57,16 @@ void _initializeApiLogging() {
   try {
     ApiCallLogger.printStats();
 
-    AppLogger.info('API 로깅 초기화 완료', tag: 'ApiLogging');
+    AppLogger.info(
+      'API 로깅 초기화 완료',
+      tag: 'ApiLogging',
+    );
   } catch (e) {
-    AppLogger.error('API 로깅 초기화 실패', tag: 'ApiLogging', error: e);
+    AppLogger.error(
+      'API 로깅 초기화 실패',
+      tag: 'ApiLogging',
+      error: e,
+    );
   }
 }
 
@@ -62,7 +75,10 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    AppLogger.debug('MyApp 빌드 시작', tag: 'AppWidget');
+    AppLogger.debug(
+      'MyApp 빌드 시작',
+      tag: 'AppWidget',
+    );
 
     final router = ref.watch(appRouterProvider);
 

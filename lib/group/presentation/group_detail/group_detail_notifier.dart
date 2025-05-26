@@ -103,7 +103,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     bool updateSummary = false, // Summary 업데이트 여부 플래그
   }) async {
     try {
-      final currentTime = timestamp ?? DateTime.now();
+      final currentTime = timestamp ?? TimeFormatter.nowInSeoul();
       final currentElapsed = elapsedSeconds ?? state.elapsedSeconds;
 
       AppLogger.info(
@@ -411,7 +411,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   Future<void> _handleStartTimer() async {
     if (state.timerStatus == TimerStatus.running) return;
 
-    _localTimerStartTime = DateTime.now();
+    _localTimerStartTime = TimeFormatter.nowInSeoul();
 
     state = state.copyWith(
       timerStatus: TimerStatus.running,
@@ -496,7 +496,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
 
     // 새로운 세션 시작 시간은 현재로 설정하되
     // elapsedSeconds는 그대로 유지
-    _localTimerStartTime = DateTime.now();
+    _localTimerStartTime = TimeFormatter.nowInSeoul();
 
     // 서버 상태 업데이트
     _updateCurrentUserInMemberList(
@@ -796,7 +796,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
             () => state.copyWith(
               groupMembersResult: AsyncData(mergedMembers),
               streamConnectionStatus: StreamConnectionStatus.connected,
-              lastStreamUpdateTime: DateTime.now(),
+              lastStreamUpdateTime: TimeFormatter.nowInSeoul(),
               errorMessage: null,
               reconnectionAttempts: 0,
             ),
@@ -904,7 +904,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     final int elapsedSeconds =
         timerElapsed ??
         (isActive && timerStartTime != null
-            ? DateTime.now().difference(timerStartTime).inSeconds
+            ? TimeFormatter.nowInSeoul().difference(timerStartTime).inSeconds
             : 0);
 
     final updatedMembers =
@@ -1143,7 +1143,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     // 1. 활성 상태인 경우 처리
     if (currentUserMember.timerState.isActive &&
         currentUserMember.timerStartAt != null) {
-      final elapsedTime = DateTime.now().difference(
+      final elapsedTime = TimeFormatter.nowInSeoul().difference(
         currentUserMember.timerStartAt!,
       );
 
@@ -1260,7 +1260,7 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
     }
 
     // 서버 비정상 종료는 알림 없음, 화면 내 메시지만 표시
-    final elapsedTime = DateTime.now().difference(lastActiveTime);
+    final elapsedTime = TimeFormatter.nowInSeoul().difference(lastActiveTime);
     final elapsedHours = elapsedTime.inHours;
     final elapsedMinutes = elapsedTime.inMinutes % 60;
 
@@ -1406,7 +1406,8 @@ class GroupDetailNotifier extends _$GroupDetailNotifier {
   // 날짜 변경 처리 - 수정
   Future<void> _handleDateChange() async {
     // 중복 처리 방지
-    final dateKey = 'date_change_${TimeFormatter.formatDate(DateTime.now())}';
+    final dateKey =
+        'date_change_${TimeFormatter.formatDate(TimeFormatter.nowInSeoul())}';
     if (_lastProcessedActivityKey == dateKey) {
       AppLogger.warning(
         '이미 처리된 날짜 변경 이벤트: $dateKey',

@@ -1,5 +1,6 @@
 // lib/group/domain/usecase/record_timer_activity_use_case.dart
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
 import 'package:devlink_mobile_app/group/domain/repository/group_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -20,7 +21,7 @@ class RecordTimerActivityUseCase {
     final result = await _repository.recordTimerActivityWithTimestamp(
       groupId,
       activityType,
-      DateTime.now(), // 현재 시간 사용
+      TimeFormatter.nowInSeoul(), // 현재 시간 사용
     );
 
     return switch (result) {

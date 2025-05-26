@@ -1,4 +1,5 @@
 // lib/group/data/mapper/attendance_mapper.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/data/dto/attendance_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/attendance.dart';
 
@@ -10,10 +11,16 @@ extension AttendanceDtoMapper on AttendanceDto {
     // 날짜 문자열을 DateTime으로 변환
     DateTime date;
     try {
-      date = DateTime.parse(this.date ?? '');
+      // 빈 문자열 체크 추가
+      if (this.date == null || this.date!.isEmpty) {
+        // 기본값으로 현재 시간 사용
+        date = TimeFormatter.nowInSeoul();
+      } else {
+        date = TimeFormatter.parseDate(this.date!);
+      }
     } catch (e) {
       // 기본값으로 현재 날짜 사용
-      date = DateTime.now();
+      date = TimeFormatter.nowInSeoul();
     }
 
     // 초 단위를 분 단위로 변환

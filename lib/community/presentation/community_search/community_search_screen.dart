@@ -2,7 +2,7 @@
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_state.dart';
 import 'package:devlink_mobile_app/community/presentation/components/post_list_item.dart';
-import 'package:devlink_mobile_app/core/service/search_history_item.dart';
+import 'package:devlink_mobile_app/core/service/search_history/search_history_item.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:flutter/material.dart';

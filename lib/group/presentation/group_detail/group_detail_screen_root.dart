@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/core/component/custom_alert_dialog.dart';
 import 'package:devlink_mobile_app/core/component/error_view.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_action.dart';
 import 'package:devlink_mobile_app/group/presentation/group_detail/group_detail_notifier.dart';
@@ -217,12 +218,15 @@ class _GroupDetailScreenRootState extends ConsumerState<GroupDetailScreenRoot>
     // 🔧 같은 메시지를 짧은 시간 내에 중복 표시하지 않음
     if (_lastShownStatusMessage == statusMessage &&
         _lastStatusMessageTime != null &&
-        DateTime.now().difference(_lastStatusMessageTime!).inSeconds < 5) {
+        TimeFormatter.nowInSeoul()
+                .difference(_lastStatusMessageTime!)
+                .inSeconds <
+            5) {
       return;
     }
 
     _lastShownStatusMessage = statusMessage;
-    _lastStatusMessageTime = DateTime.now();
+    _lastStatusMessageTime = TimeFormatter.nowInSeoul();
 
     AppLogger.info('상태 메시지 표시: $statusMessage', tag: 'GroupDetailRoot');
 

@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/auth/domain/repository/auth_profile_repositor
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/image_compression.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// 프로필 이미지 업데이트 UseCase
@@ -76,7 +77,7 @@ class UpdateProfileImageUseCase {
             quality: 80,
             maxFileSizeKB: 500,
             customFileName:
-                'profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                'profile_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}.jpg',
           );
 
           final int compressedSizeKB = await imageFileToUpload.length() ~/ 1024;

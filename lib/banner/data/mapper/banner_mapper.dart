@@ -1,3 +1,5 @@
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
+
 import '../../domain/model/banner.dart';
 import '../dto/banner_dto.dart';
 
@@ -10,10 +12,11 @@ extension BannerDtoMapper on BannerDto {
       linkUrl: linkUrl,
       isActive: isActive ?? false,
       displayOrder: displayOrder?.toInt() ?? 0,
-      startDate: startDate ?? DateTime.now(),
-      endDate: endDate ?? DateTime.now().add(const Duration(days: 1)),
+      startDate: startDate ?? TimeFormatter.nowInSeoul(),
+      endDate:
+          endDate ?? TimeFormatter.nowInSeoul().add(const Duration(days: 1)),
       targetAudience: targetAudience,
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
     );
   }
 }

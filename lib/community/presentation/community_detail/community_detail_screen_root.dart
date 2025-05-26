@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_notifier.dart';
 import 'package:devlink_mobile_app/community/presentation/community_detail/community_detail_screen.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/event/app_event.dart';
 import 'package:devlink_mobile_app/core/event/app_event_notifier.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class CommunityDetailScreenRoot extends ConsumerStatefulWidget {
   const CommunityDetailScreenRoot({super.key, required this.postId});
@@ -94,7 +94,7 @@ class _CommunityDetailScreenRootState
       CommentLiked(:final postId, :final commentId) =>
         'comment_liked_${postId}_$commentId',
       RefreshCommunity() =>
-        'refresh_community_${DateTime.now().millisecondsSinceEpoch}',
+        'refresh_community_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}',
     };
   }
 

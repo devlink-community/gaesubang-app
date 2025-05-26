@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'forgot_password_notifier.g.dart';
@@ -67,7 +68,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
   }
 
   Future<void> _performResetPassword() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.logStep(1, 4, '비밀번호 재설정 프로세스 시작');
 
     AppLogger.logState('비밀번호 재설정 요청 정보', {
@@ -98,7 +99,7 @@ class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
     // 이메일 주소는 그대로 전달하고 소문자 변환은 DataSource에서 처리
     final result = await _resetPasswordUseCase.execute(state.email);
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('비밀번호 재설정 프로세스', duration);
 
     AppLogger.logStep(4, 4, '비밀번호 재설정 API 응답 처리');

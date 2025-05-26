@@ -1,6 +1,6 @@
 // lib/community/presentation/community_list_search/community_search_state.dart
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
-import 'package:devlink_mobile_app/core/service/search_history_item.dart';
+import 'package:devlink_mobile_app/core/service/search_history/search_history_item.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 

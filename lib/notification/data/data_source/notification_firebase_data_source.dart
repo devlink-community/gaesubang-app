@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
+import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 
 class NotificationFirebaseDataSource implements NotificationDataSource {
   final FirebaseFirestore _firestore;

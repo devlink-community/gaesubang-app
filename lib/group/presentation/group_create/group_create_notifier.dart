@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:devlink_mobile_app/auth/domain/model/user.dart';
 import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/management/create_group_use_case.dart';
 import 'package:devlink_mobile_app/group/module/group_di.dart';
@@ -47,7 +48,7 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
           return;
         }
         final newTag = HashTag(
-          id: DateTime.now().toString(),
+          id: TimeFormatter.nowInSeoul().toString(),
           content: tag.trim(),
         );
         state = state.copyWith(hashTags: [...state.hashTags, newTag]);
@@ -231,7 +232,7 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
           state = state.copyWith(imageUploadProgress: 0.4);
 
           // 파일명 생성 (타임스탬프 + 원본 파일명)
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final timestamp = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
           final originalFileName = localPath.split('/').last;
           final fileName = '${timestamp}_$originalFileName';
 
@@ -246,7 +247,7 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
             metadata: {
               'contentType': 'image/jpeg',
               'uploadedBy': currentUser.id,
-              'uploadedAt': DateTime.now().toIso8601String(),
+              'uploadedAt': TimeFormatter.nowInSeoul().toIso8601String(),
             },
           );
 
@@ -300,7 +301,7 @@ class GroupCreateNotifier extends _$GroupCreateNotifier {
         hashTags: state.hashTags.map((tag) => tag.content).toList(),
         maxMemberCount: state.limitMemberCount,
         imageUrl: uploadedImageUrl, // 🔧 수정: 업로드된 URL 사용
-        createdAt: DateTime.now(),
+        createdAt: TimeFormatter.nowInSeoul(),
         memberCount: 1 + state.invitedMembers.length,
         isJoinedByCurrentUser: true,
         pauseTimeLimit: state.pauseTimeLimit,

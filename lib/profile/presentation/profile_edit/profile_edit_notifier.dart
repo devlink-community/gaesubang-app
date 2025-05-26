@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/auth/module/auth_di.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_action.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_edit/profile_edit_state.dart';
 import 'package:devlink_mobile_app/profile/presentation/profile_refresh_state.dart';
@@ -115,10 +116,10 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   /// 프로필 로드 - 중복 요청 방지 적용
   Future<void> _loadProfile() async {
     AppLogger.logBanner('프로필 편집 데이터 로드 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     // 중복 요청 방지를 위한 요청 ID 생성
-    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    final currentRequestId = TimeFormatter.nowInSeoul().microsecondsSinceEpoch;
     AppLogger.logState('프로필 편집 로드 요청', {
       'request_id': currentRequestId,
       'load_type': 'profile_edit',
@@ -163,7 +164,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
           activeLoadRequestId: null, // 요청 완료 후 ID 초기화
         );
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('프로필 편집 데이터 로드', duration);
         AppLogger.logBox(
           '프로필 편집 로드 완료',
@@ -223,7 +224,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   /// 닉네임 중복 확인
   Future<void> _performNicknameAvailabilityCheck() async {
     AppLogger.logStep(1, 4, '닉네임 중복 확인 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     final nickname = state.editingProfile?.nickname ?? '';
     AppLogger.logState('닉네임 중복 확인 요청', {
@@ -249,7 +250,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
       if (result case AsyncData(:final value)) {
         state = state.copyWith(nicknameCheckState: AsyncData(value));
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('닉네임 중복 확인', duration);
 
         AppLogger.logState('닉네임 중복 확인 결과', {
@@ -284,7 +285,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   /// 이미지 선택
   Future<void> _pickImage() async {
     AppLogger.debug('이미지 선택 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       final ImagePicker picker = ImagePicker();
@@ -303,7 +304,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         imageQuality: 80,
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('이미지 선택', duration);
 
       if (image != null) {
@@ -326,7 +327,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   /// 프로필 이미지 업데이트 - 중복 요청 방지 적용
   Future<void> _updateProfileImage(File imageFile) async {
     AppLogger.logBanner('프로필 이미지 업데이트 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     final currentProfile = state.editingProfile;
     if (currentProfile == null) {
@@ -335,7 +336,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
 
     // 중복 요청 방지를 위한 요청 ID 생성
-    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    final currentRequestId = TimeFormatter.nowInSeoul().microsecondsSinceEpoch;
     AppLogger.logState('프로필 이미지 업데이트 요청', {
       'request_id': currentRequestId,
       'image_path_length': imageFile.path.length,
@@ -382,7 +383,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         // 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('프로필 이미지 업데이트', duration);
         AppLogger.logBox(
           '프로필 이미지 업데이트 성공',
@@ -485,7 +486,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
   /// 프로필 저장 - 중복 요청 방지 적용
   Future<void> _saveProfile() async {
     AppLogger.logBanner('프로필 저장 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     final profile = state.editingProfile;
     if (profile == null) {
@@ -514,7 +515,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     }
 
     // 중복 요청 방지를 위한 요청 ID 생성
-    final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+    final currentRequestId = TimeFormatter.nowInSeoul().microsecondsSinceEpoch;
     AppLogger.logState('프로필 저장 요청', {
       'request_id': currentRequestId,
       'nickname': PrivacyMaskUtil.maskNickname(profile.nickname),
@@ -562,7 +563,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
         // 프로필 저장 성공 시 프로필 갱신 상태 마크
         ref.read(profileRefreshStateProvider.notifier).markForRefresh();
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('프로필 저장', duration);
         AppLogger.logBox(
           '프로필 저장 성공',

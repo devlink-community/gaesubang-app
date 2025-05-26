@@ -1,5 +1,8 @@
+// lib/core/service/search_history_service.dart
 import 'dart:convert';
+
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 검색어 데이터 모델 (단순화)
@@ -34,7 +37,7 @@ class SearchHistoryItem {
 
   /// 만료 여부 확인 (30일)
   bool get isExpired {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final expiryDuration = const Duration(days: 30);
     return now.difference(createdAt) > expiryDuration;
   }
@@ -101,7 +104,6 @@ class SearchHistoryService {
     if (searchTerm.trim().isEmpty) return;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
       final items = await _getSearchHistoryItems(category);
 
       // 기존 항목 제거 (중복 방지)
@@ -110,7 +112,7 @@ class SearchHistoryService {
       // 새 항목을 맨 앞에 추가
       final newItem = SearchHistoryItem(
         term: searchTerm,
-        createdAt: DateTime.now(),
+        createdAt: TimeFormatter.nowInSeoul(),
         category: category,
       );
       items.insert(0, newItem);

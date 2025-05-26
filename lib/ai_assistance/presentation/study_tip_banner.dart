@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -13,8 +14,9 @@ import '../module/ai_client_di.dart';
 
 // 캐시 키 생성 헬퍼 함수 - 다양성 요소 반영
 String _generateCacheKey(String? skills) {
-  final today = DateTime.now().toString().split(' ')[0]; // YYYY-MM-DD
-  final hour = DateTime.now().hour; // 시간대별 다양성 추가
+  final today =
+      TimeFormatter.nowInSeoul().toString().split(' ')[0]; // YYYY-MM-DD
+  final hour = TimeFormatter.nowInSeoul().hour; // 시간대별 다양성 추가
 
   // 스킬 처리 - 첫 번째 스킬만 사용 (Repository에서 랜덤 선택됨)
   final skillArea =
@@ -22,11 +24,11 @@ String _generateCacheKey(String? skills) {
           ?.split(',')
           .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
           .trim() ??
-          '프로그래밍 기초';
+      '프로그래밍 기초';
 
   // 스킬 첫 3글자만 사용하여 캐시 키 생성
   final skillPrefix =
-  skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
+      skillArea.length > 3 ? skillArea.substring(0, 3) : skillArea;
 
   // 시간대별 다양성 추가 (4시간 단위로 캐시 갱신)
   final timeSlot = (hour / 4).floor();
@@ -36,9 +38,9 @@ String _generateCacheKey(String? skills) {
 
 // 🔧 개선된 캐시 기반 FutureProvider - 일반 배너용
 final studyTipProvider = FutureProvider.autoDispose.family<StudyTip?, String?>((
-    ref,
-    skills,
-    ) async {
+  ref,
+  skills,
+) async {
   // 캐시 키 생성 - 시간대별 다양성 반영
   final cacheKey = _generateCacheKey(skills);
 
@@ -182,54 +184,54 @@ class StudyTipBanner extends ConsumerWidget {
               asyncStudyTip.when(
                 data:
                     (tip) =>
-                tip != null
-                    ? GestureDetector(
-                  onTap:
-                      () => _showStudyTipDetailsDialog(
-                    context,
-                    tip,
-                    skills,
-                    ref,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: 0.05,
-                          ),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                          spreadRadius: -2,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          '더보기',
-                          style: TextStyle(
-                            color: AppColorStyles.primary80,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                          ),
-                        ),
-                        Icon(
-                          Icons.play_arrow,
-                          color: AppColorStyles.primary80,
-                          size: 12,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                    : SizedBox.shrink(),
+                        tip != null
+                            ? GestureDetector(
+                              onTap:
+                                  () => _showStudyTipDetailsDialog(
+                                    context,
+                                    tip,
+                                    skills,
+                                    ref,
+                                  ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                      spreadRadius: -2,
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '더보기',
+                                      style: TextStyle(
+                                        color: AppColorStyles.primary80,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.play_arrow,
+                                      color: AppColorStyles.primary80,
+                                      size: 12,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            : SizedBox.shrink(),
                 loading: () => SizedBox.shrink(),
                 error: (_, __) => SizedBox.shrink(),
               ),
@@ -243,9 +245,9 @@ class StudyTipBanner extends ConsumerWidget {
   }
 
   Widget _buildStudyTipContent(
-      AsyncValue<StudyTip?> asyncStudyTip,
-      BuildContext context,
-      ) {
+    AsyncValue<StudyTip?> asyncStudyTip,
+    BuildContext context,
+  ) {
     return asyncStudyTip.when(
       data: (tip) {
         if (tip == null) {
@@ -328,11 +330,11 @@ class StudyTipBanner extends ConsumerWidget {
       },
       loading:
           () => const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2,
-        ),
-      ),
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          ),
       error: (error, stack) => _buildErrorState('오류: $error'),
     );
   }
@@ -383,10 +385,10 @@ class StudyTipBanner extends ConsumerWidget {
         .read(studyTipCacheProvider.notifier)
         .update(
           (state) => {
-        ...state,
-        cacheKey: newTip,
-      },
-    );
+            ...state,
+            cacheKey: newTip,
+          },
+        );
 
     // Provider 새로고침을 위해 invalidate
     ref.invalidate(studyTipProvider(skills));
@@ -399,12 +401,12 @@ class StudyTipBanner extends ConsumerWidget {
 
   // 🆕 강제 새로고침용 새로운 팁 로딩 메서드 - 캐시 우회
   Future<void> _loadNewTipWithCacheBypass(
-      BuildContext context,
-      String? skills,
-      WidgetRef ref,
-      Function(StudyTip) updateDialogContent,
-      ) async {
-    final startTime = DateTime.now();
+    BuildContext context,
+    String? skills,
+    WidgetRef ref,
+    Function(StudyTip) updateDialogContent,
+  ) async {
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.info(
       '캐시 우회 새로운 학습 팁 로딩 시작: $skills',
@@ -415,7 +417,7 @@ class StudyTipBanner extends ConsumerWidget {
     try {
       final freshTip = await ref.read(freshStudyTipProvider(skills).future);
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
       if (freshTip != null) {
         AppLogger.logPerformance('캐시 우회 StudyTip 생성 성공', duration);
@@ -429,7 +431,6 @@ class StudyTipBanner extends ConsumerWidget {
 
         // 🆕 새로운 팁을 일반 캐시에도 저장 (다음 번 일반 로딩을 위해)
         _updateHomeBannerCache(ref, freshTip, skills);
-
       } else {
         AppLogger.logPerformance('캐시 우회 StudyTip 생성 실패', duration);
 
@@ -448,7 +449,7 @@ class StudyTipBanner extends ConsumerWidget {
         }
       }
     } catch (e) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('캐시 우회 StudyTip 생성 예외', duration);
       AppLogger.error(
         '캐시 우회 StudyTip 생성 예외',
@@ -474,11 +475,11 @@ class StudyTipBanner extends ConsumerWidget {
 
   // 🔧 기존 로딩 다이얼로그와 함께 사용하는 개선된 메서드
   Future<void> _loadNewTip(
-      BuildContext context,
-      String? skills,
-      WidgetRef ref,
-      Function(StudyTip) updateDialogContent,
-      ) async {
+    BuildContext context,
+    String? skills,
+    WidgetRef ref,
+    Function(StudyTip) updateDialogContent,
+  ) async {
     // 대화상자 컨텍스트 추적을 위한 변수
     BuildContext? loadingDialogContext;
 
@@ -657,7 +658,6 @@ class StudyTipBanner extends ConsumerWidget {
 
         // 새로운 팁을 일반 캐시에도 저장
         _updateHomeBannerCache(ref, freshTip, skills);
-
       } else {
         AppLogger.warning(
           'freshStudyTipProvider에서 null 반환',
@@ -731,7 +731,7 @@ class StudyTipBanner extends ConsumerWidget {
             ?.split(',')
             .firstWhere((s) => s.trim().isNotEmpty, orElse: () => '프로그래밍 기초')
             .trim() ??
-            '프로그래밍 기초';
+        '프로그래밍 기초';
 
     AppLogger.info(
       '백업 StudyTip 생성: $skillArea',
@@ -745,18 +745,18 @@ class StudyTipBanner extends ConsumerWidget {
       content: fallbackTipData['content'] ?? '꾸준한 학습이 성공의 열쇠입니다.',
       relatedSkill: fallbackTipData['relatedSkill'] ?? skillArea,
       englishPhrase:
-      fallbackTipData['englishPhrase'] ?? 'Practice makes perfect.',
+          fallbackTipData['englishPhrase'] ?? 'Practice makes perfect.',
       translation: fallbackTipData['translation'] ?? '연습이 완벽을 만든다.',
       source: fallbackTipData['source'],
     );
   }
 
   void _showStudyTipDetailsDialog(
-      BuildContext context,
-      StudyTip tip,
-      String? skills,
-      WidgetRef ref,
-      ) {
+    BuildContext context,
+    StudyTip tip,
+    String? skills,
+    WidgetRef ref,
+  ) {
     AppLogger.info(
       '학습 팁 상세 다이얼로그 표시: ${tip.title}',
       tag: 'StudyTipUI',
@@ -771,27 +771,27 @@ class StudyTipBanner extends ConsumerWidget {
       barrierDismissible: true,
       builder:
           (context) => _StudyTipDialog(
-        initialTip: tip,
-        skills: skills,
-        onConfirm: (StudyTip finalTip) {
-          AppLogger.info(
-            '학습 팁 확인 버튼 클릭: ${finalTip.title}',
-            tag: 'StudyTipUI',
-          );
+            initialTip: tip,
+            skills: skills,
+            onConfirm: (StudyTip finalTip) {
+              AppLogger.info(
+                '학습 팁 확인 버튼 클릭: ${finalTip.title}',
+                tag: 'StudyTipUI',
+              );
 
-          // 확인 버튼 클릭 시 홈 배너 캐시 업데이트
-          _updateHomeBannerCache(ref, finalTip, skills);
-        },
-        onLoadNewTip: (Function(StudyTip) updateContent) {
-          AppLogger.info(
-            'Next Insight 버튼 클릭 - 캐시 우회 모드',
-            tag: 'StudyTipUI',
-          );
+              // 확인 버튼 클릭 시 홈 배너 캐시 업데이트
+              _updateHomeBannerCache(ref, finalTip, skills);
+            },
+            onLoadNewTip: (Function(StudyTip) updateContent) {
+              AppLogger.info(
+                'Next Insight 버튼 클릭 - 캐시 우회 모드',
+                tag: 'StudyTipUI',
+              );
 
-          // 🆕 캐시 우회 방식으로 새 팁 로드
-          _loadNewTip(context, skills, ref, updateContent);
-        },
-      ),
+              // 🆕 캐시 우회 방식으로 새 팁 로드
+              _loadNewTip(context, skills, ref, updateContent);
+            },
+          ),
     ).then((_) {
       // 상세 다이얼로그 닫힐 때 배너 자동재생 재개
       _notifyDialogState(false);

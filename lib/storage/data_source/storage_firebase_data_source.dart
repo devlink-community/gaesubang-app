@@ -1,6 +1,7 @@
 // lib/storage/data_source/storage_firebase_data_source.dart
 import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
@@ -22,7 +23,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
     return ApiCallDecorator.wrap(
       'StorageFirebase.uploadImage',
       () async {
-        final startTime = DateTime.now();
+        final startTime = TimeFormatter.nowInSeoul();
         AppLogger.info(
           '이미지 업로드 시작: $folderPath/$fileName',
           tag: 'StorageDataSource',
@@ -69,7 +70,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
           // 다운로드 URL 반환
           final downloadUrl = await taskSnapshot.ref.getDownloadURL();
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('이미지 업로드 완료', duration);
 
           AppLogger.info(
@@ -79,7 +80,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
 
           return downloadUrl;
         } catch (e, st) {
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('이미지 업로드 실패', duration);
 
           AppLogger.error(
@@ -106,7 +107,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
     return ApiCallDecorator.wrap(
       'StorageFirebase.uploadImages',
       () async {
-        final startTime = DateTime.now();
+        final startTime = TimeFormatter.nowInSeoul();
         AppLogger.info(
           '다중 이미지 업로드 시작: ${bytesList.length}개',
           tag: 'StorageDataSource',
@@ -137,7 +138,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
           final results = await Future.wait(futures);
           uploadedUrls.addAll(results);
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('다중 이미지 업로드 완료', duration);
 
           AppLogger.info(
@@ -153,7 +154,7 @@ class StorageFirebaseDataSource implements StorageDataSource {
 
           return uploadedUrls;
         } catch (e, st) {
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('다중 이미지 업로드 실패', duration);
 
           AppLogger.error(

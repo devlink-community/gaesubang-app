@@ -1,5 +1,6 @@
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
+import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 
 class MockNotificationDataSourceImpl implements NotificationDataSource {
   // 메모리 내 알림 저장소
@@ -16,7 +17,7 @@ class MockNotificationDataSourceImpl implements NotificationDataSource {
     try {
       final testUser =
           'testUser'; // NotificationNotifier의 _currentUserId와 일치해야 함
-      final now = DateTime.now();
+      final now = TimeFormatter.nowInSeoul();
 
       // 다양한 날짜의 알림 생성
       final notifications = [

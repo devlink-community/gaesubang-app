@@ -1,6 +1,7 @@
 // lib/core/auth/auth_provider.dart
 import 'package:devlink_mobile_app/auth/data/mapper/user_mapper.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -111,14 +112,14 @@ User? currentUser(Ref ref) {
 @riverpod
 Future<AuthState> currentAuthState(Ref ref) async {
   AppLogger.authInfo('동기 인증 상태 확인 시작');
-  final startTime = DateTime.now();
+  final startTime = TimeFormatter.nowInSeoul();
 
   final authDataSource = ref.watch(authDataSourceProvider);
 
   try {
     final userData = await authDataSource.getCurrentAuthState();
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('동기 인증 상태 확인', duration);
 
     if (userData == null) {
@@ -131,7 +132,7 @@ Future<AuthState> currentAuthState(Ref ref) async {
 
     return AuthState.authenticated(user);
   } catch (e, st) {
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('동기 인증 상태 확인 실패', duration);
     AppLogger.error('동기 인증 상태 확인 실패', error: e, stackTrace: st);
 
@@ -176,7 +177,7 @@ class SessionWatcher extends _$SessionWatcher {
     AppLogger.logBox('세션 시작', '${user.nickname}님 환영합니다!');
     AppLogger.logState('NewSession', {
       'userId': user.uid,
-      'loginTime': DateTime.now().toIso8601String(),
+      'timestamp': TimeFormatter.nowInSeoul().toIso8601String(),
     });
   }
 }
@@ -238,7 +239,7 @@ class AuthUtils extends _$AuthUtils {
     AppLogger.logState('UserActivity', {
       'userId': user.uid,
       'activity': activity,
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': TimeFormatter.nowInSeoul().toIso8601String(),
       'streakDays': user.summary?.currentStreakDays ?? 0,
       'totalSeconds': user.summary?.allTimeTotalSeconds ?? 0,
       'position': user.position ?? '미설정',

@@ -1,26 +1,28 @@
 // lib/banner/data/data_source/mock_banner_data_source_impl.dart
-import 'banner_data_source.dart';
-import '../dto/banner_dto.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
+
 import '../../../core/utils/app_logger.dart';
+import '../dto/banner_dto.dart';
+import 'banner_data_source.dart';
 
 class MockBannerDataSourceImpl implements BannerDataSource {
   @override
   Future<List<BannerDto>> fetchAllBanners() async {
     AppLogger.debug('Mock 전체 배너 조회 시작');
-    final startTime = DateTime.now();
-    
+    final startTime = TimeFormatter.nowInSeoul();
+
     AppLogger.logState('Mock 배너 조회 설정', {
       'simulated_delay_ms': 150,
       'mock_data_count': _mockBanners.length,
       'data_source': 'mock',
     });
-    
+
     // 네트워크 지연 시뮬레이션 - 실제적인 시간으로 단축
     await Future.delayed(const Duration(milliseconds: 150)); // 800ms → 150ms
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('Mock 전체 배너 조회', duration);
-    
+
     AppLogger.ui('Mock 전체 배너 조회 완료: ${_mockBanners.length}개');
     AppLogger.logState('Mock 전체 배너 결과', {
       'total_banners': _mockBanners.length,
@@ -28,21 +30,21 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       'inactive_banners': _mockBanners.where((b) => b.isActive == false).length,
       'simulation_time_ms': duration.inMilliseconds,
     });
-    
+
     return _mockBanners;
   }
 
   @override
   Future<BannerDto> fetchBannerById(String bannerId) async {
     AppLogger.debug('Mock 특정 배너 조회 시작: $bannerId');
-    final startTime = DateTime.now();
-    
+    final startTime = TimeFormatter.nowInSeoul();
+
     AppLogger.logState('Mock 특정 배너 조회 설정', {
       'banner_id': bannerId,
       'simulated_delay_ms': 50,
       'data_source': 'mock',
     });
-    
+
     // 캐시된 데이터 조회 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 50)); // 500ms → 50ms
 
@@ -52,9 +54,9 @@ class MockBannerDataSourceImpl implements BannerDataSource {
         orElse: () => throw Exception('배너를 찾을 수 없습니다: $bannerId'),
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('Mock 특정 배너 조회', duration);
-      
+
       AppLogger.ui('Mock 특정 배너 조회 성공: $bannerId');
       AppLogger.logState('Mock 조회된 배너 정보', {
         'banner_id': banner.id,
@@ -67,9 +69,9 @@ class MockBannerDataSourceImpl implements BannerDataSource {
 
       return banner;
     } catch (e, st) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('Mock 특정 배너 조회 실패', duration);
-      
+
       AppLogger.error('Mock 특정 배너 조회 실패', error: e, stackTrace: st);
       AppLogger.logState('Mock 배너 조회 실패 상세', {
         'banner_id': bannerId,
@@ -77,7 +79,7 @@ class MockBannerDataSourceImpl implements BannerDataSource {
         'available_banner_ids': _mockBanners.map((b) => b.id).toList(),
         'simulation_time_ms': duration.inMilliseconds,
       });
-      
+
       rethrow;
     }
   }
@@ -85,33 +87,35 @@ class MockBannerDataSourceImpl implements BannerDataSource {
   @override
   Future<List<BannerDto>> fetchActiveBanners() async {
     AppLogger.debug('Mock 활성 배너 조회 시작');
-    final startTime = DateTime.now();
-    
+    final startTime = TimeFormatter.nowInSeoul();
+
     AppLogger.logState('Mock 활성 배너 조회 설정', {
       'simulated_delay_ms': 100,
       'filter_criteria': 'active=true, date_range_valid=true',
       'data_source': 'mock',
     });
-    
+
     // 필터링된 데이터 조회 시뮬레이션
     await Future.delayed(const Duration(milliseconds: 100)); // 600ms → 100ms
 
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
 
     AppLogger.logStep(1, 2, '배너 활성 상태 및 날짜 범위 필터링');
     // 서버에서 필터링해서 보내주는 것을 시뮬레이션
-    final activeBanners = _mockBanners.where((banner) {
-      final isActive = banner.isActive == true;
-      final isDateValid = (banner.startDate?.isBefore(now) ?? false) &&
-          (banner.endDate?.isAfter(now) ?? false);
-      
-      return isActive && isDateValid;
-    }).toList();
+    final activeBanners =
+        _mockBanners.where((banner) {
+          final isActive = banner.isActive == true;
+          final isDateValid =
+              (banner.startDate?.isBefore(now) ?? false) &&
+              (banner.endDate?.isAfter(now) ?? false);
+
+          return isActive && isDateValid;
+        }).toList();
 
     AppLogger.logStep(2, 2, '활성 배너 필터링 결과 처리');
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
     AppLogger.logPerformance('Mock 활성 배너 조회', duration);
-    
+
     AppLogger.ui('Mock 활성 배너 조회 완료: ${activeBanners.length}개');
     AppLogger.logState('Mock 활성 배너 결과', {
       'total_banners': _mockBanners.length,
@@ -120,7 +124,7 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       'filter_date': now.toIso8601String(),
       'simulation_time_ms': duration.inMilliseconds,
     });
-    
+
     if (activeBanners.isNotEmpty) {
       AppLogger.logState('활성 배너 목록', {
         'banner_ids': activeBanners.map((b) => b.id).toList(),
@@ -142,10 +146,10 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       linkUrl: 'https://example.com/developer-program',
       isActive: true,
       displayOrder: 1,
-      startDate: DateTime.now().subtract(const Duration(days: 1)),
-      endDate: DateTime.now().add(const Duration(days: 30)),
+      startDate: TimeFormatter.nowInSeoul().subtract(const Duration(days: 1)),
+      endDate: TimeFormatter.nowInSeoul().add(const Duration(days: 30)),
       targetAudience: 'developer',
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 2)),
     ),
     BannerDto(
       id: 'banner_002',
@@ -154,10 +158,10 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       linkUrl: 'https://example.com/flutter-masterclass',
       isActive: true,
       displayOrder: 2,
-      startDate: DateTime.now().subtract(const Duration(hours: 12)),
-      endDate: DateTime.now().add(const Duration(days: 15)),
+      startDate: TimeFormatter.nowInSeoul().subtract(const Duration(hours: 12)),
+      endDate: TimeFormatter.nowInSeoul().add(const Duration(days: 15)),
       targetAudience: 'flutter_developer',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 1)),
     ),
     BannerDto(
       id: 'banner_003',
@@ -166,10 +170,10 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       linkUrl: 'https://example.com/ai-bootcamp',
       isActive: true,
       displayOrder: 3,
-      startDate: DateTime.now().subtract(const Duration(hours: 6)),
-      endDate: DateTime.now().add(const Duration(days: 45)),
+      startDate: TimeFormatter.nowInSeoul().subtract(const Duration(hours: 6)),
+      endDate: TimeFormatter.nowInSeoul().add(const Duration(days: 45)),
       targetAudience: 'ai_developer',
-      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(hours: 8)),
     ),
     BannerDto(
       id: 'banner_004',
@@ -178,10 +182,10 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       linkUrl: 'https://example.com/inactive',
       isActive: false,
       displayOrder: 4,
-      startDate: DateTime.now().subtract(const Duration(days: 5)),
-      endDate: DateTime.now().add(const Duration(days: 10)),
+      startDate: TimeFormatter.nowInSeoul().subtract(const Duration(days: 5)),
+      endDate: TimeFormatter.nowInSeoul().add(const Duration(days: 10)),
       targetAudience: 'developer',
-      createdAt: DateTime.now().subtract(const Duration(days: 6)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 6)),
     ),
     BannerDto(
       id: 'banner_005',
@@ -190,10 +194,10 @@ class MockBannerDataSourceImpl implements BannerDataSource {
       linkUrl: 'https://example.com/expired',
       isActive: true,
       displayOrder: 5,
-      startDate: DateTime.now().subtract(const Duration(days: 10)),
-      endDate: DateTime.now().subtract(const Duration(days: 1)),
+      startDate: TimeFormatter.nowInSeoul().subtract(const Duration(days: 10)),
+      endDate: TimeFormatter.nowInSeoul().subtract(const Duration(days: 1)),
       targetAudience: 'developer',
-      createdAt: DateTime.now().subtract(const Duration(days: 11)),
+      createdAt: TimeFormatter.nowInSeoul().subtract(const Duration(days: 11)),
     ),
   ];
 }

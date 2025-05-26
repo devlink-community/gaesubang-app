@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:devlink_mobile_app/ai_assistance/module/vertex_client.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/chat_message.dart';
 
 import 'bot_constants.dart';
@@ -165,14 +166,15 @@ $conversationHistory
     final botInfo = _getBotInfo(botType);
 
     return ChatMessage(
-      id: 'bot_${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(1000)}',
+      id:
+          'bot_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}_${_random.nextInt(1000)}',
       groupId: groupId,
       content: content,
       senderId: botInfo.id,
       senderName: botInfo.name,
       senderImage: null,
       // 봇은 이미지 없음
-      timestamp: DateTime.now(),
+      timestamp: TimeFormatter.nowInSeoul(),
       isRead: false,
     );
   }

@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 import '../../../core/result/result.dart';
 import '../../../core/utils/app_logger.dart';
@@ -299,7 +299,7 @@ class QuizRepositoryImpl implements QuizRepository {
 
   @override
   Future<Result<Quiz>> generateQuiz(String skillArea) async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     AppLogger.info(
       'Quiz 생성 시작: $skillArea',
@@ -419,7 +419,7 @@ class QuizRepositoryImpl implements QuizRepository {
           // 모델로 변환
           final result = updatedDto.toModel();
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('퀴즈 생성 완료', duration);
 
           AppLogger.info(
@@ -447,12 +447,12 @@ class QuizRepositoryImpl implements QuizRepository {
       // 최후의 시도 - 폴백 퀴즈 생성
       final fallbackQuiz = _generateFallbackQuiz(cleanedSkill);
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('폴백 퀴즈 생성 완료', duration);
 
       return Result.success(fallbackQuiz);
     } catch (e, st) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('퀴즈 생성 실패', duration);
 
       AppLogger.error(

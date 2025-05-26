@@ -13,6 +13,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'signup_notifier.g.dart';
@@ -363,7 +364,7 @@ class SignupNotifier extends _$SignupNotifier {
 
   // 회원가입 실행 (자동 로그인 포함)
   Future<void> _performSignup() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.logBanner('회원가입 프로세스 시작');
 
     // 폼 전체 오류 메시지 초기화
@@ -503,7 +504,7 @@ class SignupNotifier extends _$SignupNotifier {
 
       if (loginResult.hasValue) {
         AppLogger.logStep(6, 6, '자동 로그인 성공 - 회원가입 완료');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('전체 회원가입 프로세스', duration);
 
         AppLogger.logBox(

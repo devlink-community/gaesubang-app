@@ -1,4 +1,5 @@
 // lib/auth/domain/model/summary.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart'; // 추가: TimerActivityType import
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -34,7 +35,7 @@ class Summary with _$Summary {
 
   // 오늘 활동 시간 (초)
   int get todaySeconds {
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = TimeFormatter.getDateKeyInSeoul();
     return last7DaysActivityMap[today] ?? 0;
   }
 

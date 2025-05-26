@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/core/get_current_user_use_case.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../auth/domain/model/summary.dart'; // Summary 모델 임포트로 변경
@@ -42,12 +43,13 @@ class ProfileNotifier extends _$ProfileNotifier {
 
   /// 최적화된 데이터 로드 메서드 - 중복 요청 방지 로직 포함
   Future<void> loadData() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.logBanner('프로필 데이터 로드 시작');
 
     try {
       // 중복 요청 방지를 위한 요청 ID 생성
-      final currentRequestId = DateTime.now().microsecondsSinceEpoch;
+      final currentRequestId =
+          TimeFormatter.nowInSeoul().microsecondsSinceEpoch;
       AppLogger.logState('프로필 로드 요청 정보', {
         'request_id': currentRequestId,
         'load_type': 'optimized_single_call',
@@ -103,7 +105,7 @@ class ProfileNotifier extends _$ProfileNotifier {
               activeRequestId: null,
             );
 
-            final duration = DateTime.now().difference(startTime);
+            final duration = TimeFormatter.nowInSeoul().difference(startTime);
             AppLogger.logPerformance('프로필 데이터 로드', duration);
             AppLogger.logBox(
               '프로필 로드 완료',

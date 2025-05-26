@@ -5,6 +5,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/group_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -424,7 +425,7 @@ class GroupCoreFirebase {
         } else {
           // 로컬 파일 업로드
           final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_${localImagePath.split('/').last}';
+              '${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}_${localImagePath.split('/').last}';
           final storageRef = _storage.ref().child('groups/$groupId/$fileName');
 
           // 파일 업로드

@@ -3,6 +3,7 @@ import 'package:devlink_mobile_app/community/domain/model/hash_tag.dart';
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/image_compression.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/get_group_members_use_case.dart';
@@ -312,7 +313,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
       );
 
       final fileName =
-          'group_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          'group_image_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}.jpg';
       final folderPath = 'groups/${currentGroup.id}';
 
       AppLogger.debug('스토리지 경로: $folderPath/$fileName', tag: 'GroupSettings');
@@ -324,7 +325,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         metadata: {
           'groupId': currentGroup.id,
           'uploadedBy': currentGroup.ownerId,
-          'uploadedAt': DateTime.now().toIso8601String(),
+          'uploadedAt': TimeFormatter.nowInSeoul().toIso8601String(),
           'contentType': 'image/jpeg',
         },
       );
@@ -458,7 +459,7 @@ class GroupSettingsNotifier extends _$GroupSettingsNotifier {
         }
 
         final newTag = HashTag(
-          id: DateTime.now().toString(),
+          id: TimeFormatter.nowInSeoul().toString(),
           content: tag.trim(),
         );
 

@@ -1,9 +1,10 @@
 // lib/community/presentation/community_search/community_search_notifier.dart
+//TODO: 이 파일이 왜 core에 있는걸까요... 이거 어떻게 보면 뷰모델 입니다. ㅠㅠ
 import 'package:devlink_mobile_app/community/domain/usecase/search_posts_use_case.dart';
 import 'package:devlink_mobile_app/community/module/community_di.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_action.dart';
 import 'package:devlink_mobile_app/community/presentation/community_search/community_search_state.dart';
-import 'package:devlink_mobile_app/core/service/search_history_item.dart';
+import 'package:devlink_mobile_app/core/service/search_history/search_history_item.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

@@ -21,7 +21,7 @@ class TimerCalculationService {
     if (!isActive || startTime == null) return baseElapsed;
 
     // 활성 상태면 기본 누적 시간 + 현재 세션 경과 시간
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     return baseElapsed + now.difference(startTime).inSeconds;
   }
 

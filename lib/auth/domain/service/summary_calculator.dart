@@ -25,7 +25,8 @@ class SummaryCalculator {
       // 날짜 포맷에서 요일로 변환하여 처리
       summary.last7DaysActivityMap.forEach((dateStr, seconds) {
         try {
-          final date = DateTime.parse(dateStr);
+          // TimeFormatter.parseDate 사용하여 한국 시간대로 변환
+          final date = TimeFormatter.parseDate(dateStr);
           final weekday = TimeFormatter.getKoreanWeekday(date.weekday);
           // 초를 분으로 변환
           final minutes = seconds ~/ 60;
@@ -55,7 +56,7 @@ class SummaryCalculator {
 
   /// 오늘 집중 시간 계산 (분 단위)
   static int getTodayMinutes(Summary summary) {
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = TimeFormatter.nowInSeoul().toIso8601String().split('T')[0];
     final seconds = summary.last7DaysActivityMap[today] ?? 0;
     return seconds ~/ 60;
   }

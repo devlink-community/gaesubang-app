@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/auth/domain/repository/auth_activity_reposito
 import 'package:devlink_mobile_app/core/result/result.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/exception_mappers/auth_exception_mapper.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart'; // 추가: TimerActivityType import
 
 class AuthActivityRepositoryImpl implements AuthActivityRepository {
@@ -155,17 +156,18 @@ class AuthActivityRepositoryImpl implements AuthActivityRepository {
       // 이전 활동일과 오늘의 차이 계산
       int daysGap = 0;
       if (existingSummary.lastActivityDate != null) {
-        try {
-          final lastDate = DateTime.parse(existingSummary.lastActivityDate!);
-          final today = DateTime.parse(dateKey);
-          daysGap = today.difference(lastDate).inDays;
-        } catch (e) {
-          AppLogger.warning(
-            '날짜 파싱 오류',
-            tag: 'AuthActivityRepository',
-            error: e,
+        if (TimeFormatter.isValidDateKey(existingSummary.lastActivityDate!) &&
+            TimeFormatter.isValidDateKey(dateKey)) {
+          daysGap = TimeFormatter.daysBetween(
+            existingSummary.lastActivityDate!,
+            dateKey,
           );
-          daysGap = 1; // 기본값
+        } else {
+          AppLogger.warning(
+            '유효하지 않은 날짜 형식: lastActivityDate=${existingSummary.lastActivityDate}, dateKey=$dateKey',
+            tag: 'AuthActivityRepository',
+          );
+          daysGap = 1; // 형식 오류 시 기본값
         }
       }
 

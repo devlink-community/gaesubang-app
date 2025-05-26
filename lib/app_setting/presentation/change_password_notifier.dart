@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/auth_validator.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/privacy_mask_util.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'change_password_notifier.g.dart';
@@ -69,7 +70,7 @@ class ChangePasswordNotifier extends _$ChangePasswordNotifier {
   }
 
   Future<void> _performResetPassword() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     final maskedEmail = PrivacyMaskUtil.maskEmail(state.email);
 
     AppLogger.logBox('비밀번호 재설정 시도', '이메일: $maskedEmail');
@@ -133,7 +134,7 @@ class ChangePasswordNotifier extends _$ChangePasswordNotifier {
           }
         }
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('비밀번호 재설정 실패', duration);
 
         AppLogger.error(
@@ -147,7 +148,7 @@ class ChangePasswordNotifier extends _$ChangePasswordNotifier {
           formErrorMessage: errorMessage,
         );
       } else {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('비밀번호 재설정 성공', duration);
 
         AppLogger.info(
@@ -168,7 +169,7 @@ class ChangePasswordNotifier extends _$ChangePasswordNotifier {
         });
       }
     } catch (e, stackTrace) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('비밀번호 재설정 예외 발생', duration);
 
       AppLogger.error(

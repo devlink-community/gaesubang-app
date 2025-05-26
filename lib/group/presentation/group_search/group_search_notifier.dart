@@ -1,5 +1,5 @@
 import 'package:devlink_mobile_app/core/auth/auth_provider.dart';
-import 'package:devlink_mobile_app/core/service/search_history_service.dart';
+import 'package:devlink_mobile_app/core/service/search_history/search_history_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/group/domain/model/group.dart';
 import 'package:devlink_mobile_app/group/domain/usecase/management/join_group_use_case.dart';

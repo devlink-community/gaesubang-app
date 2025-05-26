@@ -1,4 +1,5 @@
 // lib/group/data/mapper/group_member_mapper.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/data/dto/group_member_dto.dart';
 import 'package:devlink_mobile_app/group/domain/model/group_member.dart';
 import 'package:devlink_mobile_app/group/domain/model/timer_activity_type.dart';
@@ -40,7 +41,7 @@ extension GroupMemberDtoMapper on GroupMemberDto {
       userName: userName ?? '',
       profileUrl: profileUrl,
       role: role ?? 'member',
-      joinedAt: joinedAt ?? DateTime.now(),
+      joinedAt: joinedAt ?? TimeFormatter.nowInSeoul(),
       timerState: timerStateEnum,
       timerStartAt: timerStartAt,
       timerLastUpdatedAt: timerLastUpdatedAt,

@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/api_call_logger.dart';
@@ -44,7 +45,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': true,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 30)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 30),
+        ),
         'joingroup': [],
       },
       {
@@ -61,7 +64,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': false,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 25)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 25),
+        ),
         'joingroup': [],
       },
       {
@@ -78,7 +83,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': true,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 20)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 20),
+        ),
         'joingroup': [],
       },
       {
@@ -95,7 +102,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': false,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 15)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 15),
+        ),
         'joingroup': [],
       },
       {
@@ -112,7 +121,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': true,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 40)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 40),
+        ),
         'joingroup': [],
       },
       {
@@ -129,7 +140,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': true,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 50)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 50),
+        ),
         'joingroup': [],
       },
       {
@@ -146,7 +159,9 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': true,
         'isPrivacyPolicyAgreed': true,
         'isMarketingAgreed': false,
-        'agreedAt': DateTime.now().subtract(const Duration(days: 60)),
+        'agreedAt': TimeFormatter.nowInSeoul().subtract(
+          const Duration(days: 60),
+        ),
         'joingroup': [],
       },
     ];
@@ -167,7 +182,7 @@ class MockAuthDataSource implements AuthDataSource {
 
   // 기본 Summary 데이터 생성
   static Map<String, dynamic> _generateDefaultSummary(String userId) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final last7Days = <String, int>{};
 
     // 최근 7일 활동 데이터 생성
@@ -198,7 +213,7 @@ class MockAuthDataSource implements AuthDataSource {
     String userId,
   ) {
     final activities = <Map<String, dynamic>>[];
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
 
     // 최근 7일간의 샘플 활동 생성
     for (int i = 0; i < 7; i++) {
@@ -343,7 +358,8 @@ class MockAuthDataSource implements AuthDataSource {
       }
 
       // 새 사용자 생성
-      final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+      final userId =
+          'user_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}';
       final newUserData = {
         'uid': userId,
         'email': lowercaseEmail,
@@ -358,7 +374,7 @@ class MockAuthDataSource implements AuthDataSource {
         'isServiceTermsAgreed': isServiceTermsAgreed,
         'isPrivacyPolicyAgreed': isPrivacyPolicyAgreed,
         'isMarketingAgreed': termsMap['isMarketingAgreed'] as bool? ?? false,
-        'agreedAt': termsMap['agreedAt'] ?? DateTime.now(),
+        'agreedAt': termsMap['agreedAt'] ?? TimeFormatter.nowInSeoul(),
         'joingroup': <Map<String, dynamic>>[],
       };
 
@@ -508,7 +524,7 @@ class MockAuthDataSource implements AuthDataSource {
       }
 
       // 타임스탬프 추가
-      termsData['agreedAt'] = DateTime.now();
+      termsData['agreedAt'] = TimeFormatter.nowInSeoul();
       final termsId = termsData['id'] as String;
       _termsAgreements[termsId] = Map<String, dynamic>.from(termsData);
 
@@ -522,12 +538,12 @@ class MockAuthDataSource implements AuthDataSource {
       await Future.delayed(const Duration(milliseconds: 300));
 
       return {
-        'id': 'terms_${DateTime.now().millisecondsSinceEpoch}',
+        'id': 'terms_${TimeFormatter.nowInSeoul().millisecondsSinceEpoch}',
         'isAllAgreed': false,
         'isServiceTermsAgreed': false,
         'isPrivacyPolicyAgreed': false,
         'isMarketingAgreed': false,
-        'agreedAt': DateTime.now(),
+        'agreedAt': TimeFormatter.nowInSeoul(),
       };
     });
   }
@@ -716,7 +732,7 @@ class MockAuthDataSource implements AuthDataSource {
       'isServiceTermsAgreed': true,
       'isPrivacyPolicyAgreed': true,
       'isMarketingAgreed': false,
-      'agreedAt': DateTime.now().toIso8601String(),
+      'agreedAt': TimeFormatter.nowInSeoul().toIso8601String(),
       'joingroup': [],
     };
 

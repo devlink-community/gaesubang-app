@@ -1,9 +1,91 @@
 // lib/core/utils/time_formatter.dart
 import 'package:intl/intl.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 /// 시간 포맷 관련 유틸리티 클래스
 class TimeFormatter {
   const TimeFormatter._(); // 인스턴스화 방지
+
+  // 초기화 상태 추적
+  static bool _isInitialized = false;
+
+  /// TimeFormatter 초기화 - timezone 데이터베이스 로드
+  static void initialize() {
+    if (_isInitialized) return;
+
+    try {
+      tzdata.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+      _isInitialized = true;
+    } catch (e) {
+      print('TimeFormatter 초기화 실패: $e');
+    }
+  }
+
+  // 한국 시간대 설정
+  static tz.Location get _seoulTimeZone {
+    if (!_isInitialized) {
+      initialize();
+    }
+    return tz.getLocation('Asia/Seoul');
+  }
+
+  /// 한국 시간 기준으로 현재 시간 반환
+  static DateTime nowInSeoul() {
+    if (!_isInitialized) {
+      initialize();
+    }
+    return tz.TZDateTime.now(_seoulTimeZone);
+  }
+
+  /// UTC DateTime을 한국 시간으로 변환
+  static DateTime toSeoulTime(DateTime dateTime) {
+    if (!_isInitialized) {
+      initialize();
+    }
+    if (dateTime is tz.TZDateTime && dateTime.location == _seoulTimeZone) {
+      return dateTime;
+    }
+    return tz.TZDateTime.from(dateTime, _seoulTimeZone);
+  }
+
+  /// 한국 시간 기준으로 날짜 포맷팅
+  static String formatDateInSeoul(DateTime date) {
+    final seoulTime = toSeoulTime(date);
+    return DateFormat('yyyy-MM-dd').format(seoulTime);
+  }
+
+  /// 한국 시간 기준으로 날짜키 생성 (YYYY-MM-DD)
+  static String getDateKeyInSeoul([DateTime? date]) {
+    final targetDate = date != null ? toSeoulTime(date) : nowInSeoul();
+    return DateFormat('yyyy-MM-dd').format(targetDate);
+  }
+
+  /// 한국 시간 기준으로 월 키 생성 (YYYY-MM)
+  static String getMonthKeyInSeoul([DateTime? date]) {
+    final targetDate = date != null ? toSeoulTime(date) : nowInSeoul();
+    return DateFormat('yyyy-MM').format(targetDate);
+  }
+
+  /// 날짜 문자열(yyyy-MM-dd)을 파싱하여 한국 시간대 DateTime으로 변환
+  static DateTime parseDate(String dateStr) {
+    // 빈 문자열 체크
+    if (dateStr.isEmpty) {
+      throw ArgumentError('날짜 문자열이 비어 있습니다.');
+    }
+
+    // 시간이 없는 경우 00:00:00 추가
+    final dateTimeStr =
+        dateStr.contains('T') || dateStr.contains(' ')
+            ? dateStr
+            : '$dateStr 00:00:00';
+
+    // 명시적으로 UTC로 파싱한 후 한국 시간대로 변환
+    return toSeoulTime(
+      DateFormat('yyyy-MM-dd HH:mm:ss').parseUtc(dateTimeStr),
+    );
+  }
 
   /// 초 단위의 시간을 HH:MM:SS 형식으로 변환
   ///
@@ -41,7 +123,7 @@ class TimeFormatter {
     DateTime startTime, {
     bool includeSeconds = true,
   }) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final difference = now.difference(startTime);
     return formatSeconds(difference.inSeconds, includeSeconds: includeSeconds);
   }
@@ -105,7 +187,7 @@ class TimeFormatter {
   ///
   /// [hours], [minutes], [seconds]를 각각 지정 가능
   static DateTime addTime({int hours = 0, int minutes = 0, int seconds = 0}) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     return now.add(Duration(hours: hours, minutes: minutes, seconds: seconds));
   }
 
@@ -117,7 +199,7 @@ class TimeFormatter {
   /// [limitMinutes] 제한 시간 (분 단위)
   /// 반환: 초과 여부
   static bool isPauseTimeExceeded(DateTime pauseTime, int limitMinutes) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final pauseDuration = now.difference(pauseTime);
     return pauseDuration.inMinutes >= limitMinutes;
   }
@@ -127,7 +209,7 @@ class TimeFormatter {
   /// [pauseTime] 일시정지 시작 시간
   /// 반환: 경과 시간 (분)
   static int getPauseElapsedMinutes(DateTime pauseTime) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final pauseDuration = now.difference(pauseTime);
     return pauseDuration.inMinutes;
   }
@@ -136,8 +218,13 @@ class TimeFormatter {
   ///
   /// 반환: 현재 시간부터 다음날 00:00:00까지의 Duration
   static Duration timeUntilMidnight() {
-    final now = DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final now = nowInSeoul();
+    final tomorrow = tz.TZDateTime(
+      _seoulTimeZone,
+      now.year,
+      now.month,
+      now.day + 1,
+    );
     return tomorrow.difference(now);
   }
 
@@ -145,16 +232,24 @@ class TimeFormatter {
   ///
   /// 반환: 어제 23:59:59의 DateTime
   static DateTime getYesterdayLastSecond() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day - 1, 23, 59, 59);
+    final now = nowInSeoul();
+    return tz.TZDateTime(
+      _seoulTimeZone,
+      now.year,
+      now.month,
+      now.day - 1,
+      23,
+      59,
+      59,
+    );
   }
 
   /// 오늘의 첫 시간 (00:00:00) 반환
   ///
   /// 반환: 오늘 00:00:00의 DateTime
   static DateTime getTodayFirstSecond() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day, 0, 0, 0);
+    final now = nowInSeoul();
+    return tz.TZDateTime(_seoulTimeZone, now.year, now.month, now.day);
   }
 
   /// 주어진 날짜가 오늘인지 확인
@@ -162,10 +257,11 @@ class TimeFormatter {
   /// [date] 확인할 날짜
   /// 반환: 오늘 여부
   static bool isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+    final now = nowInSeoul();
+    final seoulDate = toSeoulTime(date);
+    return seoulDate.year == now.year &&
+        seoulDate.month == now.month &&
+        seoulDate.day == now.day;
   }
 
   /// 주어진 날짜가 어제인지 확인
@@ -173,10 +269,17 @@ class TimeFormatter {
   /// [date] 확인할 날짜
   /// 반환: 어제 여부
   static bool isYesterday(DateTime date) {
-    final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    return date.year == yesterday.year &&
-        date.month == yesterday.month &&
-        date.day == yesterday.day;
+    final now = nowInSeoul();
+    final yesterday = tz.TZDateTime(
+      _seoulTimeZone,
+      now.year,
+      now.month,
+      now.day - 1,
+    );
+    final seoulDate = toSeoulTime(date);
+    return seoulDate.year == yesterday.year &&
+        seoulDate.month == yesterday.month &&
+        seoulDate.day == yesterday.day;
   }
 
   /// 두 날짜가 같은 날인지 확인
@@ -185,9 +288,75 @@ class TimeFormatter {
   /// [date2] 두 번째 날짜
   /// 반환: 같은 날 여부
   static bool isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
+    final seoulDate1 = toSeoulTime(date1);
+    final seoulDate2 = toSeoulTime(date2);
+    return seoulDate1.year == seoulDate2.year &&
+        seoulDate1.month == seoulDate2.month &&
+        seoulDate1.day == seoulDate2.day;
+  }
+
+  /// 두 날짜 문자열(yyyy-MM-dd) 사이의 일수 차이 계산
+  /// 두 날짜 모두 한국 시간대로 처리됨
+  static int daysBetween(String startDateStr, String endDateStr) {
+    try {
+      // parseDate 메서드 사용하여 안전하게 파싱
+      final startDate = parseDate(startDateStr);
+      final endDate = parseDate(endDateStr);
+
+      // 날짜만 추출하여 시간 요소 제거 (날짜 간의 순수한 차이 계산)
+      final startDateOnly = tz.TZDateTime(
+        _seoulTimeZone,
+        startDate.year,
+        startDate.month,
+        startDate.day,
+      );
+      final endDateOnly = tz.TZDateTime(
+        _seoulTimeZone,
+        endDate.year,
+        endDate.month,
+        endDate.day,
+      );
+
+      // 두 날짜 간의 일수 차이 계산
+      return endDateOnly.difference(startDateOnly).inDays;
+    } catch (e) {
+      print('날짜 차이 계산 오류: $e');
+      return 0; // 기본값
+    }
+  }
+
+  /// 날짜 키(yyyy-MM-dd) 형식 검증
+  static bool isValidDateKey(String? dateKey) {
+    if (dateKey == null || dateKey.isEmpty) return false;
+
+    // 정규식으로 "yyyy-MM-dd" 형식 검증
+    final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+    if (!regex.hasMatch(dateKey)) return false;
+
+    try {
+      // 실제 날짜로 파싱하여 유효성 검증
+      final parts = dateKey.split('-');
+      final year = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final day = int.parse(parts[2]);
+
+      // 월과 일 범위 검증
+      if (month < 1 || month > 12) return false;
+      if (day < 1 || day > 31) return false;
+
+      // 2월 및 각 월의 일수 검증
+      if (month == 2) {
+        final isLeapYear =
+            (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if (day > (isLeapYear ? 29 : 28)) return false;
+      } else if ([4, 6, 9, 11].contains(month) && day > 30) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /// 타이머 자동 종료 시간 계산

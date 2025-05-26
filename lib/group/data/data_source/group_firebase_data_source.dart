@@ -3,6 +3,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_core_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_query_firebase.dart';
 import 'package:devlink_mobile_app/group/data/data_source/firebase/group_timer_firebase.dart';
@@ -145,7 +146,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.start,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -155,7 +156,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.pause,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -165,7 +166,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.resume,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 
@@ -175,7 +176,7 @@ class GroupFirebaseDataSource implements GroupDataSource {
     return recordTimerActivityWithTimestamp(
       groupId,
       TimerActivityType.end,
-      DateTime.now(),
+      TimeFormatter.nowInSeoul(),
     );
   }
 

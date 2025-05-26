@@ -7,6 +7,7 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:devlink_mobile_app/core/utils/messages/auth_error_messages.dart';
 import 'package:devlink_mobile_app/core/utils/messages/community_error_messages.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'post_data_source.dart';
@@ -45,7 +46,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<List<PostDto>> fetchPostList() async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostList', () async {
       AppLogger.logStep(1, 4, 'Firebase 게시글 목록 조회 시작');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 1. 게시글 목록 조회 (최신순 정렬)
@@ -105,13 +106,13 @@ class PostFirebaseDataSource implements PostDataSource {
             }).toList();
 
         // 성능 로깅
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 목록 조회', duration);
         AppLogger.communityInfo('게시글 목록 조회 완료: ${posts.length}개');
 
         return posts;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 목록 조회 실패', duration);
         AppLogger.networkError('게시글 목록 로드 실패', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.postLoadFailed);
@@ -123,7 +124,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<PostDto> fetchPostDetail(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchPostDetail', () async {
       AppLogger.logBox('게시글 상세 조회', '게시글 ID: $postId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         AppLogger.logStep(1, 5, 'Firestore 문서 조회');
@@ -203,7 +204,7 @@ class PostFirebaseDataSource implements PostDataSource {
         );
 
         AppLogger.logStep(5, 5, '게시글 상세 조회 완료');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 상세 조회', duration);
 
         AppLogger.logState('PostDetailResult', {
@@ -216,7 +217,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
         return result;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 상세 조회 실패', duration);
 
         // ✅ 예외 구분 처리
@@ -242,7 +243,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<PostDto> toggleLike(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleLike', () async {
       AppLogger.logBox('좋아요 토글', '게시글: $postId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 정보 처리
@@ -317,7 +318,7 @@ class PostFirebaseDataSource implements PostDataSource {
         });
 
         AppLogger.logStep(2, 3, '트랜잭션 성공');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 좋아요 토글', duration);
 
         // ✅ nullable 값 처리
@@ -329,7 +330,7 @@ class PostFirebaseDataSource implements PostDataSource {
         AppLogger.logStep(3, 3, '좋아요 토글 완료');
         return result;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 좋아요 토글 실패', duration);
         AppLogger.networkError('좋아요 토글 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.likeFailed);
@@ -341,7 +342,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<PostDto> toggleBookmark(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.toggleBookmark', () async {
       AppLogger.logBox('북마크 토글', '게시글: $postId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 ID 처리
@@ -407,7 +408,7 @@ class PostFirebaseDataSource implements PostDataSource {
         });
 
         AppLogger.logStep(2, 3, '트랜잭션 성공');
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 북마크 토글', duration);
 
         // ✅ nullable 값 처리
@@ -418,7 +419,7 @@ class PostFirebaseDataSource implements PostDataSource {
         AppLogger.logStep(3, 3, '북마크 토글 완료');
         return result;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 북마크 토글 실패', duration);
         AppLogger.networkError('북마크 토글 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.bookmarkFailed);
@@ -430,7 +431,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<List<PostCommentDto>> fetchComments(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.fetchComments', () async {
       AppLogger.logBox('댓글 목록 조회', '게시글: $postId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         AppLogger.logStep(1, 5, '댓글 목록 Firestore 쿼리');
@@ -500,7 +501,7 @@ class PostFirebaseDataSource implements PostDataSource {
               return dto.copyWith(isLikedByCurrentUser: isLiked);
             }).toList();
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 댓글 목록 조회', duration);
 
         // ✅ nullable 값 처리
@@ -514,7 +515,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
         return finalComments;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 댓글 목록 조회 실패', duration);
         AppLogger.networkError(
           '댓글 목록 로드 실패: $postId',
@@ -534,7 +535,7 @@ class PostFirebaseDataSource implements PostDataSource {
     return ApiCallDecorator.wrap('PostFirebase.createComment', () async {
       final contentPreview = _truncateText(content, 30);
       AppLogger.logBox('댓글 작성', '게시글: $postId, 내용: "$contentPreview"');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 정보 처리
@@ -602,13 +603,13 @@ class PostFirebaseDataSource implements PostDataSource {
         // 5. 업데이트된 댓글 목록 반환
         final result = await fetchComments(postId);
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 댓글 작성', duration);
         AppLogger.communityInfo('댓글 작성 완료: $postId (총 ${result.length}개)');
 
         return result;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 댓글 작성 실패', duration);
         AppLogger.networkError('댓글 작성 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.commentCreateFailed);
@@ -625,7 +626,7 @@ class PostFirebaseDataSource implements PostDataSource {
       'PostFirebase.toggleCommentLike',
       () async {
         AppLogger.logBox('댓글 좋아요 토글', '게시글: $postId, 댓글: $commentId');
-        final startTime = DateTime.now();
+        final startTime = TimeFormatter.nowInSeoul();
 
         try {
           // 내부에서 현재 사용자 정보 처리
@@ -707,7 +708,7 @@ class PostFirebaseDataSource implements PostDataSource {
           });
 
           AppLogger.logStep(2, 3, '트랜잭션 성공');
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 댓글 좋아요 토글', duration);
 
           // ✅ nullable 값 처리
@@ -719,7 +720,7 @@ class PostFirebaseDataSource implements PostDataSource {
           AppLogger.logStep(3, 3, '댓글 좋아요 토글 완료');
           return result;
         } catch (e, st) {
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 댓글 좋아요 토글 실패', duration);
           AppLogger.networkError(
             '댓글 좋아요 토글 실패: $postId/$commentId',
@@ -742,7 +743,7 @@ class PostFirebaseDataSource implements PostDataSource {
       'PostFirebase.checkCommentsLikeStatus',
       () async {
         AppLogger.debug('댓글 좋아요 상태 일괄 조회: $postId (${commentIds.length}개)');
-        final startTime = DateTime.now();
+        final startTime = TimeFormatter.nowInSeoul();
 
         try {
           // 내부에서 현재 사용자 ID 처리
@@ -765,7 +766,7 @@ class PostFirebaseDataSource implements PostDataSource {
           final entries = await Future.wait(futures);
           final result = Map.fromEntries(entries);
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 댓글 좋아요 상태 조회', duration);
 
           final likedCount = result.values.where((liked) => liked).length;
@@ -775,7 +776,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
           return result;
         } catch (e, st) {
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 댓글 좋아요 상태 조회 실패', duration);
           AppLogger.networkError(
             '댓글 좋아요 상태 확인 실패: $postId',
@@ -793,7 +794,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<List<PostDto>> searchPosts(String query) async {
     return ApiCallDecorator.wrap('PostFirebase.searchPosts', () async {
       AppLogger.logBox('게시글 검색', '검색어: "$query"');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         if (query.trim().isEmpty) {
@@ -923,18 +924,18 @@ class PostFirebaseDataSource implements PostDataSource {
 
         // 5. 최신순으로 정렬하여 결과 반환
         searchResults.sort(
-          (a, b) => (b.createdAt ?? DateTime.now()).compareTo(
-            a.createdAt ?? DateTime.now(),
+          (a, b) => (b.createdAt ?? TimeFormatter.nowInSeoul()).compareTo(
+            a.createdAt ?? TimeFormatter.nowInSeoul(),
           ),
         );
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 검색', duration);
         AppLogger.searchInfo(query, searchResults.length);
 
         return searchResults;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 검색 실패', duration);
         AppLogger.networkError('게시글 검색 실패: "$query"', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.searchFailed);
@@ -959,7 +960,7 @@ class PostFirebaseDataSource implements PostDataSource {
             '태그: ${hashTags.length}개 | '
             '이미지: ${imageUris.length}개',
       );
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 정보 처리
@@ -998,7 +999,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 게시글 추가
         await postRef.set(postData);
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 작성', duration);
         AppLogger.logBanner('새 게시글 생성 완료! 🎉');
         AppLogger.communityInfo('게시글 생성 성공: $postId');
@@ -1006,7 +1007,7 @@ class PostFirebaseDataSource implements PostDataSource {
         // 생성된 게시글 ID 반환
         return postId;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 작성 실패', duration);
         AppLogger.networkError('게시글 생성 실패: $postId', error: e, stackTrace: st);
         throw Exception(CommunityErrorMessages.postCreateFailed);
@@ -1019,7 +1020,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<Map<String, bool>> checkUserLikeStatus(List<String> postIds) async {
     return ApiCallDecorator.wrap('PostFirebase.checkUserLikeStatus', () async {
       AppLogger.debug('좋아요 상태 일괄 조회: ${postIds.length}개');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 ID 처리
@@ -1042,7 +1043,7 @@ class PostFirebaseDataSource implements PostDataSource {
         final entries = await Future.wait(futures);
         final result = Map.fromEntries(entries);
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 좋아요 상태 일괄 조회', duration);
 
         final likedCount = result.values.where((liked) => liked).length;
@@ -1050,7 +1051,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
         return result;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 좋아요 상태 일괄 조회 실패', duration);
         AppLogger.networkError('좋아요 상태 일괄 조회 실패', error: e, stackTrace: st);
         // 오류 발생 시 모든 게시글에 대해 false 반환
@@ -1068,7 +1069,7 @@ class PostFirebaseDataSource implements PostDataSource {
       'PostFirebase.checkUserBookmarkStatus',
       () async {
         AppLogger.debug('북마크 상태 일괄 조회: ${postIds.length}개');
-        final startTime = DateTime.now();
+        final startTime = TimeFormatter.nowInSeoul();
 
         try {
           // 내부에서 현재 사용자 ID 처리
@@ -1092,7 +1093,7 @@ class PostFirebaseDataSource implements PostDataSource {
           final entries = await Future.wait(futures);
           final result = Map.fromEntries(entries);
 
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 북마크 상태 일괄 조회', duration);
 
           final bookmarkedCount =
@@ -1103,7 +1104,7 @@ class PostFirebaseDataSource implements PostDataSource {
 
           return result;
         } catch (e, st) {
-          final duration = DateTime.now().difference(startTime);
+          final duration = TimeFormatter.nowInSeoul().difference(startTime);
           AppLogger.logPerformance('Firebase 북마크 상태 일괄 조회 실패', duration);
           AppLogger.networkError('북마크 상태 일괄 조회 실패', error: e, stackTrace: st);
           // 오류 발생 시 모든 게시글에 대해 false 반환
@@ -1132,7 +1133,7 @@ class PostFirebaseDataSource implements PostDataSource {
             '태그: ${hashTags.length}개 | '
             '이미지: ${imageUris.length}개',
       );
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 정보 처리
@@ -1173,14 +1174,14 @@ class PostFirebaseDataSource implements PostDataSource {
         // 게시글 업데이트
         await postRef.update(updateData);
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 수정', duration);
         AppLogger.logBanner('게시글 수정 완료! ✨');
         AppLogger.communityInfo('게시글 수정 성공: $postId');
 
         return postId;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 수정 실패', duration);
 
         // ✅ 예외 구분 처리
@@ -1209,7 +1210,7 @@ class PostFirebaseDataSource implements PostDataSource {
   Future<bool> deletePost(String postId) async {
     return ApiCallDecorator.wrap('PostFirebase.deletePost', () async {
       AppLogger.logBox('게시글 삭제', '게시글 ID: $postId');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       try {
         // 내부에서 현재 사용자 ID 처리
@@ -1268,14 +1269,14 @@ class PostFirebaseDataSource implements PostDataSource {
         // 3. 게시글 문서 자체 삭제
         await postRef.delete();
 
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 삭제', duration);
         AppLogger.logBanner('게시글 삭제 완료! 🗑️');
         AppLogger.communityInfo('게시글 삭제 성공: $postId');
 
         return true;
       } catch (e, st) {
-        final duration = DateTime.now().difference(startTime);
+        final duration = TimeFormatter.nowInSeoul().difference(startTime);
         AppLogger.logPerformance('Firebase 게시글 삭제 실패', duration);
 
         // ✅ 예외 구분 처리

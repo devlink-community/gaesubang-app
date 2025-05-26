@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 import '../domain/model/skill_selector.dart';
 
@@ -109,6 +110,7 @@ class PromptService {
 
     final selectedTopic = randomTopics[_random.nextInt(randomTopics.length)];
     final selectedLevel = randomLevels[_random.nextInt(randomLevels.length)];
+    final uniqueId = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
 
     return """
 당신은 프로그래밍 퀴즈 전문가입니다. 다음 조건으로 완전히 새로운 퀴즈를 생성해주세요:
@@ -361,8 +363,8 @@ JSON 배열만 반환하고 다른 텍스트나 설명은 포함하지 마세요
     // 3. 관점/레벨 랜덤 선택
     final perspective = _getRandomPerspective();
 
-    // 4. 고유성을 위한 타임스탬프 및 랜덤 요소
-    final uniqueId = DateTime.now().millisecondsSinceEpoch;
+    // 5. 고유성을 위한 타임스탬프 및 랜덤 요소
+    final uniqueId = TimeFormatter.nowInSeoul().millisecondsSinceEpoch;
     final randomSeed = _random.nextInt(10000);
 
     AppLogger.info(

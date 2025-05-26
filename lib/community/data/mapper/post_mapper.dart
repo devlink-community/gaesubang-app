@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 /// PostDto → Post 변환
 extension PostDtoMapper on PostDto {
@@ -19,7 +20,7 @@ extension PostDtoMapper on PostDto {
       authorPosition: authorPosition ?? '',
       userProfileImageUrl: userProfileImage ?? '',
       boardType: BoardType.free, // 기본값
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       hashTags: hashTags ?? [],
       imageUrls: mediaUrls ?? [],
       likeCount: likeCount ?? 0,
@@ -39,7 +40,7 @@ extension PostCommentDtoMapper on PostCommentDto {
       userName: userName ?? 'Unknown User',
       userProfileImage: userProfileImage ?? '',
       text: text ?? '',
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       likeCount: likeCount ?? 0,
       isLikedByCurrentUser: isLikedByCurrentUser ?? false,
     );
@@ -52,7 +53,7 @@ extension PostLikeDtoMapper on PostLikeDto {
     return Like(
       userId: userId ?? '',
       userName: userName ?? 'Unknown User',
-      timestamp: timestamp ?? DateTime.now(),
+      timestamp: timestamp ?? TimeFormatter.nowInSeoul(),
     );
   }
 }

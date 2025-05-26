@@ -1,3 +1,4 @@
+// lib/core/service/app_initialization_service.dart
 import 'package:devlink_mobile_app/core/config/app_config.dart';
 import 'package:devlink_mobile_app/core/service/notification_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';

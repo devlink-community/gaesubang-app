@@ -2,6 +2,7 @@
 import 'package:devlink_mobile_app/auth/domain/model/terms_agreement.dart';
 import 'package:devlink_mobile_app/auth/domain/repository/auth_terms_repository.dart';
 import 'package:devlink_mobile_app/core/result/result.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SaveTermsAgreementUseCase {
@@ -28,7 +29,7 @@ class SaveTermsAgreementUseCase {
       isServiceTermsAgreed: termsAgreement.isServiceTermsAgreed,
       isPrivacyPolicyAgreed: termsAgreement.isPrivacyPolicyAgreed,
       isMarketingAgreed: termsAgreement.isMarketingAgreed,
-      agreedAt: DateTime.now(), // 현재 시간으로 동의 시간 업데이트
+      agreedAt: TimeFormatter.nowInSeoul(), // 현재 시간으로 동의 시간 업데이트
     );
 
     // 메모리에만 저장

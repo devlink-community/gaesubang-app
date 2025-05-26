@@ -1,5 +1,6 @@
 // lib/core/utils/api_call_logger.dart
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 import '../config/app_config.dart';
 
@@ -104,17 +105,19 @@ class ApiCallStats {
   void _startCall(Map<String, dynamic>? params) {
     // 중복 호출 감지 (Verbose 모드에서만)
     if (_lastCallStart != null && _lastCallEnd != null) {
-      final timeSinceLastCall = DateTime.now().difference(_lastCallEnd!);
+      final timeSinceLastCall = TimeFormatter.nowInSeoul().difference(
+        _lastCallEnd!,
+      );
       ApiCallLogger.logDuplicateWarning(apiName, timeSinceLastCall);
     }
 
-    _lastCallStart = DateTime.now();
+    _lastCallStart = TimeFormatter.nowInSeoul();
     _activeCalls++;
     _totalCalls++;
   }
 
   void _endCall(bool success, String? error) {
-    _lastCallEnd = DateTime.now();
+    _lastCallEnd = TimeFormatter.nowInSeoul();
     _activeCalls = (_activeCalls - 1).clamp(0, 1000);
 
     if (_lastCallStart != null) {

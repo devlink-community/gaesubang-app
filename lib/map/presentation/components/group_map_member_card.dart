@@ -2,6 +2,7 @@
 import 'package:devlink_mobile_app/core/component/app_image.dart';
 import 'package:devlink_mobile_app/core/styles/app_color_styles.dart';
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/map/domain/model/group_member_location.dart';
 import 'package:flutter/material.dart';
 
@@ -109,7 +110,7 @@ class GroupMapMemberCard extends StatelessWidget {
 
   // 마지막 업데이트 시간 포맷팅
   String _formatLastUpdated(DateTime dateTime) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
     final difference = now.difference(dateTime);
 
     if (difference.inSeconds < 60) {

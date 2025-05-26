@@ -1,6 +1,7 @@
 import 'package:devlink_mobile_app/auth/domain/usecase/core/delete_account_use_case.dart';
 import 'package:devlink_mobile_app/auth/domain/usecase/core/signout_use_case.dart';
 import 'package:devlink_mobile_app/auth/module/auth_di.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:upgrader/upgrader.dart';
@@ -58,14 +59,14 @@ class SettingsNotifier extends _$SettingsNotifier {
   }
 
   Future<void> _handleLogout() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.info('로그아웃 처리 시작', tag: 'SettingsLogout');
 
     state = state.copyWith(logoutResult: const AsyncLoading());
     final asyncResult = await _signoutUseCase.execute();
     state = state.copyWith(logoutResult: asyncResult);
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
     asyncResult.when(
       data: (_) {
@@ -88,7 +89,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   }
 
   Future<void> _handleDeleteAccount() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.info('계정 삭제 처리 시작', tag: 'SettingsDeleteAccount');
 
     state = state.copyWith(deleteAccountResult: const AsyncLoading());
@@ -105,7 +106,7 @@ class SettingsNotifier extends _$SettingsNotifier {
     final asyncResult = await _deleteAccountUseCase.execute(email);
     state = state.copyWith(deleteAccountResult: asyncResult);
 
-    final duration = DateTime.now().difference(startTime);
+    final duration = TimeFormatter.nowInSeoul().difference(startTime);
 
     asyncResult.when(
       data: (_) {
@@ -128,7 +129,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   }
 
   Future<void> _loadAppVersion() async {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.info('앱 버전 정보 로드 시작', tag: 'SettingsAppVersion');
 
     try {
@@ -164,11 +165,11 @@ class SettingsNotifier extends _$SettingsNotifier {
         isUpdateAvailable: isUpdateAvailable,
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('앱 버전 정보 로드 성공', duration);
       AppLogger.info('앱 버전 정보 로드 완료: v$appVersion', tag: 'SettingsAppVersion');
     } catch (e, stackTrace) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('앱 버전 정보 로드 실패', duration);
 
       AppLogger.error(

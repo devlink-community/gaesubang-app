@@ -1,14 +1,14 @@
 // lib/onboarding/presentation/onboarding_notifier.dart
 import 'dart:io';
 
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'onboarding_action.dart';
 import 'onboarding_state.dart';
 
@@ -31,7 +31,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   Future<void> _loadInitialState() async {
     try {
       AppLogger.logStep(1, 3, '온보딩 초기 상태 로드 시작');
-      final startTime = DateTime.now();
+      final startTime = TimeFormatter.nowInSeoul();
 
       final prefs = await SharedPreferences.getInstance();
       final isCompleted = prefs.getBool('hasCompletedOnboarding') ?? false;
@@ -49,7 +49,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       // 권한 상태 확인
       await _checkPermissions();
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('온보딩 초기 상태 로드', duration);
       AppLogger.ui('온보딩 초기 상태 로드 완료');
     } catch (e, st) {
@@ -144,7 +144,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   Future<void> _handleRequestNotificationPermission() async {
     AppLogger.logBanner('알림 권한 요청 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       state = state.copyWith(
@@ -164,7 +164,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
         await _handleAndroidNotificationPermission();
       }
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('알림 권한 요청 처리', duration);
     } catch (e, st) {
       AppLogger.error('알림 권한 요청 중 예외 발생', error: e, stackTrace: st);
@@ -338,7 +338,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   Future<void> _handleRequestLocationPermission() async {
     AppLogger.logBanner('위치 권한 요청 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       state = state.copyWith(locationPermissionStatus: const AsyncLoading());
@@ -356,7 +356,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
         await _handleAndroidLocationPermission();
       }
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('위치 권한 요청 처리', duration);
     } catch (e, st) {
       AppLogger.error('위치 권한 요청 중 예외 발생', error: e, stackTrace: st);
@@ -451,7 +451,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   Future<void> _handleCompleteOnboarding() async {
     AppLogger.logBanner('온보딩 완료 처리 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       state = state.copyWith(onboardingCompletedStatus: const AsyncLoading());
@@ -464,7 +464,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       AppLogger.logStep(2, 2, '온보딩 완료 상태 업데이트');
       state = state.copyWith(onboardingCompletedStatus: const AsyncData(true));
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('온보딩 완료 처리', duration);
       AppLogger.logBox('온보딩 완료', '소요시간: ${duration.inMilliseconds}ms');
     } catch (e, st) {
@@ -475,7 +475,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
   Future<void> _checkPermissions() async {
     AppLogger.debug('권한 상태 확인 시작');
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
 
     try {
       state = state.copyWith(
@@ -519,7 +519,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       );
 
       AppLogger.logStep(3, 3, '권한 상태 확인 완료');
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('권한 상태 확인', duration);
 
       AppLogger.logState('최종 권한 상태', {

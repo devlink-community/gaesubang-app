@@ -1,4 +1,5 @@
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
+import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 
 // DTO → Model 변환
@@ -11,7 +12,7 @@ extension NotificationDtoMapper on NotificationDto {
       targetId: targetId ?? '',
       senderName: senderName ?? '',
       senderId: _extractSafeSenderId(), // 안전한 senderId 추출
-      createdAt: createdAt ?? DateTime.now(),
+      createdAt: createdAt ?? TimeFormatter.nowInSeoul(),
       isRead: isRead ?? false,
       description: description,
       imageUrl: imageUrl,

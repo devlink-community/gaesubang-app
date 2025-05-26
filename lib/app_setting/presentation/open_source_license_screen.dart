@@ -1,4 +1,5 @@
 // lib/app_setting/presentation/open_source_license_screen.dart
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -52,7 +53,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
   }
 
   void _loadLicenses() {
-    final startTime = DateTime.now();
+    final startTime = TimeFormatter.nowInSeoul();
     AppLogger.info('라이센스 정보 로드 시작', tag: 'OpenSourceLicense');
 
     try {
@@ -64,7 +65,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
       );
 
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('라이센스 정보 로드 완료', duration);
 
       AppLogger.logState('라이센스 로드 결과', {
@@ -82,7 +83,7 @@ class _OpenSourceLicenseScreenState extends State<OpenSourceLicenseScreen> {
         tag: 'OpenSourceLicense',
       );
     } catch (e, stackTrace) {
-      final duration = DateTime.now().difference(startTime);
+      final duration = TimeFormatter.nowInSeoul().difference(startTime);
       AppLogger.logPerformance('라이센스 정보 로드 실패', duration);
 
       AppLogger.error(

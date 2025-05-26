@@ -1,9 +1,10 @@
 import 'package:devlink_mobile_app/core/styles/app_text_styles.dart';
+import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/notification/presentation/components/notification_item.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_action.dart';
 import 'package:devlink_mobile_app/notification/presentation/notification_state.dart';
-import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -108,7 +109,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Widget _buildNotificationGroups(List<AppNotification> notifications) {
-    final now = DateTime.now();
+    final now = TimeFormatter.nowInSeoul();
 
     // 오늘 알림
     final todayNotifications =
