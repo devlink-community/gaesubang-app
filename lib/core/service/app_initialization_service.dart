@@ -7,8 +7,6 @@ import 'package:devlink_mobile_app/notification/service/fcm_service.dart';
 import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 /// 앱 초기화를 담당하는 서비스
 class AppInitializationService {
@@ -23,9 +21,6 @@ class AppInitializationService {
 
     try {
       AppLogger.logBanner('개수방 앱 초기화 시작');
-
-      // 시간대 초기화 - 앱 시작 시 한국 시간대로 설정
-      await _initializeTimeZone();
 
       // 1. Firebase 초기화
       await _initializeFirebase();
@@ -46,28 +41,6 @@ class AppInitializationService {
         stackTrace: stackTrace,
       );
       // 초기화 실패해도 앱은 계속 실행
-    }
-  }
-
-  /// 시간대 초기화
-  static Future<void> _initializeTimeZone() async {
-    try {
-      AppLogger.logStep(0, 3, '시간대 초기화 시작');
-
-      // 시간대 데이터 초기화
-      tz.initializeTimeZones();
-
-      // 한국 시간대로 설정
-      tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
-
-      AppLogger.info('시간대 초기화 완료 (Asia/Seoul)', tag: 'TimeZone');
-    } catch (e) {
-      AppLogger.error(
-        '시간대 초기화 실패',
-        tag: 'TimeZone',
-        error: e,
-      );
-      // 시간대 초기화 실패해도 앱 실행 가능하도록 예외 처리
     }
   }
 

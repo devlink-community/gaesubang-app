@@ -1,21 +1,49 @@
 // lib/core/utils/time_formatter.dart
 import 'package:intl/intl.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 /// 시간 포맷 관련 유틸리티 클래스
 class TimeFormatter {
   const TimeFormatter._(); // 인스턴스화 방지
 
+  // 초기화 상태 추적
+  static bool _isInitialized = false;
+
+  /// TimeFormatter 초기화 - timezone 데이터베이스 로드
+  static void initialize() {
+    if (_isInitialized) return;
+
+    try {
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+      _isInitialized = true;
+    } catch (e) {
+      print('TimeFormatter 초기화 실패: $e');
+    }
+  }
+
   // 한국 시간대 설정
-  static final _seoulTimeZone = tz.getLocation('Asia/Seoul');
+  static tz.Location get _seoulTimeZone {
+    if (!_isInitialized) {
+      initialize();
+    }
+    return tz.getLocation('Asia/Seoul');
+  }
 
   /// 한국 시간 기준으로 현재 시간 반환
   static DateTime nowInSeoul() {
+    if (!_isInitialized) {
+      initialize();
+    }
     return tz.TZDateTime.now(_seoulTimeZone);
   }
 
   /// UTC DateTime을 한국 시간으로 변환
   static DateTime toSeoulTime(DateTime dateTime) {
+    if (!_isInitialized) {
+      initialize();
+    }
     if (dateTime is tz.TZDateTime && dateTime.location == _seoulTimeZone) {
       return dateTime;
     }
