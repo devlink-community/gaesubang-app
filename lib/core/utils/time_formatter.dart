@@ -76,8 +76,10 @@ class TimeFormatter {
             ? dateStr
             : '$dateStr 00:00:00';
 
-    // 파싱 후 한국 시간대로 변환
-    return toSeoulTime(DateTime.parse(dateTimeStr));
+    // 명시적으로 UTC로 파싱한 후 한국 시간대로 변환
+    return toSeoulTime(
+      DateFormat('yyyy-MM-dd HH:mm:ss').parseUtc(dateTimeStr),
+    );
   }
 
   /// 초 단위의 시간을 HH:MM:SS 형식으로 변환
