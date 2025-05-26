@@ -71,5 +71,15 @@
 		<string>remote-notification</string>
 		<string>background-processing</string>
 	</array>
+
+	<key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+    
+    <!-- ✅ 알림 권한 설명 텍스트 -->
+    <key>NSUserNotificationUsageDescription</key>
+    <string>이 앱은 중요한 알림을 보내기 위해 알림 권한이 필요합니다.</string>
 </dict>
 </plist>
