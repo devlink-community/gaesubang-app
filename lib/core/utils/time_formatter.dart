@@ -1,6 +1,6 @@
 // lib/core/utils/time_formatter.dart
 import 'package:intl/intl.dart';
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 /// 시간 포맷 관련 유틸리티 클래스
@@ -15,7 +15,7 @@ class TimeFormatter {
     if (_isInitialized) return;
 
     try {
-      tz.initializeTimeZones();
+      tzdata.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
       _isInitialized = true;
     } catch (e) {
