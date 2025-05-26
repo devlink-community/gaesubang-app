@@ -518,6 +518,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     debugPrint('내용: ${message.notification?.body}');
     debugPrint('데이터: ${message.data}');
   }
+  return;
 }
 
 /// 알림 페이로드 모델 (확장)
