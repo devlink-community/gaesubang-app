@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
+import 'package:devlink_mobile_app/core/service/global_navigation_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +20,7 @@ class FCMService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  final GlobalNavigationService _navigationService = GlobalNavigationService();
 
   // 알림 클릭 이벤트 스트림
   final StreamController<NotificationPayload> _onNotificationTapStream =
@@ -52,7 +54,10 @@ class FCMService {
           '앱 시작 시 초기 메시지 감지: ${initialMessage.messageId}',
           tag: 'FCMService',
         );
-        _handleRemoteMessage(initialMessage);
+        // 앱 시작 시에는 약간의 지연 후 처리
+        Future.delayed(const Duration(seconds: 2), () {
+          _handleRemoteMessageWithNavigation(initialMessage, isAppLaunch: true);
+        });
       }
 
       // 3. 포그라운드 알림 설정
@@ -80,7 +85,9 @@ class FCMService {
 
       // 6. 각 상태별 메시지 핸들러 등록
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleRemoteMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        _handleRemoteMessageWithNavigation(message, isAppLaunch: false);
+      });
       FirebaseMessaging.onBackgroundMessage(
         _firebaseMessagingBackgroundHandler,
       );
@@ -135,7 +142,12 @@ class FCMService {
         if (payload != null) {
           try {
             final data = json.decode(payload) as Map<String, dynamic>;
-            _onNotificationTapStream.add(NotificationPayload.fromJson(data));
+            final notificationPayload = NotificationPayload.fromJson(data);
+
+            // 로컬 알림 클릭 시에도 네비게이션 처리
+            _handleNotificationNavigation(notificationPayload);
+
+            _onNotificationTapStream.add(notificationPayload);
           } catch (e) {
             AppLogger.error(
               '알림 페이로드 파싱 오류',
@@ -193,6 +205,8 @@ class FCMService {
         body: notification.body ?? '',
         type: _getNotificationType(message.data['type']),
         targetId: message.data['targetId'] ?? '',
+        senderId: message.data['senderId'],
+        additionalData: Map<String, dynamic>.from(message.data),
       );
 
       await _localNotifications.show(
@@ -220,19 +234,19 @@ class FCMService {
 
       AppLogger.info('로컬 알림 표시 완료', tag: 'FCMLocalNotification');
     } catch (e) {
-      AppLogger.error(
-        '로컬 알림 표시 실패',
-        tag: 'FCMLocalNotification',
-        error: e,
-      );
+      AppLogger.error('로컬 알림 표시 실패', tag: 'FCMLocalNotification', error: e);
     }
   }
 
-  /// 원격 메시지 열기 처리 (백그라운드에서 알림 탭)
-  void _handleRemoteMessage(RemoteMessage message) {
-    AppLogger.logBox('원격 메시지 열기', '''
+  /// 원격 메시지 열기 처리 (백그라운드에서 알림 탭) - 네비게이션 포함
+  void _handleRemoteMessageWithNavigation(
+    RemoteMessage message, {
+    required bool isAppLaunch,
+  }) {
+    AppLogger.logBox('원격 메시지 열기 (네비게이션 포함)', '''
 메시지 ID: ${message.messageId}
-데이터: ${message.data}''');
+데이터: ${message.data}
+앱 런치: $isAppLaunch''');
 
     final notification = message.notification;
     if (notification != null) {
@@ -241,10 +255,58 @@ class FCMService {
         body: notification.body ?? '',
         type: _getNotificationType(message.data['type']),
         targetId: message.data['targetId'] ?? '',
+        senderId: message.data['senderId'],
+        additionalData: Map<String, dynamic>.from(message.data),
       );
 
+      // 스트림에 이벤트 추가 (기존 로직 유지)
       _onNotificationTapStream.add(payload);
+
+      // 네비게이션 처리 (새로운 기능)
+      _handleNotificationNavigation(payload, isAppLaunch: isAppLaunch);
+
       AppLogger.info('알림 탭 이벤트 스트림에 추가됨', tag: 'FCMRemoteMessage');
+    }
+  }
+
+  /// 기존 원격 메시지 처리 (호환성 유지)
+  void _handleRemoteMessage(RemoteMessage message) {
+    _handleRemoteMessageWithNavigation(message, isAppLaunch: false);
+  }
+
+  /// 알림 클릭 시 네비게이션 처리
+  Future<void> _handleNotificationNavigation(
+    NotificationPayload payload, {
+    bool isAppLaunch = false,
+  }) async {
+    try {
+      AppLogger.logBox('알림 네비게이션 처리 시작', '''
+타입: ${payload.type.name}
+타겟 ID: ${payload.targetId}
+발송자 ID: ${payload.senderId}
+앱 런치: $isAppLaunch''');
+
+      if (isAppLaunch) {
+        // 앱 시작 시에는 앱 상태 기반 네비게이션 사용
+        await _navigationService.handleAppStateNavigation(
+          type: payload.type.name,
+          targetId: payload.targetId,
+          senderId: payload.senderId,
+          additionalData: payload.additionalData,
+        );
+      } else {
+        // 일반적인 경우에는 바로 네비게이션
+        await _navigationService.handleNotificationNavigation(
+          type: payload.type.name,
+          targetId: payload.targetId,
+          senderId: payload.senderId,
+          additionalData: payload.additionalData,
+        );
+      }
+
+      AppLogger.info('알림 네비게이션 처리 완료', tag: 'FCMNavigation');
+    } catch (e) {
+      AppLogger.error('알림 네비게이션 처리 실패', tag: 'FCMNavigation', error: e);
     }
   }
 
@@ -299,11 +361,7 @@ class FCMService {
 
       return isAuthorized;
     } catch (e) {
-      AppLogger.error(
-        'FCM 권한 요청 실패',
-        tag: 'FCMPermission',
-        error: e,
-      );
+      AppLogger.error('FCM 권한 요청 실패', tag: 'FCMPermission', error: e);
       return false;
     }
   }
@@ -322,11 +380,7 @@ class FCMService {
       }
       return token;
     } catch (e) {
-      AppLogger.error(
-        'FCM 토큰 조회 오류',
-        tag: 'FCMToken',
-        error: e,
-      );
+      AppLogger.error('FCM 토큰 조회 오류', tag: 'FCMToken', error: e);
       return null;
     }
   }
@@ -338,11 +392,7 @@ class FCMService {
       return settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
     } catch (e) {
-      AppLogger.error(
-        'FCM 권한 상태 확인 실패',
-        tag: 'FCMPermission',
-        error: e,
-      );
+      AppLogger.error('FCM 권한 상태 확인 실패', tag: 'FCMPermission', error: e);
       return false;
     }
   }
@@ -353,11 +403,7 @@ class FCMService {
       await _firebaseMessaging.subscribeToTopic(topic);
       AppLogger.info('토픽 구독 성공: $topic', tag: 'FCMTopic');
     } catch (e) {
-      AppLogger.error(
-        '토픽 구독 실패',
-        tag: 'FCMTopic',
-        error: e,
-      );
+      AppLogger.error('토픽 구독 실패', tag: 'FCMTopic', error: e);
     }
   }
 
@@ -367,11 +413,7 @@ class FCMService {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
       AppLogger.info('토픽 구독 해제 성공: $topic', tag: 'FCMTopic');
     } catch (e) {
-      AppLogger.error(
-        '토픽 구독 해제 실패',
-        tag: 'FCMTopic',
-        error: e,
-      );
+      AppLogger.error('토픽 구독 해제 실패', tag: 'FCMTopic', error: e);
     }
   }
 
@@ -389,6 +431,9 @@ class FCMService {
 
     // 3. 초기화 상태 확인
     AppLogger.info('초기화 상태: $_isInitialized', tag: 'FCMTest');
+
+    // 4. 네비게이션 서비스 상태 확인
+    _navigationService.diagnose();
 
     AppLogger.logBanner('FCM 연결 테스트 완료');
   }
@@ -417,18 +462,22 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-/// 알림 페이로드 모델
+/// 알림 페이로드 모델 (확장)
 class NotificationPayload {
   final String title;
   final String body;
   final NotificationType type;
   final String targetId;
+  final String? senderId;
+  final Map<String, dynamic>? additionalData;
 
   NotificationPayload({
     required this.title,
     required this.body,
     required this.type,
     required this.targetId,
+    this.senderId,
+    this.additionalData,
   });
 
   Map<String, dynamic> toJson() => {
@@ -436,6 +485,8 @@ class NotificationPayload {
     'body': body,
     'type': type.name,
     'targetId': targetId,
+    'senderId': senderId,
+    'additionalData': additionalData,
   };
 
   factory NotificationPayload.fromJson(Map<String, dynamic> json) {
@@ -444,6 +495,8 @@ class NotificationPayload {
       body: json['body'] ?? '',
       type: _typeFromString(json['type']),
       targetId: json['targetId'] ?? '',
+      senderId: json['senderId'],
+      additionalData: json['additionalData'] as Map<String, dynamic>?,
     );
   }
 
