@@ -11,7 +11,13 @@ extension AttendanceDtoMapper on AttendanceDto {
     // 날짜 문자열을 DateTime으로 변환
     DateTime date;
     try {
-      date = TimeFormatter.parseDate(this.date ?? '');
+      // 빈 문자열 체크 추가
+      if (this.date == null || this.date!.isEmpty) {
+        // 기본값으로 현재 시간 사용
+        date = TimeFormatter.nowInSeoul();
+      } else {
+        date = TimeFormatter.parseDate(this.date!);
+      }
     } catch (e) {
       // 기본값으로 현재 날짜 사용
       date = TimeFormatter.nowInSeoul();

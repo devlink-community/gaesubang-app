@@ -70,6 +70,11 @@ class TimeFormatter {
 
   /// 날짜 문자열(yyyy-MM-dd)을 파싱하여 한국 시간대 DateTime으로 변환
   static DateTime parseDate(String dateStr) {
+    // 빈 문자열 체크
+    if (dateStr.isEmpty) {
+      throw ArgumentError('날짜 문자열이 비어 있습니다.');
+    }
+
     // 시간이 없는 경우 00:00:00 추가
     final dateTimeStr =
         dateStr.contains('T') || dateStr.contains(' ')
