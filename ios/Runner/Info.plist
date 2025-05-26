@@ -66,10 +66,11 @@
 	
 	<!-- 백그라운드 모드 (알림 및 타이머) -->
 	<key>UIBackgroundModes</key>
-	<array>
-		<string>background-fetch</string>
-		<string>remote-notification</string>
-		<string>background-processing</string>
-	</array>
+		<array>
+    		<string>fetch</string>                    
+    		<string>remote-notification</string>      
+    		<string>background-processing</string>
+		</array>
+
 </dict>
 </plist>
