@@ -128,10 +128,7 @@ class ErrorApp extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     '다음 단계를 따라주세요',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.red.shade600,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.red.shade600),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -224,10 +221,7 @@ class ErrorApp extends StatelessWidget {
         Expanded(
           child: Text(
             description,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
         ),
       ],
