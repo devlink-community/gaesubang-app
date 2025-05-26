@@ -1,6 +1,6 @@
 import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/notification/data/data_source/notification_data_source.dart';
-import 'package:devlink_mobile_app/notification/data/dto/notification_dto_old.dart';
+import 'package:devlink_mobile_app/notification/data/dto/notification_dto.dart';
 
 class MockNotificationDataSourceImpl implements NotificationDataSource {
   // 메모리 내 알림 저장소
