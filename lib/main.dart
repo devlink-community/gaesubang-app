@@ -87,8 +87,8 @@ class MyApp extends ConsumerWidget {
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
     );
   }
 }
