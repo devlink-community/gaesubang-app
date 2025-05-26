@@ -6,6 +6,7 @@ import 'package:devlink_mobile_app/community/domain/model/comment.dart';
 import 'package:devlink_mobile_app/community/domain/model/like.dart';
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 
 /// PostDto → Post 변환
 extension PostDtoMapper on PostDto {

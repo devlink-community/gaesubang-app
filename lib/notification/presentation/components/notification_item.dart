@@ -1,3 +1,4 @@
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/notification/domain/model/app_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

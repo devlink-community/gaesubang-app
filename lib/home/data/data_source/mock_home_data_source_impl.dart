@@ -1,5 +1,6 @@
 import 'package:devlink_mobile_app/community/domain/model/post.dart';
 import 'package:devlink_mobile_app/community/module/util/board_type_enum.dart';
+import 'package:devlink_mobile_app/core/utils/time_formatter.dart';
 import 'package:devlink_mobile_app/home/data/data_source/home_data_source.dart';
 import 'package:devlink_mobile_app/home/domain/model/notice.dart';
 
