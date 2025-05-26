@@ -22,16 +22,28 @@ class FCMTokenService {
       AppLogger.logBanner('FCM 토큰 등록 시작');
       AppLogger.info('사용자 ID: $userId', tag: 'FCMTokenService');
 
-      // 1. FCM 토큰 가져오기
+      // ✅ iOS 전용: APNs 토큰 확인 (새로 추가된 부분)
+      if (Platform.isIOS) {
+        final apnsReady = await _verifyAPNsReadiness();
+        if (!apnsReady) {
+          AppLogger.error('APNs 토큰이 준비되지 않아 등록을 중단합니다', tag: 'FCMTokenService');
+          throw Exception('APNs 토큰이 준비되지 않았습니다.');
+        }
+      }
+
+      // 1. FCM 토큰 가져오기 (기존 코드 유지)
       final token = await _messaging.getToken();
       if (token == null) {
         AppLogger.error('FCM 토큰을 가져올 수 없습니다', tag: 'FCMTokenService');
         throw Exception('FCM 토큰을 가져올 수 없습니다.');
       }
 
-      AppLogger.info('FCM 토큰 획득: ${token.substring(0, 20)}...', tag: 'FCMTokenService');
+      AppLogger.info(
+        'FCM 토큰 획득: ${token.substring(0, 20)}...',
+        tag: 'FCMTokenService',
+      );
 
-      // 2. 디바이스 정보 가져오기
+      // 2. 디바이스 정보 가져오기 (기존 코드 유지)
       final deviceId = await _getDeviceId();
       final platform = Platform.isIOS ? 'ios' : 'android';
 
@@ -40,7 +52,7 @@ class FCMTokenService {
         'platform': platform,
       });
 
-      // 3. 기존 토큰 문서 확인 (동일 디바이스)
+      // 3. 기존 토큰 문서 확인 (동일 디바이스) (기존 코드 유지)
       final existingTokenQuery =
           await _firestore
               .collection('users')
@@ -52,7 +64,7 @@ class FCMTokenService {
               .limit(1)
               .get();
 
-      // 4. 토큰 데이터 구성
+      // 4. 토큰 데이터 구성 (기존 코드 유지)
       final tokenData = {
         'token': token,
         'deviceId': deviceId,
@@ -62,7 +74,7 @@ class FCMTokenService {
         'deviceModel': await _getDeviceModel(),
       };
 
-      // 5. 기존 토큰 업데이트 또는 새 토큰 생성
+      // 5. 기존 토큰 업데이트 또는 새 토큰 생성 (기존 코드 유지)
       if (existingTokenQuery.docs.isNotEmpty) {
         // 기존 토큰 업데이트
         final existingDoc = existingTokenQuery.docs.first;
@@ -91,10 +103,10 @@ class FCMTokenService {
         AppLogger.info('새 FCM 토큰 등록 완료: ${docRef.id}', tag: 'FCMTokenService');
       }
 
-      // 6. 토큰 갱신 리스너 설정 (중복 방지)
+      // 6. 토큰 갱신 리스너 설정 (중복 방지) (기존 코드 유지)
       _setupTokenRefreshListenerIfNeeded(userId);
 
-      // 7. 등록 성공 검증
+      // 7. 등록 성공 검증 (기존 코드 유지)
       await _verifyTokenRegistration(userId, token);
 
       AppLogger.logBanner('FCM 토큰 등록 완료');
@@ -106,6 +118,36 @@ class FCMTokenService {
         stackTrace: stackTrace,
       );
       rethrow;
+    }
+  }
+
+  Future<bool> _verifyAPNsReadiness() async {
+    AppLogger.info('iOS APNs 준비 상태 확인 시작', tag: 'FCMTokenService');
+
+    try {
+      // APNs 토큰 확인
+      final apnsToken = await _messaging.getAPNSToken();
+
+      if (apnsToken != null) {
+        AppLogger.info('APNs 토큰 확인됨', tag: 'FCMTokenService');
+        return true;
+      }
+
+      // APNs 토큰이 없으면 잠시 대기 후 재시도
+      AppLogger.warning('APNs 토큰이 없음 - 2초 대기 후 재시도', tag: 'FCMTokenService');
+      await Future.delayed(const Duration(seconds: 2));
+
+      final retryToken = await _messaging.getAPNSToken();
+      if (retryToken != null) {
+        AppLogger.info('APNs 토큰 재시도 성공', tag: 'FCMTokenService');
+        return true;
+      } else {
+        AppLogger.error('APNs 토큰 재시도 실패', tag: 'FCMTokenService');
+        return false;
+      }
+    } catch (e) {
+      AppLogger.error('APNs 준비 상태 확인 중 오류', tag: 'FCMTokenService', error: e);
+      return false;
     }
   }
 
@@ -127,28 +169,23 @@ class FCMTokenService {
       _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((
         newToken,
       ) async {
-        AppLogger.logBox('FCM 토큰 갱신 감지', '새 토큰: ${newToken.substring(0, 20)}...');
+        AppLogger.logBox(
+          'FCM 토큰 갱신 감지',
+          '새 토큰: ${newToken.substring(0, 20)}...',
+        );
 
         try {
           await registerDeviceToken(userId);
           AppLogger.info('토큰 갱신 등록 완료', tag: 'FCMTokenService');
         } catch (e) {
-          AppLogger.error(
-            '토큰 갱신 등록 실패',
-            tag: 'FCMTokenService',
-            error: e,
-          );
+          AppLogger.error('토큰 갱신 등록 실패', tag: 'FCMTokenService', error: e);
         }
       });
 
       _isTokenRefreshListenerSetup = true;
       AppLogger.info('토큰 갱신 리스너 설정 완료', tag: 'FCMTokenService');
     } catch (e) {
-      AppLogger.error(
-        '토큰 갱신 리스너 설정 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('토큰 갱신 리스너 설정 실패', tag: 'FCMTokenService', error: e);
     }
   }
 
@@ -175,11 +212,7 @@ class FCMTokenService {
         throw Exception('토큰 등록 검증에 실패했습니다.');
       }
     } catch (e) {
-      AppLogger.error(
-        '토큰 등록 검증 중 오류',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('토큰 등록 검증 중 오류', tag: 'FCMTokenService', error: e);
     }
   }
 
@@ -197,11 +230,7 @@ class FCMTokenService {
         return 'unknown_platform_${DateTime.now().millisecondsSinceEpoch}';
       }
     } catch (e) {
-      AppLogger.error(
-        '디바이스 ID 가져오기 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('디바이스 ID 가져오기 실패', tag: 'FCMTokenService', error: e);
       return 'fallback_${DateTime.now().millisecondsSinceEpoch}';
     }
   }
@@ -214,11 +243,7 @@ class FCMTokenService {
       // return packageInfo.version;
       return '1.0.0'; // 임시값
     } catch (e) {
-      AppLogger.error(
-        '앱 버전 가져오기 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('앱 버전 가져오기 실패', tag: 'FCMTokenService', error: e);
       return 'unknown';
     }
   }
@@ -236,11 +261,7 @@ class FCMTokenService {
         return 'Unknown';
       }
     } catch (e) {
-      AppLogger.error(
-        '디바이스 모델 가져오기 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('디바이스 모델 가져오기 실패', tag: 'FCMTokenService', error: e);
       return 'Unknown';
     }
   }
@@ -285,11 +306,7 @@ class FCMTokenService {
 
       return tokens;
     } catch (e) {
-      AppLogger.error(
-        '사용자 토큰 조회 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('사용자 토큰 조회 실패', tag: 'FCMTokenService', error: e);
       return [];
     }
   }
@@ -319,16 +336,15 @@ class FCMTokenService {
           AppLogger.debug('삭제 대상 토큰: ${doc.id}', tag: 'FCMTokenService');
         }
         await batch.commit();
-        AppLogger.info('현재 디바이스 FCM 토큰 ${tokenQuery.docs.length}개 제거 완료', tag: 'FCMTokenService');
+        AppLogger.info(
+          '현재 디바이스 FCM 토큰 ${tokenQuery.docs.length}개 제거 완료',
+          tag: 'FCMTokenService',
+        );
       } else {
         AppLogger.info('제거할 토큰이 없습니다', tag: 'FCMTokenService');
       }
     } catch (e) {
-      AppLogger.error(
-        'FCM 토큰 제거 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('FCM 토큰 제거 실패', tag: 'FCMTokenService', error: e);
       rethrow;
     }
   }
@@ -363,16 +379,15 @@ class FCMTokenService {
         );
 
         await batch.commit();
-        AppLogger.info('사용자 모든 FCM 토큰 ${snapshot.docs.length}개 제거 완료', tag: 'FCMTokenService');
+        AppLogger.info(
+          '사용자 모든 FCM 토큰 ${snapshot.docs.length}개 제거 완료',
+          tag: 'FCMTokenService',
+        );
       } else {
         AppLogger.info('제거할 토큰이 없습니다', tag: 'FCMTokenService');
       }
     } catch (e) {
-      AppLogger.error(
-        '모든 FCM 토큰 제거 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('모든 FCM 토큰 제거 실패', tag: 'FCMTokenService', error: e);
       rethrow;
     }
   }
@@ -383,7 +398,10 @@ class FCMTokenService {
     int expiredDays = 90,
   }) async {
     try {
-      AppLogger.logBox('만료된 FCM 토큰 정리 시작', '사용자 ID: $userId, 만료 기준: $expiredDays일');
+      AppLogger.logBox(
+        '만료된 FCM 토큰 정리 시작',
+        '사용자 ID: $userId, 만료 기준: $expiredDays일',
+      );
 
       final expiredDate = DateTime.now().subtract(Duration(days: expiredDays));
       final expiredTimestamp = Timestamp.fromDate(expiredDate);
@@ -405,16 +423,15 @@ class FCMTokenService {
           AppLogger.debug('만료된 토큰 삭제: ${doc.id}', tag: 'FCMTokenService');
         }
         await batch.commit();
-        AppLogger.info('만료된 FCM 토큰 ${expiredTokens.docs.length}개 정리 완료', tag: 'FCMTokenService');
+        AppLogger.info(
+          '만료된 FCM 토큰 ${expiredTokens.docs.length}개 정리 완료',
+          tag: 'FCMTokenService',
+        );
       } else {
         AppLogger.info('정리할 만료된 토큰이 없습니다', tag: 'FCMTokenService');
       }
     } catch (e) {
-      AppLogger.error(
-        '만료된 토큰 정리 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('만료된 토큰 정리 실패', tag: 'FCMTokenService', error: e);
     }
   }
 
@@ -423,17 +440,16 @@ class FCMTokenService {
     try {
       final token = await _messaging.getToken();
       if (token != null) {
-        AppLogger.info('현재 디바이스 토큰: ${token.substring(0, 20)}...', tag: 'FCMTokenService');
+        AppLogger.info(
+          '현재 디바이스 토큰: ${token.substring(0, 20)}...',
+          tag: 'FCMTokenService',
+        );
       } else {
         AppLogger.warning('현재 디바이스 토큰: null', tag: 'FCMTokenService');
       }
       return token;
     } catch (e) {
-      AppLogger.error(
-        '현재 디바이스 토큰 가져오기 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('현재 디바이스 토큰 가져오기 실패', tag: 'FCMTokenService', error: e);
       return null;
     }
   }
@@ -465,11 +481,7 @@ class FCMTokenService {
         AppLogger.warning('업데이트할 토큰을 찾을 수 없습니다', tag: 'FCMTokenService');
       }
     } catch (e) {
-      AppLogger.error(
-        '토큰 사용 시간 업데이트 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('토큰 사용 시간 업데이트 실패', tag: 'FCMTokenService', error: e);
     }
   }
 
@@ -515,11 +527,7 @@ class FCMTokenService {
       AppLogger.warning('토큰 정보를 찾을 수 없습니다', tag: 'FCMTokenService');
       return null;
     } catch (e) {
-      AppLogger.error(
-        '디바이스 토큰 정보 조회 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('디바이스 토큰 정보 조회 실패', tag: 'FCMTokenService', error: e);
       return null;
     }
   }
@@ -536,14 +544,10 @@ class FCMTokenService {
         'authorizationStatus': settings.authorizationStatus.toString(),
         'hasPermission': hasPermission,
       });
-      
+
       return hasPermission;
     } catch (e) {
-      AppLogger.error(
-        'FCM 권한 상태 확인 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('FCM 권한 상태 확인 실패', tag: 'FCMTokenService', error: e);
       return false;
     }
   }
@@ -571,11 +575,7 @@ class FCMTokenService {
 
       return isAuthorized;
     } catch (e) {
-      AppLogger.error(
-        'FCM 권한 요청 실패',
-        tag: 'FCMTokenService',
-        error: e,
-      );
+      AppLogger.error('FCM 권한 요청 실패', tag: 'FCMTokenService', error: e);
       return false;
     }
   }
@@ -591,24 +591,32 @@ class FCMTokenService {
 
       // 2. 현재 토큰
       final currentToken = await getCurrentDeviceToken();
-      AppLogger.info('2. 현재 토큰: ${currentToken != null ? "있음" : "없음"}', tag: 'FCMDiagnosis');
+      AppLogger.info(
+        '2. 현재 토큰: ${currentToken != null ? "있음" : "없음"}',
+        tag: 'FCMDiagnosis',
+      );
 
       // 3. 저장된 토큰 정보
       final tokenInfo = await getDeviceTokenInfo(userId);
-      AppLogger.info('3. 저장된 토큰: ${tokenInfo != null ? "있음" : "없음"}', tag: 'FCMDiagnosis');
+      AppLogger.info(
+        '3. 저장된 토큰: ${tokenInfo != null ? "있음" : "없음"}',
+        tag: 'FCMDiagnosis',
+      );
 
       // 4. 활성 토큰 수
       final activeTokens = await getUserActiveTokens(userId);
-      AppLogger.info('4. 활성 토큰 수: ${activeTokens.length}개', tag: 'FCMDiagnosis');
+      AppLogger.info(
+        '4. 활성 토큰 수: ${activeTokens.length}개',
+        tag: 'FCMDiagnosis',
+      );
 
       // 5. 리스너 상태
-      AppLogger.info('5. 토큰 갱신 리스너 설정됨: $_isTokenRefreshListenerSetup', tag: 'FCMDiagnosis');
-    } catch (e) {
-      AppLogger.error(
-        '진단 중 오류 발생',
+      AppLogger.info(
+        '5. 토큰 갱신 리스너 설정됨: $_isTokenRefreshListenerSetup',
         tag: 'FCMDiagnosis',
-        error: e,
       );
+    } catch (e) {
+      AppLogger.error('진단 중 오류 발생', tag: 'FCMDiagnosis', error: e);
     }
 
     AppLogger.logBanner('FCM 토큰 서비스 진단 완료');
