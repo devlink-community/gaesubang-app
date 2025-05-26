@@ -7,14 +7,24 @@ import 'package:devlink_mobile_app/core/utils/api_call_logger.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   // Flutter 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 시간대 데이터 초기화
+  tz.initializeTimeZones();
+  try {
+    tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
+  } catch (e) {
+    print('시간대 설정 오류: $e');
+  }
+
   // 로거 초기화 (가장 먼저)
   AppLogger.initialize();
-  
+
   AppLogger.info(
     'Flutter 바인딩 초기화 완료',
     tag: 'AppInit',
@@ -24,7 +34,7 @@ void main() async {
     // 앱 초기화 (Firebase, FCM, 기타 서비스)
     AppLogger.logStep(1, 3, '앱 서비스 초기화 시작');
     await AppInitializationService.initialize();
-    
+
     AppLogger.info(
       '앱 초기화 서비스 완료',
       tag: 'AppInit',
@@ -37,9 +47,8 @@ void main() async {
     // 앱 실행
     AppLogger.logStep(3, 3, '앱 실행 시작');
     AppLogger.logBanner('개수방 앱 시작! 🚀');
-    
+
     runApp(const ProviderScope(child: MyApp()));
-    
   } catch (e, st) {
     AppLogger.severe(
       '앱 초기화 중 치명적 오류 발생',
@@ -47,7 +56,7 @@ void main() async {
       error: e,
       stackTrace: st,
     );
-    
+
     // 앱 초기화 실패 시에도 기본 앱은 실행하되, 오류 상태 표시
     runApp(const ProviderScope(child: ErrorApp()));
   }
@@ -57,7 +66,7 @@ void main() async {
 void _initializeApiLogging() {
   try {
     ApiCallLogger.printStats();
-    
+
     AppLogger.info(
       'API 로깅 초기화 완료',
       tag: 'ApiLogging',
@@ -136,7 +145,7 @@ class ErrorApp extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // 단계별 안내
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -161,9 +170,9 @@ class ErrorApp extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // 추가 안내
                   Container(
                     padding: const EdgeInsets.all(16),
