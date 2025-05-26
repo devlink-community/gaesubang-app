@@ -185,4 +185,22 @@ class AppInitializationService {
       AppLogger.error('FCM 상태 진단 실패', tag: 'FCM', error: e);
     }
   }
+
+  static Future<void> cleanupFCMService() async {
+    try {
+      AppLogger.info('FCM 서비스 정리 시작', tag: 'AppInit');
+
+      // FCM 서비스 인스턴스 가져와서 dispose 호출
+      final fcmService = FCMService();
+      fcmService.dispose();
+
+      // 토큰 서비스 정리
+      final fcmTokenService = FCMTokenService();
+      fcmTokenService.dispose();
+
+      AppLogger.info('FCM 서비스 정리 완료', tag: 'AppInit');
+    } catch (e) {
+      AppLogger.error('FCM 서비스 정리 실패', tag: 'AppInit', error: e);
+    }
+  }
 }

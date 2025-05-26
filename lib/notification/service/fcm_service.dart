@@ -8,6 +8,7 @@ import 'package:devlink_mobile_app/core/service/global_navigation_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// FCM 초기화 및 이벤트 처리를 담당하는 서비스
@@ -108,6 +109,14 @@ class FCMService {
           tag: 'FCMService',
         );
       });
+      WidgetsBinding.instance.addObserver(
+        AppLifecycleObserver(
+          onDetached: () {
+            AppLogger.info('앱 detached 상태 감지 - FCM 서비스 정리', tag: 'FCMService');
+            dispose();
+          },
+        ),
+      );
 
       _isInitialized = true;
       AppLogger.logBanner('FCM Service 초기화 완료');
@@ -499,7 +508,17 @@ class FCMService {
   /// 서비스 정리 (메모리 누수 방지)
   void dispose() {
     AppLogger.info('FCMService 정리 시작', tag: 'FCMService');
+
+    // 스트림 닫기
     _onNotificationTapStream.close();
+
+    // 리스너 해제
+    FirebaseMessaging.onMessage.drain();
+    FirebaseMessaging.onMessageOpenedApp.drain();
+
+    // 로컬 알림 플러그인 리소스 해제
+    _localNotifications.cancelAll();
+
     AppLogger.info('FCMService 정리 완료', tag: 'FCMService');
   }
 }
@@ -571,6 +590,19 @@ class NotificationPayload {
         return NotificationType.mention;
       default:
         return NotificationType.comment;
+    }
+  }
+}
+
+class AppLifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback onDetached;
+
+  AppLifecycleObserver({required this.onDetached});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      onDetached();
     }
   }
 }
