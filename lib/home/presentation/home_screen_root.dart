@@ -30,10 +30,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
   void initState() {
     super.initState();
 
-    AppLogger.info(
-      'HomeScreenRoot 초기화 시작',
-      tag: 'HomeInit',
-    );
+    AppLogger.info('HomeScreenRoot 초기화 시작', tag: 'HomeInit');
 
     // 초기화 시점에 사용자 스킬 정보 로드
     _loadUserSkills();
@@ -56,10 +53,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
       _isAIInitializing = true;
     });
 
-    AppLogger.info(
-      'AI 서비스 사전 초기화 시작 (백그라운드)',
-      tag: 'AIPreload',
-    );
+    AppLogger.info('AI 서비스 사전 초기화 시작 (백그라운드)', tag: 'AIPreload');
 
     final startTime = DateTime.now();
 
@@ -69,10 +63,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
       // 초기화 상태 확인
       if (firebaseAIClient.isInitialized) {
-        AppLogger.info(
-          'Firebase AI 클라이언트 이미 초기화됨',
-          tag: 'AIPreload',
-        );
+        AppLogger.info('Firebase AI 클라이언트 이미 초기화됨', tag: 'AIPreload');
 
         setState(() {
           _isAIInitialized = true;
@@ -83,19 +74,16 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
       // 🆕 초기화 진행 중인지 확인
       if (firebaseAIClient.isInitializing) {
-        AppLogger.info(
-          'Firebase AI 클라이언트 초기화 진행 중, 완료 대기',
-          tag: 'AIPreload',
-        );
+        AppLogger.info('Firebase AI 클라이언트 초기화 진행 중, 완료 대기', tag: 'AIPreload');
 
         // 다른 곳에서 초기화 중이면 완료까지 대기 (최대 10초)
-        await _waitForInitialization(firebaseAIClient, const Duration(seconds: 10));
+        await _waitForInitialization(
+          firebaseAIClient,
+          const Duration(seconds: 10),
+        );
       } else {
         // 새로 초기화 시작
-        AppLogger.info(
-          'Firebase AI 클라이언트 새로 초기화 시작',
-          tag: 'AIPreload',
-        );
+        AppLogger.info('Firebase AI 클라이언트 새로 초기화 시작', tag: 'AIPreload');
 
         await firebaseAIClient.initialize();
       }
@@ -107,10 +95,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
         _isAIInitializing = false;
       });
 
-      AppLogger.logPerformance(
-        'AI 서비스 사전 초기화 완료',
-        duration,
-      );
+      AppLogger.logPerformance('AI 서비스 사전 초기화 완료', duration);
 
       AppLogger.info(
         'AI 서비스 사전 초기화 성공 (${duration.inMilliseconds}ms)',
@@ -119,7 +104,6 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
       // 🆕 초기화 완료 후 캐시 정리 실행
       _performInitialCacheCleanup();
-
     } catch (e) {
       final duration = DateTime.now().difference(startTime);
 
@@ -128,39 +112,26 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
         // _isAIInitialized는 false로 유지
       });
 
-      AppLogger.logPerformance(
-        'AI 서비스 사전 초기화 실패',
-        duration,
-      );
+      AppLogger.logPerformance('AI 서비스 사전 초기화 실패', duration);
 
-      AppLogger.error(
-        'AI 서비스 사전 초기화 실패',
-        tag: 'AIPreload',
-        error: e,
-      );
+      AppLogger.error('AI 서비스 사전 초기화 실패', tag: 'AIPreload', error: e);
 
       // 🔧 초기화 실패해도 앱 사용에는 지장 없음 (첫 사용 시 다시 시도)
-      AppLogger.info(
-        'AI 기능 첫 사용 시 다시 초기화 시도 예정',
-        tag: 'AIPreload',
-      );
+      AppLogger.info('AI 기능 첫 사용 시 다시 초기화 시도 예정', tag: 'AIPreload');
     }
   }
 
   /// 🆕 다른 곳에서 초기화 진행 중일 때 완료 대기
   Future<void> _waitForInitialization(
-      dynamic firebaseAIClient,
-      Duration timeout,
-      ) async {
+    dynamic firebaseAIClient,
+    Duration timeout,
+  ) async {
     final startTime = DateTime.now();
     const checkInterval = Duration(milliseconds: 100);
 
     while (DateTime.now().difference(startTime) < timeout) {
       if (firebaseAIClient.isInitialized) {
-        AppLogger.info(
-          'Firebase AI 클라이언트 초기화 완료 대기 성공',
-          tag: 'AIPreload',
-        );
+        AppLogger.info('Firebase AI 클라이언트 초기화 완료 대기 성공', tag: 'AIPreload');
         return;
       }
 
@@ -173,10 +144,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
     }
 
     // 타임아웃 발생
-    throw TimeoutException(
-      'Firebase AI 클라이언트 초기화 대기 타임아웃',
-      timeout,
-    );
+    throw TimeoutException('Firebase AI 클라이언트 초기화 대기 타임아웃', timeout);
   }
 
   /// 🆕 초기화 완료 후 캐시 정리 실행
@@ -185,16 +153,9 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
       final cacheCleanup = ref.read(cacheCleanupProvider);
       cacheCleanup.cleanupOldCacheEntries();
 
-      AppLogger.info(
-        '초기 캐시 정리 완료',
-        tag: 'AIPreload',
-      );
+      AppLogger.info('초기 캐시 정리 완료', tag: 'AIPreload');
     } catch (e) {
-      AppLogger.error(
-        '초기 캐시 정리 실패',
-        tag: 'AIPreload',
-        error: e,
-      );
+      AppLogger.error('초기 캐시 정리 실패', tag: 'AIPreload', error: e);
     }
   }
 
@@ -204,17 +165,11 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
   /// 🆕 AI 서비스 강제 초기화 메서드 (필요 시 UI에서 호출)
   Future<void> forceInitializeAI() async {
     if (_isAIInitializing) {
-      AppLogger.debug(
-        'AI 강제 초기화 요청 무시 (이미 초기화 중)',
-        tag: 'AIPreload',
-      );
+      AppLogger.debug('AI 강제 초기화 요청 무시 (이미 초기화 중)', tag: 'AIPreload');
       return;
     }
 
-    AppLogger.info(
-      'AI 서비스 강제 초기화 시작',
-      tag: 'AIPreload',
-    );
+    AppLogger.info('AI 서비스 강제 초기화 시작', tag: 'AIPreload');
 
     // 상태 리셋
     setState(() {
@@ -229,10 +184,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
   Future<void> _loadUserSkills() async {
     final startTime = DateTime.now();
 
-    AppLogger.debug(
-      '사용자 스킬 정보 로드 시작',
-      tag: 'HomeInit',
-    );
+    AppLogger.debug('사용자 스킬 정보 로드 시작', tag: 'HomeInit');
 
     try {
       final currentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
@@ -247,10 +199,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
           });
 
           AppLogger.logPerformance('사용자 스킬 정보 로드 완료', duration);
-          AppLogger.info(
-            '사용자 스킬 정보 로드 완료: $userSkills',
-            tag: 'HomeInit',
-          );
+          AppLogger.info('사용자 스킬 정보 로드 완료: $userSkills', tag: 'HomeInit');
         },
         error: (error, stackTrace) {
           AppLogger.logPerformance('사용자 정보 로드 실패', duration);
@@ -262,29 +211,19 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
           );
         },
         loading: () {
-          AppLogger.debug(
-            '사용자 정보 로딩 중...',
-            tag: 'HomeInit',
-          );
+          AppLogger.debug('사용자 정보 로딩 중...', tag: 'HomeInit');
         },
       );
     } catch (e) {
       final duration = DateTime.now().difference(startTime);
       AppLogger.logPerformance('사용자 스킬 로드 예외', duration);
-      AppLogger.error(
-        '사용자 스킬 로드 예외',
-        tag: 'HomeInit',
-        error: e,
-      );
+      AppLogger.error('사용자 스킬 로드 예외', tag: 'HomeInit', error: e);
     }
   }
 
   @override
   void dispose() {
-    AppLogger.info(
-      'HomeScreenRoot 해제',
-      tag: 'HomeInit',
-    );
+    AppLogger.info('HomeScreenRoot 해제', tag: 'HomeInit');
     super.dispose();
   }
 
@@ -311,10 +250,7 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
             // 🆕 새로고침 시 AI 상태도 확인하고 필요 시 재초기화
             if (!_isAIInitialized && !_isAIInitializing) {
-              AppLogger.info(
-                '새로고침 시 AI 서비스 재초기화 시작',
-                tag: 'HomeAction',
-              );
+              AppLogger.info('새로고침 시 AI 서비스 재초기화 시작', tag: 'HomeAction');
               unawaited(_preInitializeAIServices());
             }
 
@@ -338,7 +274,15 @@ class _HomeScreenRootState extends ConsumerState<HomeScreenRoot> {
 
           case OnTapNotification():
             AppLogger.info('알림 페이지 이동', tag: 'HomeAction');
-            context.push('/notifications');
+
+            // 🆕 알림 페이지로 이동하고, 돌아왔을 때 알림 수 다시 로딩
+            final result = await context.push('/notifications');
+
+            // 알림 화면에서 돌아온 경우 (사용자가 알림을 읽었을 가능성)
+            if (result != null || context.mounted) {
+              AppLogger.info('알림 화면에서 돌아옴 - 홈 데이터 새로고침', tag: 'HomeAction');
+              await homeNotifier.onAction(const HomeAction.refresh());
+            }
             break;
 
           case OnTapCreateGroup():
