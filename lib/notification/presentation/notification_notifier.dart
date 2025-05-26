@@ -17,6 +17,7 @@ import 'package:devlink_mobile_app/notification/service/fcm_token_service.dart';
 import 'package:devlink_mobile_app/core/utils/app_logger.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:devlink_mobile_app/core/service/global_navigation_service.dart';
 
 part 'notification_notifier.g.dart';
 
@@ -29,6 +30,7 @@ class NotificationNotifier extends _$NotificationNotifier {
   late final DeleteNotificationUseCase _deleteNotificationUseCase;
   late final FCMService _fcmService;
   late final FCMTokenService _fcmTokenService;
+  late final GlobalNavigationService _navigationService;
 
   // 스트림 구독 관리
   StreamSubscription? _fcmSubscription;
@@ -88,6 +90,7 @@ class NotificationNotifier extends _$NotificationNotifier {
     _deleteNotificationUseCase = ref.watch(deleteNotificationUseCaseProvider);
     _fcmService = ref.watch(fcmServiceProvider);
     _fcmTokenService = ref.watch(fcmTokenServiceProvider);
+    _navigationService = GlobalNavigationService(); // 글로벌 네비게이션 서비스 추가
 
     AppLogger.info('의존성 주입 완료', tag: 'NotificationNotifier');
 
@@ -186,10 +189,7 @@ class NotificationNotifier extends _$NotificationNotifier {
   /// 사용자 로그인 처리
   Future<void> _handleUserLogin(String userId, String nickname) async {
     AppLogger.info('사용자 로그인 처리 시작', tag: 'NotificationAuth');
-    AppLogger.logState('로그인 정보', {
-      'userId': userId,
-      'nickname': nickname,
-    });
+    AppLogger.logState('로그인 정보', {'userId': userId, 'nickname': nickname});
 
     try {
       // 1. FCM 토큰 등록 (중복 방지)
@@ -209,11 +209,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       AppLogger.info('사용자 로그인 처리 완료', tag: 'NotificationAuth');
     } catch (e) {
-      AppLogger.error(
-        '사용자 로그인 처리 실패',
-        tag: 'NotificationAuth',
-        error: e,
-      );
+      AppLogger.error('사용자 로그인 처리 실패', tag: 'NotificationAuth', error: e);
     }
   }
 
@@ -233,11 +229,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       AppLogger.info('사용자 로그아웃 처리 완료', tag: 'NotificationAuth');
     } catch (e) {
-      AppLogger.error(
-        '사용자 로그아웃 처리 실패',
-        tag: 'NotificationAuth',
-        error: e,
-      );
+      AppLogger.error('사용자 로그아웃 처리 실패', tag: 'NotificationAuth', error: e);
     }
   }
 
@@ -282,11 +274,7 @@ class NotificationNotifier extends _$NotificationNotifier {
 
       AppLogger.info('FCM 토큰 등록 완료', tag: 'FCMToken');
     } catch (e) {
-      AppLogger.error(
-        'FCM 토큰 등록 실패',
-        tag: 'FCMToken',
-        error: e,
-      );
+      AppLogger.error('FCM 토큰 등록 실패', tag: 'FCMToken', error: e);
     }
   }
 
@@ -471,16 +459,67 @@ class NotificationNotifier extends _$NotificationNotifier {
     }
   }
 
-  /// 알림 탭 처리
+  /// 알림 탭 처리 - 글로벌 네비게이션 사용
   Future<void> _handleTapNotification(String notificationId) async {
-    AppLogger.info('알림 탭 처리: $notificationId', tag: 'NotificationAction');
+    AppLogger.info('알림 탭 처리 시작: $notificationId', tag: 'NotificationAction');
 
-    // 읽음 처리
-    await _markAsRead(notificationId);
+    try {
+      // 1. 읽음 처리
+      await _markAsRead(notificationId);
 
-    // 여기서 필요한 경우 해당 알림의 타겟으로 내비게이션하는 로직을 추가할 수 있음
-    // 예: 게시글 알림이면 게시글 상세로 이동 등
-    // 이 부분은 Root에서 처리하도록 설계됨
+      // 2. 해당 알림 찾기
+      if (state.notifications is AsyncData) {
+        final notifications =
+            (state.notifications as AsyncData<List<AppNotification>>).value;
+
+        final notification = notifications.firstWhere(
+          (n) => n.id == notificationId,
+          orElse: () => throw StateError('알림을 찾을 수 없습니다'),
+        );
+
+        AppLogger.info(
+          '알림 정보 찾음: ${notification.type.name} -> ${notification.targetId}',
+          tag: 'NotificationAction',
+        );
+
+        // 3. 글로벌 네비게이션 서비스를 통한 네비게이션
+        await _navigationService.handleNotificationNavigation(
+          type: notification.type.name,
+          targetId: notification.targetId,
+          senderId: notification.userId, // 발송자 ID는 userId 또는 별도 필드 사용
+          additionalData: {
+            'notificationId': notificationId,
+            'senderName': notification.senderName,
+            'description': notification.description,
+            'createdAt': notification.createdAt.toIso8601String(),
+          },
+        );
+
+        AppLogger.info(
+          '알림 탭 처리 완료: $notificationId',
+          tag: 'NotificationAction',
+        );
+      } else {
+        AppLogger.warning('알림 데이터가 AsyncData가 아님', tag: 'NotificationAction');
+      }
+    } catch (e) {
+      AppLogger.error(
+        '알림 탭 처리 실패: $notificationId',
+        tag: 'NotificationAction',
+        error: e,
+      );
+
+      // 실패 시 알림 목록으로 이동
+      try {
+        await _navigationService.pushTo('/notifications');
+      } catch (fallbackError) {
+        AppLogger.error(
+          '대체 네비게이션도 실패',
+          tag: 'NotificationAction',
+          error: fallbackError,
+        );
+      }
+    }
   }
 
   /// 단일 알림 읽음 처리
@@ -517,11 +556,7 @@ class NotificationNotifier extends _$NotificationNotifier {
           break;
       }
     } catch (e) {
-      AppLogger.error(
-        '알림 읽음 처리 예외',
-        tag: 'NotificationAction',
-        error: e,
-      );
+      AppLogger.error('알림 읽음 처리 예외', tag: 'NotificationAction', error: e);
       state = state.copyWith(errorMessage: '알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
@@ -563,11 +598,7 @@ class NotificationNotifier extends _$NotificationNotifier {
           break;
       }
     } catch (e) {
-      AppLogger.error(
-        '모든 알림 읽음 처리 예외',
-        tag: 'NotificationAction',
-        error: e,
-      );
+      AppLogger.error('모든 알림 읽음 처리 예외', tag: 'NotificationAction', error: e);
       state = state.copyWith(errorMessage: '모든 알림 읽음 처리 중 오류가 발생했습니다.');
     }
   }
@@ -594,11 +625,7 @@ class NotificationNotifier extends _$NotificationNotifier {
           _removeNotificationFromState(notificationId);
 
         case AsyncError(:final error):
-          AppLogger.error(
-            '알림 삭제 실패',
-            tag: 'NotificationAction',
-            error: error,
-          );
+          AppLogger.error('알림 삭제 실패', tag: 'NotificationAction', error: error);
           state = state.copyWith(errorMessage: '알림 삭제에 실패했습니다.');
 
         default:
@@ -606,11 +633,7 @@ class NotificationNotifier extends _$NotificationNotifier {
           break;
       }
     } catch (e) {
-      AppLogger.error(
-        '알림 삭제 예외',
-        tag: 'NotificationAction',
-        error: e,
-      );
+      AppLogger.error('알림 삭제 예외', tag: 'NotificationAction', error: e);
       state = state.copyWith(errorMessage: '알림 삭제 중 오류가 발생했습니다.');
     }
   }
